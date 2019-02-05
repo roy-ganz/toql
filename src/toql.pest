@@ -1,0 +1,26 @@
+
+num_value =  { ASCII_DIGIT+ }
+text_value =  { "\"" ~ ASCII_ALPHANUMERIC+ ~ "\"" }
+value= { num_value | text_value  } 
+custom =  { name ~ value+}
+
+field_filter = { name ~ value+}
+sort = @{ ("+" | "-") ~ASCII_DIGIT* }
+name =  @{ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_") * }
+fieldname = { name }
+hidden = @{"."}
+wildcard = @{"*"}
+aggregation = @{"!"}
+field = { sort? ~ hidden? ~ fieldname }
+field_clause = { field ~ aggregation? ~ field_filter?}
+clause = { field_clause | ( lpar ~ expr ~ rpar) } 
+concat = { "," | ";" }
+
+lpar = @{"("}
+rpar = @{")"}
+
+expr = { (clause | wildcard) ~ (concat ~ (clause | wildcard))*}
+query = { SOI ~ expr? ~ EOI }
+
+WHITESPACE = _{ " " }
+
