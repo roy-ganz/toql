@@ -10,32 +10,33 @@ use crate::query::QueryToken;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
-enum FilterType {
+pub (crate) enum FilterType {
     Where,
     Having,
     None,
 }
 
 pub struct SqlTarget {
-    selected: bool,             // Target is selected
-    alias: String,              // Calculated alias for field
-    used: bool,                 // Target is either selected or filtered
-    joined_target: bool,        // Target must be joined
-    joined: bool,               // Join clause set for target
-    options: MapperOptions,     // Options
-    filter_type: FilterType,    // Filter on where or having clause
-    handler: Box<FieldHandler>, // Handler to create clauses
+   //  pub (crate) selected: bool,             // Target is selected
+     pub (crate) alias: String,              // Calculated alias for field
+     //pub (crate) used: bool,                 // Target is either selected or filtered
+     pub (crate) joined_target: bool,        // Target must be joined
+     pub (crate) options: MapperOptions,     // Options
+     pub (crate) filter_type: FilterType,    // Filter on where or having clause
+     pub (crate) handler: Box<FieldHandler>, // Handler to create clauses
 }
 
+
+
 pub struct SqlField {
-    name: String
+    name: String,
 }
 pub struct MapperOptions {
-    always_selected: bool, // Always select this field, regardless of query fields
-    alias: bool,           // This field must not be aliased
-    count_query: bool,     // Use this field also in count query
-    ignore_wildcard: bool, // Ignore field for wildcard selection
-    role: Option<String>,  // Only for use by this role
+      pub (crate) always_selected: bool, // Always select this field, regardless of query fields
+      pub (crate) alias: bool,           // This field must not be aliased
+      pub (crate) count_query: bool,     // Use this field also in count query
+      pub (crate) ignore_wildcard: bool, // Ignore field for wildcard selection
+      pub (crate) roles: BTreeSet<String>,    // Only for use by these roles
 }
 
 // OPT use references
@@ -46,7 +47,7 @@ impl MapperOptions {
             alias: true,
             count_query: false,
             ignore_wildcard: false,
-            role: None
+            roles: BTreeSet::new(),
         }
     }
     pub fn select_always(mut self, always_selected: bool) -> Self {
@@ -65,44 +66,13 @@ impl MapperOptions {
         self.ignore_wildcard = ignore_wildcard;
         self
     }
-    pub fn restrict_to_role(mut self, role: &str) -> Self {
-        self.role = Some(role.to_string());
+    pub fn restrict_to_roles(mut self, roles: BTreeSet<String>) -> Self {
+        self.roles = roles;
         self
     }
-    
 }
 
-pub struct BuildOptions {
-    count_query: bool,    // Build count query
-    subpath: String,      // Build only subpath
-    role: Option<String>, // Build for role
-   
-}
 
-impl BuildOptions {
-    pub fn new() -> Self {
-        BuildOptions {
-            count_query: false,
-            subpath: "".to_string(),
-            role: None,
-            
-            
-        }
-    }
-    pub fn build_count_query(mut self, count_query: bool) -> Self {
-        self.count_query = count_query;
-        self
-    }
-    pub fn build_subpath(mut self, subpath: &str) -> Self {
-        self.subpath = subpath.to_string();
-        self
-    }
-    pub fn build_role(mut self, role: &str) -> Self {
-        self.role = Some(role.to_string());
-        self
-    }
-   
-}
 
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
@@ -111,10 +81,10 @@ pub trait FieldHandler {
     fn validate_query(&self) -> bool {
         true
     }
-    fn build_select(&self,  alias: &str) -> Option<String> {
+    fn build_select(&self, alias: &str) -> Option<String> {
         None
     }
-    fn build_filter(&self,  alias: &str,filter: &FieldFilter) -> Option<String> {
+    fn build_filter(&self, alias: &str, filter: &FieldFilter) -> Option<String> {
         None
     }
     fn build_param(&self, filter: &FieldFilter) -> Option<String> {
@@ -132,7 +102,7 @@ pub trait ToqlQuery {
 
 impl FieldHandler for SqlField {
     fn build_select(&self, alias: &str) -> Option<String> {
-        Some(format!("{}{}", alias,self.name))
+        Some(format!("{}{}", alias, self.name))
     }
     fn build_param(&self, filter: &FieldFilter) -> Option<String> {
         match filter {
@@ -151,15 +121,22 @@ impl FieldHandler for SqlField {
     }
     fn build_filter(&self, alias: &str, filter: &FieldFilter) -> Option<String> {
         match filter {
-            FieldFilter::Eq(_) => Some(format!("{}{} = ?",alias, self.name)),
-            FieldFilter::Ne(_) => Some(format!("{}{} <> ?",alias, self.name)),
-            FieldFilter::Ge(_) => Some(format!("{}{} >= ?",alias, self.name)),
-            FieldFilter::Gt(_) => Some(format!("{}{} > ?",alias, self.name)),
-            FieldFilter::Le(_) => Some(format!("{}{} <= ?",alias, self.name)),
-            FieldFilter::Lt(_) => Some(format!("{}{} < ?",alias, self.name)),
-            FieldFilter::In(values) => Some(format!("{}{} IN ({})", alias, self.name, values.join(","))),
-            FieldFilter::Out(values) => Some(format!("{}{} NOT IN ({})", alias, self.name, values.join(","))),
-            FieldFilter::Lk(_) => Some(format!("{}{} Lk ?",alias, self.name)),
+            FieldFilter::Eq(_) => Some(format!("{}{} = ?", alias, self.name)),
+            FieldFilter::Ne(_) => Some(format!("{}{} <> ?", alias, self.name)),
+            FieldFilter::Ge(_) => Some(format!("{}{} >= ?", alias, self.name)),
+            FieldFilter::Gt(_) => Some(format!("{}{} > ?", alias, self.name)),
+            FieldFilter::Le(_) => Some(format!("{}{} <= ?", alias, self.name)),
+            FieldFilter::Lt(_) => Some(format!("{}{} < ?", alias, self.name)),
+            FieldFilter::In(values) => {
+                Some(format!("{}{} IN ({})", alias, self.name, values.join(",")))
+            }
+            FieldFilter::Out(values) => Some(format!(
+                "{}{} NOT IN ({})",
+                alias,
+                self.name,
+                values.join(",")
+            )),
+            FieldFilter::Lk(_) => Some(format!("{}{} Lk ?", alias, self.name)),
             FieldFilter::Other(_) => None,
             _ => None,
         }
@@ -170,56 +147,20 @@ impl FieldHandler for SqlField {
 }
 
 pub struct SqlMapper {
-    dirty: bool,
-    alias: String,
-    field_order: Vec<String>,
-    fields: HashMap<String, SqlTarget>,
-    joins: HashMap<String, Join>,
+  //  alias: String,
+    pub (crate) field_order: Vec<String>,
+    pub (crate) fields: HashMap<String, SqlTarget>,
+    pub (crate) joins: HashMap<String, Join>,
 }
 
 pub struct Join {
-    join_clause: String,
-    alias: String,
-    joined: bool
+     pub (crate) join_clause: String,
+ //   alias: String,
+   // joined: bool
 }
 
-pub struct MapperResult {
-    pending_having_parens: u8,
-    pending_where_parens: u8,
-    need_having_concatenation: bool,
-    need_where_concatenation: bool,
-    pending_where_parens_concatenation: Option<Concatenation>,
-    pending_having_parens_concatenation: Option<Concatenation>,
-    pub join_clause: String,
-    pub select_clause: String,
-    pub where_clause: String,
-    pub order_by_clause: String,
-    pub having_clause: String,
-    pub count_where_clause: String,
-    pub count_having_clause: String,
-    pub unused_fields: Vec<String>,
-    pub where_params: Vec<String>,
-    pub having_params: Vec<String>,
-}
 
-impl MapperResult {
-    fn push_pending_parens(clause: &mut String, pending_parens: &u8) {
-        for _n in 0..*pending_parens {
-            clause.push_str("(");
-        }
-    }
-    fn push_concatenation(clause: &mut String, pending_concatenation: &Option<Concatenation>) {
-        if let Some(c) = pending_concatenation {
-            match c {
-                Concatenation::And => clause.push_str(" AND "),
-                Concatenation::Or => clause.push_str(" OR "),
-            }
-        }
-    }
-    fn push_filter(clause: &mut String, filter: &str) {
-        clause.push_str(filter);
-    }
-}
+
 
 pub trait Mappable {
     fn map(mapper: &mut SqlMapper, prefix: &str);
@@ -228,8 +169,8 @@ pub trait Mappable {
 impl SqlMapper {
     pub fn new() -> SqlMapper {
         SqlMapper {
-            dirty: false,
-            alias: "".to_string(),
+          //  dirty: false,
+          //  alias: "".to_string(),
             joins: HashMap::new(),
             fields: HashMap::new(),
             field_order: Vec::new(),
@@ -246,11 +187,11 @@ impl SqlMapper {
         m
     }
 
-    pub fn map_aliased<T: Mappable>(alias: &str) -> SqlMapper {
+   /*  pub fn map_aliased<T: Mappable>(alias: &str) -> SqlMapper {
         let mut m = Self::map::<T>();
         m.alias = alias.to_string();
         m
-    }
+    } */
 
     pub fn map_handler<'a>(
         &'a mut self,
@@ -264,10 +205,10 @@ impl SqlMapper {
         let t = SqlTarget {
             options: options,
             filter_type: FilterType::Where, // filter on where clause
-            selected: false,
-            used: false,
+        //    selected: false,
+        //    used: false,
             alias: String::from(""),
-            joined: false,
+         //   joined: false,
             joined_target: x,
             handler: handler,
         };
@@ -275,15 +216,17 @@ impl SqlMapper {
         self.fields.insert(toql_field.to_string(), t);
     }
 
-    pub fn alter_field(&mut self, toql_field :&str, sql_field :&str, options: MapperOptions){
-        let sql_target = self.fields.get_mut(toql_field).expect("Field  is not mapped.");
-        
-            let f = SqlField {
-                name: sql_field.to_string()
-            };
-        sql_target.options = options; 
+    pub fn alter_field(&mut self, toql_field: &str, sql_field: &str, options: MapperOptions) {
+        let sql_target = self
+            .fields
+            .get_mut(toql_field)
+            .expect("Field  is not mapped.");
+
+        let f = SqlField {
+            name: sql_field.to_string(),
+        };
+        sql_target.options = options;
         sql_target.handler = Box::new(f);
-        
     }
 
     pub fn map_field<'a>(
@@ -293,18 +236,18 @@ impl SqlMapper {
         options: MapperOptions,
     ) -> &'a mut Self {
         let f = SqlField {
-            name: sql_field.to_string()
+            name: sql_field.to_string(),
         };
 
-        let j = toql_field.find('_').is_some(); 
+        let j = toql_field.find('_').is_some();
         let t = SqlTarget {
             options: options,
             filter_type: FilterType::Where, // filter on where clause
-            selected: false,
+         //   selected: false,
             alias: String::from(""),
-            used: false,
+         //   used: false,
             joined_target: j,
-            joined: false,
+           // joined: false,
             handler: Box::new(f),
         };
 
@@ -341,142 +284,39 @@ impl SqlMapper {
         self.joins.insert(
             toql_field.to_string(),
             Join {
-                alias: alias.to_string(),
+           //     alias: alias.to_string(),
                 join_clause: join_clause.to_string(),
-                joined: false
+                //joined: false,
             },
         );
         self
     }
 
-    fn alias_fields(&mut self) {
-            for (field_name, sql_target) in &mut self.fields {
-                   
-                    if !self.alias.is_empty() && sql_target.options.alias {
-                            // joined fields use join alias , other use field alias
-                            let al = if sql_target.joined_target {
-                                if let Some(n) = field_name.split('_').rev().nth(1) {
-                                    &self.joins.get(n).unwrap().alias
-                                } else {
-                                    panic!("Join not found for field {}", field_name);
-                                }
-                            } else {
-                                &self.alias
-                            }; 
-                            sql_target.alias = format!("{}.",al);
-                    }
+   
+     
 
-            }
-        
-            }
-
-    fn clean_targets (&mut self) {
+    /* fn clean_targets(&mut self) {
         for (k, t) in &mut self.fields {
             t.selected = false;
         }
     }
-    fn clean_joins (&mut self) {
+    fn clean_joins(&mut self) {
         for (k, t) in &mut self.joins {
             t.joined = false;
         }
-    }
+    } */
 
-    fn build_ordering(
-        result: &mut MapperResult,
-         targets: &HashMap<String, SqlTarget>,
-        ordinals: &BTreeSet<u8>,
-        ordering: &HashMap<u8, Vec<(FieldOrder, String)>>,
-    ) {
-        // Build ordering clause
-        for n in ordinals {
-            if let Some(fields) = ordering.get(n) {
-                for (ord, toql_field) in fields {
-                    let o = match ord {
-                        FieldOrder::Asc(_) => " ASC",
-                        FieldOrder::Desc(_) => " DESC",
-                    };
-                     if let Some(sql_target) = targets.get(toql_field) {
-                         if let Some(s) = sql_target.handler.build_select(&sql_target.alias) {
-                            result.order_by_clause.push_str(&s);
-                         }
-                     }
-                    //result.order_by_clause.push_str(name);
-                    result.order_by_clause.push_str(o);
-                    result.order_by_clause.push_str(", ");
-                }
-            }
-        }
-        result.order_by_clause = result.order_by_clause.trim_end_matches(", ").to_string();
-    }
-    fn build_select_clause(
-        &self,
-        result: &mut MapperResult,
-        sql_targets: &HashMap<String, SqlTarget>,
-        field_order: &Vec<String>,
-    ) {
-        // build select clause
-        // select all fields
-        for toql_field in field_order {
-            if let Some(sql_target) = sql_targets.get(toql_field) {
-                if sql_target.selected || sql_target.options.always_selected {
-                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.alias) {
-                        /* if !self.alias.is_empty() && sql_target.options.alias {
-                            // joined fields use join alias , other use field alias
-                            let al = if sql_target.joined_target {
-                                if let Some(n) = field_name.split('_').rev().nth(1) {
-                                    &self.joins.get(n).unwrap().alias
-                                } else {
-                                    panic!("Join not found for field {}", field_name);
-                                }
-                            } else {
-                                &self.alias
-                            };
+    
 
-                            result.select_clause.push_str(al);
-                            result.select_clause.push_str(".");
-                        } */
-                      //  result.select_clause.push_str(&sql_target.alias);
-                        result.select_clause.push_str(&sql_field);
-                    }
-                } else {
-                    result.select_clause.push_str("null");
-                }
-                result.select_clause.push_str(", ");
-            }
-        }
-
-        // Remove last ,
-        result.select_clause = result.select_clause.trim_end_matches(", ").to_string();
-    }
-    fn build_join_clause(&mut self, result: &mut MapperResult) {
-        // build select clause
-        // select all fields
-
-        for (k, v) in &mut self.fields {
-            if v.used && !v.joined {
-                let fi = k.split('_').rev().nth(1);
-                if let Some(f) = fi {
-                    let j = self.joins.get_mut(f).unwrap();
-                    if !j.joined {
-                        result.join_clause.push_str(&j.join_clause);
-                        result.join_clause.push(' ');
-                        j.joined = true;
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn build(&mut self, query: Query, options: BuildOptions) -> MapperResult {
+   /*  fn build(&mut self, query: Query, options: BuildOptions) -> MapperResult {
         let mut ordinals: BTreeSet<u8> = BTreeSet::new();
         let mut ordering: HashMap<u8, Vec<(FieldOrder, String)>> = HashMap::new();
 
-        
         if self.dirty {
             self.clean_targets();
             self.clean_joins();
         } else {
-            self.alias_fields();  // Alias all fields for selecting, ordering and filtering
+            self.alias_fields(); // Alias all fields for selecting, ordering and filtering
         }
 
         let mut result = MapperResult {
@@ -558,7 +398,9 @@ impl SqlMapper {
 
                                 if let Some(f) = query_field.filter {
                                     sql_target.used = true;
-                                    if let Some(f) = sql_target.handler.build_filter( &sql_target.alias,&f) {
+                                    if let Some(f) =
+                                        sql_target.handler.build_filter(&sql_target.alias, &f)
+                                    {
                                         if query_field.aggregation == true {
                                             if result.need_having_concatenation == true {
                                                 if result.pending_having_parens > 0 {
@@ -641,8 +483,6 @@ impl SqlMapper {
             }
         }
 
-       
-
         Self::build_ordering(&mut result, &self.fields, &ordinals, &ordering);
         self.build_select_clause(&mut result, &self.fields, &self.field_order);
         self.build_join_clause(&mut result);
@@ -656,8 +496,8 @@ impl SqlMapper {
         result.join_clause.trim_end();
         result.order_by_clause.trim_end();
 
-        self.dirty= true;
+        self.dirty = true;
 
         result
-    }
+    } */
 }

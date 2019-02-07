@@ -5,7 +5,7 @@
 use toql::sql_mapper::SqlMapper;
 use toql::sql_mapper::FieldHandler;
 use toql::sql_mapper::MapperOptions;
-use toql::sql_mapper::BuildOptions;
+use toql::sql_builder::SqlBuilder;
 use toql::user_query::UserDto;
 use toql::query::Query;
 use toql::query_parser::QueryParser;
@@ -42,8 +42,19 @@ fn main() {
         .map_field("age", "t1.age", MapperOptions::new())
         .map_handler("search", Box::new(t) , MapperOptions::new())
         ;
-        
-    let result = mapper.build(query, BuildOptions::new());
+     
+    //let result = mapper.build(query, BuildOptions::new());
+
+
+    let builder = SqlBuilder::new();
+     let result= builder.for_role("hkhk")
+    // .with_restriction( QueryParser::parse("id neq \"hfkjsh\""))
+     .with_join("user")
+     .alias("t0")
+     .build_top(&mapper, &query);
+     //.build_subpath("fdjdlkf", "hkjhkj")
+
+
     println!("SELECT: {}", result.select_clause);
     println!("WHERE: {}", result.where_clause);
     println!("HAVING: {}", result.having_clause);

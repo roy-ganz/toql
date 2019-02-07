@@ -1,7 +1,7 @@
 
 
 
-use std::slice::Iter;
+
 
 #[derive(Clone, Debug)]   
 pub enum Concatenation {
@@ -55,108 +55,13 @@ pub enum QueryToken {
 pub struct Query {
     pub tokens: Vec<QueryToken>
 }
-#[derive(Clone, Debug)]
-pub struct QueryIter<'a> {
-         query: &'a Query,
-         pos: usize,
-}
 
-#[derive(Clone, Debug)]
- pub struct TraverseTop<'a> {
-         iter: QueryIter<'a>,
-         subpaths: Vec<&'a str>
-}
-
-impl<'a> Iterator for TraverseTop<'a>{
-    type Item= &'a QueryToken;
-
-            fn next(&mut self) -> Option<Self::Item> {
-                let token = self.iter.next();
-                match token {
-                     Some(QueryToken::Field (field)) => {
-                         
-                         let f = field.clone();
-                         f.name="hallo".to_owned();
-                         let t= QueryToken::Field(f);
-                         Some(&t)
-                          
-                     }
-                     _ => token
-
-                }
-               /*  if let  Some(QueryToken::Field (Field{ name, ..})) = token {
-                // Obviously, there isn't any more data to read so let's stop here.
-                 for s in &self.subpaths {
-                     if name.starts_with(s) {
-                         Some()name = f.name.trim_start_matches(s).trim_start_matches("_").to_string();
-                         break;
-                     } else {
-                         token
-                     }
-                 }
-                None
-                } else {
-                 None
-                } */
-            }
-}
-
-
-impl<'a> QueryIter<'a> {
-
-    pub fn traverse_top(self, subpaths: Vec<&'a str>) -> TraverseTop<'a> {
-        
-         TraverseTop {subpaths: subpaths, iter:self}
-     }
-
-}
-
-
-impl<'a> Iterator for QueryIter<'a>{
-    type Item= &'a QueryToken;
-
-            fn next(&mut self) -> Option<Self::Item> {
-            if self.pos >= self.query.tokens.len() {
-                // Obviously, there isn't any more data to read so let's stop here.
-                None
-                } else {
-                    // We increment the position of our iterator.
-                    self.pos += 1;
-                    // We return the current value pointed by our iterator.
-                self.query.tokens.get(self.pos - 1)
-                }
-            }
-}
-
-
-
-
-/* impl<'a> Iterator for TraverseTop<'a> {
-    type Item= &'a QueryToken;
-
-        fn next(&mut self) -> Option<Self::Item> {
-          if self.query_iter.pos >= self.query.tokens.len() {
-            // Obviously, there isn't any more data to read so let's stop here.
-            None
-            } else {
-                // We increment the position of our iterator.
-                self.pos += 1;
-                // We return the current value pointed by our iterator.
-               self.query.tokens.get(self.pos - 1)
-            }
-        }
-} */
 
 
 impl Query {
     pub fn new () -> Self {
         Query { tokens: vec![]}
     }
-
-   pub fn iter(&self) -> QueryIter {
-       QueryIter {query:self, pos:0} 
-   }
-
     
 
     pub fn remove(mut self, subpath: &str) -> Self {

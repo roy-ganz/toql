@@ -2,8 +2,7 @@
     extern crate toql;
 
     use toql::query_parser::QueryParser;
-    use toql::sql_mapper::BuildOptions;
-    use toql::sql_mapper::FieldHandler;
+    use toql::sql_builder::SqlBuilder;
     use toql::sql_mapper::MapperOptions;
     use toql::sql_mapper::SqlMapper;
 
@@ -25,20 +24,22 @@
 
     #[test]
     fn select_wildcard() {
-        let mut mapper = setup_mapper();
+        let mapper = setup_mapper();
         let query = QueryParser::parse("*"); // select all fields
 
-        let result = mapper.build(query, BuildOptions::new());
+        let result = SqlBuilder::new().build(&mapper, &query);
+        
        
         assert_eq!("t1.id, t1.username, t1.archive, t1.age", result.select_clause);
     }
 
     #[test]
     fn select_duplicates() {
-        let mut mapper = setup_mapper();
+        let mapper = setup_mapper();
         let query = QueryParser::parse("*, id, id"); // select three times id
 
-        let result = mapper.build(query, BuildOptions::new());
+        let result = SqlBuilder::new().build(&mapper, &query);
+        
        
         assert_eq!("t1.id, t1.username, t1.archive, t1.age", result.select_clause);
     }
