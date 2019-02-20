@@ -22,7 +22,7 @@ fn main() {
     //let query = QueryParser::parse("title EQ \"Hallo\"");
      //let query = QueryParser::parse("book_title, book_author_username EQ 'fritz'");
      //  let query = QueryParser::parse("fooId, bar_id, author_id, author_username, author_book_id EQ 5");
-let query = QueryParser::parse("id, ((title EQ 'Foo'; (title !EQ 'bar'))), id NE 3");
+  let query = QueryParser::parse("id, ((title EQ 'Foo'; (title !EQ 'bar'))), id NE 3").unwrap();
         
    // let query = QueryParser::parse("*");
 
@@ -54,7 +54,7 @@ let query = QueryParser::parse("id, ((title EQ 'Foo'; (title !EQ 'bar'))), id NE
 
 
     let result = SqlBuilder::new()
-       .build(&mapper, &query);
+       .build(&mapper, &query).unwrap();
            
     //  assert_eq!("SELECT id, username, b.id FROM User JOIN Book b ON (id = b.id) WHERE b.id = ?", result.sql_for_table("User"));
 

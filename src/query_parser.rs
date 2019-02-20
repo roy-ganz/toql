@@ -5,6 +5,8 @@ use crate::query::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
 use pest::Parser;
+use pest::error::Error;
+
 
 #[derive(Parser)]
 #[grammar = "toql.pest"]
@@ -15,18 +17,17 @@ pub struct QueryParser;
 impl QueryParser {
 
    
-    pub fn parse(toql_string: &str) -> Query {
-        let pairs =
-            PestQueryParser::parse(Rule::query, toql_string).unwrap_or_else(|e| panic!("{:?}", e));
+    pub fn parse(toql_string: &str) -> Result<Query, Error<Rule>>  {
+        let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
 
         let mut query = Query::new();
         let mut con = Concatenation::And;
        
         for pair in pairs.flatten().into_iter() {
             let span = pair.clone().into_span();
-            println!("Rule:    {:?}", pair.as_rule());
-            println!("Span:    {:?}", span);
-            println!("Text:    {}", span.as_str());
+         //   println!("Rule:    {:?}", pair.as_rule());
+         //   println!("Span:    {:?}", span);
+         //   println!("Text:    {}", span.as_str());
             match pair.as_rule() {
                 // Rule::wclause => {
                 //     query.tokens.push(QueryToken::Field(Field {
@@ -129,8 +130,8 @@ impl QueryParser {
 
                 _ => {}
             }
-            println!("{:?}", query.tokens);
+            //println!("{:?}", query.tokens);
         }
-        query
+        Ok(query)
     }
 }
