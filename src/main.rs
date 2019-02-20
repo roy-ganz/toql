@@ -18,8 +18,13 @@ fn main() {
 
      //let c=  parse_color();
 
-    let query = QueryParser::parse("*, ((search MA \"Suche\"; +2 username EQ \"hallo\", age !GT 0)),.archive IN 0 1; id EQ 0");
-    let query = QueryParser::parse("((age !EQ Hallo))");
+    //let query = QueryParser::parse("*, ((search MA \"Suche\"; +2 username EQ \"hallo\", age !GT 0)),.archive IN 0 1; id EQ 0");
+    //let query = QueryParser::parse("title EQ \"Hallo\"");
+     //let query = QueryParser::parse("book_title, book_author_username EQ 'fritz'");
+     //  let query = QueryParser::parse("fooId, bar_id, author_id, author_username, author_book_id EQ 5");
+let query = QueryParser::parse("id, ((title EQ 'Foo'; (title !EQ 'bar'))), id NE 3");
+        
+   // let query = QueryParser::parse("*");
 
    // let q = QueryParser::parse("id, name");
 
@@ -32,28 +37,35 @@ fn main() {
     impl FieldHandler for Test {
 
     }
-    let t = Test{};
+   
     
     let mut mapper = SqlMapper::new();
-    mapper
-        .map_field("id", "t1.id", MapperOptions::new().select_always(true).use_for_count_query(true))
-        .map_field("username", "t1.username", MapperOptions::new())
-        .map_field("archive", "t1.archive", MapperOptions::new())
-        .map_field("age", "t1.age", MapperOptions::new())
-        .map_handler("search", Box::new(t) , MapperOptions::new())
-        ;
+     mapper
+        .join("author", "LEFT JOIN author a ON (id = a.book_id)")
+        .map_field("id", "id", MapperOptions::new().select_always(true).count_query(true))
+        .map_field("title", "title", MapperOptions::new())
+        .map_field("published", "published_at", MapperOptions::new())
+        .map_field("author_id", "a.age", MapperOptions::new())
+        .map_field("author_username", "a.username", MapperOptions::new())
+        ; 
+       
      
     //let result = mapper.build(query, BuildOptions::new());
 
 
-    let builder = SqlBuilder::new();
-     let result= builder.for_role("hkhk")
+    let result = SqlBuilder::new()
+       .build(&mapper, &query);
+           
+    //  assert_eq!("SELECT id, username, b.id FROM User JOIN Book b ON (id = b.id) WHERE b.id = ?", result.sql_for_table("User"));
+
+  /*  let result= builder.for_role("hkhk")
     // .with_restriction( QueryParser::parse("id neq \"hfkjsh\""))
      .with_join("user")
      .alias("t0")
-     .build_top(&mapper, &query);
+     .build(&mapper, &query); */
      //.build_subpath("fdjdlkf", "hkjhkj")
 
+    println!("Sql is: {}", result.sql_for_table("User"));
 
     println!("SELECT: {}", result.select_clause);
     println!("WHERE: {}", result.where_clause);

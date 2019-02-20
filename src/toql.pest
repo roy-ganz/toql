@@ -1,6 +1,7 @@
-
+char =  { !("'") ~ ANY }
+string = @{ char* }
 num_value =  { ASCII_DIGIT+ }
-text_value =  { "\"" ~ ASCII_ALPHANUMERIC+ ~ "\"" }
+text_value =  { "'" ~ string ~ "'" }
 value= { num_value | text_value  } 
 custom =  { name ~ value+}
 

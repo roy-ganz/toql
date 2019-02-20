@@ -8,40 +8,58 @@
 
     fn setup_mapper() -> SqlMapper {
         let mut mapper = SqlMapper::new();
-        mapper
-            .map_field(
-                "id",
-                "t1.id",
-                MapperOptions::new()
-                    .select_always(true)
-                    .use_for_count_query(true),
-            )
-            .map_field("username", "t1.username", MapperOptions::new())
-            .map_field("archive", "t1.archive", MapperOptions::new())
-            .map_field("age", "t1.age", MapperOptions::new());
+       mapper
+        .join("author", "JOIN User a ON (id = a.book_id)")
+        .map_field("id", "id", MapperOptions::new().select_always(true).count_query(true))
+        .map_field("title", "title", MapperOptions::new())
+        .map_field("publishedAt", "published_at", MapperOptions::new())
+        .map_field("author_id", "a.id", MapperOptions::new())
+        .map_field("author_username", "a.username", MapperOptions::new())
+        ;
         mapper
     }
 
     #[test]
     fn select_wildcard() {
         let mapper = setup_mapper();
-        let query = QueryParser::parse("*"); // select all fields
+        let query = QueryParser::parse("*"); // select all top fields
 
         let result = SqlBuilder::new().build(&mapper, &query);
-        
        
-        assert_eq!("t1.id, t1.username, t1.archive, t1.age", result.select_clause);
+        assert_eq!("SELECT id, title, publishedAt, null, null FROM Book", result.sql_for_table("Book"));
     }
 
     #[test]
     fn select_duplicates() {
         let mapper = setup_mapper();
-        let query = QueryParser::parse("*, id, id"); // select three times id
+        let query = QueryParser::parse("id, id, title"); // select id twice
 
         let result = SqlBuilder::new().build(&mapper, &query);
-        
        
-        assert_eq!("t1.id, t1.username, t1.archive, t1.age", result.select_clause);
+        assert_eq!("SELECT id, title, null, null, null FROM Book", result.sql_for_table("Book"));
     }
+
+    #[test]
+    fn select_optional_join() {
+        let mapper = setup_mapper();
+        let query = QueryParser::parse("id, title, author_id"); // select author from joined table
+
+        let result = SqlBuilder::new().build(&mapper, &query);
+       
+        assert_eq!("SELECT id, title, null, a.id, null FROM Book JOIN User a ON (id = a.book_id)", result.sql_for_table("Book"));
+    }
+
+     #[test]
+    fn select_hidden() {
+        let mapper = setup_mapper();
+        let query = QueryParser::parse(".id, .title, publishedAt"); // id must always be selected (see mapper), title is hidden
+
+        let result = SqlBuilder::new().build(&mapper, &query);
+       
+        assert_eq!("SELECT id, null, published_at, null, null FROM Book", result.sql_for_table("Book"));
+    }
+
+
+    
 
 
