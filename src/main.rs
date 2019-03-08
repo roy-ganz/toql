@@ -1,7 +1,5 @@
 
-
-
-//extern crate toql;
+use std::collections::HashMap;
 use toql::sql_mapper::SqlMapper;
 use toql::sql_mapper::FieldHandler;
 use toql::sql_mapper::MapperOptions;
@@ -11,72 +9,97 @@ use toql::query::Query;
 use toql::query_parser::QueryParser;
 use toql::query_parser::*;
 
+#[derive(Debug, Clone)]
+struct Book {
+    id: u8,
+    title: Option<String>,
+    author_id :u8,
+  
+    author : Option<User>
 
-fn main() {
-    println!("Hello, world!");
-
-
-     //let c=  parse_color();
-
-    //let query = QueryParser::parse("*, ((search MA \"Suche\"; +2 username EQ \"hallo\", age !GT 0)),.archive IN 0 1; id EQ 0");
-    //let query = QueryParser::parse("title EQ \"Hallo\"");
-     //let query = QueryParser::parse("book_title, book_author_username EQ 'fritz'");
-     //  let query = QueryParser::parse("fooId, bar_id, author_id, author_username, author_book_id EQ 5");
-  let query = QueryParser::parse("id, ((title EQ 'Foo'; (title !EQ 'bar'))), id NE 3").unwrap();
-        
-   // let query = QueryParser::parse("*");
-
-   // let q = QueryParser::parse("id, name");
-
-    //let u = UserDto::find_for_id(5);
-
-    //let query = Query::new("id, name".to_string());
-    //let query = QueryParser::parse("is, name");
-
-    struct Test;
-    impl FieldHandler for Test {
-
-    }
-   
-    
-    let mut mapper = SqlMapper::new();
-     mapper
-        .join("author", "LEFT JOIN author a ON (id = a.book_id)")
-        .map_field("id", "id", MapperOptions::new().select_always(true).count_query(true))
-        .map_field("title", "title", MapperOptions::new())
-        .map_field("published", "published_at", MapperOptions::new())
-        .map_field("author_id", "a.age", MapperOptions::new())
-        .map_field("author_username", "a.username", MapperOptions::new())
-        ; 
-       
-     
-    //let result = mapper.build(query, BuildOptions::new());
-
-
-    let result = SqlBuilder::new()
-       .build(&mapper, &query).unwrap();
-           
-    //  assert_eq!("SELECT id, username, b.id FROM User JOIN Book b ON (id = b.id) WHERE b.id = ?", result.sql_for_table("User"));
-
-  /*  let result= builder.for_role("hkhk")
-    // .with_restriction( QueryParser::parse("id neq \"hfkjsh\""))
-     .with_join("user")
-     .alias("t0")
-     .build(&mapper, &query); */
-     //.build_subpath("fdjdlkf", "hkjhkj")
-
-    println!("Sql is: {}", result.sql_for_table("User"));
-
-    println!("SELECT: {}", result.select_clause);
-    println!("WHERE: {}", result.where_clause);
-    println!("HAVING: {}", result.having_clause);
-    println!("ORDER: {}", result.order_by_clause);
-    println!("W PARAM: {:?}", result.where_params);
-    println!("H PARAM: {:?}", result.having_params);
- 
-    
-    //let s = mapper.build_sql("test");
-   // let u2 = UserDto::find_for_toql(&mapper, &result.where_clause, 0, 10);
-    
 }
 
+#[derive(Debug, Clone)]
+struct User{
+    id :u8,         // This is always selected
+    username: Option<String>,
+   other: String, // skipped
+    books: Vec<Book>
+}
+
+
+
+impl toql :: sql_mapper :: Mappable for User { 
+  fn map ( mapper : & mut toql :: sql_mapper :: SqlMapper , toql_path : & str , sql_alias : & str ) { 
+      mapper . map_field_with_options ( & format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) {"" } else { "_" } , "id" ) , 
+          & format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "id" ) , 
+          toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
+          
+    mapper . map_field_with_options ( & format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "username" ) , 
+    & format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "username" ) ,
+     toql :: sql_mapper :: MapperOptions :: new ( ) .count_query(true) ) ; 
+     } 
+  }
+
+ 
+ impl toql :: sql_mapper :: Mappable for Book { 
+   fn map ( mapper : & mut toql :: sql_mapper :: SqlMapper , toql_path : & str , sql_alias : & str ) { 
+	mapper . map_field_with_options ( 
+		& format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "id" ) , 
+		& format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "id" ) , 
+	toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
+
+	mapper . map_field_with_options ( 
+	& format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "title" ) , 
+	& format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "title" ) , 
+	toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
+	
+	mapper . map_field_with_options ( 
+		& format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "_author_id" ) , 
+		& format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "author_id" ) , 
+		toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
+
+	mapper . map_join :: < User > ( "author" , "a" ) ; 
+  } 
+  
+  }
+
+    /* fn author_from_row_i(row: Vec, &mut i) ->User {
+        User {
+          id: row[i+= 1],
+          username: row.take("author_username"),
+          books: Vec::new(),
+          other: String::new()
+      }
+    }
+  fn book_from_row(row: Vec) ->Book {
+
+      Book {
+             id: row.take("id"),
+             title: row.take("title"),
+             author_id: row.take("_author_id"),
+             author: Some(author_from_selection(row))                // ev if row.get("author_id").is_none() {None} else { Some()}
+            }
+      } */
+
+  
+
+
+  fn main() {
+      println!("Hello, world!");
+
+      let mut mu = toql::sql_mapper::SqlMapper::map::<Book>();
+      mu.join("author", "LEFT JOIN User a on (author_id = a.ud)");
+
+        // Should roles make field null or return err?
+
+      let q= toql::query_parser::QueryParser::parse("id, title, author_id, author_username");
+
+      let r = toql::sql_builder::SqlBuilder::new().build(&mu, &q.unwrap());
+
+      assert_eq!( "SELECT id, title FROM Book LEFT JOIN User u ON author_id = u.id", r.unwrap().sql_for_table("Book"));
+
+      
+
+
+  }

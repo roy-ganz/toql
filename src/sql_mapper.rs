@@ -3,11 +3,13 @@ use crate::query::FieldFilter;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub (crate) enum FilterType {
     Where,
     Having,
     None,
 }
+
 
 pub struct SqlTarget {
    //  pub (crate) selected: bool,             // Target is selected
@@ -21,13 +23,14 @@ pub struct SqlTarget {
 }
 
 
-
+#[derive(Debug)]
 pub struct SqlField {
     name: String,
 }
+
+#[derive(Debug)]
 pub struct MapperOptions {
       pub (crate) always_selected: bool, // Always select this field, regardless of query fields
-      pub (crate) alias: bool,           // This field must not be aliased
       pub (crate) count_query: bool,     // Use this field also in count query
       pub (crate) ignore_wildcard: bool, // Ignore field for wildcard selection
       pub (crate) roles: BTreeSet<String>,    // Only for use by these roles
@@ -38,7 +41,6 @@ impl MapperOptions {
     pub fn new() -> Self {
         MapperOptions {
             always_selected: false,
-            alias: true,
             count_query: false,
             ignore_wildcard: false,
             roles: BTreeSet::new(),
@@ -48,10 +50,7 @@ impl MapperOptions {
         self.always_selected = always_selected;
         self
     }
-    pub fn alias(mut self, alias: bool) -> Self {
-        self.alias = alias;
-        self
-    }
+   
     pub fn count_query(mut self, count_query: bool) -> Self {
         self.count_query = count_query;
         self
@@ -71,6 +70,8 @@ impl MapperOptions {
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
 }
+
+
 pub trait FieldHandler {
     fn validate_query(&self) -> bool {
         true
@@ -78,10 +79,10 @@ pub trait FieldHandler {
     fn build_select(&self) -> Option<String> {
         None
     }
-    fn build_filter(&self, filter: &FieldFilter) -> Option<String> {
+    fn build_filter(&self, _filter: &FieldFilter) -> Option<String> {
         None
     }
-    fn build_param(&self, filter: &FieldFilter) -> Option<String> {
+    fn build_param(&self, _filter: &FieldFilter) -> Option<String> {
         None
     }
     fn build_join(&self) -> Option<String> {
@@ -109,8 +110,7 @@ impl FieldHandler for SqlField {
             FieldFilter::In(_) => None,
             FieldFilter::Out(_) => None,
             FieldFilter::Lk(criteria) => Some(criteria.clone()),
-            FieldFilter::Other(_) => None,
-            _ => None,
+            FieldFilter::Other(_) => None
         }
     }
     fn build_filter(&self, filter: &FieldFilter) -> Option<String> {
@@ -139,6 +139,7 @@ impl FieldHandler for SqlField {
     } */
 }
 
+
 pub struct SqlMapper {
   //  alias: String,
     pub (crate) field_order: Vec<String>,
@@ -146,6 +147,7 @@ pub struct SqlMapper {
     pub (crate) joins: HashMap<String, Join>,
 }
 
+#[derive(Debug)]
 pub struct Join {
      pub (crate) join_clause: String,
  //   alias: String,
@@ -156,11 +158,11 @@ pub struct Join {
 
 
 pub trait Mappable {
-    fn map(mapper: &mut SqlMapper, prefix: &str);
+    fn map(mapper: &mut SqlMapper, prefix: &str, asl_alias: &str);
 }
 
 impl SqlMapper {
-    pub fn new() -> SqlMapper {
+    pub fn new() -> Self {
         SqlMapper {
           //  dirty: false,
           //  alias: "".to_string(),
@@ -169,16 +171,18 @@ impl SqlMapper {
             field_order: Vec::new(),
         }
     }
-    pub fn map<T: Mappable>() -> SqlMapper {
+    pub fn map<T: Mappable>(sql_alias: &str) -> Self {
         let mut m = Self::new();
-        T::map(&mut m, "");
+        T::map(&mut m, "", sql_alias);
         m
     }
-    pub fn map_with_prefix<T: Mappable>(prefix: &str) -> SqlMapper {
-        let mut m = Self::new();
-        T::map(&mut m, prefix);
-        m
+    pub fn map_join<'a,T: Mappable >(&'a mut self,toql_path: &str, sql_alias: &str) -> &'a mut Self {
+        
+        T::map(self, toql_path, sql_alias);
+        self
     }
+
+   
 
     pub fn map_handler<'a> (
         &'a mut self,
@@ -217,8 +221,17 @@ impl SqlMapper {
         sql_target.handler = Box::new(f);
         self
     }
+   
 
-    pub fn map_field<'a>(
+ pub fn map_field<'a>(
+        &'a mut self,
+        toql_field: &str,
+        sql_field: &str,
+    ) -> &'a mut Self {
+            self.map_field_with_options(toql_field, sql_field, MapperOptions::new())
+        }
+
+    pub fn map_field_with_options<'a>(
         &'a mut self,
         toql_field: &str,
         sql_field: &str,

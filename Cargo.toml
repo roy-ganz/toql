@@ -7,3 +7,9 @@ edition = "2018"
 [dependencies]
 pest = "2.0"
 pest_derive = "2.0"
+mysql = {version = "*", optional = true}
+
+[features]
+mysqldb = ["mysql"]
+
+

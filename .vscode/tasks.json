@@ -35,6 +35,18 @@
             "problemMatcher": [
                 "$rustc"
             ]
+        },
+        {
+            "type": "cargo",
+            "label": "cargo doc",
+            "command": "cargo",
+            "args": [
+                "doc",
+                "--no-deps"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
         }
     ]
 }

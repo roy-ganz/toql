@@ -10,11 +10,11 @@
         let mut mapper = SqlMapper::new();
        mapper
         .join("author", "JOIN User a ON (id = a.book_id)")
-        .map_field("id", "id", MapperOptions::new().select_always(true).count_query(true))
-        .map_field("title", "title", MapperOptions::new())
-        .map_field("publishedAt", "published_at", MapperOptions::new())
-        .map_field("author_id", "a.id", MapperOptions::new())
-        .map_field("author_username", "a.username", MapperOptions::new())
+        .map_field_with_options("id", "id", MapperOptions::new().select_always(true).count_query(true))
+        .map_field("title", "title")
+        .map_field("publishedAt", "published_at")
+        .map_field("author_id", "a.id")
+        .map_field("author_username", "a.username")
         ;
         mapper
     }
