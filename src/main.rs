@@ -88,7 +88,7 @@ impl toql :: sql_mapper :: Mappable for User {
   fn main() {
       println!("Hello, world!");
 
-      let mut mu = toql::sql_mapper::SqlMapper::map::<Book>();
+      let mut mu = toql::sql_mapper::SqlMapper::map::<Book>("b");
       mu.join("author", "LEFT JOIN User a on (author_id = a.ud)");
 
         // Should roles make field null or return err?
@@ -97,7 +97,7 @@ impl toql :: sql_mapper :: Mappable for User {
 
       let r = toql::sql_builder::SqlBuilder::new().build(&mu, &q.unwrap());
 
-      assert_eq!( "SELECT id, title FROM Book LEFT JOIN User u ON author_id = u.id", r.unwrap().sql_for_table("Book"));
+      assert_eq!( "SELECT b.id, b.title FROM Book LEFT JOIN User u ON b.author_id = u.id", r.unwrap().sql_for_table("Book b"));
 
       
 
