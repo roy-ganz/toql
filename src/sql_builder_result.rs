@@ -1,6 +1,8 @@
 
 use crate::query::Concatenation;
 
+
+
 pub struct SqlBuilderResult {
     pub join_clause: String,
     pub select_clause: String,
@@ -15,8 +17,54 @@ pub struct SqlBuilderResult {
 }
 
 impl SqlBuilderResult {
+
+    fn sql_body_for_table(&self,table: &str,  s: &mut String)  {
+        s.push_str(&self.select_clause);
+        s.push_str(" FROM ");
+        s.push_str(table);
+         if !self.join_clause.is_empty() {
+            s.push(' ');
+            s.push_str(&self.join_clause);
+         }
+         if !self.where_clause.is_empty() {
+            s.push_str(" WHERE " );
+            s.push_str(&self.where_clause);
+         }
+         if !self.having_clause.is_empty() {
+           s.push_str(" HAVING " );
+            s.push_str(&self.having_clause);
+         }
+         if !self.order_by_clause.is_empty() {
+            s.push_str(" ORDER BY " );
+            s.push_str(&self.order_by_clause);
+         }
+         
+    }
+    // Put behind feature
+
+    pub fn sql_for_mysql_table(&self, table: &str, hint:&str, offset:u64, max: u16) -> String {
+
+        let mut s = String::from("SELECT ");
+
+        if !hint.is_empty() {
+            s.push_str(hint);
+              s.push(' ');
+        }
+         self.sql_body_for_table(table, &mut s);
+         s.push_str(" LIMIT ");
+         s.push_str(&offset.to_string());
+         s.push(',');
+         s.push_str(&max.to_string());
+
+         s
+    }
+
     pub fn sql_for_table(&self, table: &str) -> String {
-        format!(
+
+          let mut s = String::from("SELECT ");
+           self.sql_body_for_table(table, &mut s);
+           s
+        /* format!(
             "SELECT {} FROM {}{}{}{}{}",
             self.select_clause,
             table,
@@ -42,7 +90,7 @@ impl SqlBuilderResult {
             }
         )
         .trim_end()
-        .to_string()
+        .to_string() */
     }
 
     pub (crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {

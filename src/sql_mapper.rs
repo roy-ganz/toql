@@ -18,7 +18,7 @@ pub struct SqlTarget {
      //pub (crate) joined_target: bool,        // Target must be joined
      pub (crate) options: MapperOptions,     // Options
      pub (crate) filter_type: FilterType,    // Filter on where or having clause
-     pub (crate) handler: Box<FieldHandler>, // Handler to create clauses
+     pub (crate) handler: Box<FieldHandler + Send + Sync>, // Handler to create clauses
      pub (crate) subfields: bool,                // Target name has subfields separated by underscore
 }
 
@@ -99,44 +99,54 @@ impl FieldHandler for SqlField {
     fn build_select(&self) -> Option<String> {
         Some(format!("{}", self.name))
     }
+  
+   
+   
+  
+   
+    
     fn build_param(&self, filter: &FieldFilter) -> Option<String> {
         match filter {
             FieldFilter::Eq(criteria) => Some(criteria.clone()),
+            FieldFilter::Eqn => None,
             FieldFilter::Ne(criteria) => Some(criteria.clone()),
+            FieldFilter::Nen => None,
             FieldFilter::Ge(criteria) => Some(criteria.clone()),
             FieldFilter::Gt(criteria) => Some(criteria.clone()),
             FieldFilter::Le(criteria) => Some(criteria.clone()),
             FieldFilter::Lt(criteria) => Some(criteria.clone()),
+            FieldFilter::Bw(_, _) => None,
+            FieldFilter::Re(criteria) =>  Some(criteria.clone()),
+            FieldFilter::Sc(criteria) =>  Some(criteria.clone()),
             FieldFilter::In(_) => None,
             FieldFilter::Out(_) => None,
             FieldFilter::Lk(criteria) => Some(criteria.clone()),
-            FieldFilter::Other(_) => None
+            FieldFilter::Fn(..) => None,
         }
     }
     fn build_filter(&self, filter: &FieldFilter) -> Option<String> {
+
+        // TODO make Between, In , out parameters ?, change Option<String> to Option<Vec<String>>
         match filter {
             FieldFilter::Eq(_) => Some(format!("{} = ?",  self.name)),
+            FieldFilter::Eqn => Some(format!("{} IS NULL",  self.name)),
             FieldFilter::Ne(_) => Some(format!("{} <> ?", self.name)),
+            FieldFilter::Nen => Some(format!("{} IS NOT NULL", self.name)),
             FieldFilter::Ge(_) => Some(format!("{} >= ?", self.name)),
             FieldFilter::Gt(_) => Some(format!("{} > ?",  self.name)),
             FieldFilter::Le(_) => Some(format!("{} <= ?", self.name)),
             FieldFilter::Lt(_) => Some(format!("{} < ?",  self.name)),
-            FieldFilter::In(values) => {
-                Some(format!("{} IN ({})", self.name, values.join(",")))
-            }
-            FieldFilter::Out(values) => Some(format!(
-                "{} NOT IN ({})",
-                self.name,
-                values.join(",")
-            )),
+            FieldFilter::Bw(lower, upper) => Some(format!("{} BETWEEN {} AND {}",  self.name, lower, upper)),
+            FieldFilter::Re(_) => Some(format!("{} RLIKE ?",  self.name)),
+            FieldFilter::In(values) => { Some(format!("{} IN ({})", self.name, values.join(","))) }
+            FieldFilter::Out(values) => Some(format!("{} NOT IN ({})",   self.name,   values.join(",") )),
+             FieldFilter::Sc(_) => Some(format!("{} FIND_IN_SET ?", self.name)),
             FieldFilter::Lk(_) => Some(format!("{} LIKE ?", self.name)),
-            FieldFilter::Other(_) => None,
-            _ => None,
+            FieldFilter::Fn(name, args) => Some(format!("{} ({})", self.name, args.join(","))),
+            
         }
     }
-    /*  fn build_join(&self) ->Option<String> {
-        self.join_clause.clone()
-    } */
+   
 }
 
 
@@ -187,7 +197,7 @@ impl SqlMapper {
     pub fn map_handler<'a> (
         &'a mut self,
         toql_field: &str,
-        handler: Box<FieldHandler>,
+        handler: Box<FieldHandler + Sync + Send>,
         options: MapperOptions,
     ) ->  &'a mut Self{
         // Check if toql field has underscore
@@ -212,7 +222,7 @@ impl SqlMapper {
         let sql_target = self
             .fields
             .get_mut(toql_field)
-            .expect("Field  is not mapped.");
+            .expect(&format!("Cannot alter \"{}\": Field is not mapped.", toql_field));
 
         let f = SqlField {
             name: sql_field.to_string(),
@@ -277,6 +287,16 @@ impl SqlMapper {
         
 
 
+        self
+    }
+
+    pub fn alter_join<'a>(
+        &'a mut self,
+        toql_field: &str,
+        join_clause: &str,
+    ) -> &'a mut Self {
+        let j = self.joins.get_mut(toql_field).expect("Join is missing.");
+        j.join_clause =  join_clause.to_string();
         self
     }
 

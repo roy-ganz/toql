@@ -27,6 +27,7 @@ impl Default for SqlTargetData {
     }
 }
 
+
 struct SqlJoinData {
     joined: bool,  // Join has been added to join clause
    // alias: String, // Calculated alias for join
@@ -171,16 +172,7 @@ impl SqlBuilder {
                     }
              result.select_clause.push_str(", ");        
 
-            // If SQl target is always selected make sure join data is available
-            if sql_target.options.always_selected && sql_target.subfields {
-                for subfield in toql_field.split('_').rev().skip(1){
-                    if !sql_join_data.contains_key(subfield){
-                        // TODO Optimize &String::from 
-                        sql_join_data.insert(subfield, SqlJoinData::default());
-                    }
-                }
-                
-            }
+            
 
             }
         }
@@ -216,6 +208,8 @@ impl SqlBuilder {
         }
         result.join_clause = result.join_clause.trim_end().to_string();
     }
+    
+
     
 
     pub fn build(&mut self, sql_mapper: &SqlMapper, query: &Query) -> Result<SqlBuilderResult, SqlBuilderError> {
@@ -273,7 +267,7 @@ impl SqlBuilder {
                         }
                     }
 
-                    QueryToken::Wildcard => {
+                    QueryToken::Wildcard(..) => {
                         for (field_name, mapper_field) in &sql_mapper.fields {
                             // Select all top fields, that don't ignore wildcard
                             if !mapper_field.options.ignore_wildcard && !mapper_field.subfields{
@@ -427,6 +421,23 @@ impl SqlBuilder {
                 }
             }
         }
+
+
+        // Build select 
+        // Ensure implicitly selected subfields are joined
+        for toql_field in &sql_mapper.field_order {
+            if let Some(sql_target) = sql_mapper.fields.get(toql_field.as_str()) {
+                if  sql_target.options.always_selected && sql_target.subfields {
+                    for subfield in toql_field.split('_').rev().skip(1){
+                        if !sql_join_data.contains_key(subfield){
+                            sql_join_data.insert(subfield, SqlJoinData::default());
+                        }
+                    }
+                }
+            }
+        }
+            
+
 
         Self::build_ordering(
             &mut result,

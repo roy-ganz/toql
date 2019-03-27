@@ -29,7 +29,7 @@ struct User{
 
 
 
-impl toql :: sql_mapper :: Mappable for User { 
+/* impl toql :: sql_mapper :: Mappable for User { 
   fn map ( mapper : & mut toql :: sql_mapper :: SqlMapper , toql_path : & str , sql_alias : & str ) { 
       mapper . map_field_with_options ( & format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) {"" } else { "_" } , "id" ) , 
           & format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "id" ) , 
@@ -62,7 +62,7 @@ impl toql :: sql_mapper :: Mappable for User {
 	mapper . map_join :: < User > ( "author" , "a" ) ; 
   } 
   
-  }
+  } */
 
     /* fn author_from_row_i(row: Vec, &mut i) ->User {
         User {
@@ -83,21 +83,62 @@ impl toql :: sql_mapper :: Mappable for User {
       } */
 
   
+  use toql::query::Field;
+
+/* struct Fish ();
+struct Market ();
+
+struct Path<J, K>(String);
+struct PathEnd<J>(String);
+
+impl<J,K> Path<J,K> {
+     fn join(mut self, path: Path<K,_>) -> Path {
+        self.0.push('_'); 
+        self.0.push_str(path);
+        self
+    }
+    fn field(mut self, field: PathEnd<K> ) -> Field {
+        self.0.push('_'); 
+        self.0.push_str(field.0);
+        Field::from(self.0)
+    }
+}
+
+
+
+ let s :Path<Fish, Market>= Path("user");
+ let d = s.field(PathField<Market>("id")); // -> Field */
+
+
 
 
   fn main() {
-      println!("Hello, world!");
 
-      let mut mu = toql::sql_mapper::SqlMapper::map::<Book>("b");
-      mu.join("author", "LEFT JOIN User a on (author_id = a.ud)");
+    let mut q = Query::new();
+        q.and ("foo");
+        q.and ("bar");
+        q.or ("foo");
+        assert_eq!("(foo,bar);foo", q.to_string());   
+
+     // q.and( vec![Field::from("hkj").eq(5), Field::from("gh")]);
+        
+    //  q1.unwrap().prepend(q);
+
+        
+
+       //let q = Query::from(vec[Field::from("id"), Field::] ) 
+
+
+   //   let mut mu = toql::sql_mapper::SqlMapper::map::<Book>("b");
+    //  mu.join("author", "LEFT JOIN User a on (author_id = a.ud)");
 
         // Should roles make field null or return err?
 
-      let q= toql::query_parser::QueryParser::parse("id, title, author_id, author_username");
+    //  let q= toql::query_parser::QueryParser::parse("id, title, author_id, author_username");
 
-      let r = toql::sql_builder::SqlBuilder::new().build(&mu, &q.unwrap());
+    //  let r = toql::sql_builder::SqlBuilder::new().build(&mu, &q.unwrap());
 
-      assert_eq!( "SELECT b.id, b.title FROM Book LEFT JOIN User u ON b.author_id = u.id", r.unwrap().sql_for_table("Book b"));
+    //  assert_eq!( "SELECT b.id, b.title FROM Book LEFT JOIN User u ON b.author_id = u.id", r.unwrap().sql_for_table("Book b"));
 
       
 

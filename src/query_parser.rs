@@ -1,3 +1,4 @@
+use pest::error::ErrorVariant::CustomError;
 use crate::query::Concatenation;
 use crate::query::Field;
 use crate::query::FieldFilter;
@@ -97,7 +98,9 @@ impl QueryParser {
 
                             field.filter = match op.unwrap().to_uppercase().as_str() {
                                 "EQ" => Some(FieldFilter::Eq(iter.next().unwrap().to_string())),
+                                "EQN" => Some(FieldFilter::Eqn),
                                 "NE" => Some(FieldFilter::Ne(iter.next().unwrap().to_string())),
+                                "EQN" => Some(FieldFilter::Nen),
                                 "GT" => Some(FieldFilter::Gt(iter.next().unwrap().to_string())),
                                 "GE" => Some(FieldFilter::Ge(iter.next().unwrap().to_string())),
                                 "LT" => Some(FieldFilter::Lt(iter.next().unwrap().to_string())),
@@ -105,13 +108,17 @@ impl QueryParser {
                                 "LK" => Some(FieldFilter::Lk(iter.next().unwrap().to_string())),
                                 "IN" => Some(FieldFilter::In(iter.map(String::from).collect())),
                                 "OUT" => Some(FieldFilter::Out(iter.map(String::from).collect())),
-                                _ => Some(FieldFilter::Other(iter.map(String::from).collect())),
+                                "BW" => Some(FieldFilter::Bw(iter.next().unwrap().to_string(), iter.next().unwrap().to_string())),
+                                "RE" => Some(FieldFilter::Re(iter.next().unwrap().to_string())),
+                                "CS" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
+                                "FN" => Some(FieldFilter::Fn(iter.next().unwrap().to_string(), iter.map(String::from).collect())),
+                                _ => return Err(Error::new_from_span(CustomError { message:"Invalid filter Function".to_string()}, span)),
                             }
                         }
                     }
                 }
                 Rule::wildcard => {
-                    query.tokens.push(QueryToken::Wildcard);
+                    query.tokens.push(QueryToken::Wildcard(con.clone()));
                 }
                  Rule::rpar => {
                                          
