@@ -4,24 +4,33 @@ use crate::query::Concatenation;
 
 
 pub struct SqlBuilderResult {
-    pub join_clause: String,
-    pub select_clause: String,
-    pub where_clause: String,
-    pub order_by_clause: String,
-    pub having_clause: String,
-    pub count_where_clause: String,
-    pub count_having_clause: String,
+    pub(crate) table: String,
+    pub(crate) any_selected: bool,
+    pub(crate) join_clause: String,
+    pub(crate) select_clause: String,
+    pub(crate) where_clause: String,
+    pub(crate) order_by_clause: String,
+    pub(crate) having_clause: String,
+   // pub count_where_clause: String,
+   // pub count_having_clause: String,
 
-    pub where_params: Vec<String>,
-    pub having_params: Vec<String>,
+    pub(crate) where_params: Vec<String>,
+    pub(crate) having_params: Vec<String>,
+    pub(crate) combined_params: Vec<String>,
 }
 
 impl SqlBuilderResult {
 
-    fn sql_body_for_table(&self,table: &str,  s: &mut String)  {
+    pub fn is_empty (&self) -> bool{
+            !self.any_selected
+        &&  self.where_clause.is_empty()
+        &&  self.having_clause.is_empty()
+    }
+    
+    fn sql_body(&self,  s: &mut String)  {
         s.push_str(&self.select_clause);
         s.push_str(" FROM ");
-        s.push_str(table);
+        s.push_str(&self.table);
          if !self.join_clause.is_empty() {
             s.push(' ');
             s.push_str(&self.join_clause);
@@ -41,8 +50,7 @@ impl SqlBuilderResult {
          
     }
     // Put behind feature
-
-    pub fn sql_for_mysql_table(&self, table: &str, hint:&str, offset:u64, max: u16) -> String {
+    pub fn to_sql_for_mysql(&self, hint:&str, offset:u64, max: u16) -> String {
 
         let mut s = String::from("SELECT ");
 
@@ -50,7 +58,7 @@ impl SqlBuilderResult {
             s.push_str(hint);
               s.push(' ');
         }
-         self.sql_body_for_table(table, &mut s);
+         self.sql_body(&mut s);
          s.push_str(" LIMIT ");
          s.push_str(&offset.to_string());
          s.push(',');
@@ -59,38 +67,21 @@ impl SqlBuilderResult {
          s
     }
 
-    pub fn sql_for_table(&self, table: &str) -> String {
+    pub fn to_sql(&self) -> String {
 
           let mut s = String::from("SELECT ");
-           self.sql_body_for_table(table, &mut s);
+           self.sql_body( &mut s);
            s
-        /* format!(
-            "SELECT {} FROM {}{}{}{}{}",
-            self.select_clause,
-            table,
-             if self.join_clause.is_empty() {
-                String::from("")
-            } else {
-                format!(" {}", self.join_clause)
-            },
-            if self.where_clause.is_empty() {
-                String::from("")
-            } else {
-                format!(" WHERE {}", self.where_clause)
-            },
-            if self.having_clause.is_empty() {
-                String::from("")
-            } else {
-                format!(" HAVING {}", self.having_clause)
-            },
-            if self.order_by_clause.is_empty() {
-                String::from("")
-            } else {
-                format!(" ORDER BY {}", self.order_by_clause)
-            }
-        )
-        .trim_end()
-        .to_string() */
+    }
+
+    pub fn params(&self) -> &Vec<String> {
+        if self.where_params.is_empty() {
+            &self.having_params
+        } else if self.having_params.is_empty() {
+            &self.where_params
+        } else {
+            &self.combined_params
+        }
     }
 
     pub (crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {

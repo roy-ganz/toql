@@ -20,12 +20,13 @@ pub struct SqlTarget {
      pub (crate) filter_type: FilterType,    // Filter on where or having clause
      pub (crate) handler: Box<FieldHandler + Send + Sync>, // Handler to create clauses
      pub (crate) subfields: bool,                // Target name has subfields separated by underscore
+     pub (crate) expression: String                   // Column name or SQL Expression
 }
 
 
 #[derive(Debug)]
 pub struct SqlField {
-    name: String,
+   // name: String,
 }
 
 #[derive(Debug)]
@@ -76,15 +77,18 @@ pub trait FieldHandler {
     fn validate_query(&self) -> bool {
         true
     }
-    fn build_select(&self) -> Option<String> {
+    fn build_select(&self, sql: &str) -> Option<String>;
+    /* {
         None
-    }
-    fn build_filter(&self, _filter: &FieldFilter) -> Option<String> {
+    } */
+    fn build_filter(&self,sql: &str, _filter: &FieldFilter) -> Option<String>; 
+    /* {
         None
-    }
-    fn build_param(&self, _filter: &FieldFilter) -> Option<String> {
-        None
-    }
+    } */
+    fn build_param(&self, _filter: &FieldFilter) -> Vec<String>; 
+    /* {
+        vec![]
+    } */
     fn build_join(&self) -> Option<String> {
         None
     }
@@ -96,62 +100,58 @@ pub trait ToqlQuery {
 }
 
 impl FieldHandler for SqlField {
-    fn build_select(&self) -> Option<String> {
-        Some(format!("{}", self.name))
+    fn build_select(&self, expression:&str) -> Option<String> {
+        Some(format!("{}", expression))
     }
-  
-   
-   
-  
-   
     
-    fn build_param(&self, filter: &FieldFilter) -> Option<String> {
+    fn build_param(&self, filter: &FieldFilter) ->Vec<String> {
         match filter {
-            FieldFilter::Eq(criteria) => Some(criteria.clone()),
-            FieldFilter::Eqn => None,
-            FieldFilter::Ne(criteria) => Some(criteria.clone()),
-            FieldFilter::Nen => None,
-            FieldFilter::Ge(criteria) => Some(criteria.clone()),
-            FieldFilter::Gt(criteria) => Some(criteria.clone()),
-            FieldFilter::Le(criteria) => Some(criteria.clone()),
-            FieldFilter::Lt(criteria) => Some(criteria.clone()),
-            FieldFilter::Bw(_, _) => None,
-            FieldFilter::Re(criteria) =>  Some(criteria.clone()),
-            FieldFilter::Sc(criteria) =>  Some(criteria.clone()),
-            FieldFilter::In(_) => None,
-            FieldFilter::Out(_) => None,
-            FieldFilter::Lk(criteria) => Some(criteria.clone()),
-            FieldFilter::Fn(..) => None,
+            FieldFilter::Eq(criteria) => vec![criteria.clone()],
+            FieldFilter::Eqn => vec![],
+            FieldFilter::Ne(criteria) => vec![criteria.clone()],
+            FieldFilter::Nen => vec![],
+            FieldFilter::Ge(criteria) => vec![criteria.clone()],
+            FieldFilter::Gt(criteria) => vec![criteria.clone()],
+            FieldFilter::Le(criteria) => vec![criteria.clone()],
+            FieldFilter::Lt(criteria) => vec![criteria.clone()],
+            FieldFilter::Bw(lower, upper) => vec![lower.clone(), upper.clone()],
+            FieldFilter::Re(criteria) =>  vec![criteria.clone()],
+            FieldFilter::Sc(criteria) =>  vec![criteria.clone()],
+            FieldFilter::In(args) => args.clone(),
+            FieldFilter::Out(args) => args.clone(),
+            FieldFilter::Lk(criteria) => vec![criteria.clone()],
+            FieldFilter::Fn(_name, _args) => vec![], // must be implemented by user
         }
     }
-    fn build_filter(&self, filter: &FieldFilter) -> Option<String> {
+
+    fn build_filter(&self,expression: &str, filter: &FieldFilter) -> Option<String> {
 
         // TODO make Between, In , out parameters ?, change Option<String> to Option<Vec<String>>
         match filter {
-            FieldFilter::Eq(_) => Some(format!("{} = ?",  self.name)),
-            FieldFilter::Eqn => Some(format!("{} IS NULL",  self.name)),
-            FieldFilter::Ne(_) => Some(format!("{} <> ?", self.name)),
-            FieldFilter::Nen => Some(format!("{} IS NOT NULL", self.name)),
-            FieldFilter::Ge(_) => Some(format!("{} >= ?", self.name)),
-            FieldFilter::Gt(_) => Some(format!("{} > ?",  self.name)),
-            FieldFilter::Le(_) => Some(format!("{} <= ?", self.name)),
-            FieldFilter::Lt(_) => Some(format!("{} < ?",  self.name)),
-            FieldFilter::Bw(lower, upper) => Some(format!("{} BETWEEN {} AND {}",  self.name, lower, upper)),
-            FieldFilter::Re(_) => Some(format!("{} RLIKE ?",  self.name)),
-            FieldFilter::In(values) => { Some(format!("{} IN ({})", self.name, values.join(","))) }
-            FieldFilter::Out(values) => Some(format!("{} NOT IN ({})",   self.name,   values.join(",") )),
-             FieldFilter::Sc(_) => Some(format!("{} FIND_IN_SET ?", self.name)),
-            FieldFilter::Lk(_) => Some(format!("{} LIKE ?", self.name)),
-            FieldFilter::Fn(name, args) => Some(format!("{} ({})", self.name, args.join(","))),
-            
+            FieldFilter::Eq(_) => Some(format!("{} = ?",  expression)),
+            FieldFilter::Eqn => Some(format!("{} IS NULL",  expression)),
+            FieldFilter::Ne(_) => Some(format!("{} <> ?", expression)),
+            FieldFilter::Nen => Some(format!("{} IS NOT NULL", expression)),
+            FieldFilter::Ge(_) => Some(format!("{} >= ?", expression)),
+            FieldFilter::Gt(_) => Some(format!("{} > ?",  expression)),
+            FieldFilter::Le(_) => Some(format!("{} <= ?", expression)),
+            FieldFilter::Lt(_) => Some(format!("{} < ?",  expression)),
+            FieldFilter::Bw(_, _) => Some(format!("{} BETWEEN ? AND ?",  expression)),
+            FieldFilter::Re(_) => Some(format!("{} RLIKE ?",  expression)),
+            FieldFilter::In(values) => { Some(format!("{} IN ({})", expression, std::iter::repeat("?").take(values.len()).collect::<Vec<&str>>().join(","))) }
+            FieldFilter::Out(values) => Some(format!("{} NOT IN ({})",   expression, std::iter::repeat("?").take(values.len()).collect::<Vec<&str>>().join(",") )),
+            FieldFilter::Sc(_) => Some(format!("FIND_IN_SET (?, {})", expression)),
+            FieldFilter::Lk(_) => Some(format!("{} LIKE ?", expression)),
+            FieldFilter::Fn(_,_) => None, // Must be implemented by user
         }
     }
-   
 }
 
+pub type SqlMapperCache = HashMap<String, SqlMapper>;
 
 pub struct SqlMapper {
-  //  alias: String,
+  
+    pub (crate) table: String, 
     pub (crate) field_order: Vec<String>,
     pub (crate) fields: HashMap<String, SqlTarget>,
     pub (crate) joins: HashMap<String, Join>,
@@ -168,23 +168,33 @@ pub struct Join {
 
 
 pub trait Mappable {
+   
+    fn insert_new_mapper(cache: &mut SqlMapperCache) ->  &mut SqlMapper;
+    fn new_mapper(sql_alias: &str) -> SqlMapper; // Creates Sql Mapper and maps entity fields
     fn map(mapper: &mut SqlMapper, prefix: &str, asl_alias: &str);
 }
 
 impl SqlMapper {
-    pub fn new() -> Self {
+    pub fn new<T>(table: T)  -> Self 
+    where T :  Into<String>
+    {
         SqlMapper {
-          //  dirty: false,
-          //  alias: "".to_string(),
+            table: table.into(),
             joins: HashMap::new(),
             fields: HashMap::new(),
             field_order: Vec::new(),
         }
     }
+    pub fn insert_new_mapper<T: Mappable> (cache: &mut SqlMapperCache) ->  &mut SqlMapper {
+        T::insert_new_mapper(cache)
+    }
     pub fn map<T: Mappable>(sql_alias: &str) -> Self {
-        let mut m = Self::new();
-        T::map(&mut m, "", sql_alias);
-        m
+        // Mappable must create Mapper for top level table
+        // the mapper contain all maped fields
+        T::new_mapper(sql_alias)
+       // let mut m = Self::new("User"); // Mappable 
+       // T::map(&mut m, "", sql_alias);
+       // m
     }
     pub fn map_join<'a,T: Mappable >(&'a mut self,toql_path: &str, sql_alias: &str) -> &'a mut Self {
         
@@ -197,6 +207,7 @@ impl SqlMapper {
     pub fn map_handler<'a> (
         &'a mut self,
         toql_field: &str,
+        expression: &str,
         handler: Box<FieldHandler + Sync + Send>,
         options: MapperOptions,
     ) ->  &'a mut Self{
@@ -212,21 +223,42 @@ impl SqlMapper {
             //joined_target: x,
             subfields: toql_field.find('_').is_some(),
             handler: handler,
+            expression: expression.to_string()
         };
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);
         self
     }
+    pub fn alter_handler(&mut self, toql_field: &str, handler: Box<FieldHandler + Sync + Send>) ->  & mut Self {
+        let sql_target = self
+            .fields
+            .get_mut(toql_field)
+            .expect(&format!("Cannot alter \"{}\": Field is not mapped.", toql_field));
 
-    pub fn alter_field(&mut self, toql_field: &str, sql_field: &str, options: MapperOptions) ->  & mut Self {
+        sql_target.handler = handler;
+        self
+    }
+
+    pub fn alter_handler_with_options(&mut self, toql_field: &str, handler: Box<FieldHandler + Sync + Send>,  options: MapperOptions) ->  & mut Self {
+        let sql_target = self
+            .fields
+            .get_mut(toql_field)
+            .expect(&format!("Cannot alter \"{}\": Field is not mapped.", toql_field));
+        sql_target.options = options;
+        sql_target.handler = handler;
+        self
+    }
+
+    pub fn alter_field(&mut self, toql_field: &str, sql_expression: &str, options: MapperOptions) ->  & mut Self {
         let sql_target = self
             .fields
             .get_mut(toql_field)
             .expect(&format!("Cannot alter \"{}\": Field is not mapped.", toql_field));
 
         let f = SqlField {
-            name: sql_field.to_string(),
+            //name: sql_field.to_string(),
         };
+        sql_target.expression = sql_expression.to_string();
         sql_target.options = options;
         sql_target.handler = Box::new(f);
         self
@@ -244,15 +276,16 @@ impl SqlMapper {
     pub fn map_field_with_options<'a>(
         &'a mut self,
         toql_field: &str,
-        sql_field: &str,
+        sql_expression: &str,
         options: MapperOptions,
     ) -> &'a mut Self {
         let f = SqlField {
-            name: sql_field.to_string(),
+           // name: sql_field.to_string(),
         };
 
       
         let t = SqlTarget {
+            expression: sql_expression.to_string(),
             options: options,
             filter_type: FilterType::Where, // filter on where clause
          //   selected: false,

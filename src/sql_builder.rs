@@ -131,7 +131,7 @@ impl SqlBuilder {
                     };
                     if let Some(_sql_target_data) = sql_target_data.get(toql_field.as_str()) {
                         if let Some(sql_target) = sql_targets.get(toql_field) {
-                            if let Some(s) = sql_target.handler.build_select()
+                            if let Some(s) = sql_target.handler.build_select(&sql_target.expression)
                             {
                                 result.order_by_clause.push_str(&s);
                             }
@@ -154,15 +154,17 @@ impl SqlBuilder {
     ) {
         // build select clause
         // select all fields
+        let mut any_selected= false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
                 let selected =  sql_target.options.always_selected || sql_target_data.get(toql_field.as_str()).map_or(false, |d|d.selected);
 
                 if selected {
-                    if let Some(sql_field) = sql_target.handler.build_select()
+                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression)
                         {
                             result.select_clause.push_str(&sql_field);
+                            any_selected = true;
                         }
                         else {
                           result.select_clause.push_str("null");
@@ -176,6 +178,7 @@ impl SqlBuilder {
 
             }
         }
+        result.any_selected = any_selected;
          // Remove last ,
         result.select_clause = result.select_clause.trim_end_matches(", ").to_string();
     }
@@ -232,15 +235,18 @@ impl SqlBuilder {
 
 
         let mut result = SqlBuilderResult {
+            table: sql_mapper.table.clone(),
+            any_selected: false,
             join_clause: String::from(""),
             select_clause: String::from(""),
             where_clause: String::from(""),
             order_by_clause: String::from(""),
             having_clause: String::from(""),
-            count_where_clause: String::from(""),
-            count_having_clause: String::from(""),
+        //    count_where_clause: String::from(""),
+        //    count_having_clause: String::from(""),
             where_params: vec![],
             having_params: vec![],
+            combined_params: vec![],
         };
 
         for t in &query.tokens {
@@ -330,7 +336,7 @@ impl SqlBuilder {
                                 if let Some(f) = &query_field.filter {
                                     // data.used = true;
                                     if let Some(f) =
-                                        sql_target.handler.build_filter( &f)
+                                        sql_target.handler.build_filter( &sql_target.expression, &f)
                                     {
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {
@@ -386,14 +392,13 @@ impl SqlBuilder {
                                             need_where_concatenation = true;
                                         }
                                     }
-
-                                    if let Some(p) = sql_target.handler.build_param(&f) {
-                                        if query_field.aggregation == true {
-                                            result.having_params.push(p);
-                                        } else {
-                                            result.where_params.push(p);
-                                        }
+                                    let mut p = sql_target.handler.build_param(&f);
+                                    if query_field.aggregation == true {
+                                        result.having_params.append(&mut p);
+                                    } else {
+                                        result.where_params.append(&mut p);
                                     }
+                                    
 
                                     if let Some(j) = sql_target.handler.build_join() {
                                         result.join_clause.push_str(&j);
@@ -467,8 +472,12 @@ impl SqlBuilder {
         result.join_clause.trim_end();
         result.order_by_clause.trim_end();
 
-        //self.dirty = true;
-
+        // create combined params if needed
+        if !result.having_params.is_empty() && !result.where_params.is_empty() {
+                result.combined_params.extend_from_slice(&result.where_params);
+                result.combined_params.extend_from_slice(&result.having_params);
+        }
+       
         Ok(result)
     }
 

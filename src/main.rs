@@ -29,60 +29,6 @@ struct User{
 
 
 
-/* impl toql :: sql_mapper :: Mappable for User { 
-  fn map ( mapper : & mut toql :: sql_mapper :: SqlMapper , toql_path : & str , sql_alias : & str ) { 
-      mapper . map_field_with_options ( & format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) {"" } else { "_" } , "id" ) , 
-          & format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "id" ) , 
-          toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
-          
-    mapper . map_field_with_options ( & format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "username" ) , 
-    & format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "username" ) ,
-     toql :: sql_mapper :: MapperOptions :: new ( ) .count_query(true) ) ; 
-     } 
-  }
-
- 
- impl toql :: sql_mapper :: Mappable for Book { 
-   fn map ( mapper : & mut toql :: sql_mapper :: SqlMapper , toql_path : & str , sql_alias : & str ) { 
-	mapper . map_field_with_options ( 
-		& format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "id" ) , 
-		& format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "id" ) , 
-	toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
-
-	mapper . map_field_with_options ( 
-	& format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "title" ) , 
-	& format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "title" ) , 
-	toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
-	
-	mapper . map_field_with_options ( 
-		& format ! ( "{}{}{}" , toql_path , if toql_path . is_empty ( ) { "" } else { "_" } , "_author_id" ) , 
-		& format ! ( "{}{}{}" , sql_alias , if sql_alias . is_empty ( ) { "" } else { "." } , "author_id" ) , 
-		toql :: sql_mapper :: MapperOptions :: new ( ) ) ; 
-
-	mapper . map_join :: < User > ( "author" , "a" ) ; 
-  } 
-  
-  } */
-
-    /* fn author_from_row_i(row: Vec, &mut i) ->User {
-        User {
-          id: row[i+= 1],
-          username: row.take("author_username"),
-          books: Vec::new(),
-          other: String::new()
-      }
-    }
-  fn book_from_row(row: Vec) ->Book {
-
-      Book {
-             id: row.take("id"),
-             title: row.take("title"),
-             author_id: row.take("_author_id"),
-             author: Some(author_from_selection(row))                // ev if row.get("author_id").is_none() {None} else { Some()}
-            }
-      } */
-
-  
   use toql::query::Field;
 
 /* struct Fish ();
@@ -115,9 +61,7 @@ impl<J,K> Path<J,K> {
   fn main() {
 
     let mut q = Query::new();
-        q.and ("foo");
-        q.and ("bar");
-        q.or ("foo");
+        q.and ("foo").and ("bar").or ("foo");
         assert_eq!("(foo,bar);foo", q.to_string());   
 
      // q.and( vec![Field::from("hkj").eq(5), Field::from("gh")]);

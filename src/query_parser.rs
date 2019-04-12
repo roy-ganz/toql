@@ -100,7 +100,7 @@ impl QueryParser {
                                 "EQ" => Some(FieldFilter::Eq(iter.next().unwrap().to_string())),
                                 "EQN" => Some(FieldFilter::Eqn),
                                 "NE" => Some(FieldFilter::Ne(iter.next().unwrap().to_string())),
-                                "EQN" => Some(FieldFilter::Nen),
+                                "NEN" => Some(FieldFilter::Nen),
                                 "GT" => Some(FieldFilter::Gt(iter.next().unwrap().to_string())),
                                 "GE" => Some(FieldFilter::Ge(iter.next().unwrap().to_string())),
                                 "LT" => Some(FieldFilter::Lt(iter.next().unwrap().to_string())),

@@ -7,7 +7,7 @@
     use toql::sql_mapper::SqlMapper;
 
     fn setup_mapper() -> SqlMapper {
-        let mut mapper = SqlMapper::new();
+        let mut mapper = SqlMapper::new("Book");
        mapper
         .join("author", "JOIN User a ON (id = a.book_id)")
         .map_field_with_options("id", "id", MapperOptions::new().select_always(true).count_query(true))
@@ -26,7 +26,7 @@
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, title, publishedAt, null, null FROM Book", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, title, publishedAt, null, null FROM Book", result.to_sql());
     }
 
     #[test]
@@ -36,7 +36,7 @@
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, title, null, null, null FROM Book", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, title, null, null, null FROM Book", result.to_sql());
     }
 
     #[test]
@@ -46,7 +46,7 @@
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, title, null, a.id, null FROM Book JOIN User a ON (id = a.book_id)", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, title, null, a.id, null FROM Book JOIN User a ON (id = a.book_id)", result.to_sql());
     }
 
      #[test]
@@ -56,7 +56,7 @@
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, null, published_at, null, null FROM Book", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, null, published_at, null, null FROM Book", result.to_sql());
     }
 
      #[test]

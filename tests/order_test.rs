@@ -6,7 +6,7 @@ extern crate toql;
     use toql::sql_mapper::SqlMapper;
 
     fn setup_mapper() -> SqlMapper {
-        let mut mapper = SqlMapper::new();
+        let mut mapper = SqlMapper::new("Book");
        mapper
         .map_field_with_options("id", "id", MapperOptions::new().select_always(true).count_query(true))
         .map_field("title", "title")
@@ -23,7 +23,7 @@ extern crate toql;
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, title, published_at FROM Book ORDER BY title ASC", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, title, published_at FROM Book ORDER BY title ASC", result.to_sql());
     }
      #[test]
     fn order_priority() {
@@ -33,7 +33,7 @@ extern crate toql;
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, title, published_at FROM Book ORDER BY title ASC, id DESC, published_at DESC", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, title, published_at FROM Book ORDER BY title ASC, id DESC, published_at DESC", result.to_sql());
     }
 
      #[test]
@@ -44,5 +44,5 @@ extern crate toql;
 
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
-        assert_eq!("SELECT id, title, published_at FROM Book ORDER BY id DESC, title ASC, published_at DESC", result.sql_for_table("Book"));
+        assert_eq!("SELECT id, title, published_at FROM Book ORDER BY id DESC, title ASC, published_at DESC", result.to_sql());
     }
