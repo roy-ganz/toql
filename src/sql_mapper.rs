@@ -10,7 +10,7 @@ pub (crate) enum FilterType {
     None,
 }
 
-
+#[derive(Debug)]
 pub struct SqlTarget {
    //  pub (crate) selected: bool,             // Target is selected
      //pub (crate) alias: String,              // Calculated alias for field
@@ -73,6 +73,7 @@ trait MapperFilter {
 }
 
 
+
 pub trait FieldHandler {
     fn validate_query(&self) -> bool {
         true
@@ -91,6 +92,12 @@ pub trait FieldHandler {
     } */
     fn build_join(&self) -> Option<String> {
         None
+    }
+}
+
+impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sync + 'static) {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "FieldHandler()")
     }
 }
 
@@ -149,6 +156,7 @@ impl FieldHandler for SqlField {
 
 pub type SqlMapperCache = HashMap<String, SqlMapper>;
 
+#[derive(Debug)]
 pub struct SqlMapper {
   
     pub (crate) table: String, 
