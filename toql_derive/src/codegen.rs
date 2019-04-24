@@ -260,7 +260,7 @@ impl<'a> quote::ToTokens for GeneratedToql<'a> {
 
 
        
-       // println!("GEN (Builder) = {}", builder.to_string());
+        println!("GEN (Builder) = {}", builder.to_string());
 
 
 

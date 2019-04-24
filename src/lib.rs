@@ -11,10 +11,13 @@ pub use toql_core::load as load;
 
 pub use toql_derive as derive;
 
-#[cfg(feature = "rocket")]
+#[cfg(feature = "rocket_mysql")]
 pub use toql_rocket as rocket;
 
-#[cfg(feature = "mysql")]
+#[cfg(any(feature = "mysql",feature = "rocket_mysql" ))]
 pub use toql_mysql as mysql;
+
+
+
 
 

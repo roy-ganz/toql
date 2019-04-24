@@ -109,9 +109,9 @@ impl<'a> GeneratedMysql<'a> {
 
             let load_dependencies_from_mysql = if path_loaders.is_empty() {quote!(
                 pub fn load_dependencies_from_mysql(mut _entities: &mut Vec< #struct_ident >, 
-                _query: &mut toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut mysql::PooledConn) {}
+                _query: &mut toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut mysql::Conn) {}
             )} else {quote!(
-                pub fn load_dependencies_from_mysql(mut entities: &mut Vec< #struct_ident >, query: &mut toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::PooledConn) 
+                pub fn load_dependencies_from_mysql(mut entities: &mut Vec< #struct_ident >, query: &mut toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn) 
                 {
                     #(#path_loaders)*
                 }
@@ -120,7 +120,7 @@ impl<'a> GeneratedMysql<'a> {
         quote!( 
             impl #struct_ident {
                
-                pub fn load_path_from_mysql(path: &str, query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,  conn: &mut mysql::PooledConn) 
+                pub fn load_path_from_mysql(path: &str, query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,  conn: &mut mysql::Conn) 
                 -> std::vec::Vec< #struct_ident > 
                 {
                     let mapper = mappers.get( #struct_name ).unwrap();
@@ -140,7 +140,7 @@ impl<'a> GeneratedMysql<'a> {
             }
             impl toql::mysql::load::Load<#struct_ident> for #struct_ident
             {
-                fn load_one(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::PooledConn, distinct:bool ) 
+                fn load_one(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn, distinct:bool ) 
                     -> Result<# struct_ident , toql::load::LoadError> 
                 {
                     let mapper= mappers.get( #struct_name).unwrap();
@@ -159,9 +159,9 @@ impl<'a> GeneratedMysql<'a> {
                     let mut entities = toql::mysql::row::load::< #struct_ident >(entities_stmt).unwrap();
 
                     if entities.len() > 1 {
-                        return Err(toql::load::LoadError::NotFound);
-                    } else if entities.is_empty() {
                         return Err(toql::load::LoadError::NotUnique);
+                    } else if entities.is_empty() {
+                        return Err(toql::load::LoadError::NotFound);
                     }
                                 
                     // Restrict dependencies to parent entity
@@ -175,7 +175,7 @@ impl<'a> GeneratedMysql<'a> {
                 
                 
                 fn load_many(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, 
-                mut conn: &mut mysql::PooledConn, distinct:bool, count:bool, first:u64, max:u16) 
+                mut conn: &mut mysql::Conn, distinct:bool, count:bool, first:u64, max:u16) 
                 -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), mysql::error::Error> {
 
                     let mapper = mappers.get( #struct_name) .unwrap();
@@ -254,7 +254,7 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
         );
 
 
-       // println!("GEN (mysql) = {}", mysql.to_string());
+        println!("GEN (mysql) = {}", mysql.to_string());
 
         tokens.extend(mysql);
 

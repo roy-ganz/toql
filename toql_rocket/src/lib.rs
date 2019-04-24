@@ -30,7 +30,7 @@ pub mod mysql {
     use super::ToqlQuery;
 
 
-    pub fn load_one<'a,T: Load<T>, B>(mut query: &mut Query, mappers: &SqlMapperCache, mut conn: &mut mysql::PooledConn, serialize: &Fn(&T) -> B, distinct: bool) 
+    pub fn load_one<'a,T: Load<T>, B>(mut query: &mut Query, mappers: &SqlMapperCache, mut conn: &mut mysql::Conn, serialize: &Fn(&T) -> B, distinct: bool) 
     -> Response<'a> 
     where  B: Read + Seek + 'a
     {
@@ -44,12 +44,12 @@ pub mod mysql {
                     response
                 },
             Err(LoadError::NotFound) => {
-                log::warn!("No result found for Toql query \"{}\"", query.to_string());
+                log::info!("No result found for Toql query \"{}\"", query.to_string());
                 response.set_status(Status::NotFound);
                 response
             },
             Err(LoadError::NotUnique) =>{
-                log::error!("No unique result found for Toql query \"{}\"",query.to_string() );
+                log::info!("No unique result found for Toql query \"{}\"",query.to_string() );
                 response.set_status(Status::BadRequest);
                 response
             }
@@ -57,7 +57,7 @@ pub mod mysql {
 
     }
 
-    pub fn load_many<'a,T: Load<T>, B>(toql_query: &ToqlQuery, mappers: &SqlMapperCache, mut conn: &mut mysql::PooledConn, serialize: &Fn(&[T]) -> B) 
+    pub fn load_many<'a,T: Load<T>, B>(toql_query: &ToqlQuery, mappers: &SqlMapperCache, mut conn: &mut mysql::Conn, serialize: &Fn(&[T]) -> B) 
     -> Response<'a>  
     where  B: Read + Seek + 'a
     {
