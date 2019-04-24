@@ -1,0 +1,16 @@
+[package]
+name = "toql_rocket"
+version = "0.1.0"
+authors = ["Roy Ganz <roy.ganz@glanis.ch>"]
+edition = "2018"
+
+[dependencies]
+toql_core = {path="../toql_core"}
+toql_mysql = {path="../toql_mysql"}
+rocket= "0.4"
+log ="0.4"
+mysql = {version = "14.2",  optional=true}
+
+
+[features]
+mysqldb = ["mysql"]

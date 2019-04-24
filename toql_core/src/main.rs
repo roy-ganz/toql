@@ -1,13 +1,13 @@
 
 use std::collections::HashMap;
-use toql::sql_mapper::SqlMapper;
-use toql::sql_mapper::FieldHandler;
-use toql::sql_mapper::MapperOptions;
-use toql::sql_builder::SqlBuilder;
-use toql::user_query::UserDto;
-use toql::query::Query;
-use toql::query_parser::QueryParser;
-use toql::query_parser::*;
+use toql_core::sql_mapper::SqlMapper;
+use toql_core::sql_mapper::FieldHandler;
+use toql_core::sql_mapper::MapperOptions;
+use toql_core::sql_builder::SqlBuilder;
+use toql_core::user_query::UserDto;
+use toql_core::query::Query;
+use toql_core::query_parser::QueryParser;
+use toql_core::query_parser::*;
 
 #[derive(Debug, Clone)]
 struct Book {
@@ -29,7 +29,7 @@ struct User{
 
 
 
-  use toql::query::Field;
+  use toql_core::query::Field;
 
 /* struct Fish ();
 struct Market ();

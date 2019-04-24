@@ -1,11 +1,11 @@
-extern crate toql;
 
-    use toql::query::FieldFilter;
-use toql::sql_mapper::FieldHandler;
-use toql::query_parser::QueryParser;
-    use toql::sql_builder::SqlBuilder;
-    use toql::sql_mapper::MapperOptions;
-    use toql::sql_mapper::SqlMapper;
+
+    use toql_core::query::FieldFilter;
+    use toql_core::sql_mapper::FieldHandler;
+    use toql_core::query_parser::QueryParser;
+    use toql_core::sql_builder::SqlBuilder;
+    use toql_core::sql_mapper::MapperOptions;
+    use toql_core::sql_mapper::SqlMapper;
 
     fn setup_mapper() -> SqlMapper {
         let mut mapper = SqlMapper::new("Book");
@@ -27,7 +27,7 @@ use toql::query_parser::QueryParser;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, title, null, null, null FROM Book WHERE title LIKE ?", result.to_sql());
-        assert_eq!( result.where_params, ["'%Foobar%'"]);
+        assert_eq!( *result.params(), ["'%Foobar%'"]);
     }
 
    
@@ -39,7 +39,7 @@ use toql::query_parser::QueryParser;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, null, null, null, null FROM Book HAVING id > ?", result.to_sql());
-        assert_eq!( result.having_params, ["5"]);
+        assert_eq!( *result.params(), ["5"]);
         
     }
 
@@ -51,7 +51,7 @@ use toql::query_parser::QueryParser;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, null, null, null, null FROM Book WHERE id BETWEEN ? AND ?", result.to_sql());
-        assert_eq!( result.where_params, ["0", "5"]);
+        assert_eq!( *result.params(), ["0", "5"]);
         
     }
     #[test]
@@ -62,7 +62,7 @@ use toql::query_parser::QueryParser;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, null, null, null, null FROM Book WHERE id IN (?,?,?)", result.to_sql());
-        assert_eq!( result.where_params, ["0", "1", "5"]);
+        assert_eq!( *result.params(), ["0", "1", "5"]);
     }
     
     #[test]
@@ -104,7 +104,7 @@ use toql::query_parser::QueryParser;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, title, null, null, null FROM Book WHERE MATCH (title) AGAINST (?)", result.to_sql());
-        assert_eq!( result.where_params, ["'Foobar'"]);
+        assert_eq!( *result.params(), ["'Foobar'"]);
     }
 
      #[test]
@@ -115,7 +115,7 @@ use toql::query_parser::QueryParser;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, null, null, a.id, null FROM Book JOIN User a ON (id = a.book_id) WHERE a.id = ?", result.to_sql());
-        assert_eq!( result.where_params, ["5"]);
+        assert_eq!( *result.params(), ["5"]);
     }
 
     

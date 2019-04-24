@@ -1,0 +1,11 @@
+[package]
+name = "toql_mysql"
+version = "0.1.0"
+authors = ["Roy Ganz <roy.ganz@glanis.ch>"]
+edition = "2018"
+
+[dependencies]
+toql_core = {path="../toql_core"}
+mysql = "14.2"
+
+

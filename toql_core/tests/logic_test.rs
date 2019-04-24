@@ -1,9 +1,9 @@
-extern crate toql;
 
-    use toql::query_parser::QueryParser;
-    use toql::sql_builder::SqlBuilder;
-    use toql::sql_mapper::MapperOptions;
-    use toql::sql_mapper::SqlMapper;
+
+    use toql_core::query_parser::QueryParser;
+    use toql_core::sql_builder::SqlBuilder;
+    use toql_core::sql_mapper::MapperOptions;
+    use toql_core::sql_mapper::SqlMapper;
 
     fn setup_mapper() -> SqlMapper {
         let mut mapper = SqlMapper::new("Book");
@@ -24,9 +24,7 @@ extern crate toql;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, title, null FROM Book WHERE title = ? OR title = ? AND id <> ?", result.to_sql());
-        assert_eq!( "'Foo'", result.where_params.get(0).expect("Parameter expected."));
-        assert_eq!( "'Bar'", result.where_params.get(1).expect("Parameter expected."));
-        assert_eq!( "3", result.where_params.get(2).expect("Parameter expected."));
+        assert_eq!(*result.params(), ["'Foo'", "'Bar'", "3"]);
     }
 
      #[test]
@@ -38,9 +36,7 @@ extern crate toql;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, title, null FROM Book WHERE (title = ? OR (title = ?)) AND id <> ?", result.to_sql());
-        assert_eq!( "'Foo'", result.where_params.get(0).expect("Parameter expected."));
-        assert_eq!( "'Bar'", result.where_params.get(1).expect("Parameter expected."));
-        assert_eq!( "3", result.where_params.get(2).expect("Parameter expected."));
+          assert_eq!(*result.params(), ["'Foo'", "'Bar'", "3"]);
     }
      #[test]
     fn logic_where_having_parens() {
@@ -51,7 +47,6 @@ extern crate toql;
         let result = SqlBuilder::new().build(&mapper, &query).unwrap();
        
         assert_eq!("SELECT id, title, null FROM Book WHERE (title = ?) AND id <> ? HAVING ((title = ?))", result.to_sql());
-        assert_eq!( "'Foo'", result.where_params.get(0).expect("Parameter expected."));
-        assert_eq!( "3", result.where_params.get(1).expect("Parameter expected."));
-        assert_eq!( "'Bar'", result.having_params.get(0).expect("Parameter expected."));
+        assert_eq!(*result.params(), ["'Foo'","3", "'Bar'"]);
+        
     }

@@ -1,7 +1,7 @@
-extern crate toql;
 
-    use toql::query::Query;
-    use toql::query::Field;
+
+    use toql_core::query::Query;
+    use toql_core::query::Field;
 
     
 #[test]

@@ -1,0 +1,21 @@
+[package]
+name = "toql_derive"
+version = "0.1.0"
+authors = ["Roy Ganz <roy.ganz@glanis.ch>"]
+edition = "2018"
+
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "0.15"
+quote = "0.6"
+heck = "0.3"
+darling ="0.9"
+proc-macro2 = "0.4"
+mysql = {version="14.2", optional=true}
+
+[features]
+mysqldb = ["mysql"]
+
