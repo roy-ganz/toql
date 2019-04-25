@@ -253,7 +253,7 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
         );
 
        
-        //println!("/* Toql derive (codegen_mysql) */\n {}", mysql.to_string());
+        println!("/* Toql derive (codegen_mysql) */\n {}", mysql.to_string());
         
 
         tokens.extend(mysql);

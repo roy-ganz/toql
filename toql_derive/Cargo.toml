@@ -21,4 +21,4 @@ mysql = {version="14.2", optional=true}
 mysqldb = ["mysql"]
 
 [dev-dependencies]
-toql = {version = "0.1", path="../../toql"}
+toql = {version = "0.1", path="../../toql", features=["mysql"]}

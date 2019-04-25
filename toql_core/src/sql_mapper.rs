@@ -164,7 +164,7 @@ pub struct Join {
     pub(crate) join_clause: String,
 }
 
-pub trait Mappable {
+pub trait Map {
     fn insert_new_mapper(cache: &mut SqlMapperCache) -> &mut SqlMapper;     // Create new SQL Mapper and insert into mapper cache
     fn new_mapper(sql_alias: &str) -> SqlMapper;                            // Create new SQL Mapper and map entity fields
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str);       // Map entity fields
@@ -182,14 +182,14 @@ impl SqlMapper {
             field_order: Vec::new(),
         }
     }
-    pub fn insert_new_mapper<T: Mappable>(cache: &mut SqlMapperCache) -> &mut SqlMapper {
+    pub fn insert_new_mapper<T: Map>(cache: &mut SqlMapperCache) -> &mut SqlMapper {
         T::insert_new_mapper(cache)
     }
-    pub fn map<T: Mappable>(sql_alias: &str) -> Self {
+    pub fn map<T: Map>(sql_alias: &str) -> Self {
         // Mappable must create mapper for top level table
         T::new_mapper(sql_alias)
     }
-    pub fn map_join<'a, T: Mappable>(
+    pub fn map_join<'a, T: Map>(
         &'a mut self,
         toql_path: &str,
         sql_alias: &str,

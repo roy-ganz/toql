@@ -190,12 +190,12 @@ impl<'a> GeneratedToql<'a> {
 
             let field_type = field.first_non_generic_type().unwrap();
 
-            let path_ident =
-                syn::Ident::new(&field_type.to_string().to_snake_case(), Span::call_site());
+           /*  let path_ident =
+                syn::Ident::new(&field_type.to_string().to_snake_case(), Span::call_site()); */
             let type_ident: &Ident = field_type;
-            let field_type_ident =
-                syn::Ident::new(&format!("{}Fields", type_ident), Span::call_site());
-            let path_fields_struct = quote!( super :: #path_ident :: #field_type_ident );
+           /*  let field_type_ident =
+                syn::Ident::new(&format!("{}Fields", type_ident), Span::call_site()); */
+            let path_fields_struct =  quote!( < #type_ident as toql::query_builder::FieldsType>::FieldsType); //quote!( super :: #path_ident :: #field_type_ident );
 
             self.builder_fields.push(quote!(
                         pub fn #field_ident (mut self) -> #path_fields_struct {
@@ -222,7 +222,11 @@ impl<'a> quote::ToTokens for GeneratedToql<'a> {
 
         let builder = quote!(
 
-            impl toql::sql_mapper::Mappable for #struct_ident {
+            impl toql::query_builder::FieldsType for #struct_ident {
+                type FieldsType = #builder_fields_struct ;
+            }
+
+            impl toql::sql_mapper::Map for #struct_ident {
                 fn insert_new_mapper(cache: &mut toql::sql_mapper::SqlMapperCache) ->  &mut toql::sql_mapper::SqlMapper {
                     let m = Self::new_mapper( #sql_table_alias);
                     cache.insert( String::from( #sql_table_name ), m);
@@ -258,8 +262,8 @@ impl<'a> quote::ToTokens for GeneratedToql<'a> {
             }
         );
 
-        //println!("GEN (Builder) = {}", builder.to_string());
-
+        println!("/* Toql (codegen) */\n {}", builder.to_string());
+        
         tokens.extend(builder);
     }
 }
