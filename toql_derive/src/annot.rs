@@ -7,7 +7,7 @@ use crate::codegen_mysql::GeneratedMysql;
 use syn::Ident;
 use syn::GenericArgument::Type;
 
-
+// Attribute on struct field
 #[derive(Debug, FromField)]
 #[darling(attributes(toql))]
 pub struct ToqlField {
@@ -18,7 +18,9 @@ pub struct ToqlField {
      #[darling(default)]
     pub skip: bool,
     #[darling(default)]
-    pub count_query: bool,
+    pub count_filter: bool,
+    #[darling(default)]
+    pub count_select: bool,
     #[darling(default)]
     pub select_always: bool,
     #[darling(default)]
@@ -42,9 +44,10 @@ pub struct ToqlField {
 
 
 impl ToqlField {
-   
 
-  pub fn first_type<'a>(&'a self)-> &'a Ident {
+  // IMPROVE: Function is used, but somehow considered unused 
+  #[allow(dead_code)]
+  pub fn _first_type<'a>(&'a self)-> &'a Ident {
       let types= self.get_types();
       types.0
   }
@@ -135,6 +138,8 @@ impl quote::ToTokens for Toql {
 
     //println!("DARLING = {:?}", self);
 
+      
+
         let mut gen = GeneratedToql::from_toql(&self);
      
         #[cfg(feature = "mysqldb")]
@@ -142,10 +147,10 @@ impl quote::ToTokens for Toql {
          
 
          let Toql {
-            ident:_,
-            attrs:_,
-            ref tables,
-             ref columns,
+             ident:_,
+             attrs:_,
+             tables:_,
+             columns:_,
              alias:_,
              alter:_,
              ref data,
@@ -164,7 +169,7 @@ impl quote::ToTokens for Toql {
                 }
                 let result = gen.add_field_mapping(&self, field);
 
-                // Don't build other code for invalid field, process next field
+                // Don't build further code for invalid field, process next field
                 if result.is_err() {
                     continue;
                 }

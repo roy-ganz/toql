@@ -8,13 +8,13 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'toql'",
+            "name": "Debug unit tests in library 'toql_core'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=toql"
+                    "--package=toql_core"
                 ],
                 "filter": {
                     "kind": "lib"
@@ -23,6 +23,7 @@
             "args": [],
             "cwd": "${workspaceFolder}"
         },
+
         {
             "type": "lldb",
             "request": "launch",

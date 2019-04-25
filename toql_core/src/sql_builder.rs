@@ -2,42 +2,33 @@ use crate::query::Concatenation;
 use crate::query::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
+use crate::sql_builder_result::SqlBuilderResult;
 use crate::sql_mapper::Join;
 use crate::sql_mapper::SqlMapper;
 use crate::sql_mapper::SqlTarget;
-use crate::sql_builder_result::SqlBuilderResult;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 struct SqlTargetData {
     selected: bool, // Target is selected
-  //  alias: String,  // Calculated alias for field
     used: bool,     // Target is either selected or filtered
-    joined: bool,   // Join clause set for target
 }
 
 impl Default for SqlTargetData {
     fn default() -> SqlTargetData {
         SqlTargetData {
             used: false,
-            joined: false,
             selected: false,
-           // alias: "".to_string(),
         }
     }
 }
 
-
 struct SqlJoinData {
-    joined: bool,  // Join has been added to join clause
-   // alias: String, // Calculated alias for join
+    joined: bool, // Join has been added to join clause
 }
 impl Default for SqlJoinData {
     fn default() -> SqlJoinData {
-        SqlJoinData {
-            joined: false,
-            //alias: "".to_string(),
-        }
+        SqlJoinData { joined: false }
     }
 }
 
@@ -46,8 +37,8 @@ pub struct SqlBuilder {
     subpath: String,         // Build only subpath
     roles: BTreeSet<String>, // Use only fields for those roles
     joins: BTreeSet<String>, // Use this joins
-    ignored_paths : Vec<String> // Ignore paths, no errors are raised for them
-   // alias: String,           // Alias all fields with this
+    ignored_paths: Vec<String>, // Ignore paths, no errors are raised for them
+                             // alias: String,           // Alias all fields with this
 }
 
 #[derive(Debug)]
@@ -56,7 +47,6 @@ pub enum SqlBuilderError {
     RoleRequired(String),
 }
 
-
 impl SqlBuilder {
     pub fn new() -> Self {
         SqlBuilder {
@@ -64,35 +54,45 @@ impl SqlBuilder {
             subpath: "".to_string(),
             roles: BTreeSet::new(),
             joins: BTreeSet::new(),
-            ignored_paths: Vec::new()
+            ignored_paths: Vec::new(),
         }
     }
-    pub fn ignore_path<T:Into<String>>(mut self, path: T) -> Self {
+    pub fn ignore_path<T: Into<String>>(mut self, path: T) -> Self {
         self.ignored_paths.push(path.into());
         self
     }
-    pub fn for_role<T:Into<String>>(mut self, role: T) -> Self {
+    pub fn for_role<T: Into<String>>(mut self, role: T) -> Self {
         self.roles.insert(role.into());
         self
     }
-    pub fn with_join<T:Into<String>>(mut self, join: T) -> Self {
+    pub fn with_join<T: Into<String>>(mut self, join: T) -> Self {
         self.joins.insert(join.into());
         self
     }
-   
 
-    pub fn build_count(&mut self, sql_mapper: &SqlMapper, query: &Query) -> Result<SqlBuilderResult,SqlBuilderError> {
+    pub fn build_count(
+        &mut self,
+        sql_mapper: &SqlMapper,
+        query: &Query,
+    ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.count_query = true;
         self.build(sql_mapper, query)
     }
 
-    pub fn build_path<T:Into<String>>(
+    pub fn build_path<T: Into<String>>(
         &mut self,
-         path: T,
+        path: T,
         sql_mapper: &SqlMapper,
-        query: &Query
+        query: &Query,
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
-        self.subpath = { let p = path.into(); if p.ends_with("_") { p } else { format!("{}_", p) }};
+        self.subpath = {
+            let p = path.into();
+            if p.ends_with("_") {
+                p
+            } else {
+                format!("{}_", p)
+            }
+        };
         self.build(sql_mapper, query)
     }
 
@@ -111,8 +111,6 @@ impl SqlBuilder {
         }
         true
     }
-
-    
 
     fn build_ordering(
         result: &mut SqlBuilderResult,
@@ -137,7 +135,6 @@ impl SqlBuilder {
                             }
                         }
                     }
-                    //result.order_by_clause.push_str(name);
                     result.order_by_clause.push_str(o);
                     result.order_by_clause.push_str(", ");
                 }
@@ -145,41 +142,67 @@ impl SqlBuilder {
         }
         result.order_by_clause = result.order_by_clause.trim_end_matches(", ").to_string();
     }
+
+    fn build_count_select_clause(
+        result: &mut SqlBuilderResult,
+        sql_targets: &HashMap<String, SqlTarget>,
+        field_order: &Vec<String>,
+    ) {
+        let mut any_selected = false;
+        for toql_field in field_order {
+            if let Some(sql_target) = sql_targets.get(toql_field) {
+                // For selected fields there exists target data
+                if sql_target.options.count_select {
+                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression)
+                    {
+                        result.select_clause.push_str(&sql_field);
+                        result.select_clause.push_str(", ");
+                        any_selected = true;
+                    }
+                }
+            }
+        }
+        result.any_selected = any_selected;
+        if any_selected {
+            // Remove last ,
+            result.select_clause = result.select_clause.trim_end_matches(", ").to_string();
+        } else {
+            result.select_clause = "1".to_string();
+        }
+    }
+
     fn build_select_clause(
         result: &mut SqlBuilderResult,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
-        sql_join_data: &mut HashMap<&str, SqlJoinData>,
         field_order: &Vec<String>,
     ) {
-        // build select clause
-        // select all fields
-        let mut any_selected= false;
+        // Build select clause
+        let mut any_selected = false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
-                let selected =  sql_target.options.always_selected || sql_target_data.get(toql_field.as_str()).map_or(false, |d|d.selected);
+                let selected = sql_target.options.always_selected
+                    || sql_target_data
+                        .get(toql_field.as_str())
+                        .map_or(false, |d| d.selected);
 
                 if selected {
                     if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression)
-                        {
-                            result.select_clause.push_str(&sql_field);
-                            any_selected = true;
-                        }
-                        else {
-                          result.select_clause.push_str("null");
-                        }
-                } else {
+                    {
+                        result.select_clause.push_str(&sql_field);
+                        any_selected = true;
+                    } else {
                         result.select_clause.push_str("null");
                     }
-             result.select_clause.push_str(", ");        
-
-            
-
+                } else {
+                    result.select_clause.push_str("null");
+                }
+                result.select_clause.push_str(", ");
             }
         }
         result.any_selected = any_selected;
-         // Remove last ,
+        // Remove last ,
         result.select_clause = result.select_clause.trim_end_matches(", ").to_string();
     }
     fn build_join_clause(
@@ -189,33 +212,36 @@ impl SqlBuilder {
     ) {
         // Process all fields with subpaths from the query
         for (k, v) in sql_join_data {
-
             // If not yet joined, check if subpath should be optionally joined
             if !v.joined {
+                // For every subpath, check if there is JOIN data available
+                if let Some(t) = sql_joins.get(*k) {
+                    // If there is JOIN data available, use it to construct join
+                    // Join data can be missing for directly typed join
 
-                // For every subpath, check if there is Join data available
-                // and 
-             //   if let Some(sp) = k.split('_').rev().nth(1) {
-                       if let Some(t) = sql_joins.get(*k) {
-                        // If there is join data available, use it to construct join
-                        // Join data can be missing for directly typed join
-                       // if let Some(t) = ot {
-                            result.join_clause.push_str(&t.join_clause);
-                            result.join_clause.push(' ');
-                       // }
-                       }
-                           
-               // }
+                    result.join_clause.push_str(&t.join_clause);
+                    result.join_clause.push(' ');
+                }
                 v.joined = true; // Mark join as processed
             }
         }
-        result.join_clause = result.join_clause.trim_end().to_string();
+        if result
+            .join_clause
+            .chars()
+            .rev()
+            .next()
+            .unwrap_or('A')
+            .is_whitespace()
+        {
+            result.join_clause = result.join_clause.trim_end().to_string();
+        }
     }
-    
 
-    
-
-    pub fn build(&mut self, sql_mapper: &SqlMapper, query: &Query) -> Result<SqlBuilderResult, SqlBuilderError> {
+    pub fn build(
+        &mut self,
+        sql_mapper: &SqlMapper,
+        query: &Query,
+    ) -> Result<SqlBuilderResult, SqlBuilderError> {
         let mut ordinals: BTreeSet<u8> = BTreeSet::new();
         let mut ordering: HashMap<u8, Vec<(FieldOrder, String)>> = HashMap::new();
 
@@ -229,11 +255,6 @@ impl SqlBuilder {
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
         let mut sql_join_data: HashMap<&str, SqlJoinData> = HashMap::new();
 
-        
-
-
-
-
         let mut result = SqlBuilderResult {
             table: sql_mapper.table.clone(),
             any_selected: false,
@@ -242,8 +263,6 @@ impl SqlBuilder {
             where_clause: String::from(""),
             order_by_clause: String::from(""),
             having_clause: String::from(""),
-        //    count_where_clause: String::from(""),
-        //    count_having_clause: String::from(""),
             where_params: vec![],
             having_params: vec![],
             combined_params: vec![],
@@ -274,69 +293,75 @@ impl SqlBuilder {
                     }
 
                     QueryToken::Wildcard(..) => {
+                        // Skip wildcard for count queries
+                        if self.count_query {
+                            continue;
+                        }
+
                         for (field_name, mapper_field) in &sql_mapper.fields {
                             // Select all top fields, that don't ignore wildcard
-                            if !mapper_field.options.ignore_wildcard && !mapper_field.subfields{
-                                let f = sql_target_data
-                                    .entry(field_name.as_str())
-                                    .or_default();
+                            if !mapper_field.options.ignore_wildcard && !mapper_field.subfields {
+                                let f = sql_target_data.entry(field_name.as_str()).or_default();
                                 f.selected = true; // Select field
                             }
                         }
                     }
                     QueryToken::Field(query_field) => {
-                        // Ignore field, if name does not start with path
-                        // e.g "user_id" has path "user"
+                        // Ignore field if name does not start with path
+                        // E.g "user_id" has path "user"
                         if !self.subpath.is_empty() && !query_field.name.starts_with(&self.subpath)
                         {
                             continue;
                         }
-                        
-                        let fieldname =  if self.subpath.is_empty() {
+
+                        let fieldname = if self.subpath.is_empty() {
                             &query_field.name
                         } else {
-                             query_field.name.trim_start_matches(&self.subpath).trim_start_matches('_')
+                            query_field
+                                .name
+                                .trim_start_matches(&self.subpath)
+                                .trim_start_matches('_')
                         };
 
                         match sql_mapper.fields.get(fieldname) {
                             Some(sql_target) => {
-
                                 // Verify user role and skip field role mismatches
                                 let role_valid =
                                     Self::validate_roles(&self.roles, &sql_target.options.roles);
                                 if role_valid == false {
-                                    return Err(SqlBuilderError::RoleRequired(format!("Field requires a user role: '{}'. ", fieldname)));
+                                    return Err(SqlBuilderError::RoleRequired(format!(
+                                        "Field requires a user role: '{}'. ",
+                                        fieldname
+                                    )));
                                 }
-
-                                // Ignore field if count query should be build and field is not used in count query
-                                if self.count_query == true && !sql_target.options.count_query {
-                                    break;
+                                // Skip filtering and ordering in count queries for unfiltered fields
+                                if self.count_query == true && !sql_target.options.count_filter {
+                                    continue;
                                 }
 
                                 // Select sql target if field is not hidden
+                                let data = sql_target_data.entry(fieldname).or_default();
 
-                                let data =
-                                    sql_target_data.entry(fieldname).or_default();
-
-                                
                                 // Add Join data for all sub fields
                                 if sql_target.subfields {
-                                    for subfield in fieldname.split('_').rev().skip(1){
-                                        if !sql_join_data.contains_key(subfield){
-                                         sql_join_data.insert(subfield, SqlJoinData::default());
+                                    for subfield in fieldname.split('_').rev().skip(1) {
+                                        if !sql_join_data.contains_key(subfield) {
+                                            sql_join_data.insert(subfield, SqlJoinData::default());
                                         }
                                     }
-                                   
                                 }
 
+                                data.selected = if self.count_query {
+                                    sql_target.options.count_select
+                                } else {
+                                    !query_field.hidden
+                                };
 
-                                data.selected = !query_field.hidden;
                                 data.used = !query_field.hidden;
 
                                 if let Some(f) = &query_field.filter {
-                                    // data.used = true;
                                     if let Some(f) =
-                                        sql_target.handler.build_filter( &sql_target.expression, &f)
+                                        sql_target.handler.build_filter(&sql_target.expression, &f)
                                     {
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {
@@ -348,7 +373,7 @@ impl SqlBuilder {
                                                 } else {
                                                     SqlBuilderResult::push_concatenation(
                                                         &mut result.having_clause,
-                                                        &Some(query_field.concatenation.clone()), // Improve
+                                                        &Some(query_field.concatenation.clone()), // OPTIMISE
                                                     );
                                                 }
                                             }
@@ -398,7 +423,6 @@ impl SqlBuilder {
                                     } else {
                                         result.where_params.append(&mut p);
                                     }
-                                    
 
                                     if let Some(j) = sql_target.handler.build_join() {
                                         result.join_clause.push_str(&j);
@@ -412,13 +436,18 @@ impl SqlBuilder {
                                     };
                                     ordinals.insert(*num);
                                     let l = ordering.entry(*num).or_insert(Vec::new());
-                                    l.push((o.clone(), query_field.name.clone())); // IMPROVE
+                                    l.push((o.clone(), query_field.name.clone())); // OPTIMISE
                                 }
                             }
                             None => {
                                 // If field has path, validate to known paths
-                                if !query_field.name.contains("_") || !self.path_ignored(&query_field.name) {
-                                    return Err( SqlBuilderError::FieldMissing(format!("Missing field: '{}'. ", query_field.name)));
+                                if !query_field.name.contains("_")
+                                    || !self.path_ignored(&query_field.name)
+                                {
+                                    return Err(SqlBuilderError::FieldMissing(format!(
+                                        "Missing field: '{}'. ",
+                                        query_field.name
+                                    )));
                                 }
                             }
                         }
@@ -427,127 +456,147 @@ impl SqlBuilder {
             }
         }
 
+        // Select all fields for count queries that are marked with count_select
+        if self.count_query {
+            for (field_name, mapper_field) in &sql_mapper.fields {
+                if mapper_field.options.count_select {
+                    let f = sql_target_data.entry(field_name.as_str()).or_default();
+                    f.selected = true;
+                }
+            }
+        }
 
-        // Build select 
+        // Build select
         // Ensure implicitly selected subfields are joined
         for toql_field in &sql_mapper.field_order {
             if let Some(sql_target) = sql_mapper.fields.get(toql_field.as_str()) {
-                if  sql_target.options.always_selected && sql_target.subfields {
-                    for subfield in toql_field.split('_').rev().skip(1){
-                        if !sql_join_data.contains_key(subfield){
+                if sql_target.options.always_selected && sql_target.subfields {
+                    for subfield in toql_field.split('_').rev().skip(1) {
+                        if !sql_join_data.contains_key(subfield) {
                             sql_join_data.insert(subfield, SqlJoinData::default());
                         }
                     }
                 }
             }
         }
-            
 
-
-        Self::build_ordering(
-            &mut result,
-            &sql_target_data,
-            &sql_mapper.fields,
-            &ordinals,
-            &ordering,
-        );
-
-        Self::build_select_clause(
-            &mut result,
-            &sql_mapper.fields,
-            &sql_target_data,
-            &mut sql_join_data,
-            &sql_mapper.field_order,
-        );
-
-        //  self.build_join_clause(&mut result);
-        Self::build_join_clause(
-            &mut sql_join_data,
-            &sql_mapper.joins,
-            &mut result,
-        );
-
-      
-        // Remove trailing white space on joins
-        result.join_clause.trim_end();
-        result.order_by_clause.trim_end();
-
-        // create combined params if needed
-        if !result.having_params.is_empty() && !result.where_params.is_empty() {
-                result.combined_params.extend_from_slice(&result.where_params);
-                result.combined_params.extend_from_slice(&result.having_params);
+        if self.count_query {
+            Self::build_count_select_clause(
+                &mut result,
+                &sql_mapper.fields,
+                &sql_mapper.field_order,
+            );
+        } else {
+            Self::build_ordering(
+                &mut result,
+                &sql_target_data,
+                &sql_mapper.fields,
+                &ordinals,
+                &ordering,
+            );
+            Self::build_select_clause(
+                &mut result,
+                &sql_mapper.fields,
+                &sql_target_data,
+                &sql_mapper.field_order,
+            );
         }
-       
+
+        Self::build_join_clause(&mut sql_join_data, &sql_mapper.joins, &mut result);
+
+        // Remove trailing whitespace on JOIN and ORDER clause
+        if result
+            .join_clause
+            .chars()
+            .rev()
+            .next()
+            .unwrap_or(' ')
+            .is_whitespace()
+        {
+            result.join_clause = result.join_clause.trim_end().to_owned();
+        }
+        if result
+            .order_by_clause
+            .chars()
+            .rev()
+            .next()
+            .unwrap_or('_')
+            .is_whitespace()
+        {
+            result.order_by_clause = result.order_by_clause.trim_end().to_owned();
+        }
+
+        // Create combined params if needed
+        if !result.having_params.is_empty() && !result.where_params.is_empty() {
+            result
+                .combined_params
+                .extend_from_slice(&result.where_params);
+            result
+                .combined_params
+                .extend_from_slice(&result.having_params);
+        }
+
         Ok(result)
     }
 
-    fn path_ignored(&self , fieldname: &str) -> bool {
-         for path in &self.ignored_paths {
+    fn path_ignored(&self, fieldname: &str) -> bool {
+        for path in &self.ignored_paths {
             if fieldname.starts_with(path) {
                 return true;
             }
         }
         false
-    } 
+    }
 }
 
-
-// Generic merge function 
-
-pub fn merge<T,  O,   K, F, X, Y>( this: &mut std::vec::Vec<T>, mut other: Vec<O>,tkey : X, okey: Y,  assign: F )
- where O:Clone,
-      K: Eq + std::hash::Hash,
-      F: Fn(&mut T, O) , 
-      X: Fn(&T) -> Option<K>, 
-      Y: Fn(&O) -> Option<K>
-  {
-
+// Generic merge function
+pub fn merge<T, O, K, F, X, Y>(
+    this: &mut std::vec::Vec<T>,
+    mut other: Vec<O>,
+    tkey: X,
+    okey: Y,
+    assign: F,
+) where
+    O: Clone,
+    K: Eq + std::hash::Hash,
+    F: Fn(&mut T, O),
+    X: Fn(&T) -> Option<K>,
+    Y: Fn(&O) -> Option<K>,
+{
     // Build index to lookup all books of an author by author id
-    let mut index : HashMap<K, Vec<usize>> = HashMap::new();
+    let mut index: HashMap<K, Vec<usize>> = HashMap::new();
 
-    for (i,b) in this.iter().enumerate() {
-      match  tkey(&b) {
-         Some(k) => {
-            let v = index.entry(k).or_insert(Vec::new());
-             v.push(i);
-         },
-         None => {}
-      }
-     
-     // let v = index.entry(b.author_id).or_insert(Vec::new());
-     
+    for (i, b) in this.iter().enumerate() {
+        match tkey(&b) {
+            Some(k) => {
+                let v = index.entry(k).or_insert(Vec::new());
+                v.push(i);
+            }
+            None => {}
+        }
     }
 
-    // Consume all authors and distribute 
+    // Consume all authors and distribute
     for a in other.drain(..) {
+        // Get all books for author id
+        match &okey(&a) {
+            Some(ok) => {
+                let vbi = index.get(ok).unwrap();
 
-      // Get all books for author id
-      //let vbi = index.get(a.id).unwrap();
-      match &okey(&a) {
-        Some(ok) => {
-          let vbi = index.get(ok).unwrap();
+                // Clone author for second to last books
+                for bi in vbi.iter().skip(1) {
+                    if let Some(mut b) = this.get_mut(*bi) {
+                        assign(&mut b, a.clone());
+                    }
+                }
 
-          // Clone author for second to last books
-          for bi in vbi.iter().skip(1) {
-            //let  mut  b = this.get_mut(*bi).unwrap();
-            if let  Some(mut  b) = this.get_mut(*bi) {
-              assign(&mut b, a.clone());
+                // Assign drained author for first book
+                let fbi = vbi.get(0).unwrap();
+                if let Some(mut b) = this.get_mut(*fbi) {
+                    assign(&mut b, a.clone());
+                }
             }
-           
-          }
-
-          // Assign drained author for first book
-          let fbi= vbi.get(0).unwrap();
-          //let mut b = this.get_mut(*fbi).unwrap();
-          if let Some(mut b) = this.get_mut(*fbi) {
-            assign(&mut b, a.clone());
-          }
+            None => {}
         }
-        None => {}
-
-      }
-     
-    } 
-
- }
-
+    }
+}

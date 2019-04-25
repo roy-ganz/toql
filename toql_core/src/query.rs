@@ -1,8 +1,5 @@
-
-
 pub trait FilterArg<T> {
     fn to_sql(self) -> String;
-
 }
 
 impl FilterArg<&str> for &str {
@@ -12,9 +9,7 @@ impl FilterArg<&str> for &str {
         s.push_str(self);
         s.push('\'');
         s
-
     }
-
 }
 
 impl FilterArg<u8> for u8 {
@@ -69,12 +64,12 @@ impl FilterArg<i128> for i128 {
 }
 impl FilterArg<bool> for bool {
     fn to_sql(self) -> String {
-        String::from(if self == true {"1"} else {"0"})
+        String::from(if self == true { "1" } else { "0" })
     }
 }
 impl FilterArg<f32> for f32 {
     fn to_sql(self) -> String {
-       self.to_string()
+        self.to_string()
     }
 }
 impl FilterArg<f64> for f64 {
@@ -82,8 +77,6 @@ impl FilterArg<f64> for f64 {
         self.to_string()
     }
 }
-
-
 
 #[derive(Clone, Debug)]
 pub enum Concatenation {
@@ -101,7 +94,6 @@ pub struct Field {
     pub aggregation: bool,
 }
 
-
 impl Field {
     pub fn from<T>(name: T) -> Self
     where
@@ -112,7 +104,7 @@ impl Field {
         {
             // Ensure name does not end with wildcard
             if name.ends_with("*") {
-                panic!("Fieldname {:?} must not end with wildcard!", name);
+                panic!("Fieldname {:?} must not end with wildcard.", name);
             }
         }
 
@@ -125,7 +117,7 @@ impl Field {
             aggregation: false,
         }
     }
-  
+
     pub fn hide(mut self) -> Self {
         self.hidden = true;
         self
@@ -134,136 +126,180 @@ impl Field {
         self.aggregation = true;
         self
     }
-    pub fn asc(mut self, order:u8) -> Self 
-    {
+    pub fn asc(mut self, order: u8) -> Self {
         self.order = Some(FieldOrder::Asc(order));
         self
     }
-     pub fn desc(mut self, order:u8) -> Self 
-    {
+    pub fn desc(mut self, order: u8) -> Self {
         self.order = Some(FieldOrder::Desc(order));
         self
     }
-    pub fn eq<T>(mut self, criteria: impl FilterArg<T>) -> Self 
-    {
+    pub fn eq<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Eq(criteria.to_sql()));
         self
     }
-    pub fn eqn(mut self) -> Self  
-    {
+    pub fn eqn(mut self) -> Self {
         self.filter = Some(FieldFilter::Eqn);
         self
     }
-    pub fn ne<T>(mut self, criteria:  impl FilterArg<T>) -> Self  
-    {
+    pub fn ne<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Ne(criteria.to_sql()));
         self
     }
-    pub fn nen(mut self) -> Self  
-    {
+    pub fn nen(mut self) -> Self {
         self.filter = Some(FieldFilter::Nen);
         self
     }
-    pub fn gt<T>(mut self, criteria:  impl FilterArg<T>) -> Self  
-    {
+    pub fn gt<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Gt(criteria.to_sql()));
         self
     }
-    pub fn ge<T>(mut self, criteria:  impl FilterArg<T>) -> Self  
-    {
+    pub fn ge<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Ge(criteria.to_sql()));
         self
     }
-     pub fn lt<T>(mut self, criteria:  impl FilterArg<T>) -> Self   
-    {
+    pub fn lt<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Lt(criteria.to_sql()));
         self
     }
-    pub fn le<T>(mut self, criteria:  impl FilterArg<T>) -> Self   
-    {
+    pub fn le<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Le(criteria.to_sql()));
         self
     }
-    pub fn bw<T>(mut self, lower:  impl FilterArg<T>, upper:  impl FilterArg<T>) -> Self 
-    {
+    pub fn bw<T>(mut self, lower: impl FilterArg<T>, upper: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Bw(lower.to_sql(), upper.to_sql()));
         self
     }
-    pub fn lk<T>(mut self, criteria:  impl FilterArg<T>) -> Self  
-    {
+    pub fn lk<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Lk(criteria.to_sql()));
         self
     }
-     pub fn re<T>(mut self, criteria:  impl FilterArg<T>) -> Self  
-    {
+    pub fn re<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Re(criteria.to_sql()));
         self
     }
-     pub fn sc<T>(mut self, criteria:  impl FilterArg<T>) -> Self  
-    {
+    pub fn sc<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Sc(criteria.to_sql()));
         self
     }
-    pub fn ins<T>(mut self, criteria:  Vec<impl FilterArg<T>>) -> Self  
-    {
-        self.filter = Some(FieldFilter::In(criteria.into_iter().map(|c| c.to_sql()).collect() ));
+    pub fn ins<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
+        self.filter = Some(FieldFilter::In(
+            criteria.into_iter().map(|c| c.to_sql()).collect(),
+        ));
         self
     }
-    pub fn out<T>(mut self, criteria:  Vec<impl FilterArg<T>>) -> Self  
-    {
-        self.filter = Some(FieldFilter::Out(criteria.into_iter().map(|c| c.to_sql()).collect() ));
+    pub fn out<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
+        self.filter = Some(FieldFilter::Out(
+            criteria.into_iter().map(|c| c.to_sql()).collect(),
+        ));
         self
     }
-    pub fn fnc<U, T>(mut self, name: U, args:   Vec<impl FilterArg<T>>) -> Self   where U: Into<String>,
+    pub fn fnc<U, T>(mut self, name: U, args: Vec<impl FilterArg<T>>) -> Self
+    where
+        U: Into<String>,
     {
-        self.filter = Some(FieldFilter::Fn(name.into(), args.into_iter().map(|c| c.to_sql()).collect()));
+        self.filter = Some(FieldFilter::Fn(
+            name.into(),
+            args.into_iter().map(|c| c.to_sql()).collect(),
+        ));
         self
     }
 }
-
 
 impl ToString for Field {
     fn to_string(&self) -> String {
         let mut s = String::new();
-               match self.order {
-                   Some(FieldOrder::Asc(o)) => {s.push('+'); s.push_str(&o.to_string());}
-                   Some(FieldOrder::Desc(o)) => {s.push('-'); s.push_str(&o.to_string());}
-                   None => {}
-               };
-                if self.hidden {
-                    s.push('.');
-                }
-                 s.push_str(&self.name);
+        match self.order {
+            Some(FieldOrder::Asc(o)) => {
+                s.push('+');
+                s.push_str(&o.to_string());
+            }
+            Some(FieldOrder::Desc(o)) => {
+                s.push('-');
+                s.push_str(&o.to_string());
+            }
+            None => {}
+        };
+        if self.hidden {
+            s.push('.');
+        }
+        s.push_str(&self.name);
 
-                 if self.filter.is_some() {
-                    if self.aggregation {
-                        s.push_str(" !");
-                    } else {
-                        s.push(' ');
-                    }
-                 }
-                match self.filter  {
-                    None => s.push_str(""),
-                    Some(FieldFilter::Eq(ref arg)) => { s.push_str("EQ ");s.push_str(arg); },
-                    Some(FieldFilter::Eqn) => { s.push_str("EQN");},
-                    Some(FieldFilter::Ne(ref arg)) => { s.push_str("NE ");s.push_str(arg); },
-                    Some(FieldFilter::Nen) => { s.push_str("NEN");},
-                    Some(FieldFilter::Gt(ref arg)) => { s.push_str("GT ");s.push_str(arg); },
-                    Some(FieldFilter::Ge(ref arg)) => { s.push_str("GE ");s.push_str(arg); },
-                    Some(FieldFilter::Lt(ref arg)) => { s.push_str("LT ");s.push_str(arg); },
-                    Some(FieldFilter::Le(ref arg)) => { s.push_str("LE ");s.push_str(arg); },
-                    Some(FieldFilter::Lk(ref arg)) => { s.push_str("LK ");s.push_str(arg); },
-                    Some(FieldFilter::Re(ref arg)) => { s.push_str("RE ");s.push_str(arg); },
-                    Some(FieldFilter::Sc(ref arg)) => { s.push_str("SC ");s.push_str(arg); },
-                    Some(FieldFilter::Bw(ref lower, ref upper)) => { s.push_str("BW ");s.push_str(lower);s.push(' ');s.push_str(upper); },
-                    Some(FieldFilter::In(ref args)) => { s.push_str("IN "); s.push_str(&args.join(" "))},
-                    Some(FieldFilter::Out(ref args)) => { s.push_str("OUT ");s.push_str(&args.join(" ")) },
-                    Some(FieldFilter::Fn(ref name, ref args)) => { s.push_str("FN ");s.push_str(name); s.push(' ');s.push_str(&args.join(" "))},
-                }
-              s
+        if self.filter.is_some() {
+            if self.aggregation {
+                s.push_str(" !");
+            } else {
+                s.push(' ');
+            }
+        }
+        match self.filter {
+            None => s.push_str(""),
+            Some(FieldFilter::Eq(ref arg)) => {
+                s.push_str("EQ ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Eqn) => {
+                s.push_str("EQN");
+            }
+            Some(FieldFilter::Ne(ref arg)) => {
+                s.push_str("NE ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Nen) => {
+                s.push_str("NEN");
+            }
+            Some(FieldFilter::Gt(ref arg)) => {
+                s.push_str("GT ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Ge(ref arg)) => {
+                s.push_str("GE ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Lt(ref arg)) => {
+                s.push_str("LT ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Le(ref arg)) => {
+                s.push_str("LE ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Lk(ref arg)) => {
+                s.push_str("LK ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Re(ref arg)) => {
+                s.push_str("RE ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Sc(ref arg)) => {
+                s.push_str("SC ");
+                s.push_str(arg);
+            }
+            Some(FieldFilter::Bw(ref lower, ref upper)) => {
+                s.push_str("BW ");
+                s.push_str(lower);
+                s.push(' ');
+                s.push_str(upper);
+            }
+            Some(FieldFilter::In(ref args)) => {
+                s.push_str("IN ");
+                s.push_str(&args.join(" "))
+            }
+            Some(FieldFilter::Out(ref args)) => {
+                s.push_str("OUT ");
+                s.push_str(&args.join(" "))
+            }
+            Some(FieldFilter::Fn(ref name, ref args)) => {
+                s.push_str("FN ");
+                s.push_str(name);
+                s.push(' ');
+                s.push_str(&args.join(" "))
+            }
+        }
+        s
     }
 }
-
 
 impl From<&str> for Field {
     fn from(s: &str) -> Field {
@@ -271,14 +307,11 @@ impl From<&str> for Field {
     }
 }
 
-
-
 impl Into<QueryToken> for Field {
     fn into(self) -> QueryToken {
         QueryToken::Field(self)
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub enum FieldFilter {
@@ -291,19 +324,18 @@ pub enum FieldFilter {
     Lt(String),
     Le(String),
     Lk(String),
-    Bw(String, String), // Lower upper
+    Bw(String, String), // Lower, upper limit
     In(Vec<String>),
     Out(Vec<String>),
     Re(String),
     Sc(String),
-    Fn(String, Vec<String>), // Name Args
+    Fn(String, Vec<String>), // Function name, args
 }
 #[derive(Clone, Debug)]
 pub enum FieldOrder {
     Asc(u8),
     Desc(u8),
 }
-
 
 #[derive(Clone, Debug)]
 pub enum QueryToken {
@@ -324,29 +356,21 @@ impl From<&str> for QueryToken {
 }
 
 impl ToString for QueryToken {
-
-    fn to_string(&self)-> String {
-              
+    fn to_string(&self) -> String {
         let s = match self {
-            QueryToken::RightBracket =>  String::from(")"),
-            QueryToken::LeftBracket ( c) => {
-               match c {
-                   Concatenation::And => String::from("("),
-                   Concatenation::Or => String::from("("),
-               }
+            QueryToken::RightBracket => String::from(")"),
+            QueryToken::LeftBracket(c) => match c {
+                Concatenation::And => String::from("("),
+                Concatenation::Or => String::from("("),
             },
-          QueryToken::Field (field /*Field {concatenation, name, hidden, order, filter, aggregation}*/)
-          => {
-              field.to_string()
-          },
+            QueryToken::Field(
+                field, /*Field {concatenation, name, hidden, order, filter, aggregation}*/
+            ) => field.to_string(),
             QueryToken::Wildcard(_) => String::from("*"),
         };
         s
-
     }
-
 }
-
 
 #[derive(Clone, Debug)]
 pub struct Query {
@@ -358,7 +382,7 @@ impl Query {
         Query { tokens: vec![] }
     }
 
- pub fn and<T>(&mut self, query: T) ->  &mut Self
+    pub fn and<T>(&mut self, query: T) -> &mut Self
     where
         T: Into<Query>,
     {
@@ -370,40 +394,36 @@ impl Query {
         T: Into<Query>,
     {
         let mut query = query.into();
-        
-        // Put parens around both expression because logical or has higher precendence
+
+        // Put parens around both expressions because logical OR has higher precendence
         // Example:  a AND b OR c != (a AND b) OR c
-        // Reason "b OR c" is evaluated first in first expression
-        
+        // Reason: "b OR c" is evaluated first in "a AND b OR C"
 
         let bracket_needed = query.tokens.len() > 1;
         if self.tokens.len() > 1 {
-            self.tokens.insert(0,QueryToken::LeftBracket(Concatenation::And));
+            self.tokens
+                .insert(0, QueryToken::LeftBracket(Concatenation::And));
             self.tokens.push(QueryToken::RightBracket);
         }
         if bracket_needed {
             self.tokens.push(QueryToken::LeftBracket(Concatenation::Or));
-        } 
-        // TODO
-        // Don't know how to make this work in rust
+        }
+        
         // Prevent brackets on single token
-         else {
-            // make single token concat with or
-             if query.tokens.len() == 1 {
-                    // TODO make this work with match
-                    
-                    if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
-                        *c= Concatenation::Or;
-                    }
-                     else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
-                        field.concatenation = Concatenation::Or;
-                    }
-                    else if let QueryToken::Wildcard(w) = query.tokens.get_mut(0).unwrap() {
-                        *w= Concatenation::Or;
-                    }
+        else {
+            // Make single token concat with or
+            if query.tokens.len() == 1 {
+                // TODO Make this work with "match {}"
 
-            } 
-       } 
+                if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
+                    *c = Concatenation::Or;
+                } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
+                    field.concatenation = Concatenation::Or;
+                } else if let QueryToken::Wildcard(w) = query.tokens.get_mut(0).unwrap() {
+                    *w = Concatenation::Or;
+                }
+            }
+        }
         self.tokens.append(&mut query.tokens);
         if bracket_needed {
             self.tokens.push(QueryToken::RightBracket {});
@@ -420,47 +440,48 @@ impl Query {
         let mut q = query.into();
         q.tokens.append(&mut self.tokens);
         std::mem::swap(&mut q.tokens, &mut self.tokens);
-       
+
         self
     }
-
-    
 }
-
-
 
 impl ToString for Query {
     fn to_string(&self) -> String {
-
-        fn get_concatenation( c: &Concatenation) -> char {
-            match c  {
+        fn get_concatenation(c: &Concatenation) -> char {
+            match c {
                 Concatenation::And => ',',
-                Concatenation::Or => ';'
+                Concatenation::Or => ';',
             }
         }
 
         let mut s = String::new();
         let mut concatenation_needed = false;
-        let mut parens_open = false;
+
         for token in &self.tokens {
             if concatenation_needed {
                 match &token {
-                     QueryToken::LeftBracket(concatenation) | QueryToken::Wildcard(concatenation)=> s.push( get_concatenation(concatenation)),
-                     QueryToken::Field(field) => s.push( get_concatenation(&field.concatenation)),
-                     _ => {}
+                    QueryToken::LeftBracket(concatenation)
+                    | QueryToken::Wildcard(concatenation) => {
+                        s.push(get_concatenation(concatenation))
+                    }
+                    QueryToken::Field(field) => s.push(get_concatenation(&field.concatenation)),
+                    _ => {}
                 }
             }
             s.push_str(&token.to_string());
             match token {
-                QueryToken::LeftBracket(..) => {concatenation_needed = false},
-                QueryToken::Field(..) => {parens_open= false; concatenation_needed = true;},
-                QueryToken::Wildcard(..) => {parens_open= false; concatenation_needed = true},
+                QueryToken::LeftBracket(..) => concatenation_needed = false,
+                QueryToken::Field(..) => concatenation_needed = true,
+                QueryToken::Wildcard(..) => concatenation_needed = true,
                 _ => {}
             }
-            println!("{:?}", s);
         }
-        s.trim_start_matches(",");
-        s.trim_start_matches(";");
+
+        // To avoid allocation check first if string starts with a separator
+        let t = s.chars().next().unwrap_or(' ');
+        if t == ',' || t == ';' {
+            s = s.trim_start_matches(",").trim_start_matches(";").to_owned();
+        }
         s
     }
 }
@@ -484,5 +505,3 @@ impl From<&str> for Query {
         q
     }
 }
-
-

@@ -53,7 +53,6 @@ impl<'a> GeneratedMysql<'a> {
                 #field_ident : Some ( < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? ) 
             ));
         } else {
-            let collection_type = field.first_type();
             self.mysql_deserialize_fields.push( quote!(
                 #field_ident : Vec::new()
             ));
@@ -125,7 +124,7 @@ impl<'a> GeneratedMysql<'a> {
                 {
                     let mapper = mappers.get( #struct_name ).unwrap();
                     let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query).unwrap(); 
-                    log::info!("SQL = \"{}\" with params {:?}", result.to_sql(), result.params());
+                    toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql(), result.params());
                     if result.is_empty() {
                         vec![]
                     } else {
@@ -151,7 +150,7 @@ impl<'a> GeneratedMysql<'a> {
                     #(#ignored_paths)*
                     .build(mapper, &query).unwrap();
                     
-                    log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql(&hint, 0, 2), result.params());
+                    toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql(&hint, 0, 2), result.params());
                     
                     
 
@@ -194,21 +193,21 @@ impl<'a> GeneratedMysql<'a> {
                     #(#ignored_paths)*
                     .build(mapper, &query).unwrap();
 
-                    log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql(&hint, first, max), result.params());
+                    toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql(&hint, first, max), result.params());
                     let entities_stmt = conn.prep_exec(result.to_sql_for_mysql( &hint, first, max), result.params());
                     let mut entities = toql::mysql::row::load::< #struct_ident >(entities_stmt).unwrap();
                     let mut count_result = None;
                     
                     // Get count values
                     if count {
-                        log::info!("SQL = \"SELECT FOUND_ROWS();\"");
+                        toql::log::info!("SQL = \"SELECT FOUND_ROWS();\"");
                         let r = conn.query("SELECT FOUND_ROWS();").unwrap();
                         let total_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
 
                         let result = toql::sql_builder::SqlBuilder::new().build_count(mapper, &query).unwrap();
-                        log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params());
+                        toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params());
                         conn.prep_exec(result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params()).expect("SQL error"); // don't select any rows
-                        log::info!("SQL = \"SELECT FOUND_ROWS();\"");
+                        toql::log::info!("SQL = \"SELECT FOUND_ROWS();\"");
                         let r = conn.query("SELECT FOUND_ROWS();").unwrap();
                         let filtered_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
                         count_result = Some((total_count ,filtered_count))
@@ -253,8 +252,9 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
 
         );
 
-
-        println!("GEN (mysql) = {}", mysql.to_string());
+       
+        //println!("/* Toql derive (codegen_mysql) */\n {}", mysql.to_string());
+        
 
         tokens.extend(mysql);
 

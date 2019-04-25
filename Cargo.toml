@@ -10,7 +10,7 @@ toql_mysql = { path = "toql_mysql", version = "0.1.0", optional = true }
 toql_rocket = { path = "toql_rocket", version = "0.1.0", optional = true }
 toql_derive = { path = "toql_derive", version = "0.1.0" }
 
-
+log = "0.4"
 
 [workspace]
 members =  [

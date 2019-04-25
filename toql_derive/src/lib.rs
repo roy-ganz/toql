@@ -1,4 +1,4 @@
-#![recursion_limit="512"]
+#![recursion_limit = "512"]
 
 extern crate proc_macro;
 
@@ -17,9 +17,6 @@ use darling::FromDeriveInput;
 
 use proc_macro::TokenStream;
 
-
-
-
 mod annot;
 mod codegen;
 
@@ -30,10 +27,8 @@ mod util;
 
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
-   
     let ast = parse_macro_input!(input as DeriveInput);
     let generated = annot::Toql::from_derive_input(&ast).unwrap();
-  
+
     TokenStream::from(quote!(#generated))
 }
-

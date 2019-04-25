@@ -9,6 +9,7 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
+
 syn = "0.15"
 quote = "0.6"
 heck = "0.3"
@@ -19,3 +20,5 @@ mysql = {version="14.2", optional=true}
 [features]
 mysqldb = ["mysql"]
 
+[dev-dependencies]
+toql = {version = "0.1", path="../../toql"}

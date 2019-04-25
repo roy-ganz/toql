@@ -1,13 +1,12 @@
-use pest::error::ErrorVariant::CustomError;
 use crate::query::Concatenation;
 use crate::query::Field;
 use crate::query::FieldFilter;
 use crate::query::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
-use pest::Parser;
 use pest::error::Error;
-
+use pest::error::ErrorVariant::CustomError;
+use pest::Parser;
 
 #[derive(Parser)]
 #[grammar = "toql.pest"]
@@ -16,31 +15,18 @@ struct PestQueryParser;
 pub struct QueryParser;
 
 impl QueryParser {
-
-   
-    pub fn parse(toql_string: &str) -> Result<Query, Error<Rule>>  {
+    pub fn parse(toql_string: &str) -> Result<Query, Error<Rule>> {
         let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
 
         let mut query = Query::new();
         let mut con = Concatenation::And;
-       
+
         for pair in pairs.flatten().into_iter() {
-            let span = pair.clone().into_span();
-         //   println!("Rule:    {:?}", pair.as_rule());
-         //   println!("Span:    {:?}", span);
-         //   println!("Text:    {}", span.as_str());
+            let span = pair.clone().as_span();
+            //   println!("Rule:    {:?}", pair.as_rule());
+            //   println!("Span:    {:?}", span);
+            //   println!("Text:    {}", span.as_str());
             match pair.as_rule() {
-                // Rule::wclause => {
-                //     query.tokens.push(QueryToken::Field(Field {
-                //         concatenation: con.clone(),
-                //         name: "missing".to_string(),
-                //         hidden: false,
-                //         order: None,
-                //         having: false,
-                //         filter: None,
-                //         dynamic: false,
-                //     }));
-                // }
                 Rule::field_clause => {
                     query.tokens.push(QueryToken::Field(Field {
                         concatenation: con.clone(),
@@ -80,7 +66,7 @@ impl QueryParser {
                         }
                     }
                 }
-               
+
                 Rule::fieldname => {
                     let token = query.tokens.last_mut();
                     if let Some(t) = token {
@@ -108,11 +94,24 @@ impl QueryParser {
                                 "LK" => Some(FieldFilter::Lk(iter.next().unwrap().to_string())),
                                 "IN" => Some(FieldFilter::In(iter.map(String::from).collect())),
                                 "OUT" => Some(FieldFilter::Out(iter.map(String::from).collect())),
-                                "BW" => Some(FieldFilter::Bw(iter.next().unwrap().to_string(), iter.next().unwrap().to_string())),
+                                "BW" => Some(FieldFilter::Bw(
+                                    iter.next().unwrap().to_string(),
+                                    iter.next().unwrap().to_string(),
+                                )),
                                 "RE" => Some(FieldFilter::Re(iter.next().unwrap().to_string())),
                                 "CS" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
-                                "FN" => Some(FieldFilter::Fn(iter.next().unwrap().to_string(), iter.map(String::from).collect())),
-                                _ => return Err(Error::new_from_span(CustomError { message:"Invalid filter Function".to_string()}, span)),
+                                "FN" => Some(FieldFilter::Fn(
+                                    iter.next().unwrap().to_string(),
+                                    iter.map(String::from).collect(),
+                                )),
+                                _ => {
+                                    return Err(Error::new_from_span(
+                                        CustomError {
+                                            message: "Invalid filter Function".to_string(),
+                                        },
+                                        span,
+                                    ))
+                                }
                             }
                         }
                     }
@@ -120,8 +119,7 @@ impl QueryParser {
                 Rule::wildcard => {
                     query.tokens.push(QueryToken::Wildcard(con.clone()));
                 }
-                 Rule::rpar => {
-                                         
+                Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);
                 }
                 Rule::lpar => {
@@ -137,7 +135,6 @@ impl QueryParser {
 
                 _ => {}
             }
-            //println!("{:?}", query.tokens);
         }
         Ok(query)
     }

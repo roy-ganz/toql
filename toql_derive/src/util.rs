@@ -5,7 +5,7 @@ use heck::ShoutySnakeCase;
 use heck::MixedCase;
 use heck::SnakeCase;
 
-pub fn rename_sql_table(table: &str, renaming: &Option<&str>) -> String{
+pub fn rename_sql_table(table: &str, renaming: &Option<String>) -> String{
         if let Some(tables) = &renaming {
             match tables.as_ref() {
                 "CamelCase" => table.to_camel_case(),
@@ -19,7 +19,7 @@ pub fn rename_sql_table(table: &str, renaming: &Option<&str>) -> String{
         }
 
     }
-pub fn rename_sql_column( column: &str, renaming: &Option<&str>) -> String{
+pub fn rename_sql_column( column: &str, renaming: &Option<String>) -> String{
        if let Some(columns) = &renaming {
         match columns.as_ref() {
             "CamelCase" => column.to_camel_case(),
