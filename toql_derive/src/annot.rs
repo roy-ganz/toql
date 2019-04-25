@@ -116,12 +116,14 @@ impl ToqlField {
 
 
 #[derive(Debug, FromDeriveInput)]
-#[darling(attributes(tables, columns, alter, alias), forward_attrs(allow, doc, cfg), supports(struct_any))]
+#[darling(attributes(toql), forward_attrs(allow, doc, cfg), supports(struct_any))]
 pub struct Toql {
     pub ident: syn::Ident,
     pub attrs: Vec<syn::Attribute>,
-     #[darling(default)]
+    #[darling(default)]
     pub tables: Option<String>,
+    #[darling(default)]
+    pub table: Option<String>,
      #[darling(default)]
     pub columns: Option<String>,
       #[darling(default)]
@@ -136,11 +138,22 @@ pub struct Toql {
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut  proc_macro2::TokenStream) {
 
-    //println!("DARLING = {:?}", self);
+        println!("DARLING = {:?}", self);
 
       
 
-        let mut gen = GeneratedToql::from_toql(&self);
+        let mut gen_result = GeneratedToql::from_toql(&self);
+
+        if let Err(error) = gen_result {
+            tokens.extend(quote_spanned! {
+                    self.ident.span() =>
+                        compile_error!( #error);
+                }
+            );
+            return;
+        }
+
+        let mut gen = gen_result.unwrap();
      
         #[cfg(feature = "mysqldb")]
         let mut mysql = GeneratedMysql::from_toql(&self);
@@ -150,6 +163,7 @@ impl quote::ToTokens for Toql {
              ident:_,
              attrs:_,
              tables:_,
+             table: _,
              columns:_,
              alias:_,
              alter:_,

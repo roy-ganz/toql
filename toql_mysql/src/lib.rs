@@ -21,3 +21,10 @@ pub mod row;
  {
     T::load_many(query, mappers, conn, distinct, count, first, max)
  }
+
+
+ pub fn is_null(row: &mysql::Row, key: &str) -> bool {
+    let v : mysql::Value;
+    v = row.get(key).unwrap();
+    v == mysql::Value::NULL
+}

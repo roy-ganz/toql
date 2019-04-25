@@ -19,10 +19,16 @@ pub(crate) struct GeneratedToql<'a> {
 }
 
 impl<'a> GeneratedToql<'a> {
-    pub(crate) fn from_toql(toql: &Toql) -> GeneratedToql {
-        GeneratedToql {
+    pub(crate) fn from_toql(toql: &Toql) -> Result<GeneratedToql, String> {
+        let r = crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables)?;
+        
+        
+        //println!("TABLE RENAIMNG {:?}\n", toql.tables);
+        //println!("ORIGINAL {}\n", toql.ident.to_string());
+        //println!("NEW {}\n", toql.table.unwrap_or(crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables));
+        Ok(GeneratedToql {
             struct_ident: &toql.ident,
-            sql_table_name: crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables), //toql.ident.to_string(),
+            sql_table_name: crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables)?, //toql.ident.to_string(),
             sql_table_alias: toql
                 .alias
                 .clone()
@@ -34,7 +40,7 @@ impl<'a> GeneratedToql<'a> {
             builder_fields: Vec::new(),
             merge_functions: Vec::new(),
             field_mappings: Vec::new(),
-        }
+        })
     }
 
     pub(crate) fn add_field_mapping(
@@ -46,7 +52,7 @@ impl<'a> GeneratedToql<'a> {
 
         let toql_field = format!("{}", field_ident).to_mixed_case();
         
-        let renamed_sql_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
+        let renamed_sql_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns).unwrap(); // TODO HANDLE RESULT
         let sql_field: &str = match &field.column {
             Some(string) => string,
             None => &renamed_sql_column,
@@ -58,16 +64,27 @@ impl<'a> GeneratedToql<'a> {
             let joined_struct_ident = field.first_non_generic_type();
             let joined_struct_name = field.first_non_generic_type().unwrap().to_string();
             let renamed_join_table =
-                crate::util::rename_sql_table(&joined_struct_name, &toql.tables);
+                crate::util::rename_sql_table(&joined_struct_name, &toql.tables).unwrap(); // TODO RESULT
             let join_table = &field.table.as_ref().unwrap_or(&renamed_join_table);
             let join_alias = &field.alias.as_ref().unwrap_or(&joined_struct_name);
 
-            let this_key = crate::util::rename_sql_column(vk[0].trim(),&toql.columns);
-            let other_key = crate::util::rename_sql_column(vk[1].trim(),&toql.columns);
-            let format_string = format!(
-                "LEFT JOIN {} {} ON ({{}}.{} = {}.{})",
-                join_table, join_alias, this_key, join_alias, other_key
-            );
+            let this_key = crate::util::rename_sql_column(vk[0].trim(),&toql.columns).unwrap(); // TODO HANDLE RTESULKT
+            let other_key = crate::util::rename_sql_column(vk[1].trim(),&toql.columns).unwrap(); // TODO HANDLE RTESULKT
+
+            println!("THIS TABLE COL:{}, RENAMED: {}",joined_struct_name, renamed_join_table );
+            println!("THIS COLUMN COL:{}, RENAMED: {}",vk[0], this_key );
+
+            let format_string = if field._first_type() == "Option" {
+                format!(
+                    "LEFT JOIN {} {} ON ({{}}.{} = {}.{})",
+                    join_table, join_alias, this_key, join_alias, other_key
+                )
+            } else {
+                format!(
+                    "INNER JOIN {} {} ON ({{}}.{} = {}.{})",
+                    join_table, join_alias, this_key, join_alias, other_key
+                )
+            };
             let join_clause = quote!(&format!( #format_string, sql_alias));
             self.field_mappings.push(quote! {
                 mapper.map_join::<#joined_struct_ident>(  #toql_field, #join_alias);

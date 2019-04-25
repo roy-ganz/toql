@@ -38,6 +38,8 @@ impl<'a> GeneratedMysql<'a> {
 
     pub(crate) fn add_mysql_deserialize(&mut self, _toql: & Toql, field: &'a ToqlField) {
          let field_ident= &field.ident;
+
+         // Regular fields
          if field.join.is_none() && field.merge.is_none()   {
             
             let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(*i) }else { quote!({*i +=1; * i })};
@@ -45,14 +47,29 @@ impl<'a> GeneratedMysql<'a> {
                     #field_ident : row . take ( #assignment ) . unwrap ( ) 
             ));
 
-        } else if field.merge.is_none() {
+        } 
+        // Joined fields
+        else if field.join.is_some() {
+            
             
             let join_type= field.first_non_generic_type();
             let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(i) }else { quote!({*i +=1; i })};
+            
+            // If join is optional, assign None if key column is NULL, otherwise assign deserialize nomally
+            if field._first_type() == "Option" {
+               let vk: Vec<&str> = field.join.as_ref().unwrap().split("<=").collect();
+                let other_key = crate::util::rename_sql_column(vk[1].trim(),&_toql.columns).unwrap();// TODO RESULT
+                self.mysql_deserialize_fields.push( quote!(
+                #field_ident : if toql::mysql::is_null(&row, #other_key) {None} else {Some (< #join_type > :: from_row_with_index ( & mut row , #assignment ) ? ) }
+                ));
+            } else {
             self.mysql_deserialize_fields.push( quote!(
-                #field_ident : Some ( < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? ) 
+                #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? 
             ));
-        } else {
+            }
+        } 
+        // Merged fields
+        else {
             self.mysql_deserialize_fields.push( quote!(
                 #field_ident : Vec::new()
             ));
@@ -253,7 +270,7 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
         );
 
        
-        println!("/* Toql derive (codegen_mysql) */\n {}", mysql.to_string());
+        println!("/* Toql (codegen_mysql) */\n {}", mysql.to_string());
         
 
         tokens.extend(mysql);
