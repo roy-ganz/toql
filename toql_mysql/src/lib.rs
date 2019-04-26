@@ -17,14 +17,15 @@ pub mod row;
  }
 
  pub fn load_many<T: load::Load<T>>(query: &mut Query, mappers: &SqlMapperCache, conn: &mut Conn, distinct: bool, count: bool, first:u64, max:u16)
--> Result<(Vec<T>, Option<(u32,u32)>), Error>
+-> Result<(Vec<T>, Option<(u32,u32)>), LoadError>
  {
     T::load_many(query, mappers, conn, distinct, count, first, max)
  }
 
 
- pub fn is_null(row: &mysql::Row, key: &str) -> bool {
+ pub fn is_null(row: &mysql::Row, id: usize) -> bool {
     let v : mysql::Value;
-    v = row.get(key).unwrap();
+    println!("{:?}", row);
+    v = row.get(id).unwrap();
     v == mysql::Value::NULL
 }

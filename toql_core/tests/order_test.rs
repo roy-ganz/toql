@@ -10,7 +10,7 @@ fn setup_mapper() -> SqlMapper {
         .map_field_with_options(
             "id",
             "id",
-            MapperOptions::new().select_always(true).count_query(true),
+            MapperOptions::new().select_always(true)
         )
         .map_field("title", "title")
         .map_field("publishedAt", "published_at");

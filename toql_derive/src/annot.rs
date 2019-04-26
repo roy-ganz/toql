@@ -7,12 +7,22 @@ use crate::codegen_mysql::GeneratedMysql;
 use syn::Ident;
 use syn::GenericArgument::Type;
 
+
+#[derive(Debug, FromMeta)]
+pub struct KeyPair {
+    #[darling(rename="self")]
+    pub this: String,
+    pub other: String
+}
+
 // Attribute on struct field
 #[derive(Debug, FromField)]
 #[darling(attributes(toql))]
 pub struct ToqlField {
     pub ident: Option<syn::Ident>,
     pub ty: syn::Type,
+     #[darling(default)]
+    pub join: Option<KeyPair>,
     #[darling(default)]
     pub column: Option<String>,
      #[darling(default)]
@@ -31,9 +41,7 @@ pub struct ToqlField {
     pub sql: Option<String>,
     #[darling(multiple)]
     pub role: Vec<String>,
-    #[darling(default)]
-    pub join: Option<String>,
-    #[darling(default)]
+     #[darling(default)]
     pub merge: Option<String>,
     #[darling(default)]
     pub alias: Option<String>,
@@ -114,18 +122,31 @@ impl ToqlField {
  
 }
 
+#[derive(FromMeta, PartialEq, Eq, Debug)]
+pub enum RenameCase {
+    #[darling(rename="CamelCase")]
+    CamelCase,
+    #[darling(rename="snake_case")]
+    SnakeCase,
+    #[darling(rename="SHOUTY_SNAKE_CASE")]
+    ShoutySnakeCase,
+    #[darling(rename="mixedCase")]
+    MixedCase
+}
+
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(toql), forward_attrs(allow, doc, cfg), supports(struct_any))]
 pub struct Toql {
+    pub vis: syn::Visibility,
     pub ident: syn::Ident,
     pub attrs: Vec<syn::Attribute>,
     #[darling(default)]
-    pub tables: Option<String>,
+    pub tables: Option<RenameCase>,
     #[darling(default)]
     pub table: Option<String>,
      #[darling(default)]
-    pub columns: Option<String>,
+    pub columns: Option<RenameCase>,
       #[darling(default)]
     pub alias: Option<String>,
      #[darling(default)]
@@ -138,32 +159,32 @@ pub struct Toql {
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut  proc_macro2::TokenStream) {
 
-        println!("DARLING = {:?}", self);
+        //println!("DARLING = {:?}", self);
 
-      
-
-        let mut gen_result = GeneratedToql::from_toql(&self);
-
-        if let Err(error) = gen_result {
-            tokens.extend(quote_spanned! {
+        match self.vis {
+            syn::Visibility::Public(_) => {},
+            _ => {
+                tokens.extend(quote_spanned! {
                     self.ident.span() =>
-                        compile_error!( #error);
-                }
-            );
-            return;
+                    compile_error!( "Visibility for Toql structs must be public. Add `pub`.");
+                }); 
+                return;
+            }
         }
+       
 
-        let mut gen = gen_result.unwrap();
+        let mut gen = GeneratedToql::from_toql(&self);
      
         #[cfg(feature = "mysqldb")]
         let mut mysql = GeneratedMysql::from_toql(&self);
          
 
          let Toql {
+             vis: _,
              ident:_,
              attrs:_,
              tables:_,
-             table: _,
+             table:_,
              columns:_,
              alias:_,
              alter:_,
@@ -178,6 +199,7 @@ impl quote::ToTokens for Toql {
         
         for field in fields {
             
+                println!("JOIN = {:?}", field.join);
                 if field.skip {
                     continue;
                 }

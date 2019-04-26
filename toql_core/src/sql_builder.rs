@@ -8,6 +8,7 @@ use crate::sql_mapper::SqlMapper;
 use crate::sql_mapper::SqlTarget;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::fmt;
 
 struct SqlTargetData {
     selected: bool, // Target is selected
@@ -46,6 +47,19 @@ pub enum SqlBuilderError {
     FieldMissing(String),
     RoleRequired(String),
 }
+
+impl fmt::Display for SqlBuilderError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SqlBuilderError::FieldMissing(ref s) =>
+                write!(f, "field `{}` is missing", s),
+            SqlBuilderError::RoleRequired(ref s) =>
+                write!(f, "role `{}` is required", s),
+            
+        }
+    }
+}
+
 
 impl SqlBuilder {
     pub fn new() -> Self {

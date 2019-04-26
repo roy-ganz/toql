@@ -28,7 +28,11 @@ mod util;
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let generated = annot::Toql::from_derive_input(&ast).unwrap();
+   
+    let generated_result = annot::Toql::from_derive_input(&ast);
 
-    TokenStream::from(quote!(#generated))
+    match generated_result {
+        Ok(gen) =>  TokenStream::from(quote!(#gen)),
+        Err(error) => TokenStream::from(error.write_errors())
+    }
 }

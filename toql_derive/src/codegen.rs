@@ -1,5 +1,6 @@
 use crate::annot::Toql;
 use crate::annot::ToqlField;
+use crate::annot::KeyPair;
 use quote::quote;
 
 use proc_macro2::Span;
@@ -19,16 +20,12 @@ pub(crate) struct GeneratedToql<'a> {
 }
 
 impl<'a> GeneratedToql<'a> {
-    pub(crate) fn from_toql(toql: &Toql) -> Result<GeneratedToql, String> {
-        let r = crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables)?;
-        
-        
-        //println!("TABLE RENAIMNG {:?}\n", toql.tables);
-        //println!("ORIGINAL {}\n", toql.ident.to_string());
-        //println!("NEW {}\n", toql.table.unwrap_or(crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables));
-        Ok(GeneratedToql {
+    pub(crate) fn from_toql(toql: &Toql) -> GeneratedToql {
+       
+       let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
+        GeneratedToql {
             struct_ident: &toql.ident,
-            sql_table_name: crate::util::rename_sql_table(&toql.ident.to_string(), &toql.tables)?, //toql.ident.to_string(),
+            sql_table_name: toql.table.clone().unwrap_or(renamed_table), //toql.ident.to_string(),
             sql_table_alias: toql
                 .alias
                 .clone()
@@ -40,7 +37,7 @@ impl<'a> GeneratedToql<'a> {
             builder_fields: Vec::new(),
             merge_functions: Vec::new(),
             field_mappings: Vec::new(),
-        })
+        }
     }
 
     pub(crate) fn add_field_mapping(
@@ -52,27 +49,29 @@ impl<'a> GeneratedToql<'a> {
 
         let toql_field = format!("{}", field_ident).to_mixed_case();
         
-        let renamed_sql_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns).unwrap(); // TODO HANDLE RESULT
+        let renamed_sql_column = crate::util::rename(&field_ident.to_string(),&toql.columns);
+        
         let sql_field: &str = match &field.column {
             Some(string) => string,
             None => &renamed_sql_column,
         };
 
-        if field.join.is_some() {
+        // Joined field
+        if let Some (KeyPair{this:this_key, other:other_key}) = &field.join {
            // let renamed_join_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
-            let vk: Vec<&str> = field.join.as_ref().unwrap().split("<=").collect();
+            
             let joined_struct_ident = field.first_non_generic_type();
             let joined_struct_name = field.first_non_generic_type().unwrap().to_string();
+            let default_join_alias = joined_struct_name.to_snake_case();
             let renamed_join_table =
-                crate::util::rename_sql_table(&joined_struct_name, &toql.tables).unwrap(); // TODO RESULT
+                crate::util::rename(&joined_struct_name, &toql.tables);
             let join_table = &field.table.as_ref().unwrap_or(&renamed_join_table);
-            let join_alias = &field.alias.as_ref().unwrap_or(&joined_struct_name);
+            let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias); 
 
-            let this_key = crate::util::rename_sql_column(vk[0].trim(),&toql.columns).unwrap(); // TODO HANDLE RTESULKT
-            let other_key = crate::util::rename_sql_column(vk[1].trim(),&toql.columns).unwrap(); // TODO HANDLE RTESULKT
+            let this_key = crate::util::rename(&this_key, &toql.columns);
+            let other_key = crate::util::rename(&other_key, &toql.columns);
 
-            println!("THIS TABLE COL:{}, RENAMED: {}",joined_struct_name, renamed_join_table );
-            println!("THIS COLUMN COL:{}, RENAMED: {}",vk[0], this_key );
+           
 
             let format_string = if field._first_type() == "Option" {
                 format!(
@@ -90,7 +89,9 @@ impl<'a> GeneratedToql<'a> {
                 mapper.map_join::<#joined_struct_ident>(  #toql_field, #join_alias);
                 mapper.join( #toql_field, #join_clause );
             });
-        } else if field.merge.is_none() {
+        } 
+        // Regular field
+        else if field.merge.is_none() {
             let (base, _generic, _gegeneric) = field.get_types();
 
             if base == "Vec" {
@@ -227,7 +228,8 @@ impl<'a> GeneratedToql<'a> {
 impl<'a> quote::ToTokens for GeneratedToql<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
-        let sql_table_name = &self.sql_table_name;
+        let struct_name= format!("{}", struct_ident);
+        let sql_table_name =  &self.sql_table_name;
         let sql_table_alias = &self.sql_table_alias;
 
         let builder_fields_struct = &self.builder_fields_struct;
@@ -246,8 +248,8 @@ impl<'a> quote::ToTokens for GeneratedToql<'a> {
             impl toql::sql_mapper::Map for #struct_ident {
                 fn insert_new_mapper(cache: &mut toql::sql_mapper::SqlMapperCache) ->  &mut toql::sql_mapper::SqlMapper {
                     let m = Self::new_mapper( #sql_table_alias);
-                    cache.insert( String::from( #sql_table_name ), m);
-                    cache.get_mut( #sql_table_name ).unwrap()
+                    cache.insert( String::from( #struct_name ), m);
+                    cache.get_mut( #struct_name ).unwrap()
                 }
 
                 fn new_mapper(table_alias: &str) -> toql::sql_mapper::SqlMapper {

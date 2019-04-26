@@ -21,7 +21,7 @@ members =  [
 ]
 
 [features]
-mysql = ["toql_mysql", "toql_derive/mysqldb"]
-rocket_mysql = ["toql_rocket/mysqldb", "toql_derive/mysqldb", "toql_mysql"]
+mysql = [ "toql_core/mysqldb", "toql_mysql", "toql_derive/mysqldb"]
+rocket_mysql = ["toql_core/mysqldb","toql_rocket/mysqldb", "toql_derive/mysqldb", "toql_mysql"]
 
  
