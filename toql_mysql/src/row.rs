@@ -4,7 +4,7 @@ use mysql;
 // Helper functions to load query result into structures
 
 pub trait FromResultRow<T> {
-    fn forward_row(i: &mut usize);
+    fn forward_row( i: usize)-> usize;
     fn from_row_with_index( row: &mut mysql::Row, i: &mut usize) -> Result<T,mysql::error::Error> ;
 }
 

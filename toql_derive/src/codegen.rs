@@ -95,9 +95,9 @@ impl<'a> GeneratedToql<'a> {
             let (base, _generic, _gegeneric) = field.get_types();
 
             if base == "Vec" {
-                let error = format!("Missing attribute \"merge\". \
-                                     Tell Toql which field in this struct and the other struct have the same value. \
-                                     Add #[toql(merge = \"id <= {}_id\")]", toql.ident.to_string().to_snake_case());
+                let error = format!("Missing attribute `merge`. \
+                                     Tell Toql which field in this struct and the other struct share the same value. \
+                                     Add `#[toql( merge(self=\"id\", other=\" {}_id\") )]`", toql.ident.to_string().to_snake_case());
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
                     compile_error!( #error);
@@ -114,7 +114,7 @@ impl<'a> GeneratedToql<'a> {
                 // TODO Get types as ident to highlight type and not variable name
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
-                    compile_error!("Invalid collection type. Only \"Vec\" is supported.");
+                    compile_error!("Invalid collection type. Only `std::vec::Vec` is supported.");
                 });
                 return Err(());
             }

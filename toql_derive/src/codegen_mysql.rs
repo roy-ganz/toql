@@ -21,7 +21,9 @@ pub(crate) struct GeneratedMysql<'a> {
     path_loaders: Vec<proc_macro2::TokenStream>,
     ignored_paths: Vec<proc_macro2::TokenStream>,
     merge_one_predicates: Vec<proc_macro2::TokenStream>,
-    merge_many_predicates: Vec<proc_macro2::TokenStream>
+    merge_many_predicates: Vec<proc_macro2::TokenStream>,
+    forward_joins: Vec<proc_macro2::TokenStream>,
+    regular_fields: usize   // Impl for mysql::row::ColumnIndex
 }
 
 impl<'a> GeneratedMysql<'a> {
@@ -34,6 +36,9 @@ impl<'a> GeneratedMysql<'a> {
             ignored_paths: Vec::new(),
             merge_one_predicates: Vec::new(),
             merge_many_predicates: Vec::new(),
+            forward_joins: Vec::new(),
+            regular_fields : 0
+
         }
      }
     
@@ -45,38 +50,43 @@ impl<'a> GeneratedMysql<'a> {
          // Regular fields
          if field.join.is_none() && field.merge.is_none()   {
             
+            self.regular_fields += 1;
+
             // Check if regular field is a discrimantor field for an optional join
-            let field_name= field_ident.as_ref().unwrap().to_string();
+           // let field_name= field_ident.as_ref().unwrap().to_string();
             
-            let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(*i) }else { quote!({*i +=1; * i })};
+            let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(*i) }else { quote!({ *i +=1;  *i })};
             self.mysql_deserialize_fields.push( quote!(
-                    #field_ident : row . take ( #assignment ) . unwrap ( ) 
+                    #field_ident : row . take_opt ( #assignment ) . unwrap ( )? 
             ));
             
 
         } 
         // Joined fields
-        else if let Some(KeyPair{this:this_key, other: _}) = &field.join {
-            
-            
+        else if field.join.is_some() {
+                       
 
             let join_type= field.first_non_generic_type();
-            let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(i) }else { quote!({*i +=1; i })};
+
+            self.forward_joins.push(quote!( i = < #join_type > ::forward_row(i);));
+
+            let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(i) }else { quote!({ *i +=1; *i })};
             
-            // If join is optional, assign None if key column is NULL, otherwise assign deserialize nomally
+            // If join is optional, assign None if deserialization fails
             if field._first_type() == "Option" {
-             
-               
-                //let table_alias = _toql.alias.clone().unwrap_or(_toql.ident.to_string().to_snake_case());    
-               // let this_key = crate::util::rename(vk[0].trim(),&_toql.columns);
-                let discriminator_var = Ident::new(&this_key, Span::call_site());
+              
                 self.mysql_deserialize_fields.push( quote!(
-                #field_ident : if toql::mysql::is_null(&row, #discriminator_var) {< #join_type > :: forward_row(i);None} else {Some (< #join_type > :: from_row_with_index ( & mut row , #assignment ) ? ) }
+                    #field_ident : { let j = *i;
+                                    let #field_ident = < #join_type > :: from_row_with_index ( & mut row , #assignment ).ok();
+                                    *i = if #field_ident .is_none() { < #join_type > :: forward_row (j)} else {*i}; // Recover index from error
+                                    #field_ident
+                                    }
+                                    
                 ));
             } else {
-            self.mysql_deserialize_fields.push( quote!(
-                #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? 
-            ));
+                self.mysql_deserialize_fields.push( quote!(
+                    #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? 
+                ));
             }
         } 
         // Merged fields
@@ -96,7 +106,7 @@ impl<'a> GeneratedMysql<'a> {
         let merge_struct_key_ident = Ident::new( vk.get(0).unwrap().trim(), Span::call_site());
 
         self.merge_one_predicates.push( quote!(
-                    query.and(toql::query::Field::from(#toql_merge_field).eq( entity. #merge_struct_key_ident));
+                    query.and(toql::query::Field::from(#toql_merge_field).eq( _entity. #merge_struct_key_ident));
         ));
 
         self.merge_many_predicates.push( quote!(
@@ -197,7 +207,7 @@ impl<'a> GeneratedMysql<'a> {
                                 
                     // Restrict dependencies to parent entity
                     // query.and( "parent_child_id eq XX" )
-                    let entity = entities.get(0).unwrap();
+                    let _entity = entities.get(0).unwrap();
                     #(#merge_one_predicates)*
                     #struct_ident ::load_dependencies_from_mysql(&mut entities, &mut query, mappers, conn)?;
 
@@ -269,18 +279,21 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
    
     let mysql_deserialize_fields= &self.mysql_deserialize_fields;
    
-    let number_of_fields= mysql_deserialize_fields.len();
+    let regular_fields= self.regular_fields;
+    let forward_joins = &self.forward_joins;
         let mysql= quote!(
            
             #loader
             
 
             impl toql :: mysql :: row:: FromResultRow < #struct_ident > for #struct_ident { 
-            fn forward_row(i : & mut usize) {
-                *i += #number_of_fields ;
+            fn forward_row(mut i : usize) -> usize {
+                i += #regular_fields ;
+                #(#forward_joins)*
+                i
             }
 
-            fn from_row_with_index ( mut row : & mut mysql :: Row , i : & mut usize ) -> Result < #struct_ident , mysql :: error :: Error > {
+            fn from_row_with_index ( row : & mut mysql :: Row , i : &mut usize) -> Result < #struct_ident , mysql :: error :: Error > {
 
                 Ok ( #struct_ident { 
                     #(#mysql_deserialize_fields),*
