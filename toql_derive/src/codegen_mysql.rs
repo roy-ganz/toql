@@ -42,19 +42,21 @@ impl<'a> GeneratedMysql<'a> {
         }
      }
     
-   
+    pub (crate) fn add_mysql_deserialize_skip_field(&mut self, field: &'a ToqlField) {
+         let field_ident= &field.ident;
+         let field_type= &field.ty;
+            self.mysql_deserialize_fields.push( quote!(
+                 #field_ident : #field_type :: default()
+            ));
+    }
 
     pub(crate) fn add_mysql_deserialize(&mut self, _toql: & Toql, field: &'a ToqlField) {
          let field_ident= &field.ident;
 
          // Regular fields
-         if field.join.is_none() && field.merge.is_none()   {
-            
+         if field.join.is_empty() && field.merge.is_empty()   {
             self.regular_fields += 1;
-
-            // Check if regular field is a discrimantor field for an optional join
-           // let field_name= field_ident.as_ref().unwrap().to_string();
-            
+     
             let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(*i) }else { quote!({ *i +=1;  *i })};
             self.mysql_deserialize_fields.push( quote!(
                     #field_ident : row . take_opt ( #assignment ) . unwrap ( )? 
@@ -62,26 +64,21 @@ impl<'a> GeneratedMysql<'a> {
             
 
         } 
+
         // Joined fields
-        else if field.join.is_some() {
-                       
-
+        else if !field.join.is_empty() {
             let join_type= field.first_non_generic_type();
-
             self.forward_joins.push(quote!( i = < #join_type > ::forward_row(i);));
-
-            let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(i) }else { quote!({ *i +=1; *i })};
+            let assignment = if self.mysql_deserialize_fields.is_empty()  {quote!(i) }else { quote!({ *i +=1; i })};
             
             // If join is optional, assign None if deserialization fails
             if field._first_type() == "Option" {
-              
                 self.mysql_deserialize_fields.push( quote!(
                     #field_ident : { let j = *i;
                                     let #field_ident = < #join_type > :: from_row_with_index ( & mut row , #assignment ).ok();
                                     *i = if #field_ident .is_none() { < #join_type > :: forward_row (j)} else {*i}; // Recover index from error
                                     #field_ident
                                     }
-                                    
                 ));
             } else {
                 self.mysql_deserialize_fields.push( quote!(
@@ -89,6 +86,7 @@ impl<'a> GeneratedMysql<'a> {
                 ));
             }
         } 
+
         // Merged fields
         else {
             self.mysql_deserialize_fields.push( quote!(
@@ -101,17 +99,25 @@ impl<'a> GeneratedMysql<'a> {
          
         let field_name= &field.ident.as_ref().unwrap().to_string();
         let toql_field = field_name.to_mixed_case();
-        let vk :Vec<&str>= field.merge.as_ref().expect("Merge self struct field <= other struct field").split("<=").collect();
-        let toql_merge_field =format!("{}_{}",toql_field, vk.get(1).unwrap().trim().to_mixed_case()); 
-        let merge_struct_key_ident = Ident::new( vk.get(0).unwrap().trim(), Span::call_site());
+        //let vk :Vec<&str>= field.merge.as_ref().expect("Merge self struct field <= other struct field").split("<=").collect();
+        //let toql_merge_field =format!("{}_{}",toql_field, vk.get(1).unwrap().trim().to_mixed_case()); 
+        //let merge_struct_key_ident = Ident::new( vk.get(0).unwrap().trim(), Span::call_site());
 
-        self.merge_one_predicates.push( quote!(
-                    query.and(toql::query::Field::from(#toql_merge_field).eq( _entity. #merge_struct_key_ident));
-        ));
-
-        self.merge_many_predicates.push( quote!(
+        for merge in &field.merge {
+              let toql_merge_field =format!("{}_{}",toql_field, merge.other.to_mixed_case()); 
+                let merge_struct_key_ident = Ident::new(  &merge.this, Span::call_site());
+            self.merge_one_predicates.push( quote!(
+                        query.and(toql::query::Field::from(#toql_merge_field).eq( _entity. #merge_struct_key_ident));
+            ));
+           
+            self.merge_many_predicates.push( quote!(
                    query.and(toql::query::Field::from(#toql_merge_field).ins(entities.iter().map(|entity| entity. #merge_struct_key_ident).collect()));
-        ));
+            ));
+            
+        }
+
+        
+       
 
     }
     pub(crate) fn add_ignored_path(&mut self, _toql: & Toql, field: &'a ToqlField) {
@@ -136,7 +142,7 @@ impl<'a> GeneratedMysql<'a> {
                 #struct_ident :: #merge_function (&mut entities, #field_ident);
          ));
      }
-    pub fn loader_functions(&self ) -> proc_macro2::TokenStream {
+    pub(crate) fn loader_functions(&self ) -> proc_macro2::TokenStream {
             let struct_ident= &self.struct_ident;
             let struct_name = &self.struct_ident.to_string();
             let path_loaders= &self.path_loaders;
@@ -166,7 +172,7 @@ impl<'a> GeneratedMysql<'a> {
                 {
                     let mapper = mappers.get( #struct_name ).ok_or( toql::load::LoadError::MapperMissing(String::from(#struct_name)))?;
                     let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query)?; 
-                    toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql(), result.params());
+                    toql::log::info!("SQL `{}` with params {:?}", result.to_sql(), result.params());
                     if result.is_empty() {
                         Ok(vec![])
                     } else {
@@ -192,7 +198,7 @@ impl<'a> GeneratedMysql<'a> {
                     #(#ignored_paths)*
                     .build(mapper, &query)?;
                     
-                    toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql(&hint, 0, 2), result.params());
+                    toql::log::info!("SQL `{}` with params {:?}", result.to_sql_for_mysql(&hint, 0, 2), result.params());
                     
                     
 
@@ -235,21 +241,21 @@ impl<'a> GeneratedMysql<'a> {
                     #(#ignored_paths)*
                     .build(mapper, &query)?;
 
-                    toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql(&hint, first, max), result.params());
+                    toql::log::info!("SQL `{}` with params {:?}", result.to_sql_for_mysql(&hint, first, max), result.params());
                     let entities_stmt = conn.prep_exec(result.to_sql_for_mysql( &hint, first, max), result.params())?;
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
                     let mut count_result = None;
                     
                     // Get count values
                     if count {
-                        toql::log::info!("SQL = \"SELECT FOUND_ROWS();\"");
+                        toql::log::info!("SQL `SELECT FOUND_ROWS();`");
                         let r = conn.query("SELECT FOUND_ROWS();")?;
                         let total_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
 
                         let result = toql::sql_builder::SqlBuilder::new().build_count(mapper, &query)?;
-                        toql::log::info!("SQL = \"{}\" with params {:?}", result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params());
+                        toql::log::info!("SQL `{}` with params {:?}", result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params());
                         conn.prep_exec(result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
-                        toql::log::info!("SQL = \"SELECT FOUND_ROWS();\"");
+                        toql::log::info!("SQL `SELECT FOUND_ROWS();`");
                         let r = conn.query("SELECT FOUND_ROWS();")?;
                         let filtered_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
                         count_result = Some((total_count ,filtered_count))
@@ -293,7 +299,7 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
                 i
             }
 
-            fn from_row_with_index ( row : & mut mysql :: Row , i : &mut usize) -> Result < #struct_ident , mysql :: error :: Error > {
+            fn from_row_with_index ( mut row : & mut mysql :: Row , i : &mut usize) -> Result < #struct_ident , mysql :: error :: Error > {
 
                 Ok ( #struct_ident { 
                     #(#mysql_deserialize_fields),*

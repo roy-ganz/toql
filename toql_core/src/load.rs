@@ -13,7 +13,7 @@ use mysql::error::Error;
     SqlBuilderError(SqlBuilderError),
 
     #[cfg(feature = "mysqldb")]
-    MysqlError(Error)
+    MySqlError(Error)
 } 
 
 impl From<SqlBuilderError> for LoadError {
@@ -25,7 +25,7 @@ impl From<SqlBuilderError> for LoadError {
 #[cfg(feature = "mysqldb")]
 impl From<Error> for LoadError {
         fn from(err: Error) -> LoadError {
-        LoadError::MysqlError(err)
+        LoadError::MySqlError(err)
     }
 }
 
@@ -39,7 +39,7 @@ impl fmt::Display for LoadError {
             LoadError::MapperMissing(ref s) =>
                 write!(f, "no mapper found for `{}`", s),
             #[cfg(feature = "mysqldb")]
-            LoadError::MysqlError (ref e) => e.fmt(f),
+            LoadError::MySqlError (ref e) => e.fmt(f),
             LoadError::SqlBuilderError (ref e) => e.fmt(f),
         }
     }

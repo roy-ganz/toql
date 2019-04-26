@@ -21,8 +21,8 @@ pub struct KeyPair {
 pub struct ToqlField {
     pub ident: Option<syn::Ident>,
     pub ty: syn::Type,
-     #[darling(default)]
-    pub join: Option<KeyPair>,
+     #[darling(default, multiple)]
+    pub join: Vec<KeyPair>,
     #[darling(default)]
     pub column: Option<String>,
      #[darling(default)]
@@ -41,8 +41,8 @@ pub struct ToqlField {
     pub sql: Option<String>,
     #[darling(multiple)]
     pub role: Vec<String>,
-     #[darling(default)]
-    pub merge: Option<String>,
+     #[darling(default, multiple)]
+    pub merge: Vec<KeyPair>,
     #[darling(default)]
     pub alias: Option<String>,
     #[darling(default)]
@@ -161,7 +161,7 @@ impl quote::ToTokens for Toql {
 
         //println!("DARLING = {:?}", self);
 
-        match self.vis {
+       /*  match self.vis {
             syn::Visibility::Public(_) => {},
             _ => {
                 tokens.extend(quote_spanned! {
@@ -170,7 +170,7 @@ impl quote::ToTokens for Toql {
                 }); 
                 return;
             }
-        }
+        } */
        
 
         let mut gen = GeneratedToql::from_toql(&self);
@@ -199,8 +199,8 @@ impl quote::ToTokens for Toql {
         
         for field in fields {
             
-                println!("JOIN = {:?}", field.join);
                 if field.skip {
+                    mysql.add_mysql_deserialize_skip_field(field);
                     continue;
                 }
                 let result = gen.add_field_mapping(&self, field);
@@ -212,7 +212,7 @@ impl quote::ToTokens for Toql {
 
                 gen.add_field_for_builder(&self, field);
 
-                if field.merge.is_some(){
+                if !field.merge.is_empty(){
                     gen.add_merge_function(&self, field);  
 
                     #[cfg(feature = "mysqldb")]   

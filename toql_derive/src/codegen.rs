@@ -11,6 +11,7 @@ use syn::Ident;
 
 pub(crate) struct GeneratedToql<'a> {
     struct_ident: &'a Ident,
+    vis: &'a syn::Visibility,
     sql_table_name: String,
     sql_table_alias: String,
     builder_fields_struct: Ident,
@@ -25,6 +26,7 @@ impl<'a> GeneratedToql<'a> {
        let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
         GeneratedToql {
             struct_ident: &toql.ident,
+            vis: &toql.vis,
             sql_table_name: toql.table.clone().unwrap_or(renamed_table), //toql.ident.to_string(),
             sql_table_alias: toql
                 .alias
@@ -57,7 +59,7 @@ impl<'a> GeneratedToql<'a> {
         };
 
         // Joined field
-        if let Some (KeyPair{this:this_key, other:other_key}) = &field.join {
+        if  !field.join.is_empty() {
            // let renamed_join_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
             
             let joined_struct_ident = field.first_non_generic_type();
@@ -68,30 +70,26 @@ impl<'a> GeneratedToql<'a> {
             let join_table = &field.table.as_ref().unwrap_or(&renamed_join_table);
             let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias); 
 
-            let this_key = crate::util::rename(&this_key, &toql.columns);
-            let other_key = crate::util::rename(&other_key, &toql.columns);
+            let join_condition :Vec<String> =   field.join.iter().map(|j| {
+                let this_key = crate::util::rename(&j.this, &toql.columns);
+                let other_key = crate::util::rename(&j.other, &toql.columns);
+                format!("{{alias}}.{} = {}.{}",this_key, join_alias, other_key) }).collect();
 
-           
+           let format_string = format!("{} JOIN {} {} ON ({})",
+                if field._first_type() == "Option" {"LEFT"} else {"INNER"},
+                join_table, join_alias,
+                join_condition.join( " AND " )
+           );
 
-            let format_string = if field._first_type() == "Option" {
-                format!(
-                    "LEFT JOIN {} {} ON ({{}}.{} = {}.{})",
-                    join_table, join_alias, this_key, join_alias, other_key
-                )
-            } else {
-                format!(
-                    "INNER JOIN {} {} ON ({{}}.{} = {}.{})",
-                    join_table, join_alias, this_key, join_alias, other_key
-                )
-            };
-            let join_clause = quote!(&format!( #format_string, sql_alias));
+        
+            let join_clause = quote!(&format!( #format_string, alias = sql_alias));
             self.field_mappings.push(quote! {
                 mapper.map_join::<#joined_struct_ident>(  #toql_field, #join_alias);
                 mapper.join( #toql_field, #join_clause );
             });
         } 
         // Regular field
-        else if field.merge.is_none() {
+        else if field.merge.is_empty() {
             let (base, _generic, _gegeneric) = field.get_types();
 
             if base == "Vec" {
@@ -169,20 +167,35 @@ impl<'a> GeneratedToql<'a> {
         let field_ident = &field.ident.as_ref().unwrap();
         let function_ident = syn::Ident::new(&format!("merge_{}", field_ident), Span::call_site());
 
-        let vk: Vec<&str> = field
-            .merge
-            .as_ref()
-            .expect("Merge self struct field <= other struct field")
-            .split("<=")
-            .collect();
-        let self_key = syn::Ident::new(vk.get(0).unwrap().trim(), Span::call_site());
-        let other_key = syn::Ident::new(vk.get(1).unwrap().trim(), Span::call_site());
+        let ref self_tuple :Vec<proc_macro2::TokenStream>= field.merge.iter().map(|k| {
+                let key= Ident::new(&k.this, Span::call_site()); 
+                quote!(t. #key)
+        } ).collect();
+
+         let ref other_tuple :Vec<proc_macro2::TokenStream> = field.merge.iter().map(|k| {
+                let key= Ident::new(&k.other, Span::call_site()); 
+                quote!( o. #key )
+        } ).collect();
+
+       let self_fnc : proc_macro2::TokenStream =  
+       if field.merge.len() == 1 {
+            quote!( Option::from( #(#self_tuple)*) )
+       } else {
+           quote!( if #( (Option::from (#self_tuple)).or)* (None).is_some() { Option::from((#(#self_tuple),* ))} else {None} )
+       };
+       let other_fnc : proc_macro2::TokenStream =  
+       if field.merge.len() == 1 {
+            quote!( Option::from( #(#other_tuple)*) )
+       } else {
+           quote!( if #( (Option::from (#other_tuple)).or)* (None).is_some() { Option::from((#(#other_tuple),* ))} else {None} )
+       };
+
 
         self.merge_functions.push(quote!(
             pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #joined_struct_ident > ) {
                     toql :: sql_builder :: merge ( t , o ,
-                    | t | Option::from( t. #self_key) ,
-                    | o | Option::from( o. #other_key) ,
+                    | t | #self_fnc ,
+                    | o | #other_fnc ,
                     | t , o | t . #field_ident . push ( o )
                     ) ;
             }
@@ -191,11 +204,11 @@ impl<'a> GeneratedToql<'a> {
 
     pub(crate) fn add_field_for_builder(&mut self, _toql: &Toql, field: &'a ToqlField) {
         let field_ident = &field.ident;
-
-        if field.join.is_none() && field.merge.is_none() {
+        let vis = &_toql.vis;
+        if field.join.is_empty() && field.merge.is_empty() {
             let toql_field = format!("{}", field_ident.as_ref().unwrap()).to_mixed_case();
             self.builder_fields.push(quote!(
-                pub fn #field_ident (mut self) -> toql :: query :: Field {
+                #vis fn #field_ident (mut self) -> toql :: query :: Field {
                     self . 0 . push_str ( #toql_field ) ;
                     toql :: query :: Field :: from ( self . 0 )
                 }
@@ -216,7 +229,7 @@ impl<'a> GeneratedToql<'a> {
             let path_fields_struct =  quote!( < #type_ident as toql::query_builder::FieldsType>::FieldsType); //quote!( super :: #path_ident :: #field_type_ident );
 
             self.builder_fields.push(quote!(
-                        pub fn #field_ident (mut self) -> #path_fields_struct {
+                        #vis fn #field_ident (mut self) -> #path_fields_struct {
                             self.0.push_str(#toql_field);
                             #path_fields_struct ::from_path(self.0)
                         }
@@ -231,6 +244,7 @@ impl<'a> quote::ToTokens for GeneratedToql<'a> {
         let struct_name= format!("{}", struct_ident);
         let sql_table_name =  &self.sql_table_name;
         let sql_table_alias = &self.sql_table_alias;
+        let vis = self.vis;        
 
         let builder_fields_struct = &self.builder_fields_struct;
         let builder_fields = &self.builder_fields;
@@ -268,15 +282,15 @@ impl<'a> quote::ToTokens for GeneratedToql<'a> {
 
                 #(#merge_functions)*
 
-                pub fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
-                pub fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
+                #vis fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
+                #vis fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
             }
 
 
-            pub struct #builder_fields_struct ( String ) ;
+            #vis struct #builder_fields_struct ( String ) ;
             impl #builder_fields_struct {
-                pub fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
-                pub fn from_path ( path : String ) -> Self { Self ( path ) }
+                #vis fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
+                #vis fn from_path ( path : String ) -> Self { Self ( path ) }
                 #(#builder_fields)*
             }
         );

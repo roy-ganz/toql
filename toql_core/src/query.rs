@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub trait FilterArg<T> {
     fn to_sql(self) -> String;
 }
@@ -205,6 +207,9 @@ impl Field {
         self
     }
 }
+
+
+
 
 impl ToString for Field {
     fn to_string(&self) -> String {
@@ -445,9 +450,10 @@ impl Query {
     }
 }
 
-impl ToString for Query {
-    fn to_string(&self) -> String {
-        fn get_concatenation(c: &Concatenation) -> char {
+// Doc: Display  implements automatically .to_string()
+impl fmt::Display for Query {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+       fn get_concatenation(c: &Concatenation) -> char {
             match c {
                 Concatenation::And => ',',
                 Concatenation::Or => ';',
@@ -482,7 +488,8 @@ impl ToString for Query {
         if t == ',' || t == ';' {
             s = s.trim_start_matches(",").trim_start_matches(";").to_owned();
         }
-        s
+        
+        write!(f, "{}", s)
     }
 }
 

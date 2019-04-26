@@ -41,16 +41,18 @@ pub mod mysql {
                 response
             }
             Err(LoadError::NotFound) => {
-                log::info!("No result found for Toql query \"{}\"", query.to_string());
+                log::info!("No result found for Toql query `{}`", query);
                 response.set_status(Status::NotFound);
                 response
             }
             Err(LoadError::NotUnique) => {
-                log::info!(
-                    "No unique result found for Toql query \"{}\"",
-                    query.to_string()
-                );
+                log::info!( "No unique result found for Toql query `{}`",query);
                 response.set_status(Status::BadRequest);
+                response
+            },
+            Err(err) => {
+                 log::error!("Toql failed with `{}`",err);
+                response.set_status(Status::InternalServerError);
                 response
             }
         }
@@ -91,12 +93,12 @@ pub mod mysql {
                 response
             }
             Err(x) => {
-                log::error!("Invalid SQL = {}", x);
+                log::error!("Toql failed with `{}`", x);
 
                 response.set_status(Status::InternalServerError);
                 response
 
-                //InternalError(format!("No results for query \"{}\"", query_string))
+                
             }
         }
     }
