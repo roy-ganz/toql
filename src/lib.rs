@@ -42,7 +42,7 @@
 //! Important: Toql is not an ORM. Toql only cares about database queries, it cannot insert or update database tables.
 //! If you are looking for an ORM, checkout Diesel.
 //!
-pub use toql_core::load;
+pub use toql_core::error;
 pub use toql_core::query;
 pub use toql_core::query_parser;
 pub use toql_core::sql_builder;

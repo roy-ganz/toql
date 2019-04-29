@@ -8,14 +8,19 @@ use crate::annot::Toql;
 use crate::annot::ToqlField;
 use crate::annot::KeyPair;
 use syn::Ident;
+use syn::Type;
 use proc_macro2::Span;
 use heck::MixedCase;
+use std::collections::HashMap;
+use std::fmt::format;
+
 
 
 
 pub(crate) struct GeneratedMysql<'a> {
 
     struct_ident: &'a Ident,
+    sql_table_name :Ident,
     
     mysql_deserialize_fields: Vec<proc_macro2::TokenStream>,
     path_loaders: Vec<proc_macro2::TokenStream>,
@@ -23,31 +28,113 @@ pub(crate) struct GeneratedMysql<'a> {
     merge_one_predicates: Vec<proc_macro2::TokenStream>,
     merge_many_predicates: Vec<proc_macro2::TokenStream>,
     forward_joins: Vec<proc_macro2::TokenStream>,
-    regular_fields: usize   // Impl for mysql::row::ColumnIndex
+    regular_fields: usize,   // Impl for mysql::row::ColumnIndex
 
-    alter_keys: Vec<Ident>
+    alter_keys: HashMap<&'a Ident, &'a Type>,
+    alter_insert_params:  Vec<proc_macro2::TokenStream>,
+    alter_update_params:  Vec<proc_macro2::TokenStream>,
+    alter_delete_params:  Vec<proc_macro2::TokenStream>,
+    alter_columns:  Vec<String>, 
+    alter_update_fnc : Vec<proc_macro2::TokenStream>, 
 }
 
 impl<'a> GeneratedMysql<'a> {
      pub(crate) fn from_toql(toql: &Toql) -> GeneratedMysql {
+        let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
         
         GeneratedMysql {
             struct_ident: &toql.ident,
+            sql_table_name :  Ident::new(&toql.table.clone().unwrap_or(renamed_table), Span::call_site()),
             mysql_deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
             ignored_paths: Vec::new(),
             merge_one_predicates: Vec::new(),
             merge_many_predicates: Vec::new(),
             forward_joins: Vec::new(),
-            regular_fields : 0
+            regular_fields : 0,
+            alter_keys: HashMap::new(),
+            alter_insert_params :Vec::new(),
+            alter_update_params :Vec::new(),
+            alter_delete_params: Vec::new(),
+            alter_columns : Vec::new(),
+            alter_update_fnc: Vec::new()
 
         }
      }
     
-    pub (crate) fn add_alter_field(&mut self, field: &'a ToqlField) {
-        if (field.alter_key) {
-            self.alter_keys.push(field.ident);
-        }
+    pub (crate) fn add_alter_field(&mut self,  toql: & Toql,field: &'a ToqlField) {
+
+        let struct_ident = &toql.ident;
+        let field_ident =  field.ident.as_ref().unwrap();
+
+        // Field used as key
+        if field.alter_key {
+            let sql_column= crate::util::rename(&field_ident.to_string(),&toql.columns);
+            self.alter_delete_params.push( quote!( #sql_column => entity. #field_ident));
+            self.alter_update_params.push( quote!( #sql_column => entity . #field_ident));
+            self.alter_keys.insert(field.ident.as_ref().unwrap(), &field.ty);
+            
+        } 
+        // Regular field
+        else if field.merge.is_empty() && field.join.is_empty() && field.sql.is_none(){
+            let sql_column= crate::util::rename(&field_ident.to_string(),&toql.columns);
+           
+            let set_statement= format!("SET {} = :{}", &sql_column, &sql_column);
+          
+            if field._first_type() == "Option" && !field.select_always {
+                self.alter_update_fnc.push( quote!( 
+                    if entity. #field_ident .is_some() {
+                        update_stmt.push_str( #set_statement);
+                    } 
+                ));
+                self.alter_insert_params.push( quote!( #sql_column => entity . #field_ident .unwrap()));
+                self.alter_update_params.push( quote!( #sql_column => entity . #field_ident .unwrap()));
+            } else {
+                    self.alter_update_fnc.push( quote!( 
+                        update_stmt.push_str( #set_statement);
+                ));
+                self.alter_insert_params.push( quote!( #sql_column => entity . #field_ident));
+                self.alter_update_params.push( quote!( #sql_column => entity . #field_ident));
+            }
+
+            self.alter_columns.push(sql_column); 
+
+            
+        } 
+        // Join fields
+         else if !field.join.is_empty(){
+          
+                for j in &field.join {
+                    //let sql_column= crate::util::rename(&field_ident.to_string(),&toql.columns);
+                    
+                    let self_field = &j.this;
+                    let self_column = crate::util::rename(&self_field,&toql.columns);
+                    let other_field = Ident::new(&j.other, Span::call_site());
+                    let set_statement= format!("SET {} = :{}", &self_column, &self_column);
+                    
+                    if field._first_type() == "Option" {
+                        self.alter_update_fnc.push( quote!( 
+                            if entity. #field_ident .is_some() {
+                                update_stmt.push_str( #set_statement);
+                            } 
+                        ));
+                        self.alter_insert_params.push( quote!( #self_column => entity. #field_ident .map_or(|e| e. #other_field(), None)));
+                        self.alter_update_params.push( quote!( #self_column => entity. #field_ident .map_or(|e| e. #other_field(), None)));
+                     } else {
+                        self.alter_update_fnc.push( quote!( 
+                            update_stmt.push_str( #set_statement);
+                        ));
+                        self.alter_insert_params.push( quote!( #self_column => entity. #field_ident . #other_field()  ));
+                        self.alter_update_params.push( quote!( #self_column => entity. #field_ident . #other_field() ));
+                    }
+                      self.alter_columns.push(self_column); 
+                }
+            
+             
+        } 
+
+
+        
 
         // Add field to insert and update if its not
         // - an alter key
@@ -303,94 +390,106 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
         let regular_fields= self.regular_fields;
         let forward_joins = &self.forward_joins;
 
-        // build key vars
-        if self.alter_keys.is_empty() {
-            compiler_error("Missinfg alter key str")
-        }
-        
-        let alter_key_type = 
-        if self.alter_keys.values().len() == 1 {
-                let keys = self.alter_keys.values();
-                quote!( #keys) 
-        } else {
-                quote!( ( #(#keys),* ) ) 
-        }
+     
+      
 
-        let alter_key_name = 
-        if self.alter_keys.keys().len() == 1 {
-            let names = self.alter_keys.keys();
-                quote!( #names) 
-        } else {
-                quote!( ( #(#names),* ) ) 
-        }
+        let alter_key_type = if self.alter_keys.len() == 1 {
+                             let keys  :Vec<&&Type> = self.alter_keys.values().collect();
+                                    quote!(  #(#keys)* ) 
+            } else {
+                                    let keys  :Vec<&&Type> = self.alter_keys.values().collect();
+                                    quote!( ( #(#keys),* ) ) 
+                            };
+
+        let alter_key_name =  {
+                let names  :Vec<&&Ident> = self.alter_keys.keys().collect();
+                    quote!( ( #(entity. #names),* ) ) 
+            };
         
         
-        let alter_key_comparison = if self.alter_keys.len() == 1 {
-            let names = self.alter_keys.keys();
-            
-            quote( #( #names = : #names ) AND * ) 
-        }
+       let alter_key_comparison =  self.alter_keys.keys().map(|k|{ format!("{} = :{}", k, k)}).collect::<Vec<String>>().join(" AND ");
+                
+       
+       let alter_key_declaration :Vec<proc_macro2::TokenStream>= self.alter_keys.iter().map(|(k, v)|{ quote!( #k : #v)  }).collect();
        
         
-        let alter_columns = self.alter_columns;
-        let update_column_builder = self.update_column_builder;
-        let alter_params = self.alter_params;
-        let alter_key_params = self.alter_key_params;
-        let alter_key_declaration = self.alter_key_declaration;
+        let alter_columns = &self.alter_columns;
+        let alter_update_fnc = &self.alter_update_fnc;
+        let alter_update_params = &self.alter_update_params;
+        let alter_delete_params = &self.alter_delete_params;
+        let alter_insert_params = &self.alter_insert_params;
+        
 
         let alter =  if self.alter_keys.is_empty() {
           quote_spanned! {
-                    struct.span() =>
+                    struct_ident.span() =>
                     compile_error!( "cannot find alter key, add `#[toql(alter_key)]` to at least one field in struct");
                 }
         } else {
-            quote {
-                fn insert_into_mysql( conn: &mut mysql::Conn, entity: #struct_ident) -> Result< #alter_key_type, toql::error::ToqlError> {
-                    
-                    let mut stmt = conn.prepare("INSERT INTO User ( #(#alter_columns),*)  VALUES ( #(: #alter_columns),*)")?;
-                    let x = stmt.execute(params!{
-                                #(#alter_params),*
-                        })?;
-                    info!("Inserted #struct_ident `{}`",  x.last_insert_id());
-                    Ok(x.last_insert_id())
-                }
 
-                fn update_into_mysql( conn: &mut mysql::Conn, entity: #struct_ident)  -> Result<u64, toql::error::ToqlError>{
-        
-                    let mut insert_stmt = String::from("UPDATE User");
-                    
-                    #(#update_column_builder),*)
+            let update_statement = format!("UPDATE {}", self.sql_table_name);
+            let insert_log = format!("Inserted {} `{{:?}}`", struct_ident);
+            let insert_statement = format!("INSERT INTO {} ({}) VALUES {}", 
+                self.sql_table_name,
+                self.alter_columns.join(","),
+                self.alter_columns.iter().map(|v| format!(":{}", v)).collect::<Vec<String>>().join(",")
+                );
+            
+            let update_log = format!("Updated {} `{{:?}}`", struct_ident);
+            let update_where_statement = format!(" WHERE {}", alter_key_comparison);
+            let delete_statement = format!("DELETE FROM {} WHERE {}", self.sql_table_name, alter_key_comparison );
+            let delete_log = format!("Deleted {} `{{:?}}`", struct_ident);
+            
+
+            quote! {
+                impl toql::mysql::Alter for #struct_ident {
+                    fn insert_one(  entity: #struct_ident, conn: &mut mysql::Conn) -> Result<u64, toql::error::ToqlError> {
+                        use mysql::params;
+                        let insert_stmt = String::from( #insert_statement);
+                        let params = mysql::params!{#(#alter_insert_params),* };
+                        log::info!("Sql `{}` with params {:?}", insert_stmt, params);
+                        let mut stmt = conn.prepare(insert_stmt)?;
+                        let x = stmt.execute(params)?;
+                        log::info!( #insert_log,  x.last_insert_id());
+                        Ok(x.last_insert_id())
+                    } 
+
+                    fn update_one(  entity: #struct_ident, conn: &mut mysql::Conn)  -> Result<u64, toql::error::ToqlError>{
+                        use mysql::params;
+                        let mut update_stmt = String::from( #update_statement);
                         
-                    #( if entity. #alter_columns.is_some() { insert_stmt.push_str(" SET #alter_columns = : #alter_columns")}; )*
-                    // if user.full_name.is_some() { insert_stmt.push_str(" SET full_name = :full_name")};
-
-                    insert_stmt.push_str(" WHERE #alter_key_comparison");
-
-                    info!("Sql `{}`", insert_stmt);
-
-                    // set only 
-                    let mut stmt = conn.prepare(&insert_stmt)?;
+                        #(#alter_update_fnc)*
                     
-                    //params
-                    let x = stmt.execute(params!{
-                        #(#alter_params),*
-                        
-                    })?;
+                        update_stmt.push_str(#update_where_statement);
 
-                    info!("Updated #struct_ident `{}`", #alter_key_name);
-                    Ok(x.affected_rows())
-                }
-                fn delete_from_mysql( conn: &mut mysql::Conn, #alter_key_declaration) -> Result<u64, toql::error::ToqlError>{
-                    let mut stmt = conn.prepare("DELETE FROM #struct_ident WHERE #alter_key_comparison")?;
-                    let x = stmt.execute(params!{
-                            #(#alter_key_params),*
-                        })?;
-                    info!("Deleted #struct_ident `{}`",  #alter_key_name);
-                    Ok(x.affected_rows())
+                        let params= mysql::params!{  #(#alter_update_params),* };
+
+                        log::info!("Sql `{}` with params {:?}", update_stmt, params);
+
+                        // set only 
+                        let mut stmt = conn.prepare(&update_stmt)?;
+                        
+                        //params
+                        let x = stmt.execute(params)?;
+
+                        log::info!(#update_log, #alter_key_name);
+                        Ok(x.affected_rows())
+                    } 
+                    fn delete_one(  entity: #struct_ident, conn: &mut mysql::Conn ) -> Result<u64, toql::error::ToqlError>{
+                        use mysql::params;
+                        let delete_stmt = String::from(#delete_statement);
+                        let params= mysql::params!{ #(#alter_delete_params),* };
+                        log::info!("Sql `{}` with params {:?}", delete_stmt, params);
+
+                        let mut stmt = conn.prepare(delete_stmt)?;
+                        let x = stmt.execute(params)?;
+                        log::info!(#delete_log,  #alter_key_name);
+                        Ok(x.affected_rows())
+                    } 
                 }
             }
 
-        }
+        };
 
         let mysql= quote!(
             

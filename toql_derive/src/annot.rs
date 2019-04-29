@@ -238,6 +238,9 @@ impl quote::ToTokens for Toql {
                 #[cfg(feature = "mysqldb")]
                 mysql.add_mysql_deserialize(&self, field);
                 
+                #[cfg(feature = "mysqldb")]
+                mysql.add_alter_field(&self, field);
+                
                
         }
 
