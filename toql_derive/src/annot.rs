@@ -7,6 +7,13 @@ use crate::codegen_mysql::GeneratedMysql;
 use syn::Ident;
 use syn::GenericArgument::Type;
 
+#[derive(Debug, FromMeta)]
+pub enum Skip {
+    All,
+    Query,
+    Insert,
+    Update
+}
 
 #[derive(Debug, FromMeta)]
 pub struct KeyPair {
@@ -14,6 +21,7 @@ pub struct KeyPair {
     pub this: String,
     pub other: String
 }
+
 
 // Attribute on struct field
 #[derive(Debug, FromField)]
@@ -35,6 +43,8 @@ pub struct ToqlField {
     pub select_always: bool,
     #[darling(default)]
     pub ignore_wildcard: bool,
+    #[darling(default)]
+    pub alter_key: bool,
     #[darling(default)]
     pub field: Option<String>,
     #[darling(default)]
@@ -150,7 +160,7 @@ pub struct Toql {
       #[darling(default)]
     pub alias: Option<String>,
      #[darling(default)]
-    pub alter: Option<String>,
+    pub alter: bool,
     pub data: darling::ast::Data<(), ToqlField>
 }
 

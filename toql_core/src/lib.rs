@@ -9,4 +9,4 @@ pub mod query_builder;
 pub mod sql_builder;
 pub mod sql_builder_result;
 pub mod sql_mapper;
-pub mod load;
+pub mod error;

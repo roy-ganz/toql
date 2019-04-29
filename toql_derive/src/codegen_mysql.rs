@@ -24,6 +24,8 @@ pub(crate) struct GeneratedMysql<'a> {
     merge_many_predicates: Vec<proc_macro2::TokenStream>,
     forward_joins: Vec<proc_macro2::TokenStream>,
     regular_fields: usize   // Impl for mysql::row::ColumnIndex
+
+    alter_keys: Vec<Ident>
 }
 
 impl<'a> GeneratedMysql<'a> {
@@ -42,6 +44,19 @@ impl<'a> GeneratedMysql<'a> {
         }
      }
     
+    pub (crate) fn add_alter_field(&mut self, field: &'a ToqlField) {
+        if (field.alter_key) {
+            self.alter_keys.push(field.ident);
+        }
+
+        // Add field to insert and update if its not
+        // - an alter key
+        // - a merge field
+        // For joins add key of joined entity Or none
+
+
+    } 
+
     pub (crate) fn add_mysql_deserialize_skip_field(&mut self, field: &'a ToqlField) {
          let field_ident= &field.ident;
          let field_type= &field.ty;
@@ -153,11 +168,11 @@ impl<'a> GeneratedMysql<'a> {
             let load_dependencies_from_mysql = if path_loaders.is_empty() {quote!(
                 pub fn load_dependencies_from_mysql(mut _entities: &mut Vec< #struct_ident >, 
                 _query: &mut toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut mysql::Conn) 
-                -> Result<(), toql::load::LoadError> { Ok(())}
+                -> Result<(), toql::load::ToqlError> { Ok(())}
             )} else {quote!(
                 pub fn load_dependencies_from_mysql(mut entities: &mut Vec< #struct_ident >, 
                 query: &mut toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn) 
-                -> Result<(), toql::load::LoadError>
+                -> Result<(), toql::load::ToqlError>
                 {
                     #(#path_loaders)*
                     Ok(())
@@ -168,9 +183,9 @@ impl<'a> GeneratedMysql<'a> {
             impl #struct_ident {
                
                 pub fn load_path_from_mysql(path: &str, query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,  conn: &mut mysql::Conn) 
-                -> Result<std::vec::Vec< #struct_ident >, toql::load::LoadError> 
+                -> Result<std::vec::Vec< #struct_ident >, toql::load::ToqlError> 
                 {
-                    let mapper = mappers.get( #struct_name ).ok_or( toql::load::LoadError::MapperMissing(String::from(#struct_name)))?;
+                    let mapper = mappers.get( #struct_name ).ok_or( toql::load::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query)?; 
                     toql::log::info!("SQL `{}` with params {:?}", result.to_sql(), result.params());
                     if result.is_empty() {
@@ -188,9 +203,9 @@ impl<'a> GeneratedMysql<'a> {
             impl toql::mysql::load::Load<#struct_ident> for #struct_ident
             {
                 fn load_one(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn, distinct:bool ) 
-                    -> Result<# struct_ident , toql::load::LoadError> 
+                    -> Result<# struct_ident , toql::load::ToqlError> 
                 {
-                    let mapper= mappers.get( #struct_name).ok_or( toql::load::LoadError::MapperMissing(String::from(#struct_name)))?;
+                    let mapper= mappers.get( #struct_name).ok_or( toql::load::ToqlError::MapperMissing(String::from(#struct_name)))?;
                 
                     let hint = String::from(if distinct { "DISTINCT" } else {""});
                 
@@ -206,9 +221,9 @@ impl<'a> GeneratedMysql<'a> {
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
 
                     if entities.len() > 1 {
-                        return Err(toql::load::LoadError::NotUnique);
+                        return Err(toql::load::ToqlError::NotUnique);
                     } else if entities.is_empty() {
-                        return Err(toql::load::LoadError::NotFound);
+                        return Err(toql::load::ToqlError::NotFound);
                     }
                                 
                     // Restrict dependencies to parent entity
@@ -223,9 +238,9 @@ impl<'a> GeneratedMysql<'a> {
                 
                 fn load_many(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, 
                 mut conn: &mut mysql::Conn, distinct:bool, count:bool, first:u64, max:u16) 
-                -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql::load::LoadError> {
+                -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql::load::ToqlError> {
 
-                    let mapper = mappers.get( #struct_name).ok_or( toql::load::LoadError::MapperMissing(String::from(#struct_name)))?;
+                    let mapper = mappers.get( #struct_name).ok_or( toql::load::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     // load base entities
                 
                     let mut hint = String::from( if count {"SQL_CALC_FOUND_ROWS" }else{""}); 
@@ -280,15 +295,105 @@ impl<'a> GeneratedMysql<'a> {
 impl<'a> quote::ToTokens for GeneratedMysql<'a> {
     fn to_tokens(&self, tokens: &mut  proc_macro2::TokenStream) {
 
-    let struct_ident = self.struct_ident;
-    let loader = self.loader_functions() ;
-   
-    let mysql_deserialize_fields= &self.mysql_deserialize_fields;
-   
-    let regular_fields= self.regular_fields;
-    let forward_joins = &self.forward_joins;
+        let struct_ident = self.struct_ident;
+        let loader = self.loader_functions() ;
+    
+        let mysql_deserialize_fields= &self.mysql_deserialize_fields;
+    
+        let regular_fields= self.regular_fields;
+        let forward_joins = &self.forward_joins;
+
+        // build key vars
+        if self.alter_keys.is_empty() {
+            compiler_error("Missinfg alter key str")
+        }
+        
+        let alter_key_type = 
+        if self.alter_keys.values().len() == 1 {
+                let keys = self.alter_keys.values();
+                quote!( #keys) 
+        } else {
+                quote!( ( #(#keys),* ) ) 
+        }
+
+        let alter_key_name = 
+        if self.alter_keys.keys().len() == 1 {
+            let names = self.alter_keys.keys();
+                quote!( #names) 
+        } else {
+                quote!( ( #(#names),* ) ) 
+        }
+        
+        
+        let alter_key_comparison = if self.alter_keys.len() == 1 {
+            let names = self.alter_keys.keys();
+            
+            quote( #( #names = : #names ) AND * ) 
+        }
+       
+        
+        let alter_columns = self.alter_columns;
+        let update_column_builder = self.update_column_builder;
+        let alter_params = self.alter_params;
+        let alter_key_params = self.alter_key_params;
+        let alter_key_declaration = self.alter_key_declaration;
+
+        let alter =  if self.alter_keys.is_empty() {
+          quote_spanned! {
+                    struct.span() =>
+                    compile_error!( "cannot find alter key, add `#[toql(alter_key)]` to at least one field in struct");
+                }
+        } else {
+            quote {
+                fn insert_into_mysql( conn: &mut mysql::Conn, entity: #struct_ident) -> Result< #alter_key_type, toql::error::ToqlError> {
+                    
+                    let mut stmt = conn.prepare("INSERT INTO User ( #(#alter_columns),*)  VALUES ( #(: #alter_columns),*)")?;
+                    let x = stmt.execute(params!{
+                                #(#alter_params),*
+                        })?;
+                    info!("Inserted #struct_ident `{}`",  x.last_insert_id());
+                    Ok(x.last_insert_id())
+                }
+
+                fn update_into_mysql( conn: &mut mysql::Conn, entity: #struct_ident)  -> Result<u64, toql::error::ToqlError>{
+        
+                    let mut insert_stmt = String::from("UPDATE User");
+                    
+                    #(#update_column_builder),*)
+                        
+                    #( if entity. #alter_columns.is_some() { insert_stmt.push_str(" SET #alter_columns = : #alter_columns")}; )*
+                    // if user.full_name.is_some() { insert_stmt.push_str(" SET full_name = :full_name")};
+
+                    insert_stmt.push_str(" WHERE #alter_key_comparison");
+
+                    info!("Sql `{}`", insert_stmt);
+
+                    // set only 
+                    let mut stmt = conn.prepare(&insert_stmt)?;
+                    
+                    //params
+                    let x = stmt.execute(params!{
+                        #(#alter_params),*
+                        
+                    })?;
+
+                    info!("Updated #struct_ident `{}`", #alter_key_name);
+                    Ok(x.affected_rows())
+                }
+                fn delete_from_mysql( conn: &mut mysql::Conn, #alter_key_declaration) -> Result<u64, toql::error::ToqlError>{
+                    let mut stmt = conn.prepare("DELETE FROM #struct_ident WHERE #alter_key_comparison")?;
+                    let x = stmt.execute(params!{
+                            #(#alter_key_params),*
+                        })?;
+                    info!("Deleted #struct_ident `{}`",  #alter_key_name);
+                    Ok(x.affected_rows())
+                }
+            }
+
+        }
+
         let mysql= quote!(
-           
+            
             #loader
             
 
@@ -308,9 +413,11 @@ impl<'a> quote::ToTokens for GeneratedMysql<'a> {
             }
             }
 
+            #alter
+
         );
 
-       
+        
         println!("/* Toql (codegen_mysql) */\n {}", mysql.to_string());
         
 
