@@ -11,13 +11,14 @@ pub struct ToqlQuery {
 
 #[cfg(feature = "mysqldb")]
 pub mod mysql {
-    use toql_core::load::LoadError;
+    use toql_core::error::ToqlError;
     use toql_core::query::Query;
     use toql_core::query_parser::QueryParser;
     use toql_core::sql_mapper::SqlMapperCache;
 
     use rocket::http::Status;
     use toql_mysql::load::Load;
+    use toql_mysql::alter::Alter;
 
     use super::ToqlQuery;
     use rocket::response::Response;
@@ -40,12 +41,12 @@ pub mod mysql {
                 response.set_sized_body(serialize(&entity));
                 response
             }
-            Err(LoadError::NotFound) => {
+            Err(ToqlError::NotFound) => {
                 log::info!("No result found for Toql query `{}`", query);
                 response.set_status(Status::NotFound);
                 response
             }
-            Err(LoadError::NotUnique) => {
+            Err(ToqlError::NotUnique) => {
                 log::info!( "No unique result found for Toql query `{}`",query);
                 response.set_status(Status::BadRequest);
                 response
@@ -94,7 +95,6 @@ pub mod mysql {
             }
             Err(x) => {
                 log::error!("Toql failed with `{}`", x);
-
                 response.set_status(Status::InternalServerError);
                 response
 
@@ -102,4 +102,53 @@ pub mod mysql {
             }
         }
     }
+    pub fn insert_one<'a, T:'a + Alter<'a,T>> (entity: T, mut conn: &mut mysql::Conn) -> Response<'a> {
+
+         let mut response = Response::new();
+         let result = toql_mysql::insert_one(&entity, conn);
+         match result {
+            Ok(_last_insert_id) => {
+                response.set_status(Status::Created);
+                response
+            }
+            Err(x) => {
+                    log::error!("Toql failed with `{}`", x);
+                    response.set_status(Status::InternalServerError);
+                    response
+            }
+         }
+    }
+    
+    pub fn update_one<'a, T:'a + Alter<'a,T>> (entity: T, mut conn: &mut mysql::Conn) -> Response<'a> {
+        let mut response = Response::new();
+         let result = toql_mysql::update_one(&entity, conn);
+         match result {
+            Ok(_rows_updated) => {
+                response.set_status(Status::Ok);
+                response
+            }
+            Err(x) => {
+                    log::error!("Toql failed with `{}`", x);
+                    response.set_status(Status::InternalServerError);
+                    response
+            }
+        }
+    }
+    
+    pub fn delete_one<'a, T:'a + Alter<'a,T>> (entity: T, mut conn: &mut mysql::Conn) -> Response<'a> {
+        let mut response = Response::new();
+         let result = toql_mysql::delete_one(&entity,conn);
+         match result {
+            Ok(_rows_deleted) => {
+                response.set_status(Status::Ok);
+                response
+            }
+            Err(x) => {
+                    log::error!("Toql failed with `{}`", x);
+                    response.set_status(Status::InternalServerError);
+                    response
+            }
+        }
+    }
+    
 }

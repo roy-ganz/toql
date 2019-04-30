@@ -81,6 +81,27 @@ impl ToqlField {
         Some(types.0)
         }
     }
+    pub fn number_of_options<'a>(&'a self)-> u8 {
+      let types= self.get_types();
+        
+            let mut n : u8= 0;
+            if types.0 == "Option" { 
+                n+= 1;
+                if let Some(t) = types.1 {
+                    if t == "Option" {
+                        n+= 1;
+                        if  let Some(t) = types.2 {
+                            if t == "Option" { 
+                                n+=1;
+                            }
+                        }
+                        
+                    } 
+                }
+            }
+            n
+
+    }
 
 
 

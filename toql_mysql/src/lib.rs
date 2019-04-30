@@ -11,14 +11,14 @@ pub mod row;
 pub mod alter;
 
 
- pub fn insert_one<T: alter::Alter<T>>( entity: T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-     T::insert_one(entity, conn)
+ pub fn insert_one<'a, T:'a + alter::Alter<'a, T>>( entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
+     T::insert_one(&entity, conn)
  }
-    pub fn delete_one<T: alter::Alter<T> >(entity: T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-        T::delete_one(entity, conn)
+    pub fn delete_one<'a, T:'a + alter::Alter<'a, T> >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
+        T::delete_one(&entity, conn)
     }
-    pub fn update_one<T: alter::Alter<T> >(entity: T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-         T::update_one(entity, conn)
+    pub fn update_one<'a, T:'a + alter::Alter<'a, T> >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
+         T::update_one(&entity, conn)
     }
 
 
