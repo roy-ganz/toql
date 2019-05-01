@@ -15,10 +15,20 @@ pub mod alter;
      T::insert_one(&entity, conn)
  }
     pub fn delete_one<'a, T:'a + alter::Alter<'a, T> >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-        T::delete_one(&entity, conn)
+        let rows = T::delete_one(&entity, conn)?;
+        if rows == 0 {
+            Err(ToqlError::NotFound)
+        } else {
+            Ok(rows)
+        }
     }
     pub fn update_one<'a, T:'a + alter::Alter<'a, T> >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-         T::update_one(&entity, conn)
+         let rows = T::update_one(&entity, conn)?;
+          if rows == 0 {
+            Err(ToqlError::NotFound)
+            } else {
+                Ok(rows)
+            }
     }
 
 

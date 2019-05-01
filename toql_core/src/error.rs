@@ -16,6 +16,32 @@ use mysql::error::Error;
     MySqlError(Error)
 } 
 
+ #[cfg(feature = "rocketweb")]
+impl rocket::response::Responder<'static> for ToqlError {
+    fn respond_to(self, _: &rocket::Request) -> Result<rocket::Response<'static>, rocket::http::Status> {
+        let mut response = rocket::response::Response::new();
+        match self {
+            ToqlError::NotFound => {
+                // TODO add query to not found
+                log::info!("No result found for Toql query `{}`", "TDDO");
+                response.set_status(rocket::http::Status::NotFound);
+                Ok(response)
+            }
+            ToqlError::NotUnique => {
+                 // TODO add query to not found
+                log::info!( "No unique result found for Toql query `{}`", "TODO");
+                response.set_status(rocket::http::Status::BadRequest);
+                Ok(response)
+            },
+            err => {
+                log::error!("Toql failed with `{}`",err);
+                Err(rocket::http::Status::InternalServerError)
+            }
+        }
+
+    }
+}
+
 impl From<SqlBuilderError> for ToqlError {
         fn from(err: SqlBuilderError) -> ToqlError {
         ToqlError::SqlBuilderError(err)

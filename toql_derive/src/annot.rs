@@ -1,8 +1,12 @@
 
-use crate::codegen::GeneratedToql;
+use crate::codegen_toql_mapper::GeneratedToqlMapper;
+use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
 #[cfg(feature = "mysqldb")]
-use crate::codegen_mysql::GeneratedMysql;
+use crate::codegen_mysql_query::GeneratedMysqlQuery;
+
+#[cfg(feature = "mysqldb")]
+use crate::codegen_mysql_alter::GeneratedMysqlAlter;
 
 use syn::Ident;
 use syn::GenericArgument::Type;
@@ -35,6 +39,8 @@ pub struct ToqlField {
     pub column: Option<String>,
      #[darling(default)]
     pub skip: bool,
+     #[darling(default)]
+    pub skip_alter: bool,
     #[darling(default)]
     pub count_filter: bool,
     #[darling(default)]
@@ -181,7 +187,11 @@ pub struct Toql {
       #[darling(default)]
     pub alias: Option<String>,
      #[darling(default)]
-    pub alter: bool,
+    pub skip_alter: bool,
+     #[darling(default)]
+    pub skip_query: bool,
+    #[darling(default)]
+    pub skip_query_builder: bool,
     pub data: darling::ast::Data<(), ToqlField>
 }
 
@@ -192,23 +202,15 @@ impl quote::ToTokens for Toql {
 
         //println!("DARLING = {:?}", self);
 
-       /*  match self.vis {
-            syn::Visibility::Public(_) => {},
-            _ => {
-                tokens.extend(quote_spanned! {
-                    self.ident.span() =>
-                    compile_error!( "Visibility for Toql structs must be public. Add `pub`.");
-                }); 
-                return;
-            }
-        } */
-       
-
-        let mut gen = GeneratedToql::from_toql(&self);
+        let mut toql_mapper = GeneratedToqlMapper::from_toql(&self);
+        let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&self);
      
         #[cfg(feature = "mysqldb")]
-        let mut mysql = GeneratedMysql::from_toql(&self);
-         
+        let mut mysql_query = GeneratedMysqlQuery::from_toql(&self);
+        
+        #[cfg(feature = "mysqldb")]
+        let mut mysql_alter = GeneratedMysqlAlter::from_toql(&self);
+
 
          let Toql {
              vis: _,
@@ -218,9 +220,15 @@ impl quote::ToTokens for Toql {
              table:_,
              columns:_,
              alias:_,
-             alter:_,
+             skip_alter,
+             skip_query,
+             skip_query_builder,
              ref data,
         } = *self;
+
+        let alter_enabled= !skip_alter;
+        let query_enabled= !skip_query;
+        let query_builder_enabled= !skip_query_builder;
 
         let fields = data
             .as_ref()
@@ -230,47 +238,65 @@ impl quote::ToTokens for Toql {
         
         for field in fields {
             
-                if field.skip {
-                    mysql.add_mysql_deserialize_skip_field(field);
-                    continue;
-                }
-                let result = gen.add_field_mapping(&self, field);
+                // Generate query functionality
+                if query_enabled {
+                    if field.skip {
+                        mysql_query.add_mysql_deserialize_skip_field(field);
+                        continue;
+                    }
+                    let result = toql_mapper.add_field_mapping(&self, field);
 
-                // Don't build further code for invalid field, process next field
-                if result.is_err() {
-                    continue;
-                }
+                    // Don't build further code for invalid field, process next field
+                    if result.is_err() {
+                        continue;
+                    }
 
-                gen.add_field_for_builder(&self, field);
+                    if query_builder_enabled {
+                        toql_query_builder.add_field_for_builder(&self, field);
+                    }
 
-                if !field.merge.is_empty(){
-                    gen.add_merge_function(&self, field);  
+                    if !field.merge.is_empty(){
+                        toql_mapper.add_merge_function(&self, field);  
 
-                    #[cfg(feature = "mysqldb")]   
-                    mysql.add_ignored_path(&self, field);
 
+                        #[cfg(feature = "mysqldb")]   
+                        mysql_query.add_ignored_path(&self, field);
+
+                        #[cfg(feature = "mysqldb")]
+                        mysql_query.add_path_loader(&self, field);
+
+                        #[cfg(feature = "mysqldb")]
+                        mysql_query.add_merge_predicates(&self, field);
+                    } 
+                    
                     #[cfg(feature = "mysqldb")]
-                    mysql.add_path_loader(&self, field);
+                    mysql_query.add_mysql_deserialize(&self, field);
+                }
 
+                // Generate alter functionality
+                if alter_enabled && !field.skip_alter {
                     #[cfg(feature = "mysqldb")]
-                    mysql.add_merge_predicates(&self, field);
-                } 
-                
-                #[cfg(feature = "mysqldb")]
-                mysql.add_mysql_deserialize(&self, field);
-                
-                #[cfg(feature = "mysqldb")]
-                mysql.add_alter_field(&self, field);
+                    mysql_alter.add_alter_field(&self, field);
+                }
                 
                
         }
 
-       
-      
-        tokens.extend(quote!(#gen));
-        
-        #[cfg(feature = "mysqldb")]
-        tokens.extend(quote!(#mysql));
-          
+        // Produce compiler tokens
+        if query_builder_enabled {
+               tokens.extend(quote!(#toql_query_builder));
+        }
+
+        if query_enabled {
+            tokens.extend(quote!(#toql_mapper));
+            
+            #[cfg(feature = "mysqldb")]
+            tokens.extend(quote!(#mysql_query));
+        }
+         
+        if alter_enabled {
+            #[cfg(feature = "mysqldb")]
+            tokens.extend(quote!(#mysql_alter));
+        }
     }
 }
