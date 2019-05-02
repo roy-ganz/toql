@@ -36,7 +36,6 @@ impl Default for SqlJoinData {
 pub struct SqlBuilder {
     count_query: bool,       // Build count query
     subpath: String,         // Build only subpath
-    roles: BTreeSet<String>, // Use only fields for those roles
     joins: BTreeSet<String>, // Use this joins
     ignored_paths: Vec<String>, // Ignore paths, no errors are raised for them
                              // alias: String,           // Alias all fields with this
@@ -66,7 +65,6 @@ impl SqlBuilder {
         SqlBuilder {
             count_query: false,
             subpath: "".to_string(),
-            roles: BTreeSet::new(),
             joins: BTreeSet::new(),
             ignored_paths: Vec::new(),
         }
@@ -75,10 +73,10 @@ impl SqlBuilder {
         self.ignored_paths.push(path.into());
         self
     }
-    pub fn for_role<T: Into<String>>(mut self, role: T) -> Self {
+    /* pub fn for_role<T: Into<String>>(mut self, role: T) -> Self {
         self.roles.insert(role.into());
         self
-    }
+    } */
     pub fn with_join<T: Into<String>>(mut self, join: T) -> Self {
         self.joins.insert(join.into());
         self
@@ -272,6 +270,7 @@ impl SqlBuilder {
         let mut result = SqlBuilderResult {
             table: sql_mapper.table.clone(),
             any_selected: false,
+            distinct: query.distinct,
             join_clause: String::from(""),
             select_clause: String::from(""),
             where_clause: String::from(""),
@@ -341,7 +340,7 @@ impl SqlBuilder {
                             Some(sql_target) => {
                                 // Verify user role and skip field role mismatches
                                 let role_valid =
-                                    Self::validate_roles(&self.roles, &sql_target.options.roles);
+                                    Self::validate_roles(&query.roles, &sql_target.options.roles);
                                 if role_valid == false {
                                     return Err(SqlBuilderError::RoleRequired(format!(
                                         "Field requires a user role: '{}'. ",

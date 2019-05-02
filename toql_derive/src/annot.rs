@@ -6,18 +6,12 @@ use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 use crate::codegen_mysql_query::GeneratedMysqlQuery;
 
 #[cfg(feature = "mysqldb")]
-use crate::codegen_mysql_alter::GeneratedMysqlAlter;
+use crate::codegen_mysql_idu::GeneratedMysqlIdu;
 
 use syn::Ident;
 use syn::GenericArgument::Type;
 
-#[derive(Debug, FromMeta)]
-pub enum Skip {
-    All,
-    Query,
-    Insert,
-    Update
-}
+
 
 #[derive(Debug, FromMeta)]
 pub struct KeyPair {
@@ -40,7 +34,7 @@ pub struct ToqlField {
      #[darling(default)]
     pub skip: bool,
      #[darling(default)]
-    pub skip_alter: bool,
+    pub skip_idu: bool,
     #[darling(default)]
     pub count_filter: bool,
     #[darling(default)]
@@ -50,7 +44,7 @@ pub struct ToqlField {
     #[darling(default)]
     pub ignore_wildcard: bool,
     #[darling(default)]
-    pub alter_key: bool,
+    pub idu_key: bool,
     #[darling(default)]
     pub field: Option<String>,
     #[darling(default)]
@@ -187,7 +181,7 @@ pub struct Toql {
       #[darling(default)]
     pub alias: Option<String>,
      #[darling(default)]
-    pub skip_alter: bool,
+    pub skip_idu: bool,
      #[darling(default)]
     pub skip_query: bool,
     #[darling(default)]
@@ -209,7 +203,7 @@ impl quote::ToTokens for Toql {
         let mut mysql_query = GeneratedMysqlQuery::from_toql(&self);
         
         #[cfg(feature = "mysqldb")]
-        let mut mysql_alter = GeneratedMysqlAlter::from_toql(&self);
+        let mut mysql_idu = GeneratedMysqlIdu::from_toql(&self);
 
 
          let Toql {
@@ -220,13 +214,13 @@ impl quote::ToTokens for Toql {
              table:_,
              columns:_,
              alias:_,
-             skip_alter,
+             skip_idu,
              skip_query,
              skip_query_builder,
              ref data,
         } = *self;
 
-        let alter_enabled= !skip_alter;
+        let idu_enabled= !skip_idu;
         let query_enabled= !skip_query;
         let query_builder_enabled= !skip_query_builder;
 
@@ -273,10 +267,10 @@ impl quote::ToTokens for Toql {
                     mysql_query.add_mysql_deserialize(&self, field);
                 }
 
-                // Generate alter functionality
-                if alter_enabled && !field.skip_alter {
+                // Generate mod functionality
+                if idu_enabled && !field.skip_idu {
                     #[cfg(feature = "mysqldb")]
-                    mysql_alter.add_alter_field(&self, field);
+                    mysql_idu.add_idu_field(&self, field);
                 }
                 
                
@@ -294,9 +288,9 @@ impl quote::ToTokens for Toql {
             tokens.extend(quote!(#mysql_query));
         }
          
-        if alter_enabled {
+        if idu_enabled {
             #[cfg(feature = "mysqldb")]
-            tokens.extend(quote!(#mysql_alter));
+            tokens.extend(quote!(#mysql_idu));
         }
     }
 }

@@ -1,12 +1,14 @@
 use rocket::FromForm;
+use toql_core::query::Query;
 
 #[derive(FromForm, Debug)]
 pub struct ToqlQuery {
-    query: Option<String>,
-    first: Option<u64>,
-    max: Option<u16>,
-    count: Option<bool>,
-    distinct: Option<bool>,
+    pub query: Query,
+    pub first: Option<u64>,
+    pub max: Option<u16>,
+    pub count: Option<bool>,
+    //pub distinct: Option<bool>,
+    
 }
 
 #[cfg(feature = "mysqldb")]
@@ -35,13 +37,12 @@ pub mod mysql {
         mut query: &mut Query,
         mappers: &SqlMapperCache,
         mut conn: &mut mysql::Conn,
-        serialize: &Fn(&T) -> B,
-        distinct: bool,
+        serialize: &Fn(&T) -> B
     ) -> Response<'a>
     where
         B: Read + Seek + 'a,
     {
-        let result = T::load_one(&mut query, &mappers, &mut conn, distinct);
+        let result = T::load_one(&mut query, &mappers, &mut conn);
         let mut response = rocket::response::Response::new();
         match result {
             Ok(entity) => {
@@ -75,16 +76,16 @@ pub mod mysql {
     where
         B: Read + Seek + 'a,
     {
-        let query_string = toql_query.query.as_ref().map(|x| &**x).unwrap_or("*");
+       // let query_string = toql_query.query.as_ref().map(|x| &**x).unwrap_or("*");
 
-        let mut query = QueryParser::parse(query_string).unwrap();
+        //let mut query = QueryParser::parse(query_string).unwrap();
+        
 
         // Returns sql errors
         let result = T::load_many(
-            &mut query,
+            &toql_query.query,
             &mappers,
             &mut conn,
-            toql_query.distinct.unwrap_or(false),
             toql_query.count.unwrap_or(true),
             toql_query.first.unwrap_or(0),
             toql_query.max.unwrap_or(10),

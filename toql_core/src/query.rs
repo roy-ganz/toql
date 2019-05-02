@@ -1,4 +1,5 @@
 use std::fmt;
+use std::collections::BTreeSet;
 
 pub trait FilterArg<T> {
     fn to_sql(self) -> String;
@@ -380,11 +381,17 @@ impl ToString for QueryToken {
 #[derive(Clone, Debug)]
 pub struct Query {
     pub tokens: Vec<QueryToken>,
+    pub distinct: bool,
+    pub roles: BTreeSet<String>
 }
+
+
+
 
 impl Query {
     pub fn new() -> Self {
-        Query { tokens: vec![] }
+        Query { tokens: vec![], distinct: false, roles: BTreeSet::new() }
+
     }
 
     pub fn and<T>(&mut self, query: T) -> &mut Self

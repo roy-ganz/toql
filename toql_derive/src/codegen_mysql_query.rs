@@ -163,13 +163,13 @@ impl<'a> GeneratedMysqlQuery<'a> {
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
                 pub fn load_dependencies_from_mysql(mut _entities: &mut Vec< #struct_ident >,
-                _query: &mut toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut mysql::Conn)
+                _query: &toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut mysql::Conn)
                 -> Result<(), toql::error::ToqlError> { Ok(())}
             )
         } else {
             quote!(
                 pub fn load_dependencies_from_mysql(mut entities: &mut Vec< #struct_ident >,
-                query: &mut toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn)
+                query: &toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn)
                 -> Result<(), toql::error::ToqlError>
                 {
                     #(#path_loaders)*
@@ -177,6 +177,33 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 }
             )
         };
+
+        let load_one_call_dependencies = if path_loaders.is_empty() {
+            quote!()
+        } else {
+            quote!(
+             // Restrict dependencies to parent entity
+                // query.and( "parent_child_id eq XX" )
+                let mut query = query.clone();
+                let _entity = entities.get(0).unwrap();
+                #(#merge_one_predicates)*
+                #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, mappers, conn)?;
+            )
+        };
+        let load_many_call_dependencies = if path_loaders.is_empty() {
+            quote!()
+        } else {
+            quote!(
+                let mut query = query.clone();
+                // Resolve dependencies
+                // Restrict query to keys
+                #(#merge_many_predicates)*
+
+                #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, mappers, &mut conn)?;
+            )
+        };
+        
+        
 
         quote!(
             impl #struct_ident {
@@ -201,22 +228,22 @@ impl<'a> GeneratedMysqlQuery<'a> {
             }
             impl toql::mysql::load::Load<#struct_ident> for #struct_ident
             {
-                fn load_one(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn, distinct:bool )
+                fn load_one(query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn )
                     -> Result<# struct_ident , toql::error::ToqlError>
                 {
                     let mapper= mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
 
-                    let hint = String::from(if distinct { "DISTINCT" } else {""});
+                  
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
                     .build(mapper, &query)?;
 
-                    toql::log::info!("SQL `{}` with params {:?}", result.to_sql_for_mysql(&hint, 0, 2), result.params());
+                    toql::log::info!("SQL `{}` with params {:?}", result.to_sql_for_mysql("", 0, 2), result.params());
 
 
 
-                    let entities_stmt = conn.prep_exec(result.to_sql_for_mysql( &hint, 0, 2), result.params())?;
+                    let entities_stmt = conn.prep_exec(result.to_sql_for_mysql( "", 0, 2), result.params())?;
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
 
                     if entities.len() > 1 {
@@ -225,31 +252,19 @@ impl<'a> GeneratedMysqlQuery<'a> {
                         return Err(toql::error::ToqlError::NotFound);
                     }
 
-                    // Restrict dependencies to parent entity
-                    // query.and( "parent_child_id eq XX" )
-                    let _entity = entities.get(0).unwrap();
-                    #(#merge_one_predicates)*
-                    #struct_ident ::load_dependencies_from_mysql(&mut entities, &mut query, mappers, conn)?;
-
+                    #load_one_call_dependencies
                     Ok(entities.pop().unwrap())
                 }
 
 
-                fn load_many(mut query: &mut toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,
-                mut conn: &mut mysql::Conn, distinct:bool, count:bool, first:u64, max:u16)
+                fn load_many(query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,
+                mut conn: &mut mysql::Conn, count:bool, first:u64, max:u16)
                 -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql::error::ToqlError> {
 
                     let mapper = mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     // load base entities
 
-                    let mut hint = String::from( if count {"SQL_CALC_FOUND_ROWS" }else{""});
-
-                    if distinct {
-                        if !hint.is_empty() {
-                            hint.push(' ');
-                        }
-                        hint.push_str("DISTINCT");
-                    }
+                    let hint = String::from( if count {"SQL_CALC_FOUND_ROWS" }else{""});
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
@@ -275,11 +290,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                         count_result = Some((total_count ,filtered_count))
                     }
 
-                    // Resolve dependencies
-                    // Restrict query to keys
-                    #(#merge_many_predicates)*
-
-                    #struct_ident ::load_dependencies_from_mysql(&mut entities, &mut query, mappers, &mut conn)?;
+                   #load_many_call_dependencies
 
                     Ok((entities, count_result))
                 }

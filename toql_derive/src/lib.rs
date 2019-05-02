@@ -24,14 +24,14 @@ mod codegen_toql_query_builder;
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_query;
 #[cfg(feature = "mysqldb")]
-mod codegen_mysql_alter;
+mod codegen_mysql_idu;
 
 mod util;
 
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
 
-    //env_logger::init();
+    env_logger::try_init(); // Avoid multiple init
     let ast = parse_macro_input!(input as DeriveInput);
    
     let generated_result = annot::Toql::from_derive_input(&ast);

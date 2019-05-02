@@ -7,6 +7,7 @@ use crate::query::QueryToken;
 use pest::error::Error;
 use pest::error::ErrorVariant::CustomError;
 use pest::Parser;
+use crate::error::ToqlError;
 
 #[derive(Parser)]
 #[grammar = "toql.pest"]
@@ -15,7 +16,7 @@ struct PestQueryParser;
 pub struct QueryParser;
 
 impl QueryParser {
-    pub fn parse(toql_string: &str) -> Result<Query, Error<Rule>> {
+    pub fn parse(toql_string: &str) -> Result<Query, ToqlError> {
         let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
 
         let mut query = Query::new();
@@ -105,12 +106,12 @@ impl QueryParser {
                                     iter.map(String::from).collect(),
                                 )),
                                 _ => {
-                                    return Err(Error::new_from_span(
+                                    return Err(ToqlError::QueryParserError(Error::new_from_span(
                                         CustomError {
                                             message: "Invalid filter Function".to_string(),
                                         },
                                         span,
-                                    ))
+                                    )))
                                 }
                             }
                         }
