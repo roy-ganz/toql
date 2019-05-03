@@ -45,7 +45,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
     pub(crate) fn add_field_for_builder(&mut self, _toql: &Toql, field: &'a ToqlField) {
         let field_ident = &field.ident;
         let vis = &_toql.vis;
-        if field.join.is_empty() && field.merge.is_empty() {
+        if field.sql_join.is_empty() && field.merge.is_empty() {
             let toql_field = format!("{}", field_ident.as_ref().unwrap()).to_mixed_case();
             self.builder_fields.push(quote!(
                 #vis fn #field_ident (mut self) -> toql :: query :: Field {

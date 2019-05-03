@@ -1,0 +1,86 @@
+use toql::derive::Toql;
+use toql::indelup::Indelup;
+
+#[derive(Debug, PartialEq, Toql)]
+#[toql(skip_query, skip_query_builder)]
+struct UpdateBook {
+    #[toql(delup_key)]
+    id: u8,
+    title: Option<String>, // Selectable, update if some value
+
+    #[toql(select_always)]
+    pages: Option<u8>, // Nullable column, update always
+
+    isbn: Option<Option<String>>, // Selectable nullable column, update if some value
+
+    #[toql(sql_join(self = "author_id", other = "id"))]
+    author: Option<UpdateUser>,
+}
+
+#[derive(Debug, PartialEq, Toql)]
+#[toql(skip_query, skip_query_builder)]
+struct UpdateUser {
+    #[toql(delup_key)]
+    id: u8, // Always selected
+    username: Option<String>,
+}
+
+#[test]
+fn test_update_one() {
+    let b = UpdateBook {
+        id: 5,
+        title: Some(String::from("Foo")),
+        pages: Some(6),
+        isbn: Some(Some(String::from("12345678-9"))),
+        author: Some(UpdateUser {
+            id: 16,
+            username: None,
+        }),
+    };
+
+    let (sql, params) = UpdateBook::update_one_sql(&b).unwrap();
+
+    assert_eq!(
+        "UPDATE UpdateBook t SET t.title = ?, t.pages = ?, t.isbn = ?, t.author_id = ? WHERE t.id = ?",
+        sql
+    );
+    assert_eq!(["Foo", "6", "12345678-9", "16", "5"], *params);
+}
+
+#[test]
+fn test_update_many() {
+   
+    let u1 = UpdateUser {
+        id: 11,
+        username: Some(String::from("Foo")),
+    };
+    let u2 = UpdateUser {
+        id: 22,
+        username: Some(String::from("Bar")),
+    };
+    let users = vec![u1, u2];
+
+    let (sql, params) = UpdateUser::update_many_sql(&users).unwrap();
+
+    assert_eq!("UPDATE UpdateUser t0 INNER JOIN UpdateUser t1 SET t0.username = ?, t1.username = ? WHERE t0.id = ? AND t1.id = ?", sql);
+    assert_eq!(["Foo", "Bar", "11", "22"], *params);
+
+}
+
+
+
+#[test]
+fn test_update_optional() {
+    let b = UpdateBook {
+        id: 5,
+        title: None,
+        pages: Some(6),
+        isbn: None,
+        author: None,
+    };
+
+    let (sql, params) = UpdateBook::update_one_sql(&b).unwrap();
+
+    assert_eq!("UPDATE UpdateBook t SET t.pages = ? WHERE t.id = ?", sql);
+    assert_eq!(["6", "5"], *params);
+}

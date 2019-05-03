@@ -1,12 +1,13 @@
 
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
+use crate::codegen_toql_indelup::GeneratedToqlIndelup;
 
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_query::GeneratedMysqlQuery;
 
-#[cfg(feature = "mysqldb")]
-use crate::codegen_mysql_idu::GeneratedMysqlIdu;
+
+
 
 use syn::Ident;
 use syn::GenericArgument::Type;
@@ -21,6 +22,16 @@ pub struct KeyPair {
 }
 
 
+#[derive(Debug, FromMeta)]
+pub struct JoinArg {
+    #[darling(rename="self", default)]
+    pub this: Option<String>,
+    pub other: String,
+     #[darling(default)]
+    pub on: Option<String>
+}
+
+
 // Attribute on struct field
 #[derive(Debug, FromField)]
 #[darling(attributes(toql))]
@@ -28,13 +39,15 @@ pub struct ToqlField {
     pub ident: Option<syn::Ident>,
     pub ty: syn::Type,
      #[darling(default, multiple)]
-    pub join: Vec<KeyPair>,
+    pub sql_join: Vec<JoinArg>,
     #[darling(default)]
     pub column: Option<String>,
      #[darling(default)]
     pub skip: bool,
      #[darling(default)]
-    pub skip_idu: bool,
+    pub skip_indelup: bool,
+    #[darling(default)]
+    pub skip_insert: bool,
     #[darling(default)]
     pub count_filter: bool,
     #[darling(default)]
@@ -44,7 +57,7 @@ pub struct ToqlField {
     #[darling(default)]
     pub ignore_wildcard: bool,
     #[darling(default)]
-    pub idu_key: bool,
+    pub delup_key: bool,
     #[darling(default)]
     pub field: Option<String>,
     #[darling(default)]
@@ -181,7 +194,7 @@ pub struct Toql {
       #[darling(default)]
     pub alias: Option<String>,
      #[darling(default)]
-    pub skip_idu: bool,
+    pub skip_indelup: bool,
      #[darling(default)]
     pub skip_query: bool,
     #[darling(default)]
@@ -198,12 +211,13 @@ impl quote::ToTokens for Toql {
 
         let mut toql_mapper = GeneratedToqlMapper::from_toql(&self);
         let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&self);
+        let mut toql_indelup = GeneratedToqlIndelup::from_toql(&self);
      
         #[cfg(feature = "mysqldb")]
         let mut mysql_query = GeneratedMysqlQuery::from_toql(&self);
         
-        #[cfg(feature = "mysqldb")]
-        let mut mysql_idu = GeneratedMysqlIdu::from_toql(&self);
+        
+        
 
 
          let Toql {
@@ -214,13 +228,13 @@ impl quote::ToTokens for Toql {
              table:_,
              columns:_,
              alias:_,
-             skip_idu,
+             skip_indelup,
              skip_query,
              skip_query_builder,
              ref data,
         } = *self;
 
-        let idu_enabled= !skip_idu;
+        let indelup_enabled= !skip_indelup;
         let query_enabled= !skip_query;
         let query_builder_enabled= !skip_query_builder;
 
@@ -235,6 +249,7 @@ impl quote::ToTokens for Toql {
                 // Generate query functionality
                 if query_enabled {
                     if field.skip {
+                        #[cfg(feature = "mysqldb")]  
                         mysql_query.add_mysql_deserialize_skip_field(field);
                         continue;
                     }
@@ -268,9 +283,8 @@ impl quote::ToTokens for Toql {
                 }
 
                 // Generate mod functionality
-                if idu_enabled && !field.skip_idu {
-                    #[cfg(feature = "mysqldb")]
-                    mysql_idu.add_idu_field(&self, field);
+                if indelup_enabled && !field.skip_indelup {
+                    toql_indelup.add_indelup_field(&self, field);
                 }
                 
                
@@ -288,9 +302,8 @@ impl quote::ToTokens for Toql {
             tokens.extend(quote!(#mysql_query));
         }
          
-        if idu_enabled {
-            #[cfg(feature = "mysqldb")]
-            tokens.extend(quote!(#mysql_idu));
+        if indelup_enabled {
+            tokens.extend(quote!(#toql_indelup));
         }
     }
 }

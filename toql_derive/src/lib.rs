@@ -20,18 +20,19 @@ use proc_macro::TokenStream;
 mod annot;
 mod codegen_toql_mapper;
 mod codegen_toql_query_builder;
+mod codegen_toql_indelup;
 
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_query;
-#[cfg(feature = "mysqldb")]
-mod codegen_mysql_idu;
+
+
 
 mod util;
 
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
 
-    env_logger::try_init(); // Avoid multiple init
+    let _ = env_logger::try_init(); // Avoid multiple init
     let ast = parse_macro_input!(input as DeriveInput);
    
     let generated_result = annot::Toql::from_derive_input(&ast);

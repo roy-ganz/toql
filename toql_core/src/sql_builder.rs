@@ -458,7 +458,7 @@ impl SqlBuilder {
                                     || !self.path_ignored(&query_field.name)
                                 {
                                     return Err(SqlBuilderError::FieldMissing(format!(
-                                        "Missing field: '{}'. ",
+                                        "no field mapped for `{}`",
                                         query_field.name
                                     )));
                                 }

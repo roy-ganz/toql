@@ -49,6 +49,7 @@ pub use toql_core::sql_builder;
 pub use toql_core::sql_builder_result;
 pub use toql_core::sql_mapper;
 pub use toql_core::query_builder;
+pub use toql_core::indelup;
 
 pub use toql_derive as derive;
 

@@ -7,5 +7,6 @@ edition = "2018"
 [dependencies]
 toql_core = {path="../toql_core"}
 mysql = "14.2"
+log= "0.4"
 
 

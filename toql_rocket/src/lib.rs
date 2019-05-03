@@ -24,8 +24,7 @@ pub mod mysql {
 
 
     use toql_mysql::load::Load;
-    use toql_mysql::alter::Alter;
-
+    
     use super::ToqlQuery;
     use rocket::response::Response;
     use std::io::{Read, Seek};
@@ -107,54 +106,6 @@ pub mod mysql {
                 response
 
                 
-            }
-        }
-    }
-    pub fn insert_one<'a, T:'a + Alter<'a,T>> (entity: T, mut conn: &mut mysql::Conn) -> Response<'a> {
-
-         let mut response = Response::new();
-         let result = toql_mysql::insert_one(&entity, conn);
-         match result {
-            Ok(_last_insert_id) => {
-                response.set_status(Status::Created);
-                response
-            }
-            Err(x) => {
-                    log::error!("Toql failed with `{}`", x);
-                    response.set_status(Status::InternalServerError);
-                    response
-            }
-         }
-    }
-    
-    pub fn update_one<'a, T:'a + Alter<'a,T>> (entity: T, mut conn: &mut mysql::Conn) -> Response<'a> {
-        let mut response = Response::new();
-         let result = toql_mysql::update_one(&entity, conn);
-         match result {
-            Ok(_rows_updated) => {
-                response.set_status(Status::Ok);
-                response
-            }
-            Err(x) => {
-                    log::error!("Toql failed with `{}`", x);
-                    response.set_status(Status::InternalServerError);
-                    response
-            }
-        }
-    }
-    
-    pub fn delete_one<'a, T:'a + Alter<'a,T>> (entity: T, mut conn: &mut mysql::Conn) -> Response<'a> {
-        let mut response = Response::new();
-         let result = toql_mysql::delete_one(&entity,conn);
-         match result {
-            Ok(_rows_deleted) => {
-                response.set_status(Status::Ok);
-                response
-            }
-            Err(x) => {
-                    log::error!("Toql failed with `{}`", x);
-                    response.set_status(Status::InternalServerError);
-                    response
             }
         }
     }

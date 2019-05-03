@@ -10,6 +10,7 @@ pub mod sql_builder;
 pub mod sql_builder_result;
 pub mod sql_mapper;
 pub mod error;
+pub mod indelup;
 
 #[cfg(feature = "rocketweb")]
 pub mod rocket;

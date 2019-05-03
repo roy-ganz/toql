@@ -58,7 +58,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         };
 
         // Joined field
-        if  !field.join.is_empty() {
+        if  !field.sql_join.is_empty() {
            // let renamed_join_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
             
             let joined_struct_ident = field.first_non_generic_type();
@@ -69,10 +69,14 @@ impl<'a> GeneratedToqlMapper<'a> {
             let join_table = &field.table.as_ref().unwrap_or(&renamed_join_table);
             let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias); 
 
-            let join_condition :Vec<String> =   field.join.iter().map(|j| {
-                let this_key = crate::util::rename(&j.this, &toql.columns);
-                let other_key = crate::util::rename(&j.other, &toql.columns);
-                format!("{{alias}}.{} = {}.{}",this_key, join_alias, other_key) }).collect();
+            let join_condition :Vec<String> =   field.sql_join.iter().map(|j| {
+                let auto_self_key= crate::util::rename(&field_ident.to_string(),&toql.columns);
+                let this_key = j.this.as_ref().unwrap_or(&auto_self_key);
+                let other_key = & j.other; //crate::util::rename(&j.other, &toql.columns);
+                let on = if let Some(predicate) = &j.on {
+                  format!(" AND ({})", predicate)
+                } else {String::from("")};
+                format!("{{alias}}.{} = {}.{}{}",this_key, join_alias, other_key, on) }).collect();
 
            let format_string = format!("{} JOIN {} {} ON ({})",
                 if field._first_type() == "Option" {"LEFT"} else {"INNER"},
@@ -219,7 +223,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
 
         let builder = quote!(
 
-            impl toql::sql_mapper::Map for #struct_ident {
+            impl toql::sql_mapper::Mapped for #struct_ident {
                 fn insert_new_mapper(cache: &mut toql::sql_mapper::SqlMapperCache) ->  &mut toql::sql_mapper::SqlMapper {
                     let m = Self::new_mapper( #sql_table_alias);
                     cache.insert( String::from( #struct_name ), m);

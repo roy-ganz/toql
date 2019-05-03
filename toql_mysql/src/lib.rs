@@ -3,32 +3,97 @@ use mysql::Conn;
 use toql_core::sql_mapper::SqlMapperCache;
 use toql_core::query::Query;
 use toql_core::error::ToqlError;
+use toql_core::indelup::Indelup;
 
 
 pub mod load;
 pub mod row;
-pub mod idu;
 
 
- pub fn insert_one<'a, T:'a + idu::Idu<'a, T>>( entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-     T::insert_one(&entity, conn)
+
+ pub fn insert_one<'a, T>( entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    where T:'a + Indelup<'a, T>
+ {
+     let (insert_stmt, params) = T::insert_one_sql(&entity)?;
+     if params.is_empty() {return Ok(0);}
+    log::info!("Sql `{}` with params {:?}", insert_stmt, params);
+    let mut stmt = conn.prepare(insert_stmt)?;
+    let res= stmt.execute(params)?;
+    Ok(res.last_insert_id())
+     
  }
-    pub fn delete_one<'a, T:'a + idu::Idu<'a, T> >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-        let rows = T::delete_one(&entity, conn)?;
-        if rows == 0 {
-            Err(ToqlError::NotFound)
-        } else {
-            Ok(rows)
+
+  pub fn insert_many_test<'a, I, T > (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    where I: IntoIterator<Item = &'a T> + 'a, T:'a + Indelup<'a, T>
+     {
+        let (insert_stmt, params) = T::insert_many_sql(entities.into_iter())?;
+        if params.is_empty() {return Ok(0);}
+        log::info!("Sql `{}` with params {:?}", insert_stmt, params);
+        let mut stmt = conn.prepare(insert_stmt)?;
+        let res= stmt.execute(params)?;
+        Ok(res.last_insert_id())
+    }
+
+  pub fn insert_many<'a, I, T > (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    where I: Iterator<Item = &'a T> + 'a, T:'a + Indelup<'a, T>
+     {
+        let (insert_stmt, params) = T::insert_many_sql(entities)?;
+        if params.is_empty() {return Ok(0);}
+        log::info!("Sql `{}` with params {:?}", insert_stmt, params);
+        let mut stmt = conn.prepare(insert_stmt)?;
+        let res= stmt.execute(params)?;
+        Ok(res.last_insert_id())
+    }
+
+    pub fn delete_one<'a, T >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    where T:'a + Indelup<'a, T>
+    {
+        let (delete_stmt, params) = T::delete_one_sql(&entity)?;
+        log::info!("Sql `{}` with params {:?}", delete_stmt, params);
+
+        let mut stmt = conn.prepare(delete_stmt)?;
+        let res = stmt.execute(params)?;
+        Ok(res.affected_rows())
+        
+    }
+    pub fn update_one<'a, T >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    where T:'a + Indelup<'a, T>
+    {
+        let (update_stmt, params) = T::update_one_sql(&entity)?;
+        log::info!("Sql `{}` with params {:?}", update_stmt, params);
+        let mut stmt = conn.prepare(&update_stmt)?;
+        let res = stmt.execute(params)?;
+
+        Ok(res.affected_rows())
+    }
+
+    pub fn update_many<'a, I, T> (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+        where I: Iterator<Item = &'a T> + 'a,  T:'a + Indelup<'a, T>
+         {
+       
+         let mut x = 0;
+
+        for entity in entities{
+            x += update_one(entity, conn)?
         }
+        Ok(x)
     }
-    pub fn update_one<'a, T:'a + idu::Idu<'a, T> >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> {
-         let rows = T::update_one(&entity, conn)?;
-          if rows == 0 {
-            Err(ToqlError::NotFound)
-            } else {
-                Ok(rows)
-            }
+
+   
+
+    
+
+    pub fn delete_many<'a, I, T> (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    where I: Iterator<Item = &'a T> + 'a ,  T:'a + Indelup<'a, T>
+    {
+        let (delete_stmt, params)= T::delete_many_sql(entities)?;
+        if params.is_empty() {return Ok(0);}
+        log::info!("Sql `{}` with params {:?}", delete_stmt, params);
+        let mut stmt = conn.prepare(delete_stmt)?;
+        let res= stmt.execute(params)?;
+        Ok(res.affected_rows())
     }
+    
 
 
 
