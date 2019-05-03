@@ -26,7 +26,7 @@ struct UpdateUser {
 }
 
 #[test]
-fn test_update_one() {
+fn update_one() {
     let b = UpdateBook {
         id: 5,
         title: Some(String::from("Foo")),
@@ -48,7 +48,7 @@ fn test_update_one() {
 }
 
 #[test]
-fn test_update_many() {
+fn update_many() {
    
     let u1 = UpdateUser {
         id: 11,
@@ -70,7 +70,7 @@ fn test_update_many() {
 
 
 #[test]
-fn test_update_optional() {
+fn update_optional() {
     let b = UpdateBook {
         id: 5,
         title: None,

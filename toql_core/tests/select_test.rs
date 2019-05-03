@@ -4,16 +4,16 @@ use toql_core::sql_mapper::MapperOptions;
 use toql_core::sql_mapper::SqlMapper;
 
 fn setup_mapper() -> SqlMapper {
-    let mut mapper = SqlMapper::new("Book");
+    let mut mapper = SqlMapper::new("Book b");
     mapper
-        .join("author", "JOIN User a ON (id = a.book_id)")
+        .join("author", "JOIN User a ON (b.id = a.book_id)")
         .map_field_with_options(
             "id",
-            "id",
+            "b.id",
             MapperOptions::new().select_always(true)
         )
-        .map_field("title", "title")
-        .map_field("publishedAt", "published_at")
+        .map_field("title", "b.title")
+        .map_field("publishedAt", "b.published_at")
         .map_field("author_id", "a.id")
         .map_field("author_username", "a.username");
     mapper
@@ -23,10 +23,34 @@ fn setup_mapper() -> SqlMapper {
 fn select_wildcard() {
     let mapper = setup_mapper();
     let query = QueryParser::parse("*").unwrap(); // select all top fields
+    println!("{:?}", query);
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(
-        "SELECT id, title, publishedAt, null, null FROM Book",
+        "SELECT b.id, b.title, b.published_at, null, null FROM Book b",
+        result.to_sql()
+    );
+}
+#[test]
+fn select_double_wildcard() {
+    let mapper = setup_mapper();
+    let query = QueryParser::parse("**").unwrap(); // select all top fields
+    let result = SqlBuilder::new().build(&mapper, &query).unwrap();
+
+    assert_eq!(
+        "SELECT b.id, b.title, b.published_at, a.id, a.username FROM Book b JOIN User a ON (b.id = a.book_id)",
+        result.to_sql()
+    );
+}
+#[test]
+fn select_path_wildcard() {
+    let mapper = setup_mapper();
+    let query = QueryParser::parse("author_*").unwrap(); // select all top fields
+     println!("{:?}", query);
+    let result = SqlBuilder::new().build(&mapper, &query).unwrap();
+
+    assert_eq!(
+        "SELECT b.id, null, null, a.id, a.username FROM Book b JOIN User a ON (b.id = a.book_id)",
         result.to_sql()
     );
 }
@@ -38,7 +62,7 @@ fn select_duplicates() {
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(
-        "SELECT id, title, null, null, null FROM Book",
+        "SELECT b.id, b.title, null, null, null FROM Book b",
         result.to_sql()
     );
 }
@@ -50,7 +74,7 @@ fn select_optional_join() {
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(
-        "SELECT id, title, null, a.id, null FROM Book JOIN User a ON (id = a.book_id)",
+        "SELECT b.id, b.title, null, a.id, null FROM Book b JOIN User a ON (b.id = a.book_id)",
         result.to_sql()
     );
 }
@@ -58,11 +82,14 @@ fn select_optional_join() {
 #[test]
 fn select_hidden() {
     let mapper = setup_mapper();
-    let query = QueryParser::parse(".id, .title, publishedAt").unwrap(); // id must always be selected (see mapper), title is hidden
+    
+    // id must always be selected (see mapper), title is hidden
+    let query = QueryParser::parse(".id, .title, publishedAt").unwrap(); 
+
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(
-        "SELECT id, null, published_at, null, null FROM Book",
+        "SELECT b.id, null, b.published_at, null, null FROM Book b",
         result.to_sql()
     );
 }
@@ -70,7 +97,9 @@ fn select_hidden() {
 #[test]
 fn select_missing_field() {
     let mapper = setup_mapper();
-    let query = QueryParser::parse("id, fail").unwrap(); // Field fail does not exist in mapper
+     
+    // Field fail does not exist in mapper
+    let query = QueryParser::parse("id, fail").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query);
 
     assert!(result.is_err(), "Field should be missing.");

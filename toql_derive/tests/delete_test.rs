@@ -23,7 +23,7 @@ struct DeleteUser {
 }
 
 #[test]
-fn test_delete_one() {
+fn delete_one() {
     let b = DeleteBook {
         id: 5,
         title: Some(String::from("Foo")),
@@ -37,7 +37,7 @@ fn test_delete_one() {
 }
 
 #[test]
-fn test_delete_many() {
+fn delete_many() {
     let b1 = DeleteBook {
         id: 5,
         title: Some(String::from("Foo")),

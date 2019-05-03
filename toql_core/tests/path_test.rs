@@ -21,8 +21,8 @@ fn setup_mapper() -> SqlMapper {
 #[test]
 fn build_path() {
     let mapper = setup_mapper();
-    // build query for path, ignore other fields
-    // mapper must provide fields of path
+    // Build query for path, ignore other fields
+    // Mapper must provide fields of path
     let query =
         QueryParser::parse("fooId, bar_id, author_id, author_username, author_book_id EQ 5")
             .unwrap();
@@ -41,11 +41,12 @@ fn ignore_path() {
     let mapper = setup_mapper();
     // build query, ignore path
     let query = QueryParser::parse("id, username, book_id, book_foo").unwrap();
+  
 
     let result = SqlBuilder::new()
         .ignore_path("book") // field "book_foo" is not missing, because path "book" in query is ignored, no error is raised
         .build(&mapper, &query)
         .unwrap();
 
-    assert_eq!("SELECT id, username FROM User", result.to_sql());
+    assert_eq!("SELECT id, username, null FROM User", result.to_sql());
 }

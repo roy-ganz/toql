@@ -26,6 +26,7 @@ fn setup_mapper() -> SqlMapper {
 fn filter_lk() {
     let mapper = setup_mapper();
     let query = QueryParser::parse("title LK '%Foobar%' ").unwrap();
+    println!("{:?}", query);
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(

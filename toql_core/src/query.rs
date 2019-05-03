@@ -347,14 +347,15 @@ pub enum FieldOrder {
 pub enum QueryToken {
     LeftBracket(Concatenation),
     RightBracket,
-    Wildcard(Concatenation),
+    Wildcard(Concatenation, String),
+    DoubleWildcard(Concatenation),
     Field(Field),
 }
 
 impl From<&str> for QueryToken {
     fn from(s: &str) -> QueryToken {
         if s.ends_with("*") {
-            QueryToken::Wildcard(Concatenation::And)
+            QueryToken::Wildcard(Concatenation::And, s.trim_end_matches("*").to_string())
         } else {
             QueryToken::Field(Field::from(s))
         }
@@ -372,7 +373,8 @@ impl ToString for QueryToken {
             QueryToken::Field(
                 field, /*Field {concatenation, name, hidden, order, filter, aggregation}*/
             ) => field.to_string(),
-            QueryToken::Wildcard(_) => String::from("*"),
+            QueryToken::Wildcard(_, ref name) => format!("{}*", name),
+             QueryToken::DoubleWildcard(_,) => String::from("**"),
         };
         s
     }
@@ -431,7 +433,9 @@ impl Query {
                     *c = Concatenation::Or;
                 } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
                     field.concatenation = Concatenation::Or;
-                } else if let QueryToken::Wildcard(w) = query.tokens.get_mut(0).unwrap() {
+                } else if let QueryToken::Wildcard(w, _) = query.tokens.get_mut(0).unwrap() {
+                    *w = Concatenation::Or;
+                } else if let QueryToken::DoubleWildcard(w) = query.tokens.get_mut(0).unwrap() {
                     *w = Concatenation::Or;
                 }
             }
@@ -474,7 +478,8 @@ impl fmt::Display for Query {
             if concatenation_needed {
                 match &token {
                     QueryToken::LeftBracket(concatenation)
-                    | QueryToken::Wildcard(concatenation) => {
+                    | QueryToken::DoubleWildcard(concatenation)
+                    | QueryToken::Wildcard(concatenation, _) => {
                         s.push(get_concatenation(concatenation))
                     }
                     QueryToken::Field(field) => s.push(get_concatenation(&field.concatenation)),
@@ -511,8 +516,11 @@ impl From<&str> for Query {
     fn from(field: &str) -> Query {
         let mut q = Query::new();
 
-        q.tokens.push(if field.ends_with("*") {
-            QueryToken::Wildcard(Concatenation::And)
+        q.tokens.push(
+            if field == "**" {
+            QueryToken::DoubleWildcard(Concatenation::And)
+        } else if field.ends_with("*") {
+            QueryToken::Wildcard(Concatenation::And, String::from(field.trim_end_matches("*")))
         } else {
             QueryToken::Field(Field::from(field))
         });

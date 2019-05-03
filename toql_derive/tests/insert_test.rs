@@ -26,7 +26,7 @@ struct NewUser {
 }
 
 #[test]
-fn test_insert_one() {
+fn insert_one() {
     let b = NewBook {
         id: 5,
         title: Some(String::from("Foo")),
@@ -47,7 +47,7 @@ fn test_insert_one() {
     assert_eq!(["5", "Foo", "42", "12345678-9", "6"], *params);
 }
 #[test]
-fn test_insert_many() {
+fn insert_many() {
     let u1 = NewUser {
         id: 5,
         username: Some(String::from("Foo")),
@@ -65,7 +65,7 @@ fn test_insert_many() {
 }
 
 #[test]
-fn test_null_column() {
+fn null_column() {
     let b = NewBook {
         id: 5,
         title: Some(String::from("Foo")),
@@ -84,7 +84,7 @@ fn test_null_column() {
 }
 
 #[test]
-fn test_missing_value() {
+fn missing_value() {
     let b = NewBook {
         id: 5,
         title: None, // Title must contain some value -> Error
@@ -99,7 +99,7 @@ fn test_missing_value() {
 }
 
 #[test]
-fn test_skip_insert() {
+fn skip_insert() {
     let u = NewUser {
         id: 5,
         username: Some(String::from("Foo")),

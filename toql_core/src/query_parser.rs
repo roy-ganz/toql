@@ -68,11 +68,19 @@ impl QueryParser {
                     }
                 }
 
-                Rule::fieldname => {
+                Rule::field_path => {
                     let token = query.tokens.last_mut();
                     if let Some(t) = token {
                         if let QueryToken::Field(ref mut field) = t {
                             field.name = span.as_str().to_string();
+                        }
+                    }
+                }
+                 Rule::wildcard_path => {
+                    let token = query.tokens.last_mut();
+                    if let Some(t) = token {
+                        if let QueryToken::Wildcard(_, ref mut field) = t {
+                            *field = span.as_str().to_string();
                         }
                     }
                 }
@@ -117,8 +125,11 @@ impl QueryParser {
                         }
                     }
                 }
+                Rule::double_wildcard => {
+                    query.tokens.push(QueryToken::DoubleWildcard(con.clone()));
+                }
                 Rule::wildcard => {
-                    query.tokens.push(QueryToken::Wildcard(con.clone()));
+                    query.tokens.push(QueryToken::Wildcard(con.clone(), String::from("")));
                 }
                 Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);

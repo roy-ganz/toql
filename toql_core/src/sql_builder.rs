@@ -304,18 +304,83 @@ impl SqlBuilder {
                             need_having_concatenation = true;
                         }
                     }
+                    QueryToken::DoubleWildcard(..) => {
+                         // Skip wildcard for count queries
+                        if self.count_query {
+                            continue;
+                        }
+                        for (field_name, sql_target) in &sql_mapper.fields {
+                            // Skip fields, that ignore wildcard
+                            if sql_target.options.ignore_wildcard {
+                                continue;
+                            }
+                            if self.ignored_paths.iter().any(|p| field_name.starts_with(p)) {
+                                continue;
+                            }
+                          
+                            // Skip fields with missing role
+                            let role_valid =
+                                Self::validate_roles(&query.roles, &sql_target.options.roles);
+                            if role_valid == false {
+                                continue;
+                            }
+                            let f = sql_target_data.entry(field_name.as_str()).or_default();
+                            f.selected = true; // Select field
+                            // Add JOIN information for subfields
+                            if sql_target.subfields {
+                                for subfield in field_name.split('_').rev().skip(1) {
+                                    if !sql_join_data.contains_key(subfield) {
+                                        sql_join_data.insert(subfield, SqlJoinData::default());
+                                    }
+                                }
+                            }
+                        }
+                    }
 
-                    QueryToken::Wildcard(..) => {
+                    QueryToken::Wildcard(.., ref path) => {
                         // Skip wildcard for count queries
                         if self.count_query {
                             continue;
                         }
+                        // Skip field from other path
+                        if !self.subpath.is_empty() && !path.starts_with(&self.subpath)
+                        {
+                            continue;
+                        }
 
-                        for (field_name, mapper_field) in &sql_mapper.fields {
-                            // Select all top fields, that don't ignore wildcard
-                            if !mapper_field.options.ignore_wildcard && !mapper_field.subfields {
+                        for (field_name, sql_target) in &sql_mapper.fields {
+
+                            if sql_target.options.ignore_wildcard {
+                                continue;
+                            }
+                            if self.ignored_paths.iter().any(|p| field_name.starts_with(p)) {
+                                continue;
+                            }
+                            // Skip fields with missing role
+                            let role_valid =
+                                Self::validate_roles(&query.roles, &sql_target.options.roles);
+                            if role_valid == false {
+                                continue;
+                            }
+
+                            // Select all top fields, that are top fields or are in the right path level
+                            if  (path.is_empty() && !sql_target.subfields)
+                            || (field_name.starts_with(path) && field_name.rfind("_").unwrap_or(field_name.len()) < path.len()) {
                                 let f = sql_target_data.entry(field_name.as_str()).or_default();
                                 f.selected = true; // Select field
+
+                                //println!("PATH= {}", path);
+                                //println!("FIELDNAME= {}", field_name);
+                                //println!("MATCH = {}",field_name.starts_with(path) && field_name.rfind("_").unwrap_or(field_name.len()) < field_name.len() );
+                                // Add JOIN information
+                                if sql_target.subfields {
+                                    for subfield in field_name.split('_').rev().skip(1) {
+                                        if !sql_join_data.contains_key(subfield) {
+                                            sql_join_data.insert(subfield, SqlJoinData::default());
+                                        }
+                                    }
+                                }
+
                             }
                         }
                     }
@@ -324,6 +389,9 @@ impl SqlBuilder {
                         // E.g "user_id" has path "user"
                         if !self.subpath.is_empty() && !query_field.name.starts_with(&self.subpath)
                         {
+                            continue;
+                        }
+                        if self.ignored_paths.iter().any(|p| query_field.name.starts_with(p)) {
                             continue;
                         }
 

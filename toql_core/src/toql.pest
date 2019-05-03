@@ -5,12 +5,14 @@ text_value =  { "'" ~ string ~ "'" }
 value= { num_value | text_value  } 
 field_filter = { (("FN" ~ name) | name) ~ value+}
 sort = @{ ("+" | "-") ~ASCII_DIGIT* }
-name =  @{ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_") * }
-fieldname = { name }
+name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
+field_path = @{ name ~ ("_" ~ name)* }
 hidden = @{"."}
-wildcard = @{"*"}
+wildcard_path= {field_path ~ "_"}
+wildcard = { wildcard_path? ~ "*" }
+double_wildcard = @{"**"}
 aggregation = @{"!"}
-field = { sort? ~ hidden? ~ fieldname }
+field = { sort? ~ hidden? ~ field_path }
 field_clause = { field ~ aggregation? ~ field_filter?}
 clause = { field_clause | ( lpar ~ expr ~ rpar) } 
 concat = { "," | ";" }
@@ -18,7 +20,8 @@ concat = { "," | ";" }
 lpar = @{"("}
 rpar = @{")"}
 
-expr = { (clause | wildcard) ~ (concat ~ (clause | wildcard))*}
+
+expr = { (double_wildcard | wildcard | clause ) ~ (concat ~ (double_wildcard | wildcard | clause))*}
 query = { SOI ~ expr? ~ EOI }
 
 WHITESPACE = _{ " " }

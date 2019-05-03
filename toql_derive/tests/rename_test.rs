@@ -25,7 +25,7 @@ struct MyUser {
 }
 
 #[test]
-fn test_rename() {
+fn rename() {
     let mapper = toql::sql_mapper::SqlMapper::map::<MyBook>("b");
     
     let query = toql::query_parser::QueryParser::parse("*, author_id, coAuthor_id"); // Select all top fields and id from author and co-author
