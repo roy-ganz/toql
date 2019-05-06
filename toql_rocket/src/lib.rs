@@ -30,57 +30,41 @@ pub mod mysql {
     use std::io::{Read, Seek};
 
 
-
-
-    pub fn load_one<'a, T: Load<T>, B>(
-        mut query: &mut Query,
-        mappers: &SqlMapperCache,
-        mut conn: &mut mysql::Conn,
-        serialize: &Fn(&T) -> B
-    ) -> Response<'a>
-    where
-        B: Read + Seek + 'a,
-    {
-        let result = T::load_one(&mut query, &mappers, &mut conn);
-        let mut response = rocket::response::Response::new();
-        match result {
-            Ok(entity) => {
-                response.set_sized_body(serialize(&entity));
-                response
-            }
-            Err(ToqlError::NotFound) => {
-                log::info!("No result found for Toql query `{}`", query);
-                response.set_status(Status::NotFound);
-                response
-            }
-            Err(ToqlError::NotUnique) => {
-                log::info!( "No unique result found for Toql query `{}`",query);
-                response.set_status(Status::BadRequest);
-                response
-            },
-            Err(err) => {
-                 log::error!("Toql failed with `{}`",err);
-                response.set_status(Status::InternalServerError);
-                response
-            }
+   /*  pub fn load_response<'a, T, B>( result: (Vec<T>, Option<(u32, u32)>) + 'a, response: &mut Response,serialize: &Fn(&[T]) -> B)
+    where B: Read + Seek + 'a,
+     {
+         if let( Some(count)) = result.1 {
+                if let (total_count, filtered_count) = count {
+                    response.adjoin_raw_header("X-Count", filtered_count.to_string());
+                    response.adjoin_raw_header("X-Total-Count", total_count.to_string());
+                }
+                response.set_sized_body(serialize(&result.0));
         }
-    }
+         response.set_sized_body(serialize(&result.0));
+    } */
 
-    pub fn load_many<'a, T: Load<T>, B>(
+    pub fn load_many<'a, T: Load<T>>(
         toql_query: &ToqlQuery,
         mappers: &SqlMapperCache,
-        mut conn: &mut mysql::Conn,
-        serialize: &Fn(&[T]) -> B,
-    ) -> Response<'a>
-    where
-        B: Read + Seek + 'a,
+        mut conn: &mut mysql::Conn
+        //serialize: &Fn(&[T]) -> B,
+    ) 
+    //-> Result<Response<'a>, ToqlError>
+    -> Result<(Vec<T>, Option<(u32, u32)>), ToqlError>
+    /* where
+        B: Read + Seek + 'a, */
     {
-       // let query_string = toql_query.query.as_ref().map(|x| &**x).unwrap_or("*");
-
-        //let mut query = QueryParser::parse(query_string).unwrap();
-        
-
+       
         // Returns sql errors
+        T::load_many(
+            &toql_query.query,
+            &mappers,
+            &mut conn,
+            toql_query.count.unwrap_or(true),
+            toql_query.first.unwrap_or(0),
+            toql_query.max.unwrap_or(10),
+        )
+       /*  // Returns sql errors
         let result = T::load_many(
             &toql_query.query,
             &mappers,
@@ -88,10 +72,19 @@ pub mod mysql {
             toql_query.count.unwrap_or(true),
             toql_query.first.unwrap_or(0),
             toql_query.max.unwrap_or(10),
-        );
+        )?; */
 
-        let mut response = Response::new();
-        match result {
+       /*  let mut response = Response::new();
+        if let( Some(count)) = result.1 {
+                if let (total_count, filtered_count) = count {
+                    response.adjoin_raw_header("X-Count", filtered_count.to_string());
+                    response.adjoin_raw_header("X-Total-Count", total_count.to_string());
+                }
+                response.set_sized_body(serialize(&result.0));
+        }
+         response.set_sized_body(serialize(&result.0));
+         Ok(response) */
+        /* match result.1 {
             Ok((entities, count)) => {
                 if let Some((total_count, filtered_count)) = count {
                     response.adjoin_raw_header("X-Count", filtered_count.to_string());
@@ -107,7 +100,7 @@ pub mod mysql {
 
                 
             }
-        }
+        } */
     }
     
 }

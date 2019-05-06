@@ -97,12 +97,12 @@ pub mod row;
 
 
 
- pub fn load_one<T: load::Load<T>> (query: &mut Query, mappers: &SqlMapperCache, conn: &mut Conn) 
+ pub fn load_one<T: load::Load<T>> (query: &Query, mappers: &SqlMapperCache, conn: &mut Conn) 
  -> Result<T, ToqlError> {
     T::load_one(query, mappers,conn)
  }
 
- pub fn load_many<T: load::Load<T>>(query: &mut Query, mappers: &SqlMapperCache, conn: &mut Conn, count: bool, first:u64, max:u16)
+ pub fn load_many<T: load::Load<T>>(query: &Query, mappers: &SqlMapperCache, conn: &mut Conn, count: bool, first:u64, max:u16)
 -> Result<(Vec<T>, Option<(u32,u32)>), ToqlError>
  {
     T::load_many(query, mappers, conn,  count, first, max)
