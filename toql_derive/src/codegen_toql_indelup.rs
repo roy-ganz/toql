@@ -51,7 +51,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
     fn add_insert_field(&mut self, toql: &Toql, field: &'a ToqlField) {
 
-            if !field.merge.is_empty() || field.skip_insert || field.sql.is_some() {
+            if !field.merge.is_empty() || field.skip_inup || field.sql.is_some() {
                 return;
             }
             
@@ -141,27 +141,30 @@ impl<'a> GeneratedToqlIndelup<'a> {
                 self.delup_key_params_code.push( quote!(params.push(entity. #field_ident.to_string().to_owned()); ));
             }
             self.delup_keys.push(field.ident.as_ref().unwrap().to_string());
-        }
-        // Regular field (Update only)
-        else  if field.sql_join.is_empty() {
+        } 
+        
+        // Field is not skipped for update
+        else if !field.skip_inup {
+            // Regular field 
+          if field.sql_join.is_empty() {
 
                 let set_statement = format!("{{}}.{} = ?, ", &sql_column); 
                 
-                 // Option<T>, <Option<Option<T>>
-                 if field._first_type() == "Option" && !field.select_always {
+                // Option<T>, <Option<Option<T>>
+                if field._first_type() == "Option" && !field.select_always {
                     let unwrap_null = if 2 == field.number_of_options(){
                                         quote!(.as_ref().map_or(String::from("null"), |x| x.to_string()))
                                     } else { quote!() };
                     
-                     self.update_set_code.push(quote!(
+                    self.update_set_code.push(quote!(
                         if entity. #field_ident .is_some() {
                             update_stmt.push_str( &format!(#set_statement, alias));
                             params.push(entity . #field_ident .as_ref().unwrap() #unwrap_null .to_string() .to_owned());
                         }
                     ));
-                 } 
-                 // T, Option<T> (nullable column)
-                 else {
+                } 
+                // T, Option<T> (nullable column)
+                else {
                     let unwrap_null = if 1 == field.number_of_options(){
                                             quote!(.map_or(String::from("null"), |x| x.to_string()))
                                         } else { quote!() };
@@ -169,33 +172,34 @@ impl<'a> GeneratedToqlIndelup<'a> {
                     update_stmt.push_str( &format!(#set_statement, alias));
                     params.push( entity . #field_ident #unwrap_null .to_string() .to_owned());
                         ));
-                 }
-        }
-
-        // Join Field (Update only)
-        else {
-             for j in &field.sql_join {
-                let auto_self_key= crate::util::rename(&field_ident.to_string(),&toql.columns);
-                let self_column = j.this.as_ref().unwrap_or(&auto_self_key);
-                let other_field = Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
-                let set_statement = format!("{{}}.{} = ?, ", &self_column);
-
-                // Option (LEFT JOIN)
-                if field._first_type() == "Option" {
-                    self.update_set_code.push(quote!(
-                        if entity. #field_ident .is_some() {
-                            update_stmt.push_str( &format!(#set_statement, alias));
-                            params.push(entity. #field_ident 
-                                .as_ref().unwrap(). #other_field .to_string().to_owned());
-                        }
-                    ));
-                } else {
-                    self.update_set_code.push(quote!(
-                        update_stmt.push_str( &format!(#set_statement), alias);
-                        params.push( entity. #field_ident . #other_field.to_string() .to_owned());
-                    ));
                 }
-             }
+            }
+
+            // Join Field
+            else {
+                for j in &field.sql_join {
+                    let auto_self_key= crate::util::rename(&field_ident.to_string(),&toql.columns);
+                    let self_column = j.this.as_ref().unwrap_or(&auto_self_key);
+                    let other_field = Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
+                    let set_statement = format!("{{}}.{} = ?, ", &self_column);
+
+                    // Option (LEFT JOIN)
+                    if field._first_type() == "Option" {
+                        self.update_set_code.push(quote!(
+                            if entity. #field_ident .is_some() {
+                                update_stmt.push_str( &format!(#set_statement, alias));
+                                params.push(entity. #field_ident 
+                                    .as_ref().unwrap(). #other_field .to_string().to_owned());
+                            }
+                        ));
+                    } else {
+                        self.update_set_code.push(quote!(
+                            update_stmt.push_str( &format!(#set_statement), alias);
+                            params.push( entity. #field_ident . #other_field.to_string() .to_owned());
+                        ));
+                    }
+                }
+            }
         }
     }
 

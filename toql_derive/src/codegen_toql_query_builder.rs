@@ -16,6 +16,7 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     sql_table_name: String,
     sql_table_alias: String,
     builder_fields_struct: Ident,
+    build_wildcard: bool,
     builder_fields: Vec<proc_macro2::TokenStream>,
   
 }
@@ -36,6 +37,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                 &format!("{}Fields", toql.ident.to_string()),
                 Span::call_site(),
             ),
+            build_wildcard: true,
             builder_fields: Vec::new(),
            
         }
@@ -45,6 +47,12 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
     pub(crate) fn add_field_for_builder(&mut self, _toql: &Toql, field: &'a ToqlField) {
         let field_ident = &field.ident;
         let vis = &_toql.vis;
+
+        // Omit wildcard function, if there is already a field card wildcard
+        if field_ident.as_ref().unwrap() == "wildcard" {
+            self.build_wildcard = false;
+        }
+
         if field.sql_join.is_empty() && field.merge.is_empty() {
             let toql_field = format!("{}", field_ident.as_ref().unwrap()).to_mixed_case();
             self.builder_fields.push(quote!(
@@ -86,6 +94,16 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
         let builder_fields = &self.builder_fields;
         let struct_ident = &self.struct_ident;
 
+        let wildcard = if self.build_wildcard {
+            quote!(
+                pub fn wildcard(mut self) -> toql::query::Wildcard {
+                    toql::query::Wildcard::from(self.0)
+                }
+            )
+        } else {
+            quote!()
+        };
+
         let builder = quote!(
 
             impl toql::query_builder::FieldsType for #struct_ident {
@@ -103,6 +121,8 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                 #vis fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
                 #vis fn from_path ( path : String ) -> Self { Self ( path ) }
                 #(#builder_fields)*
+
+                #wildcard
             }
         );
         

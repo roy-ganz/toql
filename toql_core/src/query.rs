@@ -87,6 +87,41 @@ pub enum Concatenation {
     Or,
 }
 
+
+pub struct Wildcard {
+    pub concatenation: Concatenation,
+    pub path: String
+}
+impl Wildcard {
+    pub fn from<T>(path: T) -> Self
+    where
+        T: Into<String>,
+    {
+        let mut path = path.into();
+        #[cfg(debug)]
+        {
+            if !path.chars().all(|x| x.is_alphanumeric() || x =='_') {
+                panic!("Path {:?} must only contain alphanumeric characters and underscores.", path);
+            }
+            
+        }
+        // Remove optional trainling *
+        if path.ends_with("*") {
+            path.pop();
+        }
+        // Add _ at end if missing
+        if !path.ends_with("_") {
+            path.push('_');
+        }
+
+        Wildcard {
+            concatenation: Concatenation::And,
+            path: path.into()
+        }
+    }
+} 
+
+
 #[derive(Clone, Debug)]
 pub struct Field {
     pub concatenation: Concatenation,
@@ -520,6 +555,16 @@ impl From<Field> for Query {
         q
     }
 }
+
+
+impl From<Wildcard> for Query {
+    fn from(wildcard: Wildcard) -> Query {
+        let mut q = Query::new();
+        q.tokens.push(QueryToken::Wildcard(wildcard.concatenation, wildcard.path));
+        q
+    }
+}
+
 impl From<&str> for Query {
     fn from(field: &str) -> Query {
         let mut q = Query::new();

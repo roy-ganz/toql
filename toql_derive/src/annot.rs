@@ -45,9 +45,7 @@ pub struct ToqlField {
      #[darling(default)]
     pub skip: bool,
      #[darling(default)]
-    pub skip_indelup: bool,
-    #[darling(default)]
-    pub skip_insert: bool,
+    pub skip_inup: bool,
     #[darling(default)]
     pub count_filter: bool,
     #[darling(default)]
@@ -282,8 +280,8 @@ impl quote::ToTokens for Toql {
                     mysql_query.add_mysql_deserialize(&self, field);
                 }
 
-                // Generate mod functionality
-                if indelup_enabled && !field.skip_indelup {
+                // Generate insert/delete/update functionality
+                if indelup_enabled {
                     toql_indelup.add_indelup_field(&self, field);
                 }
                 
