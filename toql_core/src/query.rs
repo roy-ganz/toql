@@ -395,15 +395,23 @@ impl Query {
         Query { tokens: vec![], distinct: false, roles: BTreeSet::new() }
 
     }
+     pub fn wildcard() -> Self {
+        Query { tokens: vec![QueryToken::Wildcard(Concatenation::And, String::from(""))], distinct: false, roles: BTreeSet::new() }
 
-    pub fn and<T>(&mut self, query: T) -> &mut Self
+    }
+     pub fn double_wildcard() -> Self {
+        Query { tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)], distinct: false, roles: BTreeSet::new() }
+
+    }
+
+    pub fn and<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
     {
         self.tokens.append(&mut query.into().tokens);
         self
     }
-    pub fn or<T>(&mut self, query: T) -> &mut Self
+    pub fn or<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
     {
@@ -448,7 +456,7 @@ impl Query {
         self
     }
 
-    pub fn prepend<T>(&mut self, query: T) -> &mut Self
+    pub fn prepend<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
     {

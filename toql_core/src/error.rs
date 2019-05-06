@@ -21,6 +21,8 @@ use mysql::error::Error;
 } 
 
 
+
+
 impl From<SqlBuilderError> for ToqlError {
         fn from(err: SqlBuilderError) -> ToqlError {
         ToqlError::SqlBuilderError(err)

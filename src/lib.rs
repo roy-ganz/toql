@@ -55,6 +55,9 @@ pub use toql_derive as derive;
 
 pub use log; // Reexport for generated code from Toql derive
 
+
+pub type Result<T> = std::result::Result<T,  toql_core::error::ToqlError>;
+
 #[cfg(feature = "rocket_mysql")]
 pub use toql_rocket as rocket;
 
