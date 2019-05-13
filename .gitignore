@@ -1,12 +1,25 @@
-/target
-**/*.rs.bk
+# Linux
+*~
+.Trash-*
+
+# Cargo
+target
 Cargo.lock
+target-install
+
+# Gnome Builder
+.buildconfig
+
+# Rustfmt
+*.bk
+*.backup
+
+# IntelliJ
+.idea
+*.iml
+
+# vscode
+.vscode
 
 
-#Added by cargo
-#
-#already existing elements are commented out
 
-#/target
-#**/*.rs.bk
-#Cargo.lock

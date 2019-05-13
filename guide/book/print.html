@@ -1,0 +1,752 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Toql guide</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body class="light">
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { } 
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            document.body.className = theme;
+            document.querySelector('html').className = theme + ' js';
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar" class="menu-bar">
+                    <div id="menu-bar-sticky-container">
+                        <div class="left-buttons">
+                            <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                                <i class="fa fa-bars"></i>
+                            </button>
+                            <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                                <i class="fa fa-paint-brush"></i>
+                            </button>
+                            <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                                <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                                <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            </ul>
+                            
+                            <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                <i class="fa fa-search"></i>
+                            </button>
+                            
+                        </div>
+
+                        <h1 class="menu-title">Toql guide</h1> 
+
+                        <div class="right-buttons">
+                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                                <i id="print-button" class="fa fa-print"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <a class="header" href="#toql-transfer-object-query-language" id="toql-transfer-object-query-language"><h1>Toql (<em>Transfer Object Query Language</em>)</h1></a>
+<p>This guide will explain you how to use Toql to query and modify data from a Database.</p>
+<p>Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on (Github )[www.github.com/roy-ganz/toql]</p>
+<a class="header" href="#getting-started" id="getting-started"><h2>Getting started</h2></a>
+<p>This book is split into several sections, with this introduction being the first. The others are:</p>
+<ul>
+<li>
+<p><a href="concept.html">Concept</a> - The overall concept of Toql.</p>
+</li>
+<li>
+<p><a href="query-langugae.html">Query Language</a> - How queries look like.</p>
+</li>
+<li>
+<p><a href="query-builder.html">Query Builder</a> - How queries can be programmed with typesafety.</p>
+</li>
+<li>
+<p><a href="toql-derive.html">Toql Derive</a> - Let the derive do all the work!</p>
+</li>
+<li>
+<p><a href="sql-mapper">SQL Mapper</a> - How to fine tune and tweak the derives output.</p>
+</li>
+<li>
+<p><a href="rocket-integration.html">Rocket</a> - Use rocket to provide your REST API.</p>
+</li>
+<li>
+<p><a href="mysql-integration.html">MySQL</a> - Use MySQL as a Database.</p>
+</li>
+<li>
+<p>__3rd party integration __  to work well together with Rocket and MySQL. (More planned).</p>
+</li>
+</ul>
+<p>Toql <em>Transfer Object Query Language</em> is a library that turns a query string into SQL to retrieve data records.
+It is useful for web clients to get database records from a REST interface.</p>
+<p>Toql</p>
+<ul>
+<li>can query, insert, update and delete single and multiple database records.</li>
+<li>handles dependencies in queries through SQL joins and merges.</li>
+<li>is fast, beause the mapper is only created once and than reused.</li>
+<li>has high level and low level functionality for tweaking.</li>
+</ul>
+<p>The project consists of</p>
+<ul>
+<li>A <strong>query parser</strong> to create a query from a string (from web clients).</li>
+<li>A <strong>query builder</strong> to create or change queries programatically</li>
+<li>An <strong>SQL mapper</strong> to translates toql fields into SQL columns or expressions.</li>
+<li>A <strong>SQL builder</strong> to turn a query into SQL using the mapper.</li>
+<li>A <strong>toql derive</strong> to generates all boiler plate for structs.</li>
+<li>__3rd party integration __  to work well together with Rocket and MySQL. (More planned).</li>
+</ul>
+<a class="header" href="#concept" id="concept"><h1>Concept</h1></a>
+<p>Toql is a set of crates that aim to simplify web development:</p>
+<ol>
+<li>A web client sends a Toql query to the REST Server.</li>
+<li>The server uses Toql to parse the query and create SQL.</li>
+<li>SQL is send to the Database.</li>
+<li>The database results are sent to the client.</li>
+</ol>
+<p>While all the low level functions are available for the programmer, the Toql derive produces also high level functions, so that the whole can be done with a single function call.</p>
+<a class="header" href="#example" id="example"><h2>Example</h2></a>
+<p>Here is some code that uses Rocket to serve users from a database. Note that toql can handle dependencies, such as joins and merges. Cool!</p>
+<pre><pre class="playpen"><code class="language-rust">    #[derive(Toql)]
+    #[toql(skip_indelup)] // No insert / delete / update functionality
+    struct Country {
+        id: String,
+        name: Option&lt;String&gt;
+    }
+
+    #[derive(Toql)]
+    #[toql(skip_indelup)]
+    struct User {
+        id: u32,
+        name: Option&lt;String&gt;,
+        #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;))]
+        country: Option&lt;Country&gt;
+    }
+
+    
+    #[query(&quot;/?&lt;toql..&gt;&quot;)]
+    fn query(toql: Form&lt;ToqlQuery&gt;,  conn: ExampleDbConnection, 
+        mappers: State&lt;SqlMapperCache&gt;) -&gt; Result&lt;Counted&lt;Json&lt;User&gt;&gt;&gt; {
+        let ExampleDbConnection(mut c) = conn;
+
+        let r = toql::rocket::load_many(toql, mappers, &amp;mut c)?;
+        Ok(Counted(Json(r.0), r.1))
+    }
+
+    #[database(&quot;example_db&quot;)]
+    pub struct ExampleDbConnection(mysql::Conn);
+
+    fn main() {
+        let mut mappers = SqlMapperCache::new();
+        SqlMapper::insert_new_mapper::&lt;User&gt;(&amp;mut mappers);
+
+        rocket::ignite().mount(&quot;/query&quot;, routes![query]).launch();
+    }
+</code></pre></pre>
+<p>If you have a MySQL Server running, try the full CRUD example.</p>
+<pre><code class="language-bash">LOGIN=&lt;user&gt;:&lt;pass&gt; cargo run --example rocket_mysql
+</code></pre>
+<a class="header" href="#the-query-language" id="the-query-language"><h1>The Query Language</h1></a>
+<p>The toql query language is a string that defines which fields should be selected from a database table.</p>
+<p>Fields can be filtered and ordered, they are separated by comma or semicolon to express AND or OR concatenation.</p>
+<p>Fields preceded by a path refer to a depended table.</p>
+<a class="header" href="#example-1" id="example-1"><h4>Example 1:</h4></a>
+<pre><code>id, +name, age gt 18
+</code></pre>
+<p>is translated into</p>
+<pre><code>SELECT id, name, age WHERE age &gt; 18 ORDER BY name ASC
+</code></pre>
+<a class="header" href="#example-2" id="example-2"><h4>Example 2:</h4></a>
+<pre><code>id , .age eq 12; .age eq 15
+</code></pre>
+<p>is translated into</p>
+<pre><code>SELECT id WHERE age = 12 OR age = 15
+</code></pre>
+<a class="header" href="#selecting-fields" id="selecting-fields"><h1>Selecting fields</h1></a>
+<p>Fields are selected if they are mentioned in the query.</p>
+<ul>
+<li>
+<p>Names without underscore, represent typically columns or expressions from the table the query is run against. <code>id, name, fullName, emailAddress</code></p>
+</li>
+<li>
+<p>Fields with underscores are called fields with a path. They are mapped to a joined table or another table relationship. For a join relationship, the join will be added to the SQL statement if the field is selected. For a merge relationship a second SQL query must be run to query and merge the dependency. <code>book_id, book_title, book_createdBy_id</code></p>
+</li>
+<li>
+<p>To use a field only for filtering, but not for selection hide it with a dot. <code>.age, .book_id</code></p>
+</li>
+</ul>
+<a class="header" href="#example-1-1" id="example-1-1"><h4>Example 1</h4></a>
+<pre><code>id, book_id, .age eq 50
+</code></pre>
+<p>is translated into (SQL Mapper must be told how to join)</p>
+<pre><code>SELECT a.id, b.id, null FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50
+</code></pre>
+<a class="header" href="#wildcards" id="wildcards"><h2>Wildcards</h2></a>
+<p>There are two wildcards to select multiple fields. They can neither be filtered nor ordered.</p>
+<ul>
+<li>
+<p><strong>**</strong> selects all mapped fields (top level and dependencies). Usefull for development.</p>
+</li>
+<li>
+<p><strong>*</strong> selects all fields from the top level</p>
+</li>
+<li>
+<p><strong><em>path_</em>*</strong> selects all fields from the dependency <em>path</em>.</p>
+</li>
+</ul>
+<p>Fields can be excluded from the wildcard by setting them to <code>ignore wildcard</code>.</p>
+<p>Fields that require the user to have a special role are also ignored, if the query does not have that role.</p>
+<a class="header" href="#example-1-2" id="example-1-2"><h3>Example 1</h3></a>
+<p><code>id, age, book_id, .age eq 50</code></p>
+<p>can be expressed as</p>
+<p><code>*, book_*, .age eq 50</code></p>
+<p>can be expressed as</p>
+<p><code>**, .age eq 50</code></p>
+<p>and is translation into</p>
+<p><code>SELECT id, book_id, age FROM FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50</code></p>
+<p><em>Note that the <code>age</code> field is selected with **</em></p>
+<a class="header" href="#ordering" id="ordering"><h1>Ordering</h1></a>
+<a class="header" href="#filtering" id="filtering"><h1>Filtering</h1></a>
+<p>Fields can be filtered by adding a filter to the field name.</p>
+<ul>
+<li>Filters are case insensitiv.</li>
+<li>Arguments are separated by whitespace.</li>
+<li>Strings and enum arguments are enclosed with single quotes.</li>
+<li>Boolean arguments are expressed with numbers 0 and 1.</li>
+</ul>
+<a class="header" href="#filter-operations" id="filter-operations"><h2>Filter operations</h2></a>
+<table><thead><tr><th>Toql</th><th> Operation </th><th> Example </th><th> SQL <em>MySQL</em></th></tr></thead><tbody>
+<tr><td>eq </td><td> <em>equal</em>    </td><td>   age eq 50  </td><td> age = 50</td></tr>
+<tr><td>eqn</td><td> <em>equal null</em>   </td><td>age eqn    </td><td>   age IS NULL</td></tr>
+<tr><td>ne  </td><td> <em>not equal</em>   </td><td>name ne 'foo'  </td><td>name &lt;&gt; 'foo'</td></tr>
+<tr><td>nen </td><td> <em>not equal null</em></td><td> age nen</td><td>    age IS NOT NULL</td></tr>
+<tr><td>gt </td><td> <em>greater than</em> </td><td> age gt 16 </td><td> age &gt; 16</td></tr>
+<tr><td>ge </td><td> <em>greater than or equal</em> </td><td> age ge 16 </td><td> age &gt;= 16</td></tr>
+<tr><td>lt </td><td> <em>less than</em> </td><td> age lt 16 </td><td> age &lt; 16</td></tr>
+<tr><td>le </td><td> <em>less than or equal</em> </td><td> age le 16 </td><td> age &lt;= 16</td></tr>
+<tr><td>bw </td><td> <em>between</em> </td><td> age bw 16 20 </td><td> age BETWEEN 16 AND 20</td></tr>
+<tr><td>in </td><td> <em>includes</em> </td><td> name in 'Peter' 'Susan' </td><td> name in ('Peter, 'Susan')</td></tr>
+<tr><td>out </td><td> <em>excludes</em> </td><td> age out 1 2 3 </td><td> name not in (1, 2, 3)</td></tr>
+<tr><td>re </td><td> <em>matches regular expression</em> </td><td> name re &quot;.*&quot; </td><td> name REGEXP '.*'</td></tr>
+<tr><td>sc </td><td> <em>set contains</em> </td><td> role sc 'ADMIN' 'SUPERADMIN' </td><td> FIND_IN_SET(role, 'ADMIN,SUPERADMIN') &gt; 0</td></tr>
+<tr><td>fn </td><td> <em>custom function</em> </td><td> search fn ma 'arg1' </td><td> <em>depends on implementation</em></td></tr>
+</tbody></table>
+<a class="header" href="#custom-functions" id="custom-functions"><h2>Custom functions</h2></a>
+<p>Custom functions are applied through the <code>FN</code> filter. They must be registered on the <a href="sql-mapper.html">SQL Mapper</a>.</p>
+<a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The toql derive</h1></a>
+<p>The recommended way to use Toql in your project is to use the Toql derive.</p>
+<p>The derive build a lot of code.</p>
+<p>This includes</p>
+<ul>
+<li>Mapping of struct fields to Toql fields and database</li>
+<li>Creating query builder functions</li>
+<li>Handling relationships through joins and merges</li>
+<li>Creating high level functions to load, insert, update and delete structs</li>
+</ul>
+<a class="header" href="#typical-usecase" id="typical-usecase"><h2>Typical usecase</h2></a>
+<p>With this simple code</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+   #[derive(Toql)]
+   struct User {
+       id: u32,
+       name: String,
+}
+#}</code></pre></pre>
+<p>we can now do the following</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+use toql::mysql::load_one; // Load function from derive
+use toql::mysql::update_one; // Update function from derive
+
+let conn = --snip--
+let cache = SqlMapperCache::new();
+SqlMapper::insert_new_mapper::&lt;User&gt;(&amp;mut cache); // Mapper function from derive
+let q = Query::wildcard().and(User::fields.id().eq(5)); // Builder fields from derive
+let user = load_one&lt;User&gt;(&amp;q, &amp;cache, &amp;mut conn); 
+
+user.age = Some(16);
+update_one(&amp;user); 
+#}</code></pre></pre>
+<a class="header" href="#joins" id="joins"><h2>Joins</h2></a>
+<p>A struct can refer to another struct using a join. If a field in the query mentions a field from that other struct a join clause will be added to the SQL statement. So the toql query &quot;id, name, phone_number&quot; will add a join clause for the following relationship:</p>
+<p>struct User {
+id: u32,                                                       
+name: Option<String>
+#[toql(join=&quot;id &lt;= user_id&quot;)]  // self.field &lt;= other.field
+mobile_phone : Phone
+}</p>
+<p>struct Phone {
+number: Option<String>, // Non optional fields will always add join
+user_id : Option<u32>
+}</p>
+<p>The toql derive can only create inner joins (&lt;=) or left joins (&lt;-) for simple struct fields. For different column names in the referred struct, composite keys or join conditions use the sql mapper. In that case use an empty join attribute #toql(join) and alter the join in your program:</p>
+<p>let cache = toql::SqlMapperCacher();
+let mut mapper= User::insert_new_mapper(&amp;mut cache);
+mapper.alter_join(&quot;phone&quot;, &quot;LEFT JOIN user.id = phone.user_id AND phone.mobile = true&quot;);  // Ensure table aliases  are correct</p>
+<a class="header" href="#merge" id="merge"><h2>Merge</h2></a>
+<p>A struct can also contain a collection of another struct. Since this cannot be done directly in SQL. Toql will execute multiple queries and merge the results.</p>
+<p>struct User {
+id: u32,                                                       
+name: Option<String>
+#[toql(merge=&quot;id = user_id&quot;)]  // rust comparison
+mobile_phones : Vec<Phone>
+}</p>
+<p>struct Phone {
+number: Option<String>
+user_id : Option<u32>
+}</p>
+<a class="header" href="#insert-update-and-delete" id="insert-update-and-delete"><h1>Insert, update and delete</h1></a>
+<p>Structs for toql queries include typically a lot of option fields. The toql derive creates insert, update and delete functions if reqested with the alter atribute. For composite keys mark multiple columns with the alterkey attribute and use a tuple in that order.</p>
+<p>#[derive(Toq, Defaultl)]
+#[toql(alter)]
+struct User {
+#[toql(alterkey)]
+id: u32,                                                       
+name: Option<String>
+}
+let u = User::default();
+let x = User::insert(u); // returns key
+User::update(5, u);
+User::delete(5);</p>
+<p>Notice that join and merge fields are excluded. To skip fields from insert or update functions, use the skip annotation.
+E.g. #[toql(skip=&quot;insert, delete&quot;)</p>
+<a class="header" href="#mapping-names" id="mapping-names"><h1>Mapping names</h1></a>
+<p>Struct fields are mapped to Toql and database by default in a predictable way:</p>
+<ol>
+<li>Table names are UpperCamelCase</li>
+<li>Column names are snake_case</li>
+<li>Toql fields are lowerCamelCase, dependend structs are separated with an underscore</li>
+</ol>
+<a class="header" href="#database" id="database"><h2>Database</h2></a>
+<p>To adjust the default naming to an existing database scheme use the toql attributes <code>tables</code> and <code>columns</code> on the struct.
+Possible values are</p>
+<ul>
+<li>CamelCase</li>
+<li>snake_case</li>
+<li>SHOUTY_SNAKE_CASE</li>
+<li>mixedCase</li>
+</ul>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+#[toql(tables=&quot;SHOUTY_SNAKE_CASE&quot;, columns=&quot;UpperCase&quot;)]
+  struct UserRef {
+        user_id: u32
+        full_name: String,
+}
+#}</code></pre></pre>
+<p>is translated into</p>
+<p><code>SELECT UserId, FullName FROM USER_REF;</code></p>
+<p>Or use <code>table</code> an the struct and <code>column</code> on the fields.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+#[toql(table=&quot;User&quot;)]
+  struct UserRef {
+    #[toql(column=&quot;id&quot;)]
+        user_id: u32
+        full_name: String,
+}
+#}</code></pre></pre>
+<p>is translated into</p>
+<p><code>SELECT id, full_name FROM User</code></p>
+<a class="header" href="#toql-fields" id="toql-fields"><h2>Toql fields</h2></a>
+<p>Toql fields on a struct are always mixed case, while dependencies are separated with an unserscore.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+#[toql(table=&quot;User&quot;)]
+  struct UserRef {
+    #[toql(column=&quot;id&quot;)]
+        id: u32
+        full_name: String,
+        #[toql(self=&quot;counry_id&quot;, other=&quot;id&quot;)]
+        county: Country
+}
+#}</code></pre></pre>
+<p>is referred to as</p>
+<p><code>id, fullName, country_id</code></p>
+<a class="header" href="#exclusion" id="exclusion"><h2>Exclusion</h2></a>
+<p>To exclude fields from the query annotate it with <code>skip</code>.</p>
+<a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
+<p>Each field in a toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement regardless of the query.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+    struct User {
+        id: u32,				// Always selected in SQL
+        name: Option&lt;String&gt;			// Optional field
+        middlename: Option&lt;Option&lt;String&gt;&gt;	// Optional field of nullable column
+        #[toql(select_always)]
+        middlename: Option&lt;String&gt;  		// Nullable column, always selected in SQL
+  }
+#}</code></pre></pre>
+<a class="header" href="#joins-1" id="joins-1"><h1>Joins</h1></a>
+<p>A struct can refer to another struct. This is done with a SQL join.</p>
+<p>Joins are automatically added to the SQL statement in these situations</p>
+<ul>
+<li>Fields in the Toql query refer to another struct. Example <code>user_phoneId</code></li>
+<li>Fields on a joined struct are always selected. <code>#[toql(select_always)</code></li>
+<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>. Example <code>id: u64</code></li>
+</ul>
+<a class="header" href="#example-1" id="example-1"><h3>Example</h3></a>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+struct User {
+     id: u32,	
+     name: Option&lt;String&gt;
+     #[toql(sql_join(self=&quot;mobile_id&quot; other=&quot;id&quot;))]  
+     mobile_phone : Option&lt;Phone&gt;
+
+     #[toql(sql_join(self=&quot;country_id&quot; other=&quot;id&quot;))]  
+     country : Country
+}
+
+struct Country {
+    id: String // Always selected
+}
+
+struct Phone {
+    id : Option&lt;u64&gt;, 
+}
+#}</code></pre></pre>
+<p>with the Toql query <code>id</code> translates into</p>
+<pre><code class="language-sql">SELECT user.id, null, null, country.id FROM User user 
+INNER JOIN Country country ON (user.country_id = country.id)
+</code></pre>
+<p>While the same structs with the Toql query <code>id, mobilePhone_id</code> translates into</p>
+<pre><code class="language-sql">SELECT user.id, null, mobile_phone.id, country.id FROM User user 
+LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
+INNER JOIN Country country ON (user.country_id = country.id)
+</code></pre>
+<a class="header" href="#naming-and-aliasing" id="naming-and-aliasing"><h1>Naming and aliasing</h1></a>
+<p>The default table names can be changed with <code>table</code>, the alias with <code>alias</code>.</p>
+<p>The same Toql query <code>id</code> run for this struct</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[toql table=&quot;Users&quot;, alias=&quot;u&quot;]
+struct User {
+     id: u32,	
+     name: Option&lt;String&gt;
+     #[toql(sql_join(self=&quot;mobil_id&quot; other=&quot;id&quot;), table=&quot;Phones&quot;, alias=&quot;p&quot;)]  
+     mobile_phone : Option&lt;Phone&gt;
+}
+#}</code></pre></pre>
+<p>now translates into</p>
+<pre><code class="language-sql">SELECT u.id, null, p.id FROM Users u LEFT JOIN Phones p ON (u.mobile_id = p.id)
+</code></pre>
+<a class="header" href="#join-attributes" id="join-attributes"><h1>Join Attributes</h1></a>
+<p>Sql Joins can be defined with</p>
+<ul>
+<li><em>self</em> the column on the referencing table, if omitted the field name is taken</li>
+<li><em>other</em> the column of the joined tabled</li>
+<li><em>on</em> an additional join predicate</li>
+</ul>
+<a class="header" href="#join-types" id="join-types"><h1>Join Types</h1></a>
+<p>Joining on an <code>Option</code> field will issue a LEFT JOIN rather than an INNER JOIN.</p>
+<p>If the selected columns cannot be converted into a struct then</p>
+<ul>
+<li>this will result in a field value of <code>None</code> for an <code>Option&lt;&gt;</code> type</li>
+<li>will raise an error for non <code>Option&lt;&gt;</code> types</li>
+</ul>
+<a class="header" href="#merge-1" id="merge-1"><h1>Merge</h1></a>
+<p>A struct can also contain a collection of another struct. Since this cannot be done directly in SQL Toql will execute multiple queries and merge the results afterwards.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+struct User {
+     id: u32,
+     name: Option&lt;String&gt;
+     #[toql(merge(self=&quot;id&quot;, other=&quot;user_id&quot;))]  // Struct fields for Rust comparison
+     mobile_phones : Vec&lt;Phone&gt;
+}
+
+struct Phone {
+    number: Option&lt;String&gt;
+    user_id : Option&lt;u32&gt;
+}
+#}</code></pre></pre>
+<p>Selecting all fields from above with <code>**</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common value of <code>user.id</code> and <code>phone.user_id</code>.</p>
+<a class="header" href="#composite-fields" id="composite-fields"><h2>Composite fields</h2></a>
+<p>To merge on composite fields use the attribute multiple times <code>#[toql(merge(..), merge(..))</code>.</p>
+<a class="header" href="#insert-update-and-delete-1" id="insert-update-and-delete-1"><h1>Insert, update and delete</h1></a>
+<p>Structs for toql queries include typically a lot of <code>Option&lt;&gt;</code> fields. The Toql derive builds proper insert, update and delete functions.</p>
+<a class="header" href="#keys-and-skipping" id="keys-and-skipping"><h2>Keys and skipping</h2></a>
+<p>To make this work you need to provide additional information about keys.</p>
+<pre><code class="language-struct">struct User {
+  #[toql(delup_key, skip_inup)] // Key for delete / update, never insert / update
+    id: u64
+
+    name: Option&lt;String&gt;
+}
+</code></pre>
+<p>For composite keys mark multiple columns with the <code>delup_key</code>.</p>
+<p>Join, merge and SQL fields are excluded. To skip other fields from insert or update functions use the <code>skip_inup</code> annotation. Useful for auto incremented primary keys or trigger generated values.</p>
+<a class="header" href="#example-2" id="example-2"><h3>Example</h3></a>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+struct User {
+    #[toql(delup_key, skip_inup)]
+     id: u32,
+     name: Option&lt;String&gt;
+}
+
+--snip--
+use toql::mysql::insert_one;
+use toql::mysql::udate_one;
+use toql::mysql::delete_one;
+
+let mut conn = --snip--
+
+let u = User{id:0, name: Some(&quot;Susane&quot;)};
+let x = insert_one(&amp;u, &amp;mut conn); // returns key
+u.id = x;
+u.name= Some(&quot;Peter&quot;);
+update_one(&amp;u, &amp;mut conn);
+
+delete_one(&amp;u, &amp;mut conn);
+#}</code></pre></pre>
+<a class="header" href="#update-behaviour" id="update-behaviour"><h2>Update behaviour</h2></a>
+<p>The update function will update fields only if they contains some value. Look at this struct:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+struct User {
+    id: u64
+    username: String,			// Always updated
+    realname: Option&lt;String&gt;, 		// Updated conditionally
+    address: Option&lt;Option&lt;&lt;String&gt;&gt;, 	// Optional nullable column, updated conditionally
+    #[toql(select_always)]
+    info: Option&lt;String&gt; 		// Nullable column, always updated
+
+
+}
+#}</code></pre></pre>
+<a class="header" href="#collections" id="collections"><h1>Collections</h1></a>
+<p>Collections or dependend structs are <strong>not</strong> affected by insert / delete / update. You must do this manually (for safety reasons).</p>
+<p>However functions for collections are provided.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+
+struct Phone {
+    #[toql(delup_key, skip_inup)]
+    id: u64
+}
+
+struct User {
+    #[toql(delup_key, skip_inup)]
+     id: u32,
+     phones: vec&lt;Phone&gt;
+}
+
+--snip--
+use toql::mysql::insert_one;
+use toql::mysql::insert_many;
+
+use toql::mysql::delete_one;
+use toql::mysql::delete_many;
+
+// TODO
+
+
+
+#}</code></pre></pre>
+<p>#SQL Mapper</p>
+<p>The sql mapper translates toql fields into sql column or expressions. The recommended workflow is to define a struct and use the
+toql derive to create all mapping functions.</p>
+<p>However sometimes more customising must be done than the derive attributes allow.
+Especially</p>
+<ul>
+<li>Add custom query functions ( <em>title FN CUSTOM &quot;as$&quot;</em> )</li>
+<li>Add fields that do not exist in struct ( <em>superseach eq &quot;hallo&quot;</em> )</li>
+<li>Map sql expressions programatically (sql permissions for authenticated users)</li>
+<li>Changing joins</li>
+</ul>
+<a class="header" href="#typical-usecase-1" id="typical-usecase-1"><h2>Typical usecase</h2></a>
+<p>let cache = SqlMapperCache::new();</p>
+<p>let mut user_mapper = User::insert_new_mapper(&amp;cache);</p>
+<p>lt permission_sql = if true { &quot;u.&quot;}</p>
+<p>user_mapper.add_field(&quot;permission&quot;, permission);</p>
+<a class="header" href="#custom-field-handler" id="custom-field-handler"><h2>Custom field handler</h2></a>
+<p>Using a custom field handler gives you most freedom. Here an example to match against multiple columns in MySQL.
+Note that in the database an index must be created for this to work.</p>
+<p>struct MaHandler;
+impl FieldHandler for MaHandler {</p>
+<p>}</p>
+<p>user_mapper.add_field(&quot;search&quot;, MaHandler);</p>
+<a class="header" href="#overriding-joins" id="overriding-joins"><h2>Overriding joins</h2></a>
+<p>To change existing join or add a new one:
+user_mapper.alter_join(&quot;friend&quot; &quot;INNER JOIN sdds&quot;);</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+            </nav>
+
+        </div>
+
+        
+        <!-- Livereload script (if served using the cli tool) -->
+        <script type="text/javascript">
+            var socket = new WebSocket("ws://localhost:3001");
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload(true); // force reload from server (not from cache)
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
+        
+
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+        
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+        
+        
+
+    </body>
+</html>
