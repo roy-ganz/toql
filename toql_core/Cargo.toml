@@ -3,6 +3,11 @@ name = "toql_core"
 version = "0.1.0"
 authors = ["roy"]
 edition = "2018"
+description = "Library with core functionality for toql"
+keywords = ["toql"]
+readme = "../README.md"
+license = "MIT/Apache-2.0"
+repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 pest = "2.0"
@@ -10,6 +15,7 @@ pest_derive = "2.0"
 mysql = {version = "14.2", optional = true}
 rocket= {version = "0.4", optional = true}
 log = {version = "0.4", optional = true}
+
 [features]
 mysqldb = ["mysql"]
 rocketweb = ["rocket", "log"]

@@ -12,16 +12,16 @@ pub(crate) enum FilterType {
 }
 
 #[derive(Debug)]
-pub struct SqlTarget<'a> {
+pub struct SqlTarget {
     pub(crate) options: MapperOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
-    pub(crate) handler: Rc<'a + FieldHandler + Send + Sync>, // Handler to create clauses
+    pub(crate) handler: Rc<FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool,                          // Target name has subfields separated by underscore
     pub(crate) expression: String,                       // Column name or SQL expression
 }
 
 #[derive(Debug, Clone)]
-pub struct SqlField {}
+pub struct BasicFieldHandler {}
 
 #[derive(Debug)]
 pub struct MapperOptions {
@@ -71,9 +71,6 @@ trait MapperFilter {
 }
 
 pub trait FieldHandler {
-    fn validate_query(&self) -> bool {
-        true
-    }
     fn build_select(&self, sql: &str) -> Option<String>;
     fn build_filter(&self, sql: &str, _filter: &FieldFilter) ->Result<Option<String>, crate::sql_builder::SqlBuilderError>;
     fn build_param(&self, _filter: &FieldFilter) -> Vec<String>;
@@ -90,7 +87,7 @@ impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sy
 
 
 
-impl FieldHandler for SqlField {
+impl FieldHandler for BasicFieldHandler {
     fn build_select(&self, expression: &str) -> Option<String> {
         Some(format!("{}", expression))
     }
@@ -169,7 +166,8 @@ pub struct Join {
 pub trait Mapped {
     fn insert_new_mapper(cache: &mut SqlMapperCache) -> &mut SqlMapper;     // Create new SQL Mapper and insert into mapper cache
     fn insert_new_mapper_for_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
-    where  H: 'static + FieldHandler + Send + Sync ;   
+    where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
+    ;   
     fn new_mapper(sql_alias: &str) -> SqlMapper;                            // Create new SQL Mapper and map entity fields
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str);       // Map entity fields
 }
@@ -178,7 +176,7 @@ impl SqlMapper {
      pub fn new<T>(table: T)  -> Self
       where  T: Into<String>
      {
-         let f = SqlField {};
+         let f = BasicFieldHandler {};
          Self::new_for_handler(table,f)
      }
     pub fn new_for_handler<T, H>(table: T, handler: H) -> Self
@@ -199,7 +197,7 @@ impl SqlMapper {
     }
      pub fn insert_new_mapper_for_handler<T, H>(cache: &mut SqlMapperCache, handler: H) -> &mut SqlMapper 
      where T: Mapped,
-           H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
+            H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
      {
         T::insert_new_mapper_for_handler(cache, handler)
     }
@@ -236,17 +234,19 @@ impl SqlMapper {
         self.fields.insert(toql_field.to_string(), t);
         self
     }
-    pub fn alter_handler(
+    pub fn alter_handler<H>(
         &mut self,
         toql_field: &str,
-        handler: Rc<FieldHandler + Sync + Send>,
-    ) -> &mut Self {
+        handler: H,
+    ) -> &mut Self 
+     where H: 'static + FieldHandler + Send + Sync
+    {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
             "Cannot alter \"{}\": Field is not mapped.",
             toql_field
         ));
 
-        sql_target.handler = handler;
+        sql_target.handler = Rc::new(handler);
         self
     }
 
@@ -291,7 +291,6 @@ impl SqlMapper {
         options: MapperOptions,
     ) -> &'a mut Self {
        
-
         let t = SqlTarget {
             expression: sql_expression.to_string(),
             options: options,

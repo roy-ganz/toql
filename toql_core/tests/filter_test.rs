@@ -2,6 +2,7 @@
 use toql_core::query::FieldFilter;
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
+use toql_core::sql_builder::SqlBuilderError;
 use toql_core::sql_mapper::FieldHandler;
 use toql_core::sql_mapper::MapperOptions;
 use toql_core::sql_mapper::SqlMapper;
@@ -74,6 +75,21 @@ fn filter_in() {
     assert_eq!(*result.params(), ["0", "1", "5"]);
 }
 
+
+
+#[test]
+fn filter_joined_eq() {
+    let mapper = setup_mapper();
+    let query = QueryParser::parse("author_id EQ 5").unwrap();
+
+    let result = SqlBuilder::new().build(&mapper, &query).unwrap();
+
+    assert_eq!("SELECT id, null, null, a.id, null FROM Book JOIN User a ON (id = a.book_id) WHERE a.id = ?", result.to_sql());
+    assert_eq!(*result.params(), ["5"]);
+}
+
+
+
 #[test]
 fn filter_fnc() {
     struct CustomFieldHandler {};
@@ -81,13 +97,13 @@ fn filter_fnc() {
         fn build_select(&self, sql_expression: &str) -> Option<String> {
             Some(sql_expression.to_string())
         }
-        fn build_filter(&self, sql_expression: &str, filter: &FieldFilter) -> Option<String> {
+        fn build_filter(&self, sql_expression: &str, filter: &FieldFilter) -> Result<Option<String>, SqlBuilderError> {
             match filter {
                 FieldFilter::Fn(name, _args) => match (*name).as_ref() {
-                    "MA" => Some(format!("MATCH ({}) AGAINST (?)", sql_expression)),
-                    _ => None,
+                    "MA" => Ok(Some(format!("MATCH ({}) AGAINST (?)", sql_expression))),
+                    _ => Ok(None),
                 },
-                _ => None,
+                _ => Ok(None),
             }
         }
         fn build_param(&self, filter: &FieldFilter) -> Vec<String> {
@@ -108,7 +124,7 @@ fn filter_fnc() {
     }
 
     let mut mapper = setup_mapper();
-    mapper.alter_handler("title", Box::new(CustomFieldHandler {}));
+    mapper.alter_handler("title", CustomFieldHandler {});
     let query = QueryParser::parse("title FN MA 'Foobar' ").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
@@ -117,15 +133,4 @@ fn filter_fnc() {
         result.to_sql()
     );
     assert_eq!(*result.params(), ["'Foobar'"]);
-}
-
-#[test]
-fn filter_joined_eq() {
-    let mapper = setup_mapper();
-    let query = QueryParser::parse("author_id EQ 5").unwrap();
-
-    let result = SqlBuilder::new().build(&mapper, &query).unwrap();
-
-    assert_eq!("SELECT id, null, null, a.id, null FROM Book JOIN User a ON (id = a.book_id) WHERE a.id = ?", result.to_sql());
-    assert_eq!(*result.params(), ["5"]);
 }

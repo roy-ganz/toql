@@ -36,9 +36,6 @@ impl<'r, R: Responder<'r>> Responder<'r> for Counted<R>
     }
 }
 
-//impl rocket::response::Responder<'r> for  Counted {}
-
-
 
 
 #[cfg(feature = "mysqldb")]
