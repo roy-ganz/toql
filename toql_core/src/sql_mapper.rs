@@ -12,10 +12,10 @@ pub(crate) enum FilterType {
 }
 
 #[derive(Debug)]
-pub struct SqlTarget {
+pub struct SqlTarget<'a> {
     pub(crate) options: MapperOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
-    pub(crate) handler: Rc<FieldHandler + Send + Sync>, // Handler to create clauses
+    pub(crate) handler: Rc<'a + FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool,                          // Target name has subfields separated by underscore
     pub(crate) expression: String,                       // Column name or SQL expression
 }
