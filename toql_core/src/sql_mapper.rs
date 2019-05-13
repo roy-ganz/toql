@@ -1,7 +1,7 @@
 use crate::query::FieldFilter;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug)]
 #[allow(dead_code)] // IMPROVE Having AND None are considered unused
@@ -15,7 +15,7 @@ pub(crate) enum FilterType {
 pub struct SqlTarget {
     pub(crate) options: MapperOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
-    pub(crate) handler: Rc<FieldHandler + Send + Sync>, // Handler to create clauses
+    pub(crate) handler: Arc<FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool,                          // Target name has subfields separated by underscore
     pub(crate) expression: String,                       // Column name or SQL expression
 }
@@ -104,7 +104,7 @@ impl FieldHandler for BasicFieldHandler {
             FieldFilter::Lt(criteria) => vec![criteria.clone()],
             FieldFilter::Bw(lower, upper) => vec![lower.clone(), upper.clone()],
             FieldFilter::Re(criteria) => vec![criteria.clone()],
-            FieldFilter::Sc(criteria) => vec![criteria.clone()],
+       //     FieldFilter::Sc(criteria) => vec![criteria.clone()],
             FieldFilter::In(args) => args.clone(),
             FieldFilter::Out(args) => args.clone(),
             FieldFilter::Lk(criteria) => vec![criteria.clone()],
@@ -140,7 +140,7 @@ impl FieldHandler for BasicFieldHandler {
                     .collect::<Vec<&str>>()
                     .join(",")
             ))),
-            FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
+      //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
             FieldFilter::Lk(_) => Ok(Some(format!("{} LIKE ?", expression))),
             FieldFilter::Fn(_, _) => Ok(None), // Must be implemented by user
         }
@@ -151,7 +151,7 @@ pub type SqlMapperCache = HashMap<String, SqlMapper>;
 
 #[derive(Debug)]
 pub struct SqlMapper {
-    pub(crate) handler: Rc<FieldHandler + Send + Sync>,
+    pub(crate) handler: Arc<FieldHandler + Send + Sync>,
     pub(crate) table: String,
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
@@ -169,6 +169,9 @@ pub trait Mapped {
     where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
     ;   
     fn new_mapper(sql_alias: &str) -> SqlMapper;                            // Create new SQL Mapper and map entity fields
+    fn new_mapper_for_handler<H>(sql_alias: &str, handler: H) -> SqlMapper
+    where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
+     ;                            // Create new SQL Mapper and map entity fields
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str);       // Map entity fields
 }
 
@@ -185,7 +188,7 @@ impl SqlMapper {
         H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
     {
         SqlMapper {
-            handler: Rc::new(handler),
+            handler: Arc::new(handler),
             table: table.into(),
             joins: HashMap::new(),
             fields: HashMap::new(),
@@ -227,7 +230,7 @@ impl SqlMapper {
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
-            handler: Rc::new(handler),
+            handler: Arc::new(handler),
             expression: expression.to_string(),
         };
         self.field_order.push(toql_field.to_string());
@@ -246,14 +249,14 @@ impl SqlMapper {
             toql_field
         ));
 
-        sql_target.handler = Rc::new(handler);
+        sql_target.handler = Arc::new(handler);
         self
     }
 
     pub fn alter_handler_with_options(
         &mut self,
         toql_field: &str,
-        handler: Rc<FieldHandler + Sync + Send>,
+        handler: Arc<FieldHandler + Sync + Send>,
         options: MapperOptions,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
@@ -296,7 +299,7 @@ impl SqlMapper {
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
-            handler: Rc::clone(&self.handler)
+            handler: Arc::clone(&self.handler)
         };
 
         self.field_order.push(toql_field.to_string());

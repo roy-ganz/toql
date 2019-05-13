@@ -109,7 +109,7 @@ impl QueryParser {
                                     iter.next().unwrap().to_string(),
                                 )),
                                 "RE" => Some(FieldFilter::Re(iter.next().unwrap().to_string())),
-                                "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
+                           //     "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
                                 "FN" => Some(FieldFilter::Fn(
                                     iter.next().unwrap().to_string(),
                                     iter.map(String::from).collect(),

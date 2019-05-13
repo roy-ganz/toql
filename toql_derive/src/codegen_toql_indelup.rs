@@ -255,10 +255,10 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
 
             let update_where_statement = format!(" WHERE {}", delup_key_comparison);
             let delete_one_statement = format!(
-                "DELETE FROM {} {{alias}} WHERE {}",
+                "DELETE {{alias}} FROM {} {{alias}} WHERE {}",
                 self.sql_table_ident, delup_key_comparison
             );
-            let delete_many_statement = format!("DELETE FROM {} {{alias}} WHERE ", self.sql_table_ident);
+            let delete_many_statement = format!("DELETE {{alias}} FROM {} {{alias}} WHERE ", self.sql_table_ident);
 
             quote! {
                 impl<'a> toql::indelup::Indelup<'a, #struct_ident> for #struct_ident {

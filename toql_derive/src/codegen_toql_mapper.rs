@@ -231,7 +231,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                 }
                 
                  fn insert_new_mapper_for_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
-                  where  H: 'static + FieldHandler + Send + Sync 
+                  where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
                  {
                     let m = Self::new_mapper_for_handler( #sql_table_alias, handler);
                     cache.insert( String::from( #struct_name ), m);
@@ -241,6 +241,14 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                 fn new_mapper(table_alias: &str) -> toql::sql_mapper::SqlMapper {
                     let s = format!("{} {}",#sql_table_name, table_alias );
                     let mut m = toql::sql_mapper::SqlMapper::new( if table_alias.is_empty() { #sql_table_name } else { &s });
+                    Self::map(&mut m, "", table_alias);
+                    m
+                }
+                fn new_mapper_for_handler<H>(table_alias: &str,  handler: H) -> toql::sql_mapper::SqlMapper 
+                  where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
+                {
+                    let s = format!("{} {}",#sql_table_name, table_alias );
+                    let mut m = toql::sql_mapper::SqlMapper::new_for_handler( if table_alias.is_empty() { #sql_table_name } else { &s }, handler);
                     Self::map(&mut m, "", table_alias);
                     m
                 }

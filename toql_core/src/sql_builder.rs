@@ -529,10 +529,7 @@ impl SqlBuilder {
                                 if !query_field.name.contains("_")
                                     || !self.path_ignored(&query_field.name)
                                 {
-                                    return Err(SqlBuilderError::FieldMissing(format!(
-                                        "no field mapped for `{}`",
-                                        query_field.name
-                                    )));
+                                    return Err(SqlBuilderError::FieldMissing(query_field.name.clone()));
                                 }
                             }
                         }

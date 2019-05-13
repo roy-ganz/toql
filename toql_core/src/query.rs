@@ -219,10 +219,10 @@ impl Field {
         self.filter = Some(FieldFilter::Re(criteria.to_sql()));
         self
     }
-    pub fn sc<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+  /*   pub fn sc<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Sc(criteria.to_sql()));
         self
-    }
+    } */
     pub fn ins<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
         self.filter = Some(FieldFilter::In(
             criteria.into_iter().map(|c| c.to_sql()).collect(),
@@ -316,10 +316,10 @@ impl ToString for Field {
                 s.push_str("RE ");
                 s.push_str(arg);
             }
-            Some(FieldFilter::Sc(ref arg)) => {
+           /*  Some(FieldFilter::Sc(ref arg)) => {
                 s.push_str("SC ");
                 s.push_str(arg);
-            }
+            } */
             Some(FieldFilter::Bw(ref lower, ref upper)) => {
                 s.push_str("BW ");
                 s.push_str(lower);
@@ -372,7 +372,7 @@ pub enum FieldFilter {
     In(Vec<String>),
     Out(Vec<String>),
     Re(String),
-    Sc(String),
+  //  Sc(String),
     Fn(String, Vec<String>), // Function name, args
 }
 #[derive(Clone, Debug)]

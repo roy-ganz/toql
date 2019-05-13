@@ -8,12 +8,10 @@ use toql_core::query::Query;
 
 #[derive(FromForm, Debug)]
 pub struct ToqlQuery {
-    pub query: Query,
+    pub query: Option<Query>,
     pub first: Option<u64>,
     pub max: Option<u16>,
     pub count: Option<bool>,
-    //pub distinct: Option<bool>,
-    
 }
 
 
@@ -59,78 +57,22 @@ pub mod mysql {
 
   
 
-
-   /*  pub fn load_response<'a, T, B>( result: (Vec<T>, Option<(u32, u32)>) + 'a, response: &mut Response,serialize: &Fn(&[T]) -> B)
-    where B: Read + Seek + 'a,
-     {
-         if let( Some(count)) = result.1 {
-                if let (total_count, filtered_count) = count {
-                    response.adjoin_raw_header("X-Count", filtered_count.to_string());
-                    response.adjoin_raw_header("X-Total-Count", total_count.to_string());
-                }
-                response.set_sized_body(serialize(&result.0));
-        }
-         response.set_sized_body(serialize(&result.0));
-    } */
-
     pub fn load_many<'a, T: Load<T>>(
         toql_query: &ToqlQuery,
         mappers: &SqlMapperCache,
         mut conn: &mut mysql::Conn
-        //serialize: &Fn(&[T]) -> B,
     ) 
-    //-> Result<Response<'a>, ToqlError>
     -> Result<(Vec<T>, Option<(u32, u32)>), ToqlError>
-    /* where
-        B: Read + Seek + 'a, */
     {
-       
         // Returns sql errors
         T::load_many(
-            &toql_query.query,
+            &toql_query.query.as_ref().unwrap_or(&Query::wildcard()),
             &mappers,
             &mut conn,
             toql_query.count.unwrap_or(true),
             toql_query.first.unwrap_or(0),
             toql_query.max.unwrap_or(10),
         )
-       /*  // Returns sql errors
-        let result = T::load_many(
-            &toql_query.query,
-            &mappers,
-            &mut conn,
-            toql_query.count.unwrap_or(true),
-            toql_query.first.unwrap_or(0),
-            toql_query.max.unwrap_or(10),
-        )?; */
-
-       /*  let mut response = Response::new();
-        if let( Some(count)) = result.1 {
-                if let (total_count, filtered_count) = count {
-                    response.adjoin_raw_header("X-Count", filtered_count.to_string());
-                    response.adjoin_raw_header("X-Total-Count", total_count.to_string());
-                }
-                response.set_sized_body(serialize(&result.0));
-        }
-         response.set_sized_body(serialize(&result.0));
-         Ok(response) */
-        /* match result.1 {
-            Ok((entities, count)) => {
-                if let Some((total_count, filtered_count)) = count {
-                    response.adjoin_raw_header("X-Count", filtered_count.to_string());
-                    response.adjoin_raw_header("X-Total-Count", total_count.to_string());
-                }
-                response.set_sized_body(serialize(&entities));
-                response
-            }
-            Err(x) => {
-                log::error!("Toql failed with `{}`", x);
-                response.set_status(Status::InternalServerError);
-                response
-
-                
-            }
-        } */
     }
     
 }

@@ -8,8 +8,6 @@ extern crate rocket_contrib;
 
 use rocket::http::Status;
 use rocket::request::Form;
-use rocket::response::status;
-use rocket::Response;
 use rocket::State;
 use rocket_contrib::databases::mysql;
 use rocket_contrib::json::Json;
@@ -20,6 +18,7 @@ use serde::Serialize;
 use toql::derive::Toql;
 
 use toql::query::Query;
+use toql::error::ToqlError;
 use toql::sql_mapper::SqlMapper;
 use toql::sql_mapper::SqlMapperCache;
 use toql::Result;
@@ -48,12 +47,15 @@ pub struct User {
 #[delete("/<id>")]
 pub fn delete<'a>(id: u64, conn: ExampleDbConnection) -> Result<Status> {
     let ExampleDbConnection(mut c) = conn;
-    let mut u = User {
+    let u = User {
         id: id,
         ..Default::default()
     };
 
     let _affected_rows = delete_one(&u, &mut c)?;
+    if _affected_rows == 0 {
+        return Err(ToqlError::NotFound);
+    }
     Ok(Status::NoContent)
 }
 
@@ -127,13 +129,13 @@ fn main() {
     println!("CREATE TABLE `User` (`id` int(11) NOT NULL AUTO_INCREMENT,`username` varchar(200) NOT NULL, PRIMARY KEY (id))");
     println!("------------------------------------------------------------------------------------------------------------");
     println!("Start the server with ");
-    println!("ROCKET_DATABASES={{example_db={{url=mysql://USER:PASS@localhost:3306/example_db}}}} cargo run --example crud_rocket_mysql");
+    println!("ROCKET_DATABASES={{example_db={{url=mysql://USER:PASS@localhost:3306/example_db}}}} cargo +nightly run --example crud_rocket_mysql");
     println!("----------------------------------------------------------------------------------------------------------------------");
-    println!("Create a user with `curl -X POST -d '{{\"username\":\"Peter\"}}'`");
-    println!("Update a user with `curl -X PUT -d '{{\"id\": \"ID\", \"username\":\"Susan\"}}'`");
+    println!("Create a user with `curl localhost:8000/user -X POST -d '{{\"username\":\"Peter\"}}'`");
+    println!("Update a user with `curl localhost:8000/user/ID -X PUT -d '{{\"username\":\"Susan\"}}'`");
     println!("Get a single user with `curl localhost:8000/user/ID`");
     println!("Get all users with `curl localhost:8000/user`");
-    println!("Get only id from users in descending order `curl localhost:8000/user?toql=-id`");
+    println!("Get only id from users in descending order `curl localhost:8000/user?query=-id`");
     println!("Delete a user with `curl -X DELETE localhost:8000/user/ID`");
     println!("--------------------------");
     
