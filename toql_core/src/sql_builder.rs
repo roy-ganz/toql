@@ -45,6 +45,7 @@ pub struct SqlBuilder {
 pub enum SqlBuilderError {
     FieldMissing(String),
     RoleRequired(String),
+    FilterInvalid(String)
 }
 
 impl fmt::Display for SqlBuilderError {
@@ -54,6 +55,8 @@ impl fmt::Display for SqlBuilderError {
                 write!(f, "field `{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) =>
                 write!(f, "role `{}` is required", s),
+            SqlBuilderError::FilterInvalid(ref s) =>
+                write!(f, "filter `{}` is invalid ", s),
             
         }
     }
