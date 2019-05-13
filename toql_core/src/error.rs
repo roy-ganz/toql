@@ -13,6 +13,7 @@ use mysql::error::Error;
     NotFound,
     NotUnique,
     QueryParserError(pest::error::Error<Rule>),
+    EncodingError(std::str::Utf8Error),
     MapperMissing(String),
     ValueMissing(String),
     SqlBuilderError(SqlBuilderError),
@@ -56,6 +57,7 @@ impl fmt::Display for ToqlError {
             #[cfg(feature = "mysqldb")]
             ToqlError::MySqlError (ref e) => e.fmt(f),
             ToqlError::SqlBuilderError (ref e) => e.fmt(f),
+            ToqlError::EncodingError (ref e) => e.fmt(f),
             ToqlError::QueryParserError (ref e) => e.fmt(f),
         }
     }
