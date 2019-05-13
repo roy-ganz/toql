@@ -57,7 +57,6 @@ impl fmt::Display for SqlBuilderError {
                 write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) =>
                 write!(f, "filter `{}` is invalid ", s),
-            
         }
     }
 }
