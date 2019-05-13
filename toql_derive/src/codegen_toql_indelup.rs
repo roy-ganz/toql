@@ -264,11 +264,11 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                 impl<'a> toql::indelup::Indelup<'a, #struct_ident> for #struct_ident {
                  
 
-                     fn insert_one_sql(entity: & #struct_ident) -> Result<(String, Vec<String>), toql::error::ToqlError> {
+                     fn insert_one_sql(entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)> {
                         Self::insert_many_sql(std::iter::once(entity))
                     }
 
-                     fn insert_many_sql<I>(entities: I)-> Result<(String, Vec<String>), toql::error::ToqlError>
+                     fn insert_many_sql<I>(entities: I)-> toql::error::Result<(String, Vec<String>)>
                      where I: IntoIterator<Item=&'a #struct_ident> + 'a
                      {
                     
@@ -283,7 +283,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                             Ok((insert_stmt, params))
                     }
 
-                    fn update_one_sql(  entity: & #struct_ident)  -> Result<(String, Vec<String>), toql::error::ToqlError>
+                    fn update_one_sql(  entity: & #struct_ident)  -> toql::error::Result<(String, Vec<String>)>
                     {
                         let alias= "t";
                         let mut params :Vec<String> = Vec::new();
@@ -306,7 +306,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         Ok((update_stmt, params))
 
                     }
-                    fn update_many_sql<I>(entities:I) -> Result<(String, Vec<String>), toql::error::ToqlError>
+                    fn update_many_sql<I>(entities:I) -> toql::error::Result<(String, Vec<String>)>
                     where I: IntoIterator<Item=&'a #struct_ident> + 'a + Clone
                     {
                         let mut params: Vec<String> = Vec::new();
@@ -353,7 +353,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         Ok((update_stmt, params))
                        
                     }
-                    fn delete_one_sql(  entity: & #struct_ident) -> Result<(String, Vec<String>), toql::error::ToqlError>
+                    fn delete_one_sql(  entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)>
                     {
                         let alias="t";
                         let mut params :Vec<String>= Vec::new();
@@ -364,7 +364,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         Ok((delete_stmt, params))
                      }
 
-                        fn delete_many_sql<I>(entities: I) -> Result<(String, Vec<String>), toql::error::ToqlError>
+                        fn delete_many_sql<I>(entities: I) -> toql::error::Result<(String, Vec<String>)>
                         where I:  IntoIterator<Item=&'a #struct_ident> +'a
                         {
                             let alias= "t";

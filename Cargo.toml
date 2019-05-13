@@ -3,6 +3,11 @@ name = "toql"
 version = "0.1.0"
 authors = ["Roy Ganz <roy.ganz@glanis.ch>"]
 edition = "2018"
+description = "The toql query language"
+keywords = ["toql"]
+readme = "README.md"
+license = "MIT/Apache-2.0"
+repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 toql_core = { path = "toql_core", version = "0.1.0" }
@@ -24,5 +29,16 @@ members =  [
 mysql = [ "toql_core/mysqldb", "toql_mysql", "toql_derive/mysqldb"]
 rocket_mysql = ["toql_core/mysqldb","toql_core/rocketweb", "toql_rocket/mysqldb", "toql_derive/mysqldb", "toql_mysql"]
 
+[dev-dependencies]
+rocket = "0.4" 
+rocket_contrib =  {version = "0.4", default-features = false, features = ["mysql_pool", "json"] }
+serde = { version = "1.0.8", features = ["derive"] }
+serde_json = "1.0.2"
+toql = { path = "../toql",features= ["rocket_mysql"] }
+
+[[example]]
+ name = "crud_rocket_mysql"
+ path = "examples/rocket_mysql/main.rs"
+ required-features = ["rocket_mysql"]
 
  

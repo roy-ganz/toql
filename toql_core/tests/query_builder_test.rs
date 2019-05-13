@@ -1,5 +1,6 @@
 
 use toql_core::query::Field;
+use toql_core::query::Wildcard;
 use toql_core::query::Query;
 
 #[test]
@@ -38,6 +39,15 @@ fn build_field() {
         .and(Field::from("bar").desc(2));
     assert_eq!("+1.foo !EQ 5,-2bar", q.to_string());
 }
+#[test]
+fn build_wildcards() {
+    let  q = Query::double_wildcard()
+        .and(Field::from("foo"))
+        .and(Wildcard::from("bar"))
+        .and(Wildcard::from("bar4_")); // Underscore is optional
+    assert_eq!("**,foo,bar_*,bar4_*", q.to_string());
+}
+
 #[test]
 fn build_logical() {
     let  q = Query::new().and("foo").and("bar").or("foo");

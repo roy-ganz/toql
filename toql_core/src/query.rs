@@ -87,12 +87,15 @@ pub enum Concatenation {
     Or,
 }
 
-
+#[derive(Clone, Debug)]
 pub struct Wildcard {
     pub concatenation: Concatenation,
     pub path: String
 }
 impl Wildcard {
+    pub fn new() -> Self {
+        Wildcard { concatenation :Concatenation::And, path: String::from("")}
+    }
     pub fn from<T>(path: T) -> Self
     where
         T: Into<String>,
@@ -382,7 +385,7 @@ pub enum FieldOrder {
 pub enum QueryToken {
     LeftBracket(Concatenation),
     RightBracket,
-    Wildcard(Concatenation, String),
+    Wildcard(Wildcard),
     DoubleWildcard(Concatenation),
     Field(Field),
 }
@@ -390,7 +393,7 @@ pub enum QueryToken {
 impl From<&str> for QueryToken {
     fn from(s: &str) -> QueryToken {
         if s.ends_with("*") {
-            QueryToken::Wildcard(Concatenation::And, s.trim_end_matches("*").to_string())
+            QueryToken::Wildcard(Wildcard::from(s))
         } else {
             QueryToken::Field(Field::from(s))
         }
@@ -408,7 +411,7 @@ impl ToString for QueryToken {
             QueryToken::Field(
                 field, /*Field {concatenation, name, hidden, order, filter, aggregation}*/
             ) => field.to_string(),
-            QueryToken::Wildcard(_, ref name) => format!("{}*", name),
+            QueryToken::Wildcard( wildcard) => format!("{}*", wildcard.path),
              QueryToken::DoubleWildcard(_,) => String::from("**"),
         };
         s
@@ -431,7 +434,7 @@ impl Query {
 
     }
      pub fn wildcard() -> Self {
-        Query { tokens: vec![QueryToken::Wildcard(Concatenation::And, String::from(""))], distinct: false, roles: BTreeSet::new() }
+        Query { tokens: vec![QueryToken::Wildcard(Wildcard::new())], distinct: false, roles: BTreeSet::new() }
 
     }
      pub fn double_wildcard() -> Self {
@@ -476,8 +479,8 @@ impl Query {
                     *c = Concatenation::Or;
                 } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
                     field.concatenation = Concatenation::Or;
-                } else if let QueryToken::Wildcard(w, _) = query.tokens.get_mut(0).unwrap() {
-                    *w = Concatenation::Or;
+                } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
+                    wildcard.concatenation = Concatenation::Or;
                 } else if let QueryToken::DoubleWildcard(w) = query.tokens.get_mut(0).unwrap() {
                     *w = Concatenation::Or;
                 }
@@ -522,9 +525,10 @@ impl fmt::Display for Query {
                 match &token {
                     QueryToken::LeftBracket(concatenation)
                     | QueryToken::DoubleWildcard(concatenation)
-                    | QueryToken::Wildcard(concatenation, _) => {
+                     => {
                         s.push(get_concatenation(concatenation))
                     }
+                    QueryToken::Wildcard(wildcard) => s.push(get_concatenation(&wildcard.concatenation)),
                     QueryToken::Field(field) => s.push(get_concatenation(&field.concatenation)),
                     _ => {}
                 }
@@ -560,22 +564,22 @@ impl From<Field> for Query {
 impl From<Wildcard> for Query {
     fn from(wildcard: Wildcard) -> Query {
         let mut q = Query::new();
-        q.tokens.push(QueryToken::Wildcard(wildcard.concatenation, wildcard.path));
+        q.tokens.push(QueryToken::Wildcard(wildcard));
         q
     }
 }
 
 impl From<&str> for Query {
-    fn from(field: &str) -> Query {
+    fn from(string: &str) -> Query {
         let mut q = Query::new();
 
         q.tokens.push(
-            if field == "**" {
+        if string == "**" {
             QueryToken::DoubleWildcard(Concatenation::And)
-        } else if field.ends_with("*") {
-            QueryToken::Wildcard(Concatenation::And, String::from(field.trim_end_matches("*")))
+        } else if string.ends_with("*") {
+            QueryToken::Wildcard(Wildcard::from(string))
         } else {
-            QueryToken::Field(Field::from(field))
+            QueryToken::Field(Field::from(string))
         });
         q
     }

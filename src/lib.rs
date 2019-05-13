@@ -43,6 +43,7 @@
 //! If you are looking for an ORM, checkout Diesel.
 //!
 pub use toql_core::error;
+pub use toql_core::error::Result;
 pub use toql_core::query;
 pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
@@ -55,10 +56,11 @@ pub use toql_core::indelup;
 
 pub use toql_derive as derive;
 
+
 pub use log; // Reexport for generated code from Toql derive
 
 
-pub type Result<T> = std::result::Result<T,  toql_core::error::ToqlError>;
+
 
 #[cfg(feature = "rocket_mysql")]
 pub use toql_rocket as rocket;

@@ -337,13 +337,13 @@ impl SqlBuilder {
                         }
                     }
 
-                    QueryToken::Wildcard(.., ref path) => {
+                    QueryToken::Wildcard(wildcard) => {
                         // Skip wildcard for count queries
                         if self.count_query {
                             continue;
                         }
                         // Skip field from other path
-                        if !self.subpath.is_empty() && !path.starts_with(&self.subpath)
+                        if !self.subpath.is_empty() && ! wildcard.path.starts_with(&self.subpath)
                         {
                             continue;
                         }
@@ -364,8 +364,9 @@ impl SqlBuilder {
                             }
 
                             // Select all top fields, that are top fields or are in the right path level
-                            if  (path.is_empty() && !sql_target.subfields)
-                            || (field_name.starts_with(path) && field_name.rfind("_").unwrap_or(field_name.len()) < path.len()) {
+                            if  (wildcard.path.is_empty() && !sql_target.subfields)
+                            || (field_name.starts_with(&wildcard.path) 
+                                && field_name.rfind("_").unwrap_or(field_name.len()) < wildcard.path.len()) {
                                 let f = sql_target_data.entry(field_name.as_str()).or_default();
                                 f.selected = true; // Select field
 

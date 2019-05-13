@@ -20,7 +20,7 @@ use mysql::error::Error;
     MySqlError(Error)
 } 
 
-
+pub type Result<T> = std::result::Result<T, ToqlError>;
 
 
 impl From<SqlBuilderError> for ToqlError {

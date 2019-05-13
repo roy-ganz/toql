@@ -1,5 +1,6 @@
 use crate::query::Concatenation;
 use crate::query::Field;
+use crate::query::Wildcard;
 use crate::query::FieldFilter;
 use crate::query::FieldOrder;
 use crate::query::Query;
@@ -79,8 +80,8 @@ impl QueryParser {
                  Rule::wildcard_path => {
                     let token = query.tokens.last_mut();
                     if let Some(t) = token {
-                        if let QueryToken::Wildcard(_, ref mut field) = t {
-                            *field = span.as_str().to_string();
+                        if let QueryToken::Wildcard(ref mut wildcard) = t {
+                            wildcard.path = span.as_str().to_string();
                         }
                     }
                 }
@@ -108,7 +109,7 @@ impl QueryParser {
                                     iter.next().unwrap().to_string(),
                                 )),
                                 "RE" => Some(FieldFilter::Re(iter.next().unwrap().to_string())),
-                                "CS" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
+                                "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
                                 "FN" => Some(FieldFilter::Fn(
                                     iter.next().unwrap().to_string(),
                                     iter.map(String::from).collect(),
@@ -129,7 +130,11 @@ impl QueryParser {
                     query.tokens.push(QueryToken::DoubleWildcard(con.clone()));
                 }
                 Rule::wildcard => {
-                    query.tokens.push(QueryToken::Wildcard(con.clone(), String::from("")));
+                    query.tokens.push(QueryToken::Wildcard( 
+                        Wildcard { 
+                            concatenation: con.clone(), 
+                            path: String::from("")
+                        }));
                 }
                 Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);
