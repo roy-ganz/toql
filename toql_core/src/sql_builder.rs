@@ -442,8 +442,9 @@ impl SqlBuilder {
                                 data.used = !query_field.hidden;
 
                                 if let Some(f) = &query_field.filter {
-                                    if let Some(f) =
-                                        sql_target.handler.build_filter(&sql_target.expression, &f)
+                                    
+                                    if let Some(f) = sql_target.handler.build_filter(&sql_target.expression, &f)?
+                                        
                                     {
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {

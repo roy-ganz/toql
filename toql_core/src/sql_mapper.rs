@@ -1,6 +1,7 @@
 use crate::query::FieldFilter;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Debug)]
 #[allow(dead_code)] // IMPROVE Having AND None are considered unused
@@ -14,12 +15,12 @@ pub(crate) enum FilterType {
 pub struct SqlTarget {
     pub(crate) options: MapperOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
-    pub(crate) handler: Box<FieldHandler + Send + Sync>, // Handler to create clauses
+    pub(crate) handler: Rc<FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool,                          // Target name has subfields separated by underscore
     pub(crate) expression: String,                       // Column name or SQL expression
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SqlField {}
 
 #[derive(Debug)]
@@ -74,7 +75,7 @@ pub trait FieldHandler {
         true
     }
     fn build_select(&self, sql: &str) -> Option<String>;
-    fn build_filter(&self, sql: &str, _filter: &FieldFilter) -> Option<String>;
+    fn build_filter(&self, sql: &str, _filter: &FieldFilter) ->Result<Option<String>, crate::sql_builder::SqlBuilderError>;
     fn build_param(&self, _filter: &FieldFilter) -> Vec<String>;
     fn build_join(&self) -> Option<String> {
         None
@@ -114,37 +115,37 @@ impl FieldHandler for SqlField {
         }
     }
 
-    fn build_filter(&self, expression: &str, filter: &FieldFilter) -> Option<String> {
+    fn build_filter(&self, expression: &str, filter: &FieldFilter) ->Result<Option<String>,  crate::sql_builder::SqlBuilderError> {
         match filter {
-            FieldFilter::Eq(_) => Some(format!("{} = ?", expression)),
-            FieldFilter::Eqn => Some(format!("{} IS NULL", expression)),
-            FieldFilter::Ne(_) => Some(format!("{} <> ?", expression)),
-            FieldFilter::Nen => Some(format!("{} IS NOT NULL", expression)),
-            FieldFilter::Ge(_) => Some(format!("{} >= ?", expression)),
-            FieldFilter::Gt(_) => Some(format!("{} > ?", expression)),
-            FieldFilter::Le(_) => Some(format!("{} <= ?", expression)),
-            FieldFilter::Lt(_) => Some(format!("{} < ?", expression)),
-            FieldFilter::Bw(_, _) => Some(format!("{} BETWEEN ? AND ?", expression)),
-            FieldFilter::Re(_) => Some(format!("{} RLIKE ?", expression)),
-            FieldFilter::In(values) => Some(format!(
+            FieldFilter::Eq(_) => Ok(Some(format!("{} = ?", expression))),
+            FieldFilter::Eqn => Ok(Some(format!("{} IS NULL", expression))),
+            FieldFilter::Ne(_) => Ok(Some(format!("{} <> ?", expression))),
+            FieldFilter::Nen => Ok(Some(format!("{} IS NOT NULL", expression))),
+            FieldFilter::Ge(_) => Ok(Some(format!("{} >= ?", expression))),
+            FieldFilter::Gt(_) => Ok(Some(format!("{} > ?", expression))),
+            FieldFilter::Le(_) => Ok(Some(format!("{} <= ?", expression))),
+            FieldFilter::Lt(_) => Ok(Some(format!("{} < ?", expression))),
+            FieldFilter::Bw(_, _) => Ok(Some(format!("{} BETWEEN ? AND ?", expression))),
+            FieldFilter::Re(_) => Ok(Some(format!("{} RLIKE ?", expression))),
+            FieldFilter::In(values) => Ok(Some(format!(
                 "{} IN ({})",
                 expression,
                 std::iter::repeat("?")
                     .take(values.len())
                     .collect::<Vec<&str>>()
                     .join(",")
-            )),
-            FieldFilter::Out(values) => Some(format!(
+            ))),
+            FieldFilter::Out(values) => Ok(Some(format!(
                 "{} NOT IN ({})",
                 expression,
                 std::iter::repeat("?")
                     .take(values.len())
                     .collect::<Vec<&str>>()
                     .join(",")
-            )),
-            FieldFilter::Sc(_) => Some(format!("FIND_IN_SET (?, {})", expression)),
-            FieldFilter::Lk(_) => Some(format!("{} LIKE ?", expression)),
-            FieldFilter::Fn(_, _) => None, // Must be implemented by user
+            ))),
+            FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
+            FieldFilter::Lk(_) => Ok(Some(format!("{} LIKE ?", expression))),
+            FieldFilter::Fn(_, _) => Ok(None), // Must be implemented by user
         }
     }
 }
@@ -153,6 +154,7 @@ pub type SqlMapperCache = HashMap<String, SqlMapper>;
 
 #[derive(Debug)]
 pub struct SqlMapper {
+    pub(crate) handler: Rc<FieldHandler + Send + Sync>,
     pub(crate) table: String,
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
@@ -166,16 +168,26 @@ pub struct Join {
 
 pub trait Mapped {
     fn insert_new_mapper(cache: &mut SqlMapperCache) -> &mut SqlMapper;     // Create new SQL Mapper and insert into mapper cache
+    fn insert_new_mapper_for_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
+    where  H: 'static + FieldHandler + Send + Sync ;   
     fn new_mapper(sql_alias: &str) -> SqlMapper;                            // Create new SQL Mapper and map entity fields
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str);       // Map entity fields
 }
 
 impl SqlMapper {
-    pub fn new<T>(table: T) -> Self
+     pub fn new<T>(table: T)  -> Self
+      where  T: Into<String>
+     {
+         let f = SqlField {};
+         Self::new_for_handler(table,f)
+     }
+    pub fn new_for_handler<T, H>(table: T, handler: H) -> Self
     where
         T: Into<String>,
+        H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
     {
         SqlMapper {
+            handler: Rc::new(handler),
             table: table.into(),
             joins: HashMap::new(),
             fields: HashMap::new(),
@@ -184,6 +196,12 @@ impl SqlMapper {
     }
     pub fn insert_new_mapper<T: Mapped>(cache: &mut SqlMapperCache) -> &mut SqlMapper {
         T::insert_new_mapper(cache)
+    }
+     pub fn insert_new_mapper_for_handler<T, H>(cache: &mut SqlMapperCache, handler: H) -> &mut SqlMapper 
+     where T: Mapped,
+           H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
+     {
+        T::insert_new_mapper_for_handler(cache, handler)
     }
     pub fn map<T: Mapped>(sql_alias: &str) -> Self {
         // Mappable must create mapper for top level table
@@ -198,18 +216,20 @@ impl SqlMapper {
         self
     }
 
-    pub fn map_handler<'a>(
+    pub fn map_handler<'a, H>(
         &'a mut self,
         toql_field: &str,
         expression: &str,
-        handler: Box<FieldHandler + Sync + Send>,
+        handler: H,
         options: MapperOptions,
-    ) -> &'a mut Self {
+    ) -> &'a mut Self 
+     where H: 'static + FieldHandler + Send + Sync
+    {
         let t = SqlTarget {
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
-            handler: handler,
+            handler: Rc::new(handler),
             expression: expression.to_string(),
         };
         self.field_order.push(toql_field.to_string());
@@ -219,7 +239,7 @@ impl SqlMapper {
     pub fn alter_handler(
         &mut self,
         toql_field: &str,
-        handler: Box<FieldHandler + Sync + Send>,
+        handler: Rc<FieldHandler + Sync + Send>,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
             "Cannot alter \"{}\": Field is not mapped.",
@@ -233,7 +253,7 @@ impl SqlMapper {
     pub fn alter_handler_with_options(
         &mut self,
         toql_field: &str,
-        handler: Box<FieldHandler + Sync + Send>,
+        handler: Rc<FieldHandler + Sync + Send>,
         options: MapperOptions,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
@@ -270,14 +290,14 @@ impl SqlMapper {
         sql_expression: &str,
         options: MapperOptions,
     ) -> &'a mut Self {
-        let f = SqlField {};
+       
 
         let t = SqlTarget {
             expression: sql_expression.to_string(),
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
-            handler: Box::new(f),
+            handler: Rc::clone(&self.handler)
         };
 
         self.field_order.push(toql_field.to_string());

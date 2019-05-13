@@ -1,5 +1,4 @@
 
-use crate::error::ToqlError;
 use crate::error::Result;
 
 pub trait Indelup<'a, T: 'a> {
