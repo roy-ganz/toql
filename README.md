@@ -12,7 +12,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-toql ="0.1"
+toql = { version = "0.1", features= ["rocket_mysql"] }
 ```
 
 ## Project
@@ -21,7 +21,7 @@ The Toql project consists of
 
 * A __query parser__ to parse query string from web clients.
 * A __query builder__ to modify or create queries on the fly.
-* An __SQL mapper__, that translates Toql fields into SQL columns or expressions.
+* A __SQL mapper__, that translates Toql fields into SQL columns or expressions.
 * A __SQL builder__ to turn a query into SQL with the help of the mapper.
 * A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
 * __3rd party integration__  to work well together with Rocket and MySQL.

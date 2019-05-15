@@ -1,7 +1,7 @@
 [package]
 name = "toql_core"
 version = "0.1.0"
-authors = ["roy"]
+authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with core functionality for toql"
 keywords = ["toql"]
