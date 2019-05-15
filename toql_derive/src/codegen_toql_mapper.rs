@@ -221,7 +221,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     cache.get_mut( #struct_name ).unwrap()
                 }
                 
-                 fn insert_new_mapper_with_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
+                 fn insert_new_mapper_with_handler<H>(cache: &mut toql::sql_mapper::SqlMapperCache,  handler: H) -> &mut toql::sql_mapper::SqlMapper   // Create new SQL Mapper and insert into mapper cache
                   where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
                  {
                     let m = Self::new_mapper_with_handler( #sql_table_alias, handler);

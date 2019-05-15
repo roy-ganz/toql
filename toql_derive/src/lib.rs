@@ -11,6 +11,8 @@
 //! 
 //! ### Small example
 //! ```rust
+//! use toql::derive::Toql;
+//! 
 //! #[derive(Toql)]
 //! struct User {
 

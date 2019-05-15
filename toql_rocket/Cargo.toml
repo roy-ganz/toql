@@ -10,12 +10,16 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
-toql_core = {path="../toql_core"}
+toql_core = {path="../toql_core", features=["rocketweb"]}
 toql_mysql = {path="../toql_mysql"}
 rocket= "0.4"
 log ="0.4"
 mysql = {version = "14.2",  optional=true}
 
+[dev-dependency]
+toql = {path="..", features=["rocket_mysql"]}
+rocket = "0.4" 
+rocket_contrib =  {version = "0.4", default-features = false, features = ["mysql_pool", "json"] }
 
 [features]
 mysqldb = ["mysql"]

@@ -6,9 +6,26 @@
 //!
 //! This allows to query Toql structs like this
 //! 
-//! ```rust
+//! ```ignore
+//! #[macro_use]
+//! extern crate rocket;
+//! #[macro_use]
+//! extern crate rocket_contrib;
+//! 
+//! use toql::sql_mapper::SqlMapperCache;
+//! use toql::rocket::{ToqlQuery, Counted};
+//! use rocket::request::Form;
+//! use myql::Conn;
+//! use rocket_contrib::json::Json;
+//! use toql::rocket::mysql::load_many;
+//! 
+//! #[database("example_db")]
+//! struct ExampleDbConnection(mysql::Conn);
+//! 
+//! struct User {id:u64, username: Option<String>};
+//! 
 //! #[get("/?<toql..>")]
-//! pub fn query( mappers: State<SqlMapperCache>,
+//! fn query( mappers: State<SqlMapperCache>,
 //!               conn: ExampleDbConnection, 
 //!               toql: Form<ToqlQuery>)
 //! -> Result<Counted<Json<Vec<User>>>> {

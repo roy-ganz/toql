@@ -30,14 +30,16 @@
 //! ## Small Example
 //! Using Toql without any dependency features is possible and easy. Here we go:
 //! ```
+//! use toql::{query_parser::QueryParser, sql_mapper::SqlMapper, sql_builder::SqlBuilder};
+//! 
 //! let query = QueryParser::parse("id, +title LK %foo%").unwrap();
-//! let mapper = Mapper::new("Book b");
+//! let mut mapper = SqlMapper::new("Book b");
 //!     mapper
 //!         .map_field("id", "b.id")
 //!         .map_field("title", "b.title");
 //!
 //! let result = SqlBuilder::new().build(&mapper, &query).unwrap();
-//! assert_eq!("SELECT id, title FROM Book b WHERE b.title LIKE ? ORDER BY title ASC", result.to_sql());
+//! assert_eq!("SELECT b.id, b.title FROM Book b WHERE b.title LIKE ? ORDER BY b.title ASC", result.to_sql());
 //! ```
 //! 
 //! ## Bigger Example
@@ -69,7 +71,7 @@ pub use log; // Reexport for generated code from Toql derive
 
 
 
-#[cfg(feature = "rocket_mysql")]
+#[cfg(any(feature = "rocket_mysql", feature ="rocket"))]
 pub use toql_rocket as rocket;
 
 #[cfg(any(feature = "mysql", feature = "rocket_mysql"))]

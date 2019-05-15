@@ -20,7 +20,7 @@ struct NewBook {
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct NewUser {
-    #[toql(delup_key, skip_insert)]
+    #[toql(delup_key, skip_inup)]
     id: u8, // Always selected (auto value, no insert)
     username: Option<String>,
 }
