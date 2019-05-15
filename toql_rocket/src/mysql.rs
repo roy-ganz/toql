@@ -5,6 +5,9 @@ use toql_core::error::ToqlError;
 use toql_core::sql_mapper::SqlMapperCache;
 use toql_mysql::load::Load;
 
+/// Facade function to query structs with URL query parameters from a MySQL database.
+/// 
+/// This needs the MySQL feature enabled.
 pub fn load_many<'a, T: Load<T>>(
     toql_query: &ToqlQuery,
     mappers: &SqlMapperCache,

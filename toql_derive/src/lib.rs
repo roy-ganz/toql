@@ -9,7 +9,7 @@
 //!  - Methods for all fields to support building a [Query](../toql_core/query/struct.Query.html). 
 //!  - Methods to load, insert, delete and update a struct. Requires database feature.
 //! 
-//! **Small example:**
+//! ### Small example
 //! ```rust
 //! #[derive(Toql)]
 //! struct User {

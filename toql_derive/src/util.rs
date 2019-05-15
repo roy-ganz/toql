@@ -7,7 +7,7 @@ use heck::SnakeCase;
 
 use crate::annot::RenameCase;
 
-pub fn rename(string: &str, renaming: &Option<RenameCase>) -> String{
+pub(crate) fn rename(string: &str, renaming: &Option<RenameCase>) -> String{
         
             match renaming {
                 Some(RenameCase::CamelCase) => string.to_camel_case(),
@@ -16,6 +16,4 @@ pub fn rename(string: &str, renaming: &Option<RenameCase>) -> String{
                 Some(RenameCase::MixedCase) => string.to_mixed_case(),
                 None => string.to_owned()
            }
-        
-
     }

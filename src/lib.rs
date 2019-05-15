@@ -61,7 +61,6 @@ pub use toql_core::fields_type;
 pub use toql_core::merge;
 pub use toql_core::indelup;
 
-
 pub use toql_derive as derive;
 
 

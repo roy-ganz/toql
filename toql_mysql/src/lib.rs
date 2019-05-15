@@ -16,7 +16,8 @@ pub mod row;
 
 
     /// Insert one struct. 
-    /// Skip fields in struct that are auto generated with #[toql(skip_inup)].
+    /// 
+    /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
  pub fn insert_one<'a, T>( entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where T:'a + Indelup<'a, T>
@@ -31,7 +32,8 @@ pub mod row;
  }
      
     /// Insert a collection of structs. 
-    /// Skip fields in struct that are auto generated with #[toql(skip_inup)].
+    /// 
+    /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id
   pub fn insert_many<'a, I, T > (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where I: Iterator<Item = &'a T> + 'a, T:'a + Indelup<'a, T>
@@ -45,7 +47,8 @@ pub mod row;
     }
 
     /// Delete a struct. 
-    /// The field that is used as key must be attributed with #[toql(delup_key)].
+    /// 
+    /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
     pub fn delete_one<'a, T >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where T:'a + Indelup<'a, T>
@@ -59,7 +62,8 @@ pub mod row;
         
     }
     /// Delete a collection of structs. 
-    /// The field that is used as key must be attributed with #[toql(delup_key)].
+    /// 
+    /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
     pub fn delete_many<'a, I, T> (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where I: Iterator<Item = &'a T> + 'a ,  T:'a + Indelup<'a, T>
@@ -73,13 +77,14 @@ pub mod row;
     }
 
     /// Update a collection of structs. 
+    /// 
     /// Optional fields with value `None` are not updated. See guide for details.
-    /// The field that is used as key must be attributed with #[toql(delup_key)].
+    /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of updated rows.
     pub fn update_many<'a, I, T> (entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
-        where I: Iterator<Item = &'a T> + 'a,  T:'a + Indelup<'a, T>
+        where I: Iterator<Item = &'a T> + Clone +'a,  T:'a + Indelup<'a, T>
          {
-            let (update_stmt, params) = T::update_many_sql(&entities)?;
+            let (update_stmt, params) = T::update_many_sql(entities)?;
             log::info!("Sql `{}` with params {:?}", update_stmt, params);
             let mut stmt = conn.prepare(&update_stmt)?;
             let res = stmt.execute(params)?;
@@ -94,8 +99,9 @@ pub mod row;
     }
 
     /// Update a single struct. 
+    /// 
     /// Optional fields with value `None` are not updated. See guide for details.
-    /// The field that is used as key must be attributed with #[toql(delup_key)].
+    /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of updated rows.
     pub fn update_one<'a, T >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where T:'a + Indelup<'a, T>
@@ -108,16 +114,18 @@ pub mod row;
         Ok(res.affected_rows())
     }
    
-/// Load a struct with dependencies for a given Toql query
+/// Load a struct with dependencies for a given Toql query.
+/// 
 /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
  pub fn load_one<T: load::Load<T>> (query: &Query, mappers: &SqlMapperCache, conn: &mut Conn) 
  -> Result<T, ToqlError> {
     T::load_one(query, mappers,conn)
  }
 
-/// Load a collection of struct with dependencies for a given Toql query
+/// Load a vector of structs with dependencies for a given Toql query.
+/// 
 /// Returns a tuple with the structs and an optional tuple of count values. 
-/// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`.
+/// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
 /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
  pub fn load_many<T: load::Load<T>>(query: &Query, mappers: &SqlMapperCache, conn: &mut Conn, count: bool, first:u64, max:u16)
 -> Result<(Vec<T>, Option<(u32,u32)>), ToqlError>
