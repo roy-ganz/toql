@@ -25,10 +25,10 @@ The toql project consists of
 * A __toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
 * __3rd party integration __  to work well together with Rocket and MySQL.
 
-Make sure you check out the [guide]() or run the example of a full CRUD with Rocket and MySQL. 
+Make sure you check out the [guide](http://github.com/roy-ganz/toql/guide/index.html) or run the example of a full CRUD with Rocket and MySQL. 
 
 ```bash
-cargo run --example="rocket_mysql"
+ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
 ```
 
 
@@ -46,6 +46,6 @@ I developped the initial Toql language about 5 years ago for a web project. I ha
 
 ## License
 
-mysql_enum is distributed under the terms of both the MIT license and the
+Toql is distributed under the terms of both the MIT license and the
 Apache License (Version 2.0).
 

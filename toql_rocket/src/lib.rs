@@ -38,25 +38,12 @@ impl<'r, R: Responder<'r>> Responder<'r> for Counted<R>
 
 #[cfg(feature = "mysqldb")]
 pub mod mysql {
+    use super::ToqlQuery;
+    use super::Query;
     use toql_core::error::ToqlError;
-    use toql_core::query::Query;
-    use toql_core::query_parser::QueryParser;
     use toql_core::sql_mapper::SqlMapperCache;
-
-    use rocket::http::Status;
-     use rocket::Request;
-     use rocket::response::Responder;
-
-
     use toql_mysql::load::Load;
     
-    use super::ToqlQuery;
-    use rocket::response::Response;
-    use std::io::{Read, Seek};
-
-
-  
-
     pub fn load_many<'a, T: Load<T>>(
         toql_query: &ToqlQuery,
         mappers: &SqlMapperCache,

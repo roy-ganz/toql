@@ -1,8 +1,10 @@
+//!
+//! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
 use crate::query::Concatenation;
 
 
-
+/// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 pub struct SqlBuilderResult {
      
     pub(crate) table: String,
@@ -13,9 +15,6 @@ pub struct SqlBuilderResult {
     pub(crate) where_clause: String,
     pub(crate) order_by_clause: String,
     pub(crate) having_clause: String,
-   // pub count_where_clause: String,
-   // pub count_having_clause: String,
-
     pub(crate) where_params: Vec<String>,
     pub(crate) having_params: Vec<String>,
     pub(crate) combined_params: Vec<String>,
@@ -24,6 +23,7 @@ pub struct SqlBuilderResult {
 
 impl SqlBuilderResult {
 
+    /// Returns true if no field is neither selected nor filtered.
     pub fn is_empty (&self) -> bool{
             !self.any_selected
         &&  self.where_clause.is_empty()
@@ -55,7 +55,10 @@ impl SqlBuilderResult {
          }
          
     }
-    // Put behind feature
+    
+    /// Returns SQL for MySql. 
+    /// This function is only available, if you have the _mysql_ feature enabled in your Toql dependency.
+    #[cfg(feature = "mysqldb")]
     pub fn to_sql_for_mysql(&self, hint:&str, offset:u64, max: u16) -> String {
 
         let mut s = String::from("SELECT ");
@@ -73,14 +76,14 @@ impl SqlBuilderResult {
 
          s
     }
-
+    /// Returns simple SQL.
     pub fn to_sql(&self) -> String {
 
           let mut s = String::from("SELECT ");
            self.sql_body( &mut s);
            s
     }
-
+    /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
     pub fn params(&self) -> &Vec<String> {
         if self.where_params.is_empty() {
             &self.having_params

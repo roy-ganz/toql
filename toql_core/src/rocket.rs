@@ -1,3 +1,7 @@
+//! Contains some library code for the rocket feature. 
+//! This code would better be placed in the toql_rocket module, but must be here
+//! because it implements traits for core structs (Rust language restriction).
+
 use crate::query::Query;
 use crate::query_parser::QueryParser;
 use rocket::request::FromFormValue;
@@ -6,7 +10,6 @@ use crate::error::ToqlError;
 use rocket::http::Status;
 use rocket::Response;
 use rocket::Request;
-use crate::pest::error::Error;
 use std::io::Cursor;
 
  macro_rules! bad_request_template {
@@ -83,7 +86,7 @@ impl<'v> FromFormValue<'v> for Query {
 
     fn from_form_value(form_value: &'v RawStr) -> Result<Query, ToqlError> {
        
-       println!("VALUE IS `{}`", form_value.url_decode().unwrap());
+     
        if form_value.len() == 0 {
             return Ok(Query::wildcard());  
        }

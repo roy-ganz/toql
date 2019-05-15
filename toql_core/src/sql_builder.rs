@@ -1,3 +1,39 @@
+//!
+//! The SQL Builder turns a [Query](../query/struct.Query.html) with the help of a [SQL Mapper](../sql_mapper/struct.SqlMapper.html)
+//! into a [Sql Builder Result](../sql_builder_result/SqlBuilderResult.html) 
+//! The result hold the different parts of an SQL query and can be turned into an SQL query that can be sent to the database.
+//! 
+//! ## Example
+//! 
+//! ```rust
+//! 
+//! let  query = Query::wildcard().and(Field::from("foo")eq(5));
+//! let mapper::new("Bar b").map_field("foo", "b.foo");
+//! let builder_result = QueryBuilder::new().build_query(&mapper, &query);
+//! assert_eq!("SELECT b.foo FROM Bar b WHERE b.foo = ?", builder_result.to_sql());
+//! assert_eq!(["5"], builder_result.params());
+//! ```
+//! 
+//! The SQL Builder can also add joins if needed. Joins must be registered on the SQL Mapper for this.
+//! 
+//! ### Count queries
+//! Besides normal queries the SQL Builder can als build count queries.
+//! 
+//! Let's assume you have a grid view with books and the user enters a search term to filter your grid.
+//! The normal query will get 50 books, but you will only display 10 books. Toql calls those 50 _the filtered count_.
+//! To get the unfilted count, Toql must issue another query with different filter settings. Typically to get
+//! the number of all books only that user has access to. Toql calls this _the total count_.
+//! 
+//! ### Paths
+//! The SQL Builder can also ignore paths to skip paths in the query that are not mapped in the mapper.
+//! This is needed for structs that contain collections, as these collections must be querried with a different mapper.
+//! 
+//! Let's assume a struct *user* had a collection of *phones*. 
+//! The Toql query may look like:  `username, phones_number`.
+//! The SQL Builder needs 2 passes to resolve that query:
+//!  - The first pass will query all users with the user mapper and will ignore the path *phones_*.
+//!  - The second pass will only build the query for the path *phones_* with the help of the phone mapper. 
+//! 
 use crate::query::Concatenation;
 use crate::query::FieldOrder;
 use crate::query::Query;
@@ -32,7 +68,7 @@ impl Default for SqlJoinData {
         SqlJoinData { joined: false }
     }
 }
-
+/// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder {
     count_query: bool,       // Build count query
     subpath: String,         // Build only subpath
@@ -42,9 +78,13 @@ pub struct SqlBuilder {
 }
 
 #[derive(Debug)]
+/// Represents all errors from the SQL Builder
 pub enum SqlBuilderError {
+    /// The field is not mapped to a column or SQL expression. Contains the field name.
     FieldMissing(String),
+    /// The field requires a role that the query does not have. Contains the role.
     RoleRequired(String),
+    /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
     FilterInvalid(String)
 }
 
@@ -63,6 +103,7 @@ impl fmt::Display for SqlBuilderError {
 
 
 impl SqlBuilder {
+    /// Create a new SQL Builder
     pub fn new() -> Self {
         SqlBuilder {
             count_query: false,
@@ -71,6 +112,7 @@ impl SqlBuilder {
             ignored_paths: Vec::new(),
         }
     }
+    /// Add path to list of ignore paths.
     pub fn ignore_path<T: Into<String>>(mut self, path: T) -> Self {
         self.ignored_paths.push(path.into());
         self
@@ -79,11 +121,13 @@ impl SqlBuilder {
         self.roles.insert(role.into());
         self
     } */
+    /// TODO
     pub fn with_join<T: Into<String>>(mut self, join: T) -> Self {
         self.joins.insert(join.into());
         self
     }
 
+    /// Build query for total count.
     pub fn build_count(
         &mut self,
         sql_mapper: &SqlMapper,
@@ -93,6 +137,7 @@ impl SqlBuilder {
         self.build(sql_mapper, query)
     }
 
+    // Build normal query for this path
     pub fn build_path<T: Into<String>>(
         &mut self,
         path: T,
@@ -250,7 +295,7 @@ impl SqlBuilder {
             result.join_clause = result.join_clause.trim_end().to_string();
         }
     }
-
+    /// Build normal query.
     pub fn build(
         &mut self,
         sql_mapper: &SqlMapper,
@@ -628,57 +673,5 @@ impl SqlBuilder {
             }
         }
         false
-    }
-}
-
-// Generic merge function
-pub fn merge<T, O, K, F, X, Y>(
-    this: &mut std::vec::Vec<T>,
-    mut other: Vec<O>,
-    tkey: X,
-    okey: Y,
-    assign: F,
-) where
-    O: Clone,
-    K: Eq + std::hash::Hash,
-    F: Fn(&mut T, O),
-    X: Fn(&T) -> Option<K>,
-    Y: Fn(&O) -> Option<K>,
-{
-    // Build index to lookup all books of an author by author id
-    let mut index: HashMap<K, Vec<usize>> = HashMap::new();
-
-    for (i, b) in this.iter().enumerate() {
-        match tkey(&b) {
-            Some(k) => {
-                let v = index.entry(k).or_insert(Vec::new());
-                v.push(i);
-            }
-            None => {}
-        }
-    }
-
-    // Consume all authors and distribute
-    for a in other.drain(..) {
-        // Get all books for author id
-        match &okey(&a) {
-            Some(ok) => {
-                let vbi = index.get(ok).unwrap();
-
-                // Clone author for second to last books
-                for bi in vbi.iter().skip(1) {
-                    if let Some(mut b) = this.get_mut(*bi) {
-                        assign(&mut b, a.clone());
-                    }
-                }
-
-                // Assign drained author for first book
-                let fbi = vbi.get(0).unwrap();
-                if let Some(mut b) = this.get_mut(*fbi) {
-                    assign(&mut b, a.clone());
-                }
-            }
-            None => {}
-        }
     }
 }

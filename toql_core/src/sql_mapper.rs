@@ -1,4 +1,41 @@
+//!
+//! The SQL Mapper translates Toql fields into databaae columns or SQL expressions.
+//! 
+//! It's needed by the  [SQL Builder](../sql_builder/struct.SqlBuilder.html) to turn a [Query](../query/struct.Query.html)
+//! into a [Sql Builder Result](../sql_builder_result/SqlBuilderResult.html).
+//! The result hold the different parts of an SQL query and can be turned into SQL that can be sent to the database.
+//! 
+//! ## Example
+//! ```rust
+//! let mapper::new("Bar b")
+//!     .map_field("foo", "b.foo")
+//!     .map_field("fuu_id", "u.foo")
+//!     .map_field("faa", "(SELECT COUNT(*) FROM Faa WHERE Faa.bar_id = b.id)")
+//!     .join("fuu", LEFT JOIN Fuu u ON (b.foo_id = u.id));
+//! ```
+//! 
+//! To map a full struct it's possible to implement the [Mapped](trait.Mapped.html) trait and call [map](struct.SqlMapper.html#method.map).
+//! The Toql derive implements the trait for any derived struct.
+//!   
+//! ### Options
+//! Field can have options. They can be hidden for example or require a certain role (permission). 
+//! Use [map_with_options](struct.SqlMapper.html#method.map_with_options).
+//! 
+//! ### Filter operations
+//! Besides fields and joins the mapper also contains all filter operations. 
+//! To add a custom operation you must define a new [Fieldhandler](trait.FieldHandler.html)
+//! and add it either
+//!  - to a single field with [map_handler](struct.SqlMapper.html#method.map_handler)
+//!  - to all fields with [new_with_handler](struct.SqlMapper.html#method.new_with_handler)
+//! 
+//! ### Caching
+//! If a struct contains collections of other structs then the SQL Builder must create multiple SQL queries.
+//! To give high level functions all the mappers they must be put into a cache. This allows to
+//! load the whole dependency tree.
+//! 
+
 use crate::query::FieldFilter;
+use crate::sql_builder::SqlBuilderError;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -12,7 +49,7 @@ pub(crate) enum FilterType {
 }
 
 #[derive(Debug)]
-pub struct SqlTarget {
+pub(crate) struct SqlTarget {
     pub(crate) options: MapperOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
     pub(crate) handler: Arc<FieldHandler + Send + Sync>, // Handler to create clauses
@@ -20,10 +57,13 @@ pub struct SqlTarget {
     pub(crate) expression: String,                       // Column name or SQL expression
 }
 
+/// Handles the standart filters as documented in the guide.
+/// Throws an error upon all FN calls.
 #[derive(Debug, Clone)]
 pub struct BasicFieldHandler {}
 
 #[derive(Debug)]
+/// Options for a mapped field.
 pub struct MapperOptions {
     pub(crate) always_selected: bool,   // Always select this field, regardless of query fields
     pub(crate) count_filter: bool,      // Filter field on count query
@@ -32,8 +72,10 @@ pub struct MapperOptions {
     pub(crate) roles: BTreeSet<String>, // Only for use by these roles
 }
 
-// OPT use references
+
 impl MapperOptions {
+
+    /// Create new mapper options
     pub fn new() -> Self {
         MapperOptions {
             always_selected: false,
@@ -43,23 +85,35 @@ impl MapperOptions {
             roles: BTreeSet::new(),
         }
     }
+    /// Field is always selected, regardless of the query
     pub fn select_always(mut self, always_selected: bool) -> Self {
         self.always_selected = always_selected;
         self
     }
-
+    /// Any filter on the field is considered when creating a count query.
+    /// Typically applied to fields that represent permissions and foreign keys.
+    /// Assumme a user wants to see all books. You will restrict the user query
+    /// with a permission filter, so that the user sees all of *his* books.
+    /// The count query must also use the filter.
     pub fn count_filter(mut self, count_filter: bool) -> Self {
         self.count_filter = count_filter;
         self
     }
+    // Any selected field is also used for the count query
+    // Only used in rare cases where you fiddle with distinct results
     pub fn count_select(mut self, count_select: bool) -> Self {
         self.count_select = count_select;
         self
     }
+    // Field must be ignored by the wildcard
     pub fn ignore_wildcard(mut self, ignore_wildcard: bool) -> Self {
         self.ignore_wildcard = ignore_wildcard;
         self
     }
+    // The field can only be selected and filtered for queries that have
+    // certain roles.
+    // Use case: The real email addess is only allowed for users with
+    // the _admin_ role.
     pub fn restrict_roles(mut self, roles: BTreeSet<String>) -> Self {
         self.roles = roles;
         self
@@ -69,14 +123,45 @@ impl MapperOptions {
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
 }
-
+/// A FieldHandler maps a Toql field onto an SQL.
+/// Use it to 
+/// - define your own custom function (through FN)
+/// - map the standart filters differently
+/// - disallow standart filters
+/// - handle fields that do not exist in the struct
+/// - handle fields that match multiple columns (full text index)
+/// 
+/// ## Example (see full working example in tests)
+/// ```rust
+/// struct MyHandler {};
+/// impl FieldHandler for MyHandler {
+///     fn build_filter(&self, sql: &str, _filter: &FieldFilter) 
+///     ->Result<Option<String>, toql::sql_builder::SqlBuilderError> {
+///        --snip--
+///     }
+///     fn build_param(&self, _filter: &FieldFilter) -> Vec<String> {
+///         --snip--
+///     }
+/// }
+/// let my_handler = MyHandler {};
+/// let mapper = Mapper::new_with_handler(my_handler);
+/// 
 pub trait FieldHandler {
-    fn build_select(&self, sql: &str) -> Option<String>;
-    fn build_filter(&self, sql: &str, _filter: &FieldFilter) ->Result<Option<String>, crate::sql_builder::SqlBuilderError>;
-    fn build_param(&self, _filter: &FieldFilter) -> Vec<String>;
-    fn build_join(&self) -> Option<String> {
-        None
+    /// Return sql if you want to select it.
+    fn build_select(&self, sql: &str) -> Option<String> {
+       Some(format!("{}", sql))
     }
+    
+    /// Match filter and return SQL expression.
+    /// Do not insert parameters in the SQL expression, use `?` instead.
+    /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
+    fn build_filter(&self, sql: &str, _filter: &FieldFilter) ->Result<Option<String>, crate::sql_builder::SqlBuilderError>;
+    /// Return the parameters for your `?`
+    fn build_param(&self, _filter: &FieldFilter) -> Vec<String>;
+    /// Return addition SQL join clause for this field or None
+     fn build_join(&self) -> Option<String> {
+        None
+    } 
 }
 
 impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sync + 'static) {
@@ -88,10 +173,7 @@ impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sy
 
 
 impl FieldHandler for BasicFieldHandler {
-    fn build_select(&self, expression: &str) -> Option<String> {
-        Some(format!("{}", expression))
-    }
-
+    
     fn build_param(&self, filter: &FieldFilter) -> Vec<String> {
         match filter {
             FieldFilter::Eq(criteria) => vec![criteria.clone()],
@@ -142,13 +224,15 @@ impl FieldHandler for BasicFieldHandler {
             ))),
       //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
             FieldFilter::Lk(_) => Ok(Some(format!("{} LIKE ?", expression))),
-            FieldFilter::Fn(_, _) => Ok(None), // Must be implemented by user
+            FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(format!("no filter `{}` found.", name))), // Must be implemented by user
         }
     }
 }
 
+/// A cache that holds mappers.
 pub type SqlMapperCache = HashMap<String, SqlMapper>;
 
+/// Maps from Toql fields onto columns or SQL expressions.
 #[derive(Debug)]
 pub struct SqlMapper {
     pub(crate) handler: Arc<FieldHandler + Send + Sync>,
@@ -159,30 +243,39 @@ pub struct SqlMapper {
 }
 
 #[derive(Debug)]
-pub struct Join {
+pub(crate) struct Join {
     pub(crate) join_clause: String,
 }
-
+/// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
+/// 
+/// The Toql derive implements this trait for derived structs.
 pub trait Mapped {
     fn insert_new_mapper(cache: &mut SqlMapperCache) -> &mut SqlMapper;     // Create new SQL Mapper and insert into mapper cache
-    fn insert_new_mapper_for_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
+    fn insert_new_mapper_with_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
     where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
     ;   
     fn new_mapper(sql_alias: &str) -> SqlMapper;                            // Create new SQL Mapper and map entity fields
-    fn new_mapper_for_handler<H>(sql_alias: &str, handler: H) -> SqlMapper
+    fn new_mapper_with_handler<H>(sql_alias: &str, handler: H) -> SqlMapper
     where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
      ;                            // Create new SQL Mapper and map entity fields
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str);       // Map entity fields
 }
 
 impl SqlMapper {
+
+     /// Create new mapper for _table_ or _table alias_.
+     /// Example: `::new("Book")` or `new("Book b")`.
+     /// If you use an alias you must map all
+     /// SQL columns with the alias too.
      pub fn new<T>(table: T)  -> Self
       where  T: Into<String>
      {
          let f = BasicFieldHandler {};
-         Self::new_for_handler(table,f)
+         Self::new_with_handler(table,f)
      }
-    pub fn new_for_handler<T, H>(table: T, handler: H) -> Self
+     /// Creates new mapper with a custom handler.
+     /// Use this to provide custom filter functions for all fields.
+    pub fn new_with_handler<T, H>(table: T, handler: H) -> Self
     where
         T: Into<String>,
         H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
@@ -195,19 +288,30 @@ impl SqlMapper {
             field_order: Vec::new(),
         }
     }
+    /// Creates and inserts a new mapper into a cache.
+    /// Returns a mutable reference to the created mapper. Use it for configuration.
     pub fn insert_new_mapper<T: Mapped>(cache: &mut SqlMapperCache) -> &mut SqlMapper {
         T::insert_new_mapper(cache)
     }
-     pub fn insert_new_mapper_for_handler<T, H>(cache: &mut SqlMapperCache, handler: H) -> &mut SqlMapper 
+    /// Creates a new mapper with a custom field handler and insert it into a cache.
+    /// Returns a mutable reference to the created mapper. Use it for configuration.
+     pub fn insert_new_mapper_with_handler<T, H>(cache: &mut SqlMapperCache, handler: H) -> &mut SqlMapper 
      where T: Mapped,
             H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
      {
-        T::insert_new_mapper_for_handler(cache, handler)
+        T::insert_new_mapper_with_handler(cache, handler)
     }
+    /// Maps all fields from a struct. 
+    /// This trait is implemented by the Toql derive for derived structs.
     pub fn map<T: Mapped>(sql_alias: &str) -> Self {
         // Mappable must create mapper for top level table
         T::new_mapper(sql_alias)
     }
+    /// Maps all fields from a struct as a joined dependency. 
+    /// Example: To map for a user an `Address` struct that implements `Mapped`
+    /// ```rust 
+    /// user_mapper.map_join<Address>("address", "a")
+    /// ```
     pub fn map_join<'a, T: Mapped>(
         &'a mut self,
         toql_path: &str,
@@ -216,7 +320,9 @@ impl SqlMapper {
         T::map(self, toql_path, sql_alias);
         self
     }
-
+    /// Maps a Toql field to a field handler.
+    /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
+    /// how to generate SQL for your field.
     pub fn map_handler<'a, H>(
         &'a mut self,
         toql_field: &str,
@@ -237,6 +343,9 @@ impl SqlMapper {
         self.fields.insert(toql_field.to_string(), t);
         self
     }
+    /// Changes the handler of a field.
+    /// This will panic if the field does not exist
+    /// Use it to make changes, it prevents typing errors of field names.
     pub fn alter_handler<H>(
         &mut self,
         toql_field: &str,
@@ -252,7 +361,9 @@ impl SqlMapper {
         sql_target.handler = Arc::new(handler);
         self
     }
-
+    /// Changes the handler and options of a field.
+    /// This will panic if the field does not exist
+    /// Use it to make changes, it prevents typing errors of field names.
     pub fn alter_handler_with_options(
         &mut self,
         toql_field: &str,
@@ -267,7 +378,9 @@ impl SqlMapper {
         sql_target.handler = handler;
         self
     }
-
+    /// Changes the database column or SQL expression of a field.
+    /// This will panic if the field does not exist
+    /// Use it to make changes, it prevents typing errors of field names.
     pub fn alter_field(
         &mut self,
         toql_field: &str,
@@ -282,11 +395,12 @@ impl SqlMapper {
         sql_target.options = options;
         self
     }
-
+    /// Adds a new field -or updates an existing field- to the mapper.
     pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_field: &str) -> &'a mut Self {
         self.map_field_with_options(toql_field, sql_field, MapperOptions::new())
     }
 
+    /// Adds a new field -or updates an existing field- to the mapper.
     pub fn map_field_with_options<'a>(
         &'a mut self,
         toql_field: &str,
@@ -306,10 +420,11 @@ impl SqlMapper {
         self.fields.insert(toql_field.to_string(), t);
         self
     }
-
-    pub fn join<'a>(&'a mut self, toql_field: &str, join_clause: &str) -> &'a mut Self {
+    /// Adds a join for a given path to the mapper. 
+    /// Example: `map.join("foo", "LEFT JOIN Foo f ON (foo_id = f.id)")`
+    pub fn join<'a>(&'a mut self, toql_path: &str, join_clause: &str) -> &'a mut Self {
         self.joins.insert(
-            toql_field.to_string(),
+            toql_path.to_string(),
             Join {
                 join_clause: join_clause.to_string(),
             },
@@ -319,9 +434,11 @@ impl SqlMapper {
 
         self
     }
-
-    pub fn alter_join<'a>(&'a mut self, toql_field: &str, join_clause: &str) -> &'a mut Self {
-        let j = self.joins.get_mut(toql_field).expect("Join is missing.");
+    /// Changes an already added join.
+    /// This will panic if the join does not exist
+    /// Use it to make changes, it prevents typing errors of path names.
+    pub fn alter_join<'a>(&'a mut self, toql_path: &str, join_clause: &str) -> &'a mut Self {
+        let j = self.joins.get_mut(toql_path).expect("Join is missing.");
         j.join_clause = join_clause.to_string();
         self
     }

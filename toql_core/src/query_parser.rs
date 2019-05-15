@@ -1,3 +1,18 @@
+//!
+//! The query parser can turn a string that follows the Toql query syntax into a [Query](../query/struct.Query.html).
+//!
+//! ## Example
+//! 
+//! ```rust
+//! let  query = QueryParser::parse("*, +username").unwrap()
+//! assert_eq!("*, +username", query.to_string());
+//! ```
+//! Read the guide for more information on the query syntax.
+//! 
+//! The parser is written with [Pest](https://pest.rs/) and is fast. It should be used to parse query request from users. 
+//! To build a query within your program, build it programmatically with the provided methods. 
+//! This avoids typing mistakes and - unlike parsing - cannot fail.
+//! 
 use crate::query::Concatenation;
 use crate::query::Field;
 use crate::query::Wildcard;
@@ -14,9 +29,14 @@ use crate::error::ToqlError;
 #[grammar = "toql.pest"]
 struct PestQueryParser;
 
+/// The query parser. 
+/// It contains only a single static method to turn a string into a Query struct.
 pub struct QueryParser;
 
 impl QueryParser {
+    /// Method to parse a string
+    /// This fails if the syntax is wrong. The original PEST error is wrapped with the ToqlError and 
+    /// can be used to examine to problem in detail.
     pub fn parse(toql_string: &str) -> Result<Query, ToqlError> {
         let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
 

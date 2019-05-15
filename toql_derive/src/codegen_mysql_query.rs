@@ -13,7 +13,7 @@ use syn::Ident;
 
 pub(crate) struct GeneratedMysqlQuery<'a> {
     struct_ident: &'a Ident,
-    sql_table_name: Ident,
+    
 
     mysql_deserialize_fields: Vec<proc_macro2::TokenStream>,
     path_loaders: Vec<proc_macro2::TokenStream>,
@@ -26,15 +26,9 @@ pub(crate) struct GeneratedMysqlQuery<'a> {
 
 impl<'a> GeneratedMysqlQuery<'a> {
     pub(crate) fn from_toql(toql: &Toql) -> GeneratedMysqlQuery {
-        let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
-
 
         GeneratedMysqlQuery {
             struct_ident: &toql.ident,
-            sql_table_name: Ident::new(
-                &toql.table.clone().unwrap_or(renamed_table),
-                Span::call_site(),
-            ),
             mysql_deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
             ignored_paths: Vec::new(),

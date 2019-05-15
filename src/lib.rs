@@ -1,4 +1,4 @@
-// toql. Transfer Object Query Language
+// Toql. Transfer Object Query Language
 // Copyright (c) 2019 Roy Ganz
 //
 // Licensed under the Apache License, Version 2.0
@@ -7,41 +7,49 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! # toql. Transfer Object Query Language
+//! # Toql. Transfer Object Query Language
 //!
-//! toql is a way to build SQL-queries. It can be useful for web clients making queries to a web server.
-//! Toql consists of five parts:
+//! Welcome to Toql API documentation!
+//! 
+//! This API documentation is very technical and is purely a reference. 
+//! There is a [guide](http://github.com/roy-ganz/toql/guide/index.html) that is better to get started.
+//! 
+//! ## Overview 
+//! 
+//! The project consists of the following main parts:
 //!
-//!  * A query language that can be parsed
-//!  * A 
-//!  * A mapper that knows how to translate query fields into table columns
-//!  * A query builder that turn your query into SQL using the mapper
-//!  * A Toql derive, to map big structs to tables and resolve dependencies
+//!  * A [Query Parser](../toql_core/query_parser/index.html) to build a Toql query from a string. 
+//!  * A [Query](../toql_core/query/index.html) that can be built with methods.
+//!  * An [SQL Mapper](../toql_core/sql_mapper/index.html) to map Toql fields to database columns or expressions.
+//!  * An [SQL Builder](../toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
+//!  * A [Toql Derive](../toql_derive/index.html) to build all the boilerplate code to make some ✨ happen.
+//!  * Integration with
+//!      * [MySQL](../toql_mysql/index.html)
+//!      * [Rocket](../toql_rocket/index.html)
 //!
-//! ## Example
+//! ## Small Example
+//! Using Toql without any dependency features is possible and easy. Here we go:
 //! ```
-//! let query = QueryParser::parse("id, +title LK '%foo%'").unwrap();
-//! let mapper = Mapper::new();
+//! let query = QueryParser::parse("id, +title LK %foo%").unwrap();
+//! let mapper = Mapper::new("Book b");
 //!     mapper
-//!         .map_field("id", "id")
-//!         .map_field("title", "title");
+//!         .map_field("id", "b.id")
+//!         .map_field("title", "b.title");
 //!
 //! let result = SqlBuilder::new().build(&mapper, &query).unwrap();
-//! assert_eq!("SELECT id, title FROM Book WHERE title LIKE ? ORDER BY title ASC", result.sql_for_table("Book"));
+//! assert_eq!("SELECT id, title FROM Book b WHERE b.title LIKE ? ORDER BY title ASC", result.to_sql());
 //! ```
-//!
-//! ## Features
-//!
-//! * The query language allows selecting, filtering and ordering individual fields
-//! * Subfields are supported
-//! * Filter predicates can be joined by AND and OR. Parens are supported.
-//! * Mapper allows mapping of single fields, structs (derive Toql) and custom operations
-//! * Mapper can be cached for reuse, to make toql perform fast
-//! * SQL builder can build normal queries, count queries and subpaths queries
-//!
-//! Important: Toql is not an ORM. Toql only cares about database queries, it cannot insert or update database tables.
-//! If you are looking for an ORM, checkout Diesel.
-//!
+//! 
+//! ## Bigger Example
+//! However using the Rocket and MySQL integration will reduce your amount of coding to a minimum. 
+//! If you have a MySQL server running, check out the full CRUD example with:
+//! 
+//! ```bash
+//! ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
+//! 
+//! ```
+//! 
+
 pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::query;
@@ -49,8 +57,8 @@ pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
 pub use toql_core::sql_builder_result;
 pub use toql_core::sql_mapper;
-pub use toql_core::query_builder;
-
+pub use toql_core::fields_type;
+pub use toql_core::merge;
 pub use toql_core::indelup;
 
 

@@ -13,8 +13,7 @@ pub(crate) struct GeneratedToqlMapper<'a> {
    
     sql_table_name: String,
     sql_table_alias: String,
-    builder_fields_struct: Ident,
-    builder_fields: Vec<proc_macro2::TokenStream>,
+  
     merge_functions: Vec<proc_macro2::TokenStream>,
     field_mappings: Vec<proc_macro2::TokenStream>,
 }
@@ -31,11 +30,6 @@ impl<'a> GeneratedToqlMapper<'a> {
                 .alias
                 .clone()
                 .unwrap_or(toql.ident.to_string().to_snake_case()), //  toql.ident.to_string().to_snake_case(),
-            builder_fields_struct: syn::Ident::new(
-                &format!("{}Fields", toql.ident.to_string()),
-                Span::call_site(),
-            ),
-            builder_fields: Vec::new(),
             merge_functions: Vec::new(),
             field_mappings: Vec::new(),
         }
@@ -196,7 +190,7 @@ impl<'a> GeneratedToqlMapper<'a> {
 
         self.merge_functions.push(quote!(
             pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #joined_struct_ident > ) {
-                    toql :: sql_builder :: merge ( t , o ,
+                    toql :: merge :: merge ( t , o ,
                     | t | #self_fnc ,
                     | o | #other_fnc ,
                     | t , o | t . #field_ident . push ( o )
@@ -213,10 +207,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let struct_name= format!("{}", struct_ident);
         let sql_table_name =  &self.sql_table_name;
         let sql_table_alias = &self.sql_table_alias;
-       
-        let builder_fields_struct = &self.builder_fields_struct;
-        let builder_fields = &self.builder_fields;
-
+               
         let merge_functions = &self.merge_functions;
 
         let field_mappings = &self.field_mappings;
@@ -230,10 +221,10 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     cache.get_mut( #struct_name ).unwrap()
                 }
                 
-                 fn insert_new_mapper_for_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
+                 fn insert_new_mapper_with_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
                   where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
                  {
-                    let m = Self::new_mapper_for_handler( #sql_table_alias, handler);
+                    let m = Self::new_mapper_with_handler( #sql_table_alias, handler);
                     cache.insert( String::from( #struct_name ), m);
                     cache.get_mut( #struct_name ).unwrap()
                   }
@@ -244,11 +235,11 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     Self::map(&mut m, "", table_alias);
                     m
                 }
-                fn new_mapper_for_handler<H>(table_alias: &str,  handler: H) -> toql::sql_mapper::SqlMapper 
+                fn new_mapper_with_handler<H>(table_alias: &str,  handler: H) -> toql::sql_mapper::SqlMapper 
                   where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
                 {
                     let s = format!("{} {}",#sql_table_name, table_alias );
-                    let mut m = toql::sql_mapper::SqlMapper::new_for_handler( if table_alias.is_empty() { #sql_table_name } else { &s }, handler);
+                    let mut m = toql::sql_mapper::SqlMapper::new_with_handler( if table_alias.is_empty() { #sql_table_name } else { &s }, handler);
                     Self::map(&mut m, "", table_alias);
                     m
                 }

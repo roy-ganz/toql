@@ -1,6 +1,26 @@
+//!
+//! This module contains the query and all functions to build one programatically. 
+//!
+//! ## Example
+//! 
+//! ```rust
+//! 
+//! let  q = Query::new()
+//!        .and(Field::from("foo").hide().eq(5).aggregate().asc(1))
+//!        .and(Field::from("bar").desc(2));
+//!    assert_eq!("+1.foo !EQ 5,-2bar", q.to_string());
+//! ```
+//! 
+//! To avoid typing mistakes the Toql derive builds functions for all fields in a struct. 
+//! In the example above it would be possible to write
+//! `.and(Foobar::fields().bar().desc(2)` for a derived struct `Foobar`.
+//! 
+//! Read the guide for more information on the query syntax.
+//! 
 use std::fmt;
 use std::collections::BTreeSet;
 
+/// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
 pub trait FilterArg<T> {
     fn to_sql(self) -> String;
 }
@@ -82,20 +102,34 @@ impl FilterArg<f64> for f64 {
 }
 
 #[derive(Clone, Debug)]
-pub enum Concatenation {
+pub(crate) enum Concatenation {
     And,
     Or,
 }
 
+
+/// A wildcard is used to select all fields from top or from a path.
+/// 
+/// Example
+/// ```rust
+///  let q = Query::new().and(Wildcard::new()).and(Wildcard::from("bar")); // more elegant -> Query::wildcard().and(...)
+/// 
+///  assert_eq("*, bar_*", q.to_string());
+/// ```
+/// Note that the Toql derive builds a wildcard function too. 
+/// If a struct `Foo` contained a struct `Bar`, it would be possible to replace the second call to _and()_ with  `.and(Bar::fields().bar().wildcard())` 
 #[derive(Clone, Debug)]
 pub struct Wildcard {
-    pub concatenation: Concatenation,
-    pub path: String
+    pub(crate) concatenation: Concatenation,
+    pub(crate) path: String
 }
+
 impl Wildcard {
+    /// Creates a new wildcard to select all fields from top 
     pub fn new() -> Self {
         Wildcard { concatenation :Concatenation::And, path: String::from("")}
     }
+    /// Creates a new wildcard to select all fields from a path
     pub fn from<T>(path: T) -> Self
     where
         T: Into<String>,
@@ -124,18 +158,28 @@ impl Wildcard {
     }
 } 
 
-
+/// A Toql field can select, filter and order a database column or expression
+/// A field can be created from a field name and filtered, sorted with its methods.
+/// However the Toql derive creates fields strructs for a derived struct, so instead of
+/// ```rust
+///  let f = Field:from("id");
+/// ```
+/// its easier and recommended to write
+/// ```rust
+///  let f = User::fields().id();
+/// ```
 #[derive(Clone, Debug)]
 pub struct Field {
-    pub concatenation: Concatenation,
-    pub name: String,
-    pub hidden: bool,
-    pub order: Option<FieldOrder>,
-    pub filter: Option<FieldFilter>,
-    pub aggregation: bool,
+    pub(crate) concatenation: Concatenation,
+    pub(crate) name: String,
+    pub(crate) hidden: bool,
+    pub(crate) order: Option<FieldOrder>,
+    pub(crate) filter: Option<FieldFilter>,
+    pub(crate) aggregation: bool,
 }
 
 impl Field {
+    /// Create a field for the given name.
     pub fn from<T>(name: T) -> Self
     where
         T: Into<String>,
@@ -158,63 +202,77 @@ impl Field {
             aggregation: false,
         }
     }
-
+    /// Hide field. Useful if a field should not be selected, but be used for filtering.
     pub fn hide(mut self) -> Self {
         self.hidden = true;
         self
     }
+    /// Aggregate a field to make the filter be in SQL HAVING clause instead of WHERE clause
     pub fn aggregate(mut self) -> Self {
         self.aggregation = true;
         self
     }
+    /// Use this field to order records in ascending way. Give ordering priority when records are ordered by multiple fields.
     pub fn asc(mut self, order: u8) -> Self {
         self.order = Some(FieldOrder::Asc(order));
         self
     }
+    /// Use this field to order records in descending way. Give ordering priority when records are ordered by multiple fields.
     pub fn desc(mut self, order: u8) -> Self {
         self.order = Some(FieldOrder::Desc(order));
         self
     }
+    /// Filter records with _equal_ predicate.
     pub fn eq<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Eq(criteria.to_sql()));
         self
     }
+    /// Filter records with _equal null_ predicate.
     pub fn eqn(mut self) -> Self {
         self.filter = Some(FieldFilter::Eqn);
         self
     }
+    /// Filter records with _not equal_ predicate.
     pub fn ne<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Ne(criteria.to_sql()));
         self
     }
+    /// Filter records with _not equal null_ predicate.
     pub fn nen(mut self) -> Self {
         self.filter = Some(FieldFilter::Nen);
         self
     }
+    /// Filter records with greater that_ predicate.
     pub fn gt<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Gt(criteria.to_sql()));
         self
     }
+    /// Filter records with greater or equal_ predicate.
     pub fn ge<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Ge(criteria.to_sql()));
         self
     }
+    /// Filter records with lesser than_ predicate.
     pub fn lt<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Lt(criteria.to_sql()));
         self
     }
+    /// Filter records with lesser or equal_ predicate.
     pub fn le<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Le(criteria.to_sql()));
         self
     }
+    /// Filter records with _between_ predicate. This is inclusive, so `x bw 3 6` is the same as `x ge 3, x le 6`
     pub fn bw<T>(mut self, lower: impl FilterArg<T>, upper: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Bw(lower.to_sql(), upper.to_sql()));
         self
     }
+    /// Filter records with _like_ predicate.
     pub fn lk<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Lk(criteria.to_sql()));
         self
     }
+    /// Filter records with _regex_ predicate.
     pub fn re<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Re(criteria.to_sql()));
         self
@@ -223,18 +281,23 @@ impl Field {
         self.filter = Some(FieldFilter::Sc(criteria.to_sql()));
         self
     } */
+    /// Filter records with _inside_ predicate.
     pub fn ins<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
         self.filter = Some(FieldFilter::In(
             criteria.into_iter().map(|c| c.to_sql()).collect(),
         ));
         self
     }
+    /// Filter records with _outside_ predicate.
     pub fn out<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
         self.filter = Some(FieldFilter::Out(
             criteria.into_iter().map(|c| c.to_sql()).collect(),
         ));
         self
     }
+    /// Filter records with custom function. 
+    /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
+    /// See _custom handler test_ for an example.
     pub fn fnc<U, T>(mut self, name: U, args: Vec<impl FilterArg<T>>) -> Self
     where
         U: Into<String>,
@@ -357,6 +420,8 @@ impl Into<QueryToken> for Field {
     }
 }
 
+/// The filter operation on a field. You use this when creating a [FieldHandler](../sql_mapper/trait.FieldHandler.html)
+/// to provide custom functions through the _Fn_ filter or implement a alternative mapping to SQL.
 #[derive(Clone, Debug)]
 pub enum FieldFilter {
     Eq(String),
@@ -376,13 +441,13 @@ pub enum FieldFilter {
     Fn(String, Vec<String>), // Function name, args
 }
 #[derive(Clone, Debug)]
-pub enum FieldOrder {
+pub(crate) enum FieldOrder {
     Asc(u8),
     Desc(u8),
 }
 
 #[derive(Clone, Debug)]
-pub enum QueryToken {
+pub(crate) enum QueryToken {
     LeftBracket(Concatenation),
     RightBracket,
     Wildcard(Wildcard),
@@ -418,30 +483,46 @@ impl ToString for QueryToken {
     }
 }
 
+
+
+/// A Query contains fields and wildcards.
+/// It can be turned into SQL using the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
+/// 
+/// To build a big query simple add fields and wildcards with _and_ resp. _or_ function. 
+/// 
+/// Watch out: Logical OR has precendence over AND. So _a AND b OR c_ is the same as _a AND (b OR c)_.
+/// To insert parens in a query, build a separate query and add it with or. This will add parens automatically.
+/// 
+/// ```rust
+/// let q1= Query::new().and(Field("b").eq(3)).and(Field("c").eq(2));
+/// let q2 = Query::new().and(Field("a").eq(1)).or(q1);
+///
+/// assert_eq("a eq 1; (b eq 3, c eq 2)", q2,to_string())
 #[derive(Clone, Debug)]
 pub struct Query {
-    pub tokens: Vec<QueryToken>,
+    pub(crate) tokens: Vec<QueryToken>,
     pub distinct: bool,
     pub roles: BTreeSet<String>
 }
 
 
-
-
 impl Query {
+    /// Create a new empty query.
     pub fn new() -> Self {
         Query { tokens: vec![], distinct: false, roles: BTreeSet::new() }
 
     }
+    /// Create a new query that select all top fields.
      pub fn wildcard() -> Self {
         Query { tokens: vec![QueryToken::Wildcard(Wildcard::new())], distinct: false, roles: BTreeSet::new() }
 
     }
+    /// Create a new query that select all top fields and all dependend fields. This is the best :)
      pub fn double_wildcard() -> Self {
         Query { tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)], distinct: false, roles: BTreeSet::new() }
 
     }
-
+    /// Concatenate field or query with AND to query
     pub fn and<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
@@ -449,6 +530,7 @@ impl Query {
         self.tokens.append(&mut query.into().tokens);
         self
     }
+    /// Concatenate field or query with OR to query. Puts parens around queries with more than one field.
     pub fn or<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,

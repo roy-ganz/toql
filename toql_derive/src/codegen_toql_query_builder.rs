@@ -3,18 +3,15 @@
 use crate::annot::Toql;
 use crate::annot::ToqlField;
 use quote::quote;
-
 use proc_macro2::Span;
-
 use heck::MixedCase;
-use heck::SnakeCase;
 use syn::Ident;
 
 pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     struct_ident: &'a Ident,
     vis: &'a syn::Visibility,
-    sql_table_name: String,
-    sql_table_alias: String,
+   // sql_table_name: String,
+   // sql_table_alias: String,
     builder_fields_struct: Ident,
     build_wildcard: bool,
     builder_fields: Vec<proc_macro2::TokenStream>,
@@ -24,15 +21,10 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
 impl<'a> GeneratedToqlQueryBuilder<'a> {
     pub(crate) fn from_toql(toql: &Toql) -> GeneratedToqlQueryBuilder {
        
-       let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
         GeneratedToqlQueryBuilder {
             struct_ident: &toql.ident,
             vis: &toql.vis,
-            sql_table_name: toql.table.clone().unwrap_or(renamed_table), //toql.ident.to_string(),
-            sql_table_alias: toql
-                .alias
-                .clone()
-                .unwrap_or(toql.ident.to_string().to_snake_case()), //  toql.ident.to_string().to_snake_case(),
+         
             builder_fields_struct: syn::Ident::new(
                 &format!("{}Fields", toql.ident.to_string()),
                 Span::call_site(),
@@ -48,7 +40,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
         let field_ident = &field.ident;
         let vis = &_toql.vis;
 
-        // Omit wildcard function, if there is already a field card wildcard
+        // Omit wildcard function, if there is already a field called `wildcard`
         if field_ident.as_ref().unwrap() == "wildcard" {
             self.build_wildcard = false;
         }
@@ -69,12 +61,9 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
             let field_type = field.first_non_generic_type().unwrap();
 
-           /*  let path_ident =
-                syn::Ident::new(&field_type.to_string().to_snake_case(), Span::call_site()); */
+        
             let type_ident: &Ident = field_type;
-           /*  let field_type_ident =
-                syn::Ident::new(&format!("{}Fields", type_ident), Span::call_site()); */
-            let path_fields_struct =  quote!( < #type_ident as toql::query_builder::FieldsType>::FieldsType); //quote!( super :: #path_ident :: #field_type_ident );
+            let path_fields_struct =  quote!( < #type_ident as toql::fields_type::FieldsType>::FieldsType); 
 
             self.builder_fields.push(quote!(
                         #vis fn #field_ident (mut self) -> #path_fields_struct {
@@ -106,7 +95,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
         let builder = quote!(
 
-            impl toql::query_builder::FieldsType for #struct_ident {
+            impl toql::fields_type::FieldsType for #struct_ident {
                 type FieldsType = #builder_fields_struct ;
             }
 
