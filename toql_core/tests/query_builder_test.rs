@@ -28,7 +28,7 @@ fn build_filters() {
         .and(Field::from("foo").out(vec![1, 2, 3]))
     .and(Field::from("foo").fnc("ma", vec!["bar"]));
 
-    assert_eq!("foo LK foo,foo RE foo,foo BW 41 43,foo IN 1 2 3,foo OUT 1 2 3,foo FN ma bar", q.to_string());
+    assert_eq!("foo LK 'foo',foo RE 'foo',foo BW 41 43,foo IN 1 2 3,foo OUT 1 2 3,foo FN ma 'bar'", q.to_string());
 }
 
 #[test]

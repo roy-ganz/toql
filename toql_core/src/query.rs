@@ -1,24 +1,25 @@
 //!
-//! This module contains the query and all functions to build one programatically. 
+//! This module contains the query and all functions to build one programatically.
 //!
 //! ## Example
-//! 
-//! ```rust
+//!
+//! ```ignore
+//! use toql::query::{Query, Field};
 //! 
 //! let  q = Query::new()
 //!        .and(Field::from("foo").hide().eq(5).aggregate().asc(1))
 //!        .and(Field::from("bar").desc(2));
 //!    assert_eq!("+1.foo !EQ 5,-2bar", q.to_string());
 //! ```
-//! 
-//! To avoid typing mistakes the Toql derive builds functions for all fields in a struct. 
+//!
+//! To avoid typing mistakes the Toql derive builds functions for all fields in a struct.
 //! In the example above it would be possible to write
 //! `.and(Foobar::fields().bar().desc(2)` for a derived struct `Foobar`.
-//! 
+//!
 //! Read the guide for more information on the query syntax.
-//! 
-use std::fmt;
+//!
 use std::collections::BTreeSet;
+use std::fmt;
 
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
 pub trait FilterArg<T> {
@@ -107,27 +108,30 @@ pub(crate) enum Concatenation {
     Or,
 }
 
-
 /// A wildcard is used to select all fields from top or from a path.
-/// 
+///
 /// Example
-/// ```rust
+/// ```ignore
+///
 ///  let q = Query::new().and(Wildcard::new()).and(Wildcard::from("bar")); // more elegant -> Query::wildcard().and(...)
-/// 
-///  assert_eq("*, bar_*", q.to_string());
+///
+///  assert_eq!("*, bar_*", q.to_string());
 /// ```
-/// Note that the Toql derive builds a wildcard function too. 
-/// If a struct `Foo` contained a struct `Bar`, it would be possible to replace the second call to _and()_ with  `.and(Bar::fields().bar().wildcard())` 
+/// Note that the Toql derive builds a wildcard function too.
+/// If a struct `Foo` contained a struct `Bar`, it would be possible to replace the second call to _and()_ with  `.and(Bar::fields().bar().wildcard())`
 #[derive(Clone, Debug)]
 pub struct Wildcard {
     pub(crate) concatenation: Concatenation,
-    pub(crate) path: String
+    pub(crate) path: String,
 }
 
 impl Wildcard {
-    /// Creates a new wildcard to select all fields from top 
+    /// Creates a new wildcard to select all fields from top
     pub fn new() -> Self {
-        Wildcard { concatenation :Concatenation::And, path: String::from("")}
+        Wildcard {
+            concatenation: Concatenation::And,
+            path: String::from(""),
+        }
     }
     /// Creates a new wildcard to select all fields from a path
     pub fn from<T>(path: T) -> Self
@@ -137,10 +141,12 @@ impl Wildcard {
         let mut path = path.into();
         #[cfg(debug)]
         {
-            if !path.chars().all(|x| x.is_alphanumeric() || x =='_') {
-                panic!("Path {:?} must only contain alphanumeric characters and underscores.", path);
+            if !path.chars().all(|x| x.is_alphanumeric() || x == '_') {
+                panic!(
+                    "Path {:?} must only contain alphanumeric characters and underscores.",
+                    path
+                );
             }
-            
         }
         // Remove optional trainling *
         if path.ends_with("*") {
@@ -153,19 +159,20 @@ impl Wildcard {
 
         Wildcard {
             concatenation: Concatenation::And,
-            path: path.into()
+            path: path.into(),
         }
     }
-} 
+}
 
 /// A Toql field can select, filter and order a database column or expression
 /// A field can be created from a field name and filtered, sorted with its methods.
-/// However the Toql derive creates fields strructs for a derived struct, so instead of
-/// ```rust
-///  let f = Field:from("id");
+/// However the Toql derive creates fields structs for a derived struct, so instead of
+/// ``` ignore
+///  
+///  let f = Field::from("id");
 /// ```
 /// its easier and recommended to write
-/// ```rust
+/// ``` ignore
 ///  let f = User::fields().id();
 /// ```
 #[derive(Clone, Debug)]
@@ -277,7 +284,7 @@ impl Field {
         self.filter = Some(FieldFilter::Re(criteria.to_sql()));
         self
     }
-  /*   pub fn sc<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    /*   pub fn sc<T>(mut self, criteria: impl FilterArg<T>) -> Self {
         self.filter = Some(FieldFilter::Sc(criteria.to_sql()));
         self
     } */
@@ -295,7 +302,7 @@ impl Field {
         ));
         self
     }
-    /// Filter records with custom function. 
+    /// Filter records with custom function.
     /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
     /// See _custom handler test_ for an example.
     pub fn fnc<U, T>(mut self, name: U, args: Vec<impl FilterArg<T>>) -> Self
@@ -309,9 +316,6 @@ impl Field {
         self
     }
 }
-
-
-
 
 impl ToString for Field {
     fn to_string(&self) -> String {
@@ -379,7 +383,7 @@ impl ToString for Field {
                 s.push_str("RE ");
                 s.push_str(arg);
             }
-           /*  Some(FieldFilter::Sc(ref arg)) => {
+            /*  Some(FieldFilter::Sc(ref arg)) => {
                 s.push_str("SC ");
                 s.push_str(arg);
             } */
@@ -437,7 +441,7 @@ pub enum FieldFilter {
     In(Vec<String>),
     Out(Vec<String>),
     Re(String),
-  //  Sc(String),
+    //  Sc(String),
     Fn(String, Vec<String>), // Function name, args
 }
 #[derive(Clone, Debug)]
@@ -457,7 +461,9 @@ pub(crate) enum QueryToken {
 
 impl From<&str> for QueryToken {
     fn from(s: &str) -> QueryToken {
-        if s.ends_with("*") {
+        if s == "**" {
+            QueryToken::DoubleWildcard(Concatenation::And)
+        } else if s.ends_with("*") {
             QueryToken::Wildcard(Wildcard::from(s))
         } else {
             QueryToken::Field(Field::from(s))
@@ -476,51 +482,57 @@ impl ToString for QueryToken {
             QueryToken::Field(
                 field, /*Field {concatenation, name, hidden, order, filter, aggregation}*/
             ) => field.to_string(),
-            QueryToken::Wildcard( wildcard) => format!("{}*", wildcard.path),
-             QueryToken::DoubleWildcard(_,) => String::from("**"),
+            QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
+            QueryToken::DoubleWildcard(_) => String::from("**"),
         };
         s
     }
 }
 
-
-
 /// A Query contains fields and wildcards.
 /// It can be turned into SQL using the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
-/// 
-/// To build a big query simple add fields and wildcards with _and_ resp. _or_ function. 
-/// 
-/// Watch out: Logical OR has precendence over AND. So _a AND b OR c_ is the same as _a AND (b OR c)_.
+///
+/// To build a big query simple add fields and wildcards with _and_ resp. _or_ function.
+///
+/// Watch out: Logical AND has precendence over OR. So _a AND b OR c_ is the same as _a AND (b OR c)_.
 /// To insert parens in a query, build a separate query and add it with or. This will add parens automatically.
-/// 
-/// ```rust
-/// let q1= Query::new().and(Field("b").eq(3)).and(Field("c").eq(2));
+///
+/// ``` ignore
+/// let q1 = Query::new().and(Field("b").eq(3)).and(Field("c").eq(2));
 /// let q2 = Query::new().and(Field("a").eq(1)).or(q1);
 ///
-/// assert_eq("a eq 1; (b eq 3, c eq 2)", q2,to_string())
+/// assert_eq!("a eq 1; (b eq 3, c eq 2)", q2.to_string())
 #[derive(Clone, Debug)]
 pub struct Query {
     pub(crate) tokens: Vec<QueryToken>,
     pub distinct: bool,
-    pub roles: BTreeSet<String>
+    pub roles: BTreeSet<String>,
 }
-
 
 impl Query {
     /// Create a new empty query.
     pub fn new() -> Self {
-        Query { tokens: vec![], distinct: false, roles: BTreeSet::new() }
-
+        Query {
+            tokens: vec![],
+            distinct: false,
+            roles: BTreeSet::new(),
+        }
     }
     /// Create a new query that select all top fields.
-     pub fn wildcard() -> Self {
-        Query { tokens: vec![QueryToken::Wildcard(Wildcard::new())], distinct: false, roles: BTreeSet::new() }
-
+    pub fn wildcard() -> Self {
+        Query {
+            tokens: vec![QueryToken::Wildcard(Wildcard::new())],
+            distinct: false,
+            roles: BTreeSet::new(),
+        }
     }
     /// Create a new query that select all top fields and all dependend fields. This is the best :)
-     pub fn double_wildcard() -> Self {
-        Query { tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)], distinct: false, roles: BTreeSet::new() }
-
+    pub fn double_wildcard() -> Self {
+        Query {
+            tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)],
+            distinct: false,
+            roles: BTreeSet::new(),
+        }
     }
     /// Concatenate field or query with AND to query
     pub fn and<T>(mut self, query: T) -> Self
@@ -550,7 +562,6 @@ impl Query {
         if bracket_needed {
             self.tokens.push(QueryToken::LeftBracket(Concatenation::Or));
         }
-        
         // Prevent brackets on single token
         else {
             // Make single token concat with or
@@ -592,7 +603,7 @@ impl Query {
 // Doc: Display  implements automatically .to_string()
 impl fmt::Display for Query {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-       fn get_concatenation(c: &Concatenation) -> char {
+        fn get_concatenation(c: &Concatenation) -> char {
             match c {
                 Concatenation::And => ',',
                 Concatenation::Or => ';',
@@ -606,11 +617,12 @@ impl fmt::Display for Query {
             if concatenation_needed {
                 match &token {
                     QueryToken::LeftBracket(concatenation)
-                    | QueryToken::DoubleWildcard(concatenation)
-                     => {
+                    | QueryToken::DoubleWildcard(concatenation) => {
                         s.push(get_concatenation(concatenation))
                     }
-                    QueryToken::Wildcard(wildcard) => s.push(get_concatenation(&wildcard.concatenation)),
+                    QueryToken::Wildcard(wildcard) => {
+                        s.push(get_concatenation(&wildcard.concatenation))
+                    }
                     QueryToken::Field(field) => s.push(get_concatenation(&field.concatenation)),
                     _ => {}
                 }
@@ -620,6 +632,7 @@ impl fmt::Display for Query {
                 QueryToken::LeftBracket(..) => concatenation_needed = false,
                 QueryToken::Field(..) => concatenation_needed = true,
                 QueryToken::Wildcard(..) => concatenation_needed = true,
+                QueryToken::DoubleWildcard(..) => concatenation_needed = true,
                 _ => {}
             }
         }
@@ -629,7 +642,7 @@ impl fmt::Display for Query {
         if t == ',' || t == ';' {
             s = s.trim_start_matches(",").trim_start_matches(";").to_owned();
         }
-        
+
         write!(f, "{}", s)
     }
 }
@@ -641,7 +654,6 @@ impl From<Field> for Query {
         q
     }
 }
-
 
 impl From<Wildcard> for Query {
     fn from(wildcard: Wildcard) -> Query {
@@ -655,8 +667,7 @@ impl From<&str> for Query {
     fn from(string: &str) -> Query {
         let mut q = Query::new();
 
-        q.tokens.push(
-        if string == "**" {
+        q.tokens.push(if string == "**" {
             QueryToken::DoubleWildcard(Concatenation::And)
         } else if string.ends_with("*") {
             QueryToken::Wildcard(Wildcard::from(string))

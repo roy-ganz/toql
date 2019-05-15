@@ -3,8 +3,8 @@
 //!
 //! ## Example
 //! 
-//! ```rust
-//! let  query = QueryParser::parse("*, +username").unwrap()
+//! ``` ignore
+//! let  query = QueryParser::parse("*, +username").unwrap();
 //! assert_eq!("*, +username", query.to_string());
 //! ```
 //! Read the guide for more information on the query syntax.

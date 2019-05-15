@@ -15,6 +15,7 @@ pest_derive = "2.0"
 mysql = {version = "14.2", optional = true}
 rocket= {version = "0.4", optional = true}
 log = {version = "0.4", optional = true}
+enquote="1"
 
 [features]
 mysqldb = ["mysql"]

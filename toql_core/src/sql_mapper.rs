@@ -6,12 +6,12 @@
 //! The result hold the different parts of an SQL query and can be turned into SQL that can be sent to the database.
 //! 
 //! ## Example
-//! ```rust
-//! let mapper::new("Bar b")
+//! ``` ignore
+//! let mapper = SqlMapper::new("Bar b")
 //!     .map_field("foo", "b.foo")
 //!     .map_field("fuu_id", "u.foo")
 //!     .map_field("faa", "(SELECT COUNT(*) FROM Faa WHERE Faa.bar_id = b.id)")
-//!     .join("fuu", LEFT JOIN Fuu u ON (b.foo_id = u.id));
+//!     .join("fuu", "LEFT JOIN Fuu u ON (b.foo_id = u.id)");
 //! ```
 //! 
 //! To map a full struct it's possible to implement the [Mapped](trait.Mapped.html) trait and call [map](struct.SqlMapper.html#method.map).
@@ -39,6 +39,8 @@ use crate::sql_builder::SqlBuilderError;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use enquote::unquote;
 
 #[derive(Debug)]
 #[allow(dead_code)] // IMPROVE Having AND None are considered unused
@@ -132,11 +134,15 @@ trait MapperFilter {
 /// - handle fields that match multiple columns (full text index)
 /// 
 /// ## Example (see full working example in tests)
-/// ```rust
+/// ``` ignore
+/// use toql::query::FieldFilter;
+/// use toql::sql_mapper::FieldHandler;
+/// use toql::sql_builder::SqlBuilderError;
 /// struct MyHandler {};
+/// 
 /// impl FieldHandler for MyHandler {
 ///     fn build_filter(&self, sql: &str, _filter: &FieldFilter) 
-///     ->Result<Option<String>, toql::sql_builder::SqlBuilderError> {
+///     ->Result<Option<String>, SqlBuilderError> {
 ///        --snip--
 ///     }
 ///     fn build_param(&self, _filter: &FieldFilter) -> Vec<String> {
@@ -144,7 +150,7 @@ trait MapperFilter {
 ///     }
 /// }
 /// let my_handler = MyHandler {};
-/// let mapper = Mapper::new_with_handler(my_handler);
+/// let mapper = SqlMapper::new_with_handler(my_handler);
 /// 
 pub trait FieldHandler {
     /// Return sql if you want to select it.
@@ -170,26 +176,32 @@ impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sy
     }
 }
 
-
+pub fn sql_param(s: String) -> String {
+    if s.chars().next().unwrap_or(' ')== '\'' {
+        return unquote(&s).expect("Argument invalid")    // Must be valid, because Pest rule
+    } 
+        s
+    
+}
 
 impl FieldHandler for BasicFieldHandler {
     
     fn build_param(&self, filter: &FieldFilter) -> Vec<String> {
         match filter {
-            FieldFilter::Eq(criteria) => vec![criteria.clone()],
+            FieldFilter::Eq(criteria) => vec![sql_param(criteria.clone()) ],
             FieldFilter::Eqn => vec![],
-            FieldFilter::Ne(criteria) => vec![criteria.clone()],
+            FieldFilter::Ne(criteria) => vec![sql_param(criteria.clone())],
             FieldFilter::Nen => vec![],
-            FieldFilter::Ge(criteria) => vec![criteria.clone()],
-            FieldFilter::Gt(criteria) => vec![criteria.clone()],
-            FieldFilter::Le(criteria) => vec![criteria.clone()],
-            FieldFilter::Lt(criteria) => vec![criteria.clone()],
-            FieldFilter::Bw(lower, upper) => vec![lower.clone(), upper.clone()],
-            FieldFilter::Re(criteria) => vec![criteria.clone()],
+            FieldFilter::Ge(criteria) => vec![sql_param(criteria.clone())],
+            FieldFilter::Gt(criteria) => vec![sql_param(criteria.clone())],
+            FieldFilter::Le(criteria) => vec![sql_param(criteria.clone())],
+            FieldFilter::Lt(criteria) => vec![sql_param(criteria.clone())],
+            FieldFilter::Bw(lower, upper) => vec![sql_param(lower.clone()), sql_param(upper.clone())],
+            FieldFilter::Re(criteria) => vec![sql_param(criteria.clone())],
        //     FieldFilter::Sc(criteria) => vec![criteria.clone()],
-            FieldFilter::In(args) => args.clone(),
-            FieldFilter::Out(args) => args.clone(),
-            FieldFilter::Lk(criteria) => vec![criteria.clone()],
+            FieldFilter::In(args) => args.iter().map(|a| sql_param(a.to_string())).collect(),
+            FieldFilter::Out(args) => args.iter().map(|a| sql_param(a.to_string())).collect(), //args.clone(),
+            FieldFilter::Lk(criteria) => vec![sql_param(criteria.clone())],
             FieldFilter::Fn(_name, _args) => vec![], // must be implemented by user
         }
     }
@@ -309,8 +321,8 @@ impl SqlMapper {
     }
     /// Maps all fields from a struct as a joined dependency. 
     /// Example: To map for a user an `Address` struct that implements `Mapped`
-    /// ```rust 
-    /// user_mapper.map_join<Address>("address", "a")
+    /// ``` ignore
+    /// user_mapper.map_join<Address>("address", "a");
     /// ```
     pub fn map_join<'a, T: Mapped>(
         &'a mut self,

@@ -4,10 +4,10 @@
 //!
 //! ## Example (Read the guide for derive attributes)
 //! 
-//! ```rust
+//! ``` ignore
 //! #[derive(Debug, PartialEq, Toql)]
 //! struct NewUser {
-//!     #[toql(skip_insert)]
+//!     #[toql(skip_inup)]
 //!     id: u8, // Auto value, no insert
 //!     username: Option<String>,
 //! }

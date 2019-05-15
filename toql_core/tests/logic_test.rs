@@ -27,7 +27,7 @@ fn logic_and_or() {
         "SELECT id, title, null FROM Book WHERE title = ? OR title = ? AND id <> ?",
         result.to_sql()
     );
-    assert_eq!(*result.params(), ["'Foo'", "'Bar'", "3"]);
+    assert_eq!(*result.params(), ["Foo", "Bar", "3"]);
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn logic_where_parens() {
         "SELECT id, title, null FROM Book WHERE (title = ? OR (title = ?)) AND id <> ?",
         result.to_sql()
     );
-    assert_eq!(*result.params(), ["'Foo'", "'Bar'", "3"]);
+    assert_eq!(*result.params(), ["Foo", "Bar", "3"]);
 }
 #[test]
 fn logic_where_having_parens() {
@@ -52,5 +52,5 @@ fn logic_where_having_parens() {
         "SELECT id, title, null FROM Book WHERE (title = ?) AND id <> ? HAVING ((title = ?))",
         result.to_sql()
     );
-    assert_eq!(*result.params(), ["'Foo'", "3", "'Bar'"]);
+    assert_eq!(*result.params(), ["Foo", "3", "Bar"]);
 }

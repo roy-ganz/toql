@@ -75,15 +75,15 @@ fn custom_handler() {
         ;
 
     let query = QueryParser::parse("id GT 2, title FN LN 5").unwrap();  
-    
+    println!("{:?}", query);
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
-    assert_eq!(
+     assert_eq!(
         "SELECT b.id, b.title FROM Book b WHERE b.id > ? AND LENGTH(b.title) = ?",
         result.to_sql()
     );
     assert_eq!(*result.params(), ["2", "5"]);
-
+ 
 }
 
 

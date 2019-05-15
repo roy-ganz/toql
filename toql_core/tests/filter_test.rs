@@ -34,7 +34,7 @@ fn filter_lk() {
         "SELECT id, title, null, null, null FROM Book WHERE title LIKE ?",
         result.to_sql()
     );
-    assert_eq!(*result.params(), ["'%Foobar%'"]);
+    assert_eq!(*result.params(), ["%Foobar%"]);
 }
 
 #[test]

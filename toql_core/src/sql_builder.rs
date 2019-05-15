@@ -5,9 +5,9 @@
 //! 
 //! ## Example
 //! 
-//! ```rust
+//! ``` ignore
 //! 
-//! let  query = Query::wildcard().and(Field::from("foo")eq(5));
+//! let  query = Query::wildcard().and(Field::from("foo").eq(5));
 //! let mapper::new("Bar b").map_field("foo", "b.foo");
 //! let builder_result = QueryBuilder::new().build_query(&mapper, &query);
 //! assert_eq!("SELECT b.foo FROM Bar b WHERE b.foo = ?", builder_result.to_sql());

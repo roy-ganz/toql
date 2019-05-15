@@ -29,10 +29,10 @@
 //!
 //! ## Small Example
 //! Using Toql without any dependency features is possible and easy. Here we go:
-//! ```
+//! ``` rust
 //! use toql::{query_parser::QueryParser, sql_mapper::SqlMapper, sql_builder::SqlBuilder};
 //! 
-//! let query = QueryParser::parse("id, +title LK %foo%").unwrap();
+//! let query = QueryParser::parse("id, +title LK '%foo%'").unwrap();
 //! let mut mapper = SqlMapper::new("Book b");
 //!     mapper
 //!         .map_field("id", "b.id")

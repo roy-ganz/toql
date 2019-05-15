@@ -1,9 +1,22 @@
-//char =  { !("'") ~ ANY }
-//string = @{ char* }
-//num_value =  { ASCII_DIGIT+ }
-//text_value =  { "'" ~ string ~ "'" }
-//value= { num_value | text_value  } 
-value = {  ANY+ }
+/* char =  { !("'") ~ ANY }
+string = @{ char* }
+num_value =  { ASCII_DIGIT+ }
+text_value =  { "'" ~ string ~ "'" }
+value= { num_value | text_value  }  */
+char = {
+    !("'" | "\\") ~ ANY
+    | "\\" ~ ("'" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+string = ${ "'" ~ inner ~ "'" }
+inner = @{ char* }
+number = @{
+    "-"?
+    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+    ~ ("." ~ ASCII_DIGIT*)?
+    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+value= { number | string  }
 field_filter = { (("FN" ~ name) | name) ~ value+}
 sort = @{ ("+" | "-") ~ASCII_DIGIT* }
 name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
