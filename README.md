@@ -37,7 +37,7 @@ ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} 
 My near term goal is to support more web frameworks and databases. However I would like to stabilise the API first. So you are welcome to play around and test it. **Don't use it in production yet**. Comments, bug fixes and quality improvements are welcome. For features please hold on.
 
 ## Related projects
-[Diesel](http://diesel.rs/) is an  ORM for RUST
+[Diesel](http://diesel.rs/) is an  ORM for Rust
 [GraphQL](https://github.com/graphql-rust) can query data.
 
 ## Background
