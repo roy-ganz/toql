@@ -2,7 +2,7 @@
 
 This guide will explain you how to use Toql to query and modify data from a Database.
 
-Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on (Github )[www.github.com/roy-ganz/toql]
+Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on [Github](https://github.com/roy-ganz/toql/blob/master/guide/src/introduction.md)
 
 ## Getting started
 
@@ -15,8 +15,6 @@ This book is split into several sections, with this introduction being the first
 * [SQL Mapper](sql-mapper) - How to fine tune and tweak the derives output.
 * [Rocket](rocket-integration.md) - Use rocket to provide your REST API.
 * [MySQL](mysql-integration.md) - Use MySQL as a Database.
-
-* __3rd party integration __  to work well together with Rocket and MySQL. (More planned).
 
 Toql _Transfer Object Query Language_ is a library that turns a query string into SQL to retrieve data records. 
 It is useful for web clients to get database records from a REST interface. 

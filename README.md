@@ -3,7 +3,8 @@
 ### Description
 Toql *Transfer object query language* is a query language to build SQL statements to retrieve filtered, ordered and indiviually selected columns from a database. It's aim is to give web clients an easy way to get data from a server over a REST interface.
 
-Toql is **not** an ORM. It's purpose is not to hide SQL but to make it more easy to build boilerplate SQL. *Don't be afraid of SQuirreLs 🐿️*
+Toql is **not** an ORM. It's purpose is not to hide SQL but to make it more easy to build boilerplate SQL. 
+*Don't be afraid of SQuirreLs 🐿️*
 
 ### Installation
 
@@ -18,14 +19,14 @@ toql ="0.1"
 
 The toql project consists of 
 
-* A __query parser__, typically used to parse query string from web clients.
-* A __query builder__, used to modify or create queries on the fly.
-* An __SQL mapper__, that translates toql fields into SQL columns or expressions.
-* A __SQL builder__, that turns a query into SQL with the hep of the mapper.
-* A __toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
+* A __query parser__ to parse query string from web clients.
+* A __query builder__ to modify or create queries on the fly.
+* An __SQL mapper__, that translates Toql fields into SQL columns or expressions.
+* A __SQL builder__ to turn a query into SQL with the help of the mapper.
+* A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
 * __3rd party integration __  to work well together with Rocket and MySQL.
 
-Make sure you check out the [guide](http://github.com/roy-ganz/toql/guide/index.html) or run the example of a full CRUD with Rocket and MySQL. 
+Make sure you check out the [guide](https://github.com/roy-ganz/toql/blob/master/guide/src/introduction.md) or run the example of a full CRUD with Rocket and MySQL. 
 
 ```bash
 ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
