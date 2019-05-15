@@ -42,7 +42,7 @@ My near term goal is to support more web frameworks and databases. However I wou
 
 ## Background
 
-I developped the initial Toql language about 5 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](http://www.schoolsheet.com), a webservice I created in Java for my teaching. The Rust implementation is must faster though ;)
+I developed the initial Toql language about 5 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](http://www.schoolsheet.com), a webservice I created in Java for my teaching. The Rust implementation is must faster though ;)
 
 
 ## License
