@@ -1,4 +1,5 @@
-use toql::derive::Toql;
+
+use toql_derive::Toql;
 use toql::indelup::Indelup;
 
 #[derive(Debug, PartialEq, Toql)]
