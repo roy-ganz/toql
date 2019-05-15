@@ -27,4 +27,4 @@ env_logger="0.6"
 mysqldb = ["mysql"]
 
 [dev-dependencies]
-toql = {version = "0.1", path="../../toql", features=["mysql"]}
+toql = {version = "0.1", path="..", features=["mysql"]}
