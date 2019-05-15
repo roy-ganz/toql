@@ -7,7 +7,7 @@ description = "The toql query language"
 keywords = ["toql"]
 readme = "README.md"
 license = "MIT/Apache-2.0"
-repository = "https://github.com/roy-ganz/toql"
+#repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 toql_core = { path = "toql_core", version = "0.1" }
