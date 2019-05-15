@@ -17,14 +17,14 @@ toql ="0.1"
 
 ## Project
 
-The toql project consists of 
+The Toql project consists of 
 
 * A __query parser__ to parse query string from web clients.
 * A __query builder__ to modify or create queries on the fly.
 * An __SQL mapper__, that translates Toql fields into SQL columns or expressions.
 * A __SQL builder__ to turn a query into SQL with the help of the mapper.
 * A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
-* __3rd party integration __  to work well together with Rocket and MySQL.
+* __3rd party integration__  to work well together with Rocket and MySQL.
 
 Make sure you check out the [guide](https://github.com/roy-ganz/toql/blob/master/guide/src/introduction.md) or run the example of a full CRUD with Rocket and MySQL. 
 
@@ -34,15 +34,15 @@ ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} 
 
 
 ## Contribution
-My near term goal is to support for more web frameworks and databases. However I would like to stabilise the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
+My near term goal is to support more web frameworks and databases. However I would like to stabilise the API first. So you are welcome to play around and test it. **Don't use it in production yet**. Comments, bug fixes and quality improvements are welcome. For features please hold on.
 
 ## Related projects
-[Diesel](www.http://diesel.rs/) is an  ORM for RUST
+[Diesel](http://diesel.rs/) is an  ORM for RUST
 [GraphQL](https://github.com/graphql-rust) can query data.
 
 ## Background
 
-I developped the initial Toql language about 5 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com] (www.schoolsheet.com), a webservice I created in JAVA for my teaching. The Rust implementation is must faster though ;)
+I developped the initial Toql language about 5 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](www.schoolsheet.com), a webservice I created in Java for my teaching. The Rust implementation is must faster though ;)
 
 
 ## License
