@@ -1,3 +1,29 @@
+//!
+//! The Toql Derive creates all the boilerplate functions to make the ✨ happen.
+//! Using the derive is the easiest way to deal with your structs and is therefore recommended.
+//! However beware that the generated code size can become large as it's about ~9K lines of code for a small struct.
+//! You may disable some functionality.
+//! 
+//! For a derived struct the following is generated
+//!  - Trait [Mapped](../toql_core/sql_mapper/trait.Mapped.html) to map struct to [SqlMapper](../toql_core/sql_mapper/struct.SqlMapper.html).
+//!  - Methods for all fields to support building a [Query](../toql_core/query/struct.Query.html). 
+//!  - Methods to load, insert, delete and update a struct. Requires database feature.
+//! 
+//! **Small example:**
+//! ```rust
+//! #[derive(Toql)]
+//! struct User {
+
+//!   #[toql(delup_key)] // Use this field for delete and update functions
+//!   id : u64,
+//! 
+//!   username : Option<String>
+//! }
+//! ```
+//! 
+//! Check out the guide for list of all available attributes.
+//! 
+
 #![recursion_limit = "512"]
 
 extern crate proc_macro;
@@ -29,6 +55,7 @@ mod codegen_mysql_query;
 
 mod util;
 
+/// Derive to add Toql functionality to your struct.
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
 

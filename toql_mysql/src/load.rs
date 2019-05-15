@@ -6,7 +6,7 @@ use toql_core::sql_mapper::SqlMapperCache;
 use mysql::Conn;
 
 
-// High level convenience functions
+/// Trait to define interface to 
 // They load an entity with all dependencies
 pub trait Load<T> {
     fn load_one(query: &Query, mappers: &SqlMapperCache, conn: &mut Conn) 
