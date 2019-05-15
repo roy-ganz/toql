@@ -11,7 +11,7 @@ While all the low level functions are available for the programmer, the Toql der
 
 ## Example
 
-Here is some code that uses Rocket to serve users from a database. Note that toql can handle dependencies, such as joins and merges. Cool!
+Here is part of the code that uses Rocket to serve users from a database. 
 
 ```rust
 	#[derive(Toql)]
@@ -29,7 +29,6 @@ Here is some code that uses Rocket to serve users from a database. Note that toq
 		#[toql(sql_join(self="country_id", other="id"))]
 		country: Option<Country>
 	}
-
     
 	#[query("/?<toql..>")]
 	fn query(toql: Form<ToqlQuery>,  conn: ExampleDbConnection, 
@@ -54,7 +53,8 @@ Here is some code that uses Rocket to serve users from a database. Note that toq
 If you have a MySQL Server running, try the full CRUD example.
 
 ```bash
-LOGIN=<user>:<pass> cargo run --example rocket_mysql
+ROCKET_DATABASES={example_db={url=mysql://USER:PASSWORD@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
+
 ```
 
 

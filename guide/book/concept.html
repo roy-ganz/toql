@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html" class="active"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html" class="active"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -150,7 +150,7 @@
 </ol>
 <p>While all the low level functions are available for the programmer, the Toql derive produces also high level functions, so that the whole can be done with a single function call.</p>
 <a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>Here is some code that uses Rocket to serve users from a database. Note that toql can handle dependencies, such as joins and merges. Cool!</p>
+<p>Here is part of the code that uses Rocket to serve users from a database.</p>
 <pre><pre class="playpen"><code class="language-rust">    #[derive(Toql)]
     #[toql(skip_indelup)] // No insert / delete / update functionality
     struct Country {
@@ -166,7 +166,6 @@
         #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;))]
         country: Option&lt;Country&gt;
     }
-
     
     #[query(&quot;/?&lt;toql..&gt;&quot;)]
     fn query(toql: Form&lt;ToqlQuery&gt;,  conn: ExampleDbConnection, 
@@ -188,7 +187,8 @@
     }
 </code></pre></pre>
 <p>If you have a MySQL Server running, try the full CRUD example.</p>
-<pre><code class="language-bash">LOGIN=&lt;user&gt;:&lt;pass&gt; cargo run --example rocket_mysql
+<pre><code class="language-bash">ROCKET_DATABASES={example_db={url=mysql://USER:PASSWORD@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
+
 </code></pre>
 
                     </main>
@@ -202,7 +202,7 @@
                         
 
                         
-                            <a rel="next" href="query-language.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="query-language/introduction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -220,7 +220,7 @@
                 
 
                 
-                    <a href="query-language.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="query-language/introduction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

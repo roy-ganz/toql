@@ -1,6 +1,6 @@
 
 # Optional fields
-Each field in a toql query can individually be selected. However fields must be `Option<>` for this, otherwise they will always be selected in the SQL statement regardless of the query.
+Each field in a Toql query can individually be selected. However fields must be `Option<>` for this, otherwise they will always be selected in the SQL statement regardless of the query.
 
 
 

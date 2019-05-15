@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Joins - Toql guide</title>
+        <title>The Toql Derive - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -33,7 +33,7 @@
     <body class="light">
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = "light";
         </script>
 
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html" class="active"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html" class="active"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -108,7 +108,7 @@
                         <h1 class="menu-title">Toql guide</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                             
@@ -140,89 +140,56 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#joins" id="joins"><h1>Joins</h1></a>
-<p>A struct can refer to another struct. This is done with a SQL join.</p>
-<p>Joins are automatically added to the SQL statement in these situations</p>
+                        <a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The Toql derive</h1></a>
+<p>The recommended way to use Toql in your project is to use the Toql derive.</p>
+<p>The derive builds a lot of code. This includes</p>
 <ul>
-<li>Fields in the Toql query refer to another struct. Example <code>user_phoneId</code></li>
-<li>Fields on a joined struct are always selected. <code>#[toql(select_always)</code></li>
-<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>. Example <code>id: u64</code></li>
+<li>Mapping of struct fields to Toql fields and database.</li>
+<li>Creating query builder functions.</li>
+<li>Handling relationships through joins and merges.</li>
+<li>Creating high level functions to load, insert, update and delete structs.</li>
 </ul>
-<a class="header" href="#example" id="example"><h3>Example</h3></a>
+<a class="header" href="#example" id="example"><h2>Example</h2></a>
+<p>With this simple code</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-struct User {
-     id: u32,	
-     name: Option&lt;String&gt;
-     #[toql(sql_join(self=&quot;mobile_id&quot; other=&quot;id&quot;))]  
-     mobile_phone : Option&lt;Phone&gt;
-
-     #[toql(sql_join(self=&quot;country_id&quot; other=&quot;id&quot;))]  
-     country : Country
-}
-
-struct Country {
-    id: String // Always selected
-}
-
-struct Phone {
-    id : Option&lt;u64&gt;, 
+   #[derive(Toql)]
+   struct User {
+       id: u32,
+       name: String,
 }
 #}</code></pre></pre>
-<p>with the Toql query <code>id</code> translates into</p>
-<pre><code class="language-sql">SELECT user.id, null, null, country.id FROM User user 
-INNER JOIN Country country ON (user.country_id = country.id)
-</code></pre>
-<p>While the same structs with the Toql query <code>id, mobilePhone_id</code> translates into</p>
-<pre><code class="language-sql">SELECT user.id, null, mobile_phone.id, country.id FROM User user 
-LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
-INNER JOIN Country country ON (user.country_id = country.id)
-</code></pre>
-<a class="header" href="#naming-and-aliasing" id="naming-and-aliasing"><h1>Naming and aliasing</h1></a>
-<p>The default table names can be changed with <code>table</code>, the alias with <code>alias</code>.</p>
-<p>The same Toql query <code>id</code> run for this struct</p>
+<p>we can now do the following</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-#[toql table=&quot;Users&quot;, alias=&quot;u&quot;]
-struct User {
-     id: u32,	
-     name: Option&lt;String&gt;
-     #[toql(sql_join(self=&quot;mobil_id&quot; other=&quot;id&quot;), table=&quot;Phones&quot;, alias=&quot;p&quot;)]  
-     mobile_phone : Option&lt;Phone&gt;
-}
+use toql::mysql::load_one; // Load function from derive
+use toql::mysql::update_one; // Update function from derive
+
+let conn = --snip--
+let cache = SqlMapperCache::new();
+SqlMapper::insert_new_mapper::&lt;User&gt;(&amp;mut cache); // Mapper function from derive
+
+let q = Query::wildcard().and(User::fields.id().eq(5)); // Builder fields from derive
+let user = load_one&lt;User&gt;(&amp;q, &amp;cache, &amp;mut conn); 
+
+user.age = Some(16);
+update_one(&amp;user); 
 #}</code></pre></pre>
-<p>now translates into</p>
-<pre><code class="language-sql">SELECT u.id, null, p.id FROM Users u LEFT JOIN Phones p ON (u.mobile_id = p.id)
-</code></pre>
-<a class="header" href="#join-attributes" id="join-attributes"><h1>Join Attributes</h1></a>
-<p>Sql Joins can be defined with</p>
-<ul>
-<li><em>self</em> the column on the referencing table, if omitted the field name is taken</li>
-<li><em>other</em> the column of the joined tabled</li>
-<li><em>on</em> an additional join predicate</li>
-</ul>
-<a class="header" href="#join-types" id="join-types"><h1>Join Types</h1></a>
-<p>Joining on an <code>Option</code> field will issue a LEFT JOIN rather than an INNER JOIN.</p>
-<p>If the selected columns cannot be converted into a struct then</p>
-<ul>
-<li>this will result in a field value of <code>None</code> for an <code>Option&lt;&gt;</code> type</li>
-<li>will raise an error for non <code>Option&lt;&gt;</code> types</li>
-</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="derive-optional.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../query-language/filter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="derive-merges.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/mapping.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -234,13 +201,13 @@ struct User {
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="derive-optional.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../query-language/filter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="derive-merges.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/mapping.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -270,14 +237,14 @@ struct User {
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

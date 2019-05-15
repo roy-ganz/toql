@@ -25,11 +25,10 @@ bw | _between_ | age bw 16 20 | age BETWEEN 16 AND 20
 in | _includes_ | name in 'Peter' 'Susan' | name in ('Peter, 'Susan')
 out | _excludes_ | age out 1 2 3 | name not in (1, 2, 3)
 re | _matches regular expression_ | name re ".\*" | name REGEXP '.*'
-sc | _set contains_ | role sc 'ADMIN' 'SUPERADMIN' | FIND_IN_SET(role, 'ADMIN,SUPERADMIN') > 0
 fn | _custom function_ | search fn ma 'arg1' | _depends on implementation_
 
 
 
 ## Custom functions
-Custom functions are applied through the `FN` filter. They must be registered on the [SQL Mapper](sql-mapper.md).
+Custom functions are applied through the `FN` filter. They must be handled by a Field Handler. See API for details.
 

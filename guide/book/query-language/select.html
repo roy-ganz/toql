@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Optional Fields - Toql guide</title>
+        <title>Selection - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -33,7 +33,7 @@
     <body class="light">
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = "light";
         </script>
 
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html" class="active"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html" class="active"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -108,7 +108,7 @@
                         <h1 class="menu-title">Toql guide</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                             
@@ -140,32 +140,65 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
-<p>Each field in a toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement regardless of the query.</p>
-<pre><pre class="playpen"><code class="language-rust">
-# #![allow(unused_variables)]
-#fn main() {
-    struct User {
-        id: u32,				// Always selected in SQL
-        name: Option&lt;String&gt;			// Optional field
-        middlename: Option&lt;Option&lt;String&gt;&gt;	// Optional field of nullable column
-        #[toql(select_always)]
-        middlename: Option&lt;String&gt;  		// Nullable column, always selected in SQL
-  }
-#}</code></pre></pre>
+                        <a class="header" href="#selecting-fields" id="selecting-fields"><h1>Selecting fields</h1></a>
+<p>Fields are selected if they are mentioned in the query.</p>
+<ul>
+<li>
+<p>Names without underscore represent typically columns or expressions from the table the query is run against. <code>id, name, fullName, emailAddress</code></p>
+</li>
+<li>
+<p>Fields with underscores are called <em>fields with a path</em>. They are mapped to a joined or a merged dependency. For a join relationship, the join will be added to the SQL statement if the field is selected. For a merge relationship a second SQL query must be run to query and merge the dependency. <code>book_id, book_title, book_createdBy_id</code></p>
+</li>
+<li>
+<p>To use a field only for filtering, but not for selection hide it with a dot. <code>.age, .book_id</code></p>
+</li>
+</ul>
+<a class="header" href="#example" id="example"><h4>Example</h4></a>
+<pre><code>id, book_id, .age eq 50
+</code></pre>
+<p>is translated into (SQL Mapper must be told how to join)</p>
+<pre><code>SELECT a.id, b.id, null FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50
+</code></pre>
+<a class="header" href="#wildcards" id="wildcards"><h2>Wildcards</h2></a>
+<p>There are two wildcards to select multiple fields. They can neither be filtered nor ordered.</p>
+<ul>
+<li>
+<p><strong>**</strong> selects all mapped fields (top level and dependencies). Useful for development.</p>
+</li>
+<li>
+<p><strong>*</strong> selects all fields from the top level.</p>
+</li>
+<li>
+<p><strong><em>path_</em>*</strong> selects all fields from <em>path</em>.</p>
+</li>
+</ul>
+<p>Fields can be excluded from the wildcard by setting them to <code>ignore wildcard</code>.</p>
+<a class="header" href="#example-1" id="example-1"><h4>Example</h4></a>
+<p><code>id, age, book_id, .age eq 50</code></p>
+<p>can be expressed as</p>
+<p><code>*, book_*, .age eq 50</code></p>
+<p>can be expressed as</p>
+<p><code>**, .age eq 50</code></p>
+<p>and is translation into</p>
+<p><code>SELECT id, book_id, age FROM FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50</code></p>
+<p><em>Note that the <code>age</code> field is selected with **</em>.</p>
+<a class="header" href="#roles" id="roles"><h2>Roles</h2></a>
+<p>Fields can require roles from the query. This is the permission system from Toql.
+An error is raised, if a query selects a field that it's not allowed to. However if the query
+selects with a wildcard, the field will just be ignored.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="derive-mapping.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../query-language/introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="derive-joins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../query-language/order.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -177,13 +210,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="derive-mapping.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../query-language/introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="derive-joins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../query-language/order.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -213,14 +246,14 @@
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

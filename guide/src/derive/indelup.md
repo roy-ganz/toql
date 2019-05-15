@@ -1,6 +1,6 @@
 
 # Insert, update and delete
-Structs for toql queries include typically a lot of `Option<>` fields. The Toql derive builds proper insert, update and delete functions.
+Structs for toql queries include typically a lot of `Option<>` fields. The Toql derive can build proper insert, update and delete functions.
 
 ## Keys and skipping
 To make this work you need to provide additional information about keys.
@@ -63,7 +63,7 @@ struct User {
 
 
 # Collections
-Collections or dependend structs are **not** affected by insert / delete / update. You must do this manually (for safety reasons).
+Collections or dependend structs are **not** affected by insert, delete or update. You must do this manually (for safety reasons).
 
 However functions for collections are provided.
 

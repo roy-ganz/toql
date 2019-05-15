@@ -12,6 +12,7 @@ Especially
   
  ## Typical usecase
   
+  ```rust
   let cache = SqlMapperCache::new();
   
   let mut user_mapper = User::insert_new_mapper(&cache);
@@ -19,7 +20,7 @@ Especially
   lt permission_sql = if true { "u."}
   
   user_mapper.add_field("permission", permission);
-  
+  ```
   
   ## Custom field handler 
   

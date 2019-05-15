@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -141,54 +141,28 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#toql-transfer-object-query-language" id="toql-transfer-object-query-language"><h1>Toql (<em>Transfer Object Query Language</em>)</h1></a>
-<p>This guide will explain you how to use Toql to query and modify data from a Database.</p>
-<p>Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on (Github )[www.github.com/roy-ganz/toql]</p>
+<p>This guide will explain you how to use Toql to query and modify data from a database.</p>
+<p>Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on <a href="www.github.com/roy-ganz/toql">Github</a>. Check out the API for technical details.</p>
 <a class="header" href="#getting-started" id="getting-started"><h2>Getting started</h2></a>
 <p>This book is split into several sections, with this introduction being the first. The others are:</p>
 <ul>
-<li>
-<p><a href="concept.html">Concept</a> - The overall concept of Toql.</p>
-</li>
-<li>
-<p><a href="query-langugae.html">Query Language</a> - How queries look like.</p>
-</li>
-<li>
-<p><a href="query-builder.html">Query Builder</a> - How queries can be programmed with typesafety.</p>
-</li>
-<li>
-<p><a href="toql-derive.html">Toql Derive</a> - Let the derive do all the work!</p>
-</li>
-<li>
-<p><a href="sql-mapper">SQL Mapper</a> - How to fine tune and tweak the derives output.</p>
-</li>
-<li>
-<p><a href="rocket-integration.html">Rocket</a> - Use rocket to provide your REST API.</p>
-</li>
-<li>
-<p><a href="mysql-integration.html">MySQL</a> - Use MySQL as a Database.</p>
-</li>
-<li>
-<p>__3rd party integration __  to work well together with Rocket and MySQL. (More planned).</p>
-</li>
+<li><a href="concept.html">Concept</a> - The overall concept of Toql.</li>
+<li><a href="query-language/introduction.html">Query Language</a> - How queries look like.</li>
+<li><a href="derive/introduction.html">Toql Derive</a> - Let the derive do all the work!</li>
 </ul>
+<a class="header" href="#features" id="features"><h2>Features</h2></a>
 <p>Toql <em>Transfer Object Query Language</em> is a library that turns a query string into SQL to retrieve data records.
 It is useful for web clients to get database records from a REST interface.</p>
 <p>Toql</p>
 <ul>
 <li>can query, insert, update and delete single and multiple database records.</li>
-<li>handles dependencies in queries through SQL joins and merges.</li>
+<li>handles dependencies in queries through SQL joins and merges. Cool!</li>
 <li>is fast, beause the mapper is only created once and than reused.</li>
-<li>has high level and low level functionality for tweaking.</li>
+<li>has high level functions for speed and low level functions for edge cases.</li>
 </ul>
-<p>The project consists of</p>
-<ul>
-<li>A <strong>query parser</strong> to create a query from a string (from web clients).</li>
-<li>A <strong>query builder</strong> to create or change queries programatically</li>
-<li>An <strong>SQL mapper</strong> to translates toql fields into SQL columns or expressions.</li>
-<li>A <strong>SQL builder</strong> to turn a query into SQL using the mapper.</li>
-<li>A <strong>toql derive</strong> to generates all boiler plate for structs.</li>
-<li>__3rd party integration __  to work well together with Rocket and MySQL. (More planned).</li>
-</ul>
+<a class="header" href="#background" id="background"><h2>Background</h2></a>
+<p>I developped Toql about 10 years ago for a web project. I have refined it since then and it can be seen in action
+on my other website <a href="www.schoolsheet.com">www.schoolsheet.com</a>. I started the Toql project to learn Rust.</p>
 
                     </main>
 

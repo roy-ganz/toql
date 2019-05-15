@@ -1,14 +1,14 @@
-#Rocket integration
+# Rocket integration
 
 To enable rocket integration you must use the feature
-
+```toml
 [dependencies]
-toql = {version="0.1, features=["rocket_mysql"]
-
+toql = { version = "0.1", features = ["rocket_mysql"] }
+```
 
 ## Functionality
 
-The toql rocket library provides the type ToqlQuery and a load function to run the query.
+The Toql Rocket library provides the type ToqlQuery and a load function to run the query.
 Here is a small example.
 
 #[derive(Toql)]

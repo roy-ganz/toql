@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Selection - Toql guide</title>
+        <title>Joins - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -33,7 +33,7 @@
     <body class="light">
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = "light";
         </script>
 
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html" class="active"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html" class="active"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -108,7 +108,7 @@
                         <h1 class="menu-title">Toql guide</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                             
@@ -140,62 +140,98 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#selecting-fields" id="selecting-fields"><h1>Selecting fields</h1></a>
-<p>Fields are selected if they are mentioned in the query.</p>
+                        <a class="header" href="#joins" id="joins"><h1>Joins</h1></a>
+<p>A struct can refer to another struct. This is done with a SQL join.</p>
+<p>Joins are automatically added to the SQL statement in these situations:</p>
 <ul>
-<li>
-<p>Names without underscore, represent typically columns or expressions from the table the query is run against. <code>id, name, fullName, emailAddress</code></p>
-</li>
-<li>
-<p>Fields with underscores are called fields with a path. They are mapped to a joined table or another table relationship. For a join relationship, the join will be added to the SQL statement if the field is selected. For a merge relationship a second SQL query must be run to query and merge the dependency. <code>book_id, book_title, book_createdBy_id</code></p>
-</li>
-<li>
-<p>To use a field only for filtering, but not for selection hide it with a dot. <code>.age, .book_id</code></p>
-</li>
+<li>Fields in the Toql query refer to another struct. Example <code>user_phoneId</code></li>
+<li>Fields on a joined struct are always selected. <code>#[toql(select_always)</code></li>
+<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>. Example <code>id: u64</code></li>
 </ul>
-<a class="header" href="#example-1" id="example-1"><h4>Example 1</h4></a>
-<pre><code>id, book_id, .age eq 50
+<a class="header" href="#example" id="example"><h4>Example</h4></a>
+<p>The Toql query <code>id</code> translates this</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+struct User {
+     id: u32,	
+     name: Option&lt;String&gt;
+     #[toql(sql_join(self=&quot;mobile_id&quot; other=&quot;id&quot;))]  
+     mobile_phone : Option&lt;Phone&gt;
+
+     #[toql(sql_join(self=&quot;country_id&quot; other=&quot;id&quot;))]  
+     country : Country
+}
+
+struct Country {
+    id: String // Always selected
+}
+
+struct Phone {
+    id : Option&lt;u64&gt;, 
+}
+#}</code></pre></pre>
+<p>into</p>
+<pre><code class="language-sql">SELECT user.id, null, null, country.id FROM User user 
+INNER JOIN Country country ON (user.country_id = country.id)
 </code></pre>
-<p>is translated into (SQL Mapper must be told how to join)</p>
-<pre><code>SELECT a.id, b.id, null FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50
+<p>While the same structs with the Toql query <code>id, mobilePhone_id</code> translates into</p>
+<pre><code class="language-sql">SELECT user.id, null, mobile_phone.id, country.id FROM User user 
+LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
+INNER JOIN Country country ON (user.country_id = country.id)
 </code></pre>
-<a class="header" href="#wildcards" id="wildcards"><h2>Wildcards</h2></a>
-<p>There are two wildcards to select multiple fields. They can neither be filtered nor ordered.</p>
+<a class="header" href="#naming-and-aliasing" id="naming-and-aliasing"><h2>Naming and aliasing</h2></a>
+<p>The default table names can be changed with <code>table</code>, the alias with <code>alias</code>.</p>
+<p>The Toql query <code>id</code> for this struct</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[toql table=&quot;Users&quot;, alias=&quot;u&quot;]
+struct User {
+     id: u32,	
+     name: Option&lt;String&gt;
+     #[toql(sql_join(self=&quot;mobil_id&quot;, other=&quot;id&quot;), table=&quot;Phones&quot;, alias=&quot;p&quot;)]  
+     mobile_phone : Option&lt;Phone&gt;
+}
+#}</code></pre></pre>
+<p>now translates into</p>
+<pre><code class="language-sql">SELECT u.id, null, p.id FROM Users u LEFT JOIN Phones p ON (u.mobile_id = p.id)
+</code></pre>
+<a class="header" href="#join-attributes" id="join-attributes"><h2>Join Attributes</h2></a>
+<p>SQL joins can be defined with</p>
 <ul>
-<li>
-<p><strong>**</strong> selects all mapped fields (top level and dependencies). Usefull for development.</p>
-</li>
-<li>
-<p><strong>*</strong> selects all fields from the top level</p>
-</li>
-<li>
-<p><strong><em>path_</em>*</strong> selects all fields from the dependency <em>path</em>.</p>
-</li>
+<li><em>self</em>, the column on the referencing table. If omitted the field name is taken.</li>
+<li><em>other</em>, the column of the joined tabled.</li>
+<li><em>on</em>, an additional SQL predicate. Must include the table alias.</li>
 </ul>
-<p>Fields can be excluded from the wildcard by setting them to <code>ignore wildcard</code>.</p>
-<p>Fields that require the user to have a special role are also ignored, if the query does not have that role.</p>
-<a class="header" href="#example-1-1" id="example-1-1"><h3>Example 1</h3></a>
-<p><code>id, age, book_id, .age eq 50</code></p>
-<p>can be expressed as</p>
-<p><code>*, book_*, .age eq 50</code></p>
-<p>can be expressed as</p>
-<p><code>**, .age eq 50</code></p>
-<p>and is translation into</p>
-<p><code>SELECT id, book_id, age FROM FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50</code></p>
-<p><em>Note that the <code>age</code> field is selected with **</em></p>
+<p>For composite keys use multiple <code>sql_join</code> attributes.</p>
+<a class="header" href="#example-1" id="example-1"><h4>Example</h4></a>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+    #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;), sql_join(self=&quot;language_id&quot;, other=&quot;language_id&quot;, on=&quot;country.language_id = 'en'&quot;) ]  
+    country : Option&lt;Country&gt;
+#}</code></pre></pre>
+<a class="header" href="#join-types" id="join-types"><h2>Join Types</h2></a>
+<p>Joining on an <code>Option</code> field will issue a LEFT JOIN rather than an INNER JOIN.</p>
+<p>If the selected columns cannot be converted into a struct</p>
+<ul>
+<li>then this will result in a field value of <code>None</code> for an <code>Option&lt;&gt;</code> type</li>
+<li>or will raise an error for non <code>Option&lt;&gt;</code> types</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="query-language.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../derive/optional-fields.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="auery-language-order.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/merges.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -207,13 +243,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="query-language.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../derive/optional-fields.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="auery-language-order.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/merges.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -243,14 +279,14 @@
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

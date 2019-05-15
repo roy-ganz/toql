@@ -1,6 +1,6 @@
 
 # Merge
-A struct can also contain a collection of another struct. Since this cannot be done directly in SQL Toql will execute multiple queries and merge the results afterwards. 
+A struct can also contain a collection of other structs. Since this cannot be done directly in SQL Toql will execute multiple queries and merge the results afterwards. 
 
 ```rust
 struct User {

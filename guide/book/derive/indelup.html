@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>The SQL Mapper - Toql guide</title>
+        <title>Insert / Delete / Update - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -33,7 +33,7 @@
     <body class="light">
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = "light";
         </script>
 
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language-select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="auery-language-order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language-filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive-mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive-optional.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive-joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive-merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive-indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li></ol></li><li><a href="sql-mapper.html" class="active"><strong aria-hidden="true">5.</strong> The SQL Mapper</a></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html" class="active"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -108,7 +108,7 @@
                         <h1 class="menu-title">Toql guide</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                             
@@ -140,43 +140,107 @@
 
                 <div id="content" class="content">
                     <main>
-                        <p>#SQL Mapper</p>
-<p>The sql mapper translates toql fields into sql column or expressions. The recommended workflow is to define a struct and use the
-toql derive to create all mapping functions.</p>
-<p>However sometimes more customising must be done than the derive attributes allow.
-Especially</p>
-<ul>
-<li>Add custom query functions ( <em>title FN CUSTOM &quot;as$&quot;</em> )</li>
-<li>Add fields that do not exist in struct ( <em>superseach eq &quot;hallo&quot;</em> )</li>
-<li>Map sql expressions programatically (sql permissions for authenticated users)</li>
-<li>Changing joins</li>
-</ul>
-<a class="header" href="#typical-usecase" id="typical-usecase"><h2>Typical usecase</h2></a>
-<p>let cache = SqlMapperCache::new();</p>
-<p>let mut user_mapper = User::insert_new_mapper(&amp;cache);</p>
-<p>lt permission_sql = if true { &quot;u.&quot;}</p>
-<p>user_mapper.add_field(&quot;permission&quot;, permission);</p>
-<a class="header" href="#custom-field-handler" id="custom-field-handler"><h2>Custom field handler</h2></a>
-<p>Using a custom field handler gives you most freedom. Here an example to match against multiple columns in MySQL.
-Note that in the database an index must be created for this to work.</p>
-<p>struct MaHandler;
-impl FieldHandler for MaHandler {</p>
-<p>}</p>
-<p>user_mapper.add_field(&quot;search&quot;, MaHandler);</p>
-<a class="header" href="#overriding-joins" id="overriding-joins"><h2>Overriding joins</h2></a>
-<p>To change existing join or add a new one:
-user_mapper.alter_join(&quot;friend&quot; &quot;INNER JOIN sdds&quot;);</p>
+                        <a class="header" href="#insert-update-and-delete" id="insert-update-and-delete"><h1>Insert, update and delete</h1></a>
+<p>Structs for toql queries include typically a lot of <code>Option&lt;&gt;</code> fields. The Toql derive can build proper insert, update and delete functions.</p>
+<a class="header" href="#keys-and-skipping" id="keys-and-skipping"><h2>Keys and skipping</h2></a>
+<p>To make this work you need to provide additional information about keys.</p>
+<pre><code class="language-struct">struct User {
+  #[toql(delup_key, skip_inup)] // Key for delete / update, never insert / update
+    id: u64
+
+    name: Option&lt;String&gt;
+}
+</code></pre>
+<p>For composite keys mark multiple columns with the <code>delup_key</code>.</p>
+<p>Join, merge and SQL fields are excluded. To skip other fields from insert or update functions use the <code>skip_inup</code> annotation. Useful for auto incremented primary keys or trigger generated values.</p>
+<a class="header" href="#example" id="example"><h3>Example</h3></a>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+struct User {
+    #[toql(delup_key, skip_inup)]
+     id: u32,
+     name: Option&lt;String&gt;
+}
+
+--snip--
+use toql::mysql::insert_one;
+use toql::mysql::udate_one;
+use toql::mysql::delete_one;
+
+let mut conn = --snip--
+
+let u = User{id:0, name: Some(&quot;Susane&quot;)};
+let x = insert_one(&amp;u, &amp;mut conn); // returns key
+u.id = x;
+u.name= Some(&quot;Peter&quot;);
+update_one(&amp;u, &amp;mut conn);
+
+delete_one(&amp;u, &amp;mut conn);
+#}</code></pre></pre>
+<a class="header" href="#update-behaviour" id="update-behaviour"><h2>Update behaviour</h2></a>
+<p>The update function will update fields only if they contains some value. Look at this struct:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+struct User {
+    id: u64
+    username: String,			// Always updated
+    realname: Option&lt;String&gt;, 		// Updated conditionally
+    address: Option&lt;Option&lt;&lt;String&gt;&gt;, 	// Optional nullable column, updated conditionally
+    #[toql(select_always)]
+    info: Option&lt;String&gt; 		// Nullable column, always updated
+
+
+}
+#}</code></pre></pre>
+<a class="header" href="#collections" id="collections"><h1>Collections</h1></a>
+<p>Collections or dependend structs are <strong>not</strong> affected by insert, delete or update. You must do this manually (for safety reasons).</p>
+<p>However functions for collections are provided.</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+#[derive(Toql)]
+
+struct Phone {
+    #[toql(delup_key, skip_inup)]
+    id: u64
+}
+
+struct User {
+    #[toql(delup_key, skip_inup)]
+     id: u32,
+     phones: vec&lt;Phone&gt;
+}
+
+--snip--
+use toql::mysql::insert_one;
+use toql::mysql::insert_many;
+
+use toql::mysql::delete_one;
+use toql::mysql::delete_many;
+
+// TODO
+
+
+
+#}</code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="derive-indelup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../derive/merges.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
+                        
+                            <a rel="next" href="../derive/reference.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         
 
                         <div style="clear: both"></div>
@@ -186,11 +250,15 @@ user_mapper.alter_join(&quot;friend&quot; &quot;INNER JOIN sdds&quot;);</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="derive-indelup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../derive/merges.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
+                
+                    <a href="../derive/reference.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
                 
             </nav>
 
@@ -218,14 +286,14 @@ user_mapper.alter_join(&quot;friend&quot; &quot;INNER JOIN sdds&quot;);</p>
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         
