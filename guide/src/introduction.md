@@ -14,7 +14,7 @@ This book is split into several sections, with this introduction being the first
 
 ## Features
 
-Toql _Transfer Object Query Language_ is a library that turns a query string into SQL to retrieve data records. 
+Toql _Transfer Object Query Language_ can turns a query string into SQL to retrieve data records. 
 It is useful for web clients to get database records from a REST interface. 
 
 Toql
@@ -24,8 +24,8 @@ Toql
  - has high level functions for speed and low level functions for edge cases.
  
  ## Background
- I developped Toql about 10 years ago for a web project. I have refined it since then and it can be seen in action
- on my other website [www.schoolsheet.com](www.schoolsheet.com). I started the Toql project to learn Rust.
+ I developed Toql about 10 years ago for a web project. I have refined it since then and it can be seen in action
+ on my other website [www.schoolsheet.com](http://www.schoolsheet.com). I started the Toql project to learn Rust.
 
 
 
