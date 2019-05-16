@@ -37,7 +37,7 @@ SELECT user.id, null, null, country.id FROM User user
 INNER JOIN Country country ON (user.country_id = country.id)
 ```
 
-While the same structs with the Toql query `id, mobilePhone_id` translates into
+While the Toql query `id, mobilePhone_id` for the same structs translates into
 
 ```sql 
 SELECT user.id, null, mobile_phone.id, country.id FROM User user 
