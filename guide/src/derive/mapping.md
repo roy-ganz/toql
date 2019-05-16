@@ -8,7 +8,7 @@ Struct fields are mapped to Toql and database by default in a predictable way:
 
 
 ## Database
-To adjust the default naming to an existing database scheme use the attributes `tables` and `columns` on the struct for a renaming scheme or `table` and `column` for explicit name.
+To adjust the default naming to an existing database scheme use the attributes `tables` and `columns` for a renaming scheme or `table` and `column` for explicit name.
 
 Supported renaming schemes are 
 - CamelCase
@@ -27,7 +27,7 @@ Supported renaming schemes are
 ```
 is translated into 
 
-`SELECT UserId, FullName FROM USER_REF;`
+`SELECT UserId, FullName FROM USER_REF`
 
 #### Explicit naming example:
 Use `table` an the struct and `column` on the fields.
