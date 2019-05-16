@@ -42,12 +42,12 @@ Toql is made of
 My near term goal is to support for more web frameworks and databases. However I would like to stabilise the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
 
 ## Other database projects
-- [Diesel](www.http://diesel.rs/)
+- [Diesel](http://diesel.rs/)
 - [GraphQL](https://github.com/graphql-rust)
 
 
 ## Background
-I have developed the initial Toql language about 7 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](www.schoolsheet.com), a web service I created in Java for my teaching. The Rust implementation is must faster though ;)
+I have developed the initial Toql language about 7 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](http://www.schoolsheet.com), a web service I created in Java for my teaching. The Rust implementation is must faster though ;)
 
 
 ## License
