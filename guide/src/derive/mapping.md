@@ -3,7 +3,7 @@
 Struct fields are mapped to Toql and database by default in a predictable way:
 1. Table names are UpperCamelCase.
 2. Column names are snake_case.
-3. Toql fields are lowerCamelCase
+3. Toql fields are lowerCamelCase.
 4. Toql paths are lowerCamelCase, separated with an underscore.
 
 
