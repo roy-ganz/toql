@@ -4,7 +4,7 @@ This guide will explain you how to use Toql to query and modify data from a data
 
 Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on [Github](www.github.com/roy-ganz/toql). Check out the API for technical details.
 
-## Available Chapters
+## Available Sections
 
 This book is split into several sections, with this introduction being the first. The others are:
 
