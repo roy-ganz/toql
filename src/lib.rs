@@ -12,20 +12,20 @@
 //! Welcome to Toql API documentation!
 //! 
 //! This API documentation is very technical and is purely a reference. 
-//! There is a [guide](http://github.com/roy-ganz/toql/guide/index.html) that is better to get started.
+//! There is a [guide](https://roy-ganz.github.io/toql/) that is better to get started.
 //! 
 //! ## Overview 
 //! 
 //! The project consists of the following main parts:
 //!
-//!  * A [Query Parser](../toql_core/query_parser/index.html) to build a Toql query from a string. 
-//!  * A [Query](../toql_core/query/index.html) that can be built with methods.
-//!  * An [SQL Mapper](../toql_core/sql_mapper/index.html) to map Toql fields to database columns or expressions.
-//!  * An [SQL Builder](../toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
-//!  * A [Toql Derive](../toql_derive/index.html) to build all the boilerplate code to make some ✨ happen.
+//!  * A [Query Parser](https://docs.rs/toql_core/0.1.1/toql_core/query_parser/index.html) to build a Toql query from a string. 
+//!  * A [Query](https://docs.rs/toql_core/0.1.1/toql_core/query/index.html) that can be built with methods.
+//!  * A [SQL Mapper](https://docs.rs/toql_core/0.1.1/toql_core/sql_mapper/index.html) to map Toql fields to database columns or expressions.
+//!  * A [SQL Builder](https://docs.rs/toql_core/0.1.1/toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
+//!  * A [Toql Derive](https://docs.rs/toql_derive/0.1.2/index.html) to build all the boilerplate code to make some ✨ happen.
 //!  * Integration with
-//!      * [MySQL](../toql_mysql/index.html)
-//!      * [Rocket](../toql_rocket/index.html)
+//!      * [MySQL](https://docs.rs/toql_mysql/0.1/index.html)
+//!      * [Rocket](https://docs.rs/toql_rocket/0.1/index.html)
 //!
 //! ## Small Example
 //! Using Toql without any dependency features is possible and easy. Here we go:
@@ -43,13 +43,7 @@
 //! ```
 //! 
 //! ## Bigger Example
-//! However using the Rocket and MySQL integration will reduce your amount of coding to a minimum. 
-//! If you have a MySQL server running, check out the full CRUD example with:
-//! 
-//! ```bash
-//! ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
-//! 
-//! ```
+//! Have a look at the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs) that serves users with Rocket and MySQL.
 //! 
 
 pub use toql_core::error;

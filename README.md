@@ -5,7 +5,7 @@ Toql *Transfer object query language* is a query language to build SQL statement
 
 Toql turns this
 ```toql
-id, (+age eq 16; age eq 18), adress_street
+id, (+age eq 16; age eq 18), address_street
 ```
 into
 ```sql
