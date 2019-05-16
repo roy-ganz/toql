@@ -68,6 +68,6 @@ is referred to as
 
 
 ## Exclusion
-To exclude fields from the query annotate it with `skip`.
+To exclude fields from mapping attribute them with `skip`.
 
 
