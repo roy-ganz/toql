@@ -18,7 +18,7 @@ With this simple code
 	struct User {
 		#[toql(delup_key)]
 		id: u32,
-		name: String
+		name: Option<String>
 }
 ```
 
