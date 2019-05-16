@@ -3,11 +3,11 @@
 A struct can refer to another struct. This is done with a SQL join. 
 
 Joins are automatically added to the SQL statement in these situations:
--  Fields in the Toql query refer to another struct. Example `user_phoneId`
--  Fields on a joined struct are always selected. `#[toql(select_always)` 
--  Fields on a joined struct are not `Option<>`. Example `id: u64`
+-  Fields in the Toql query refer to another struct through a path: `user_phoneId`.
+-  Fields on a joined struct are always selected: `#[toql(select_always)`. 
+-  Fields on a joined struct are not `Option<>`: `id: u64`.
 
-#### Example
+#### Example:
 
 The Toql query `id` translates this
 
@@ -37,7 +37,7 @@ SELECT user.id, null, null, country.id FROM User user
 INNER JOIN Country country ON (user.country_id = country.id)
 ```
 
-While the same structs with the Toql query `id, mobilePhone_id` translates into
+While the Toql query `id, mobilePhone_id` for the same structs translates into
 
 ```sql 
 SELECT user.id, null, mobile_phone.id, country.id FROM User user 
@@ -67,7 +67,7 @@ SELECT u.id, null, p.id FROM Users u LEFT JOIN Phones p ON (u.mobile_id = p.id)
 
 ## Join Attributes
 SQL joins can be defined with
-- *self*, the column on the referencing table. If omitted the field name is taken.
+- *self*, the column on the referencing table. If omitted the struct field's name is taken.
 - *other*, the column of the joined tabled.
 - *on*, an additional SQL predicate. Must include the table alias.
 
@@ -80,12 +80,13 @@ For composite keys use multiple `sql_join` attributes.
 ```
 
 
-## Join Types
+## Left and inner Joins
 Joining on an `Option` field will issue a LEFT JOIN rather than an INNER JOIN. 
 
-If the selected columns cannot be converted into a struct
-- then this will result in a field value of `None` for an `Option<>` type
-- or will raise an error for non `Option<>` types
+Selected columns from a join cannot always be converted into a struct. A LEFT JOIN is likely to
+produce null values. In case the database results cannot be put into a joined struct, then: 
+- `Option<>` fields value will be `None`.
+- Non `Option<>` fields will raise an error. 
 
 
 
