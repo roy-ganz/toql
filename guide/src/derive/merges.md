@@ -19,7 +19,7 @@ struct Phone {
 Selecting all fields from above with `**` will run 2 SELECT statements and merge the resulting `Vec<Phone>` into `Vec<User>` by the common value of `user.id` and `phone.user_id`.
 
 ## Merge attribute
-Because merging is done by Rust, the merge fields must be named after the struct fields.
+Because merging is done by Rust, the merge fields must refer to the struct fields.
 
 `#[toql(merge(self="rust_field_name_in_this_struct", other="rust_field_name_in_other_struct"))] `
 
