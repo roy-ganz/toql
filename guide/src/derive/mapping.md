@@ -3,7 +3,8 @@
 Struct fields are mapped to Toql and database by default in a predictable way:
 1. Table names are UpperCamelCase.
 2. Column names are snake_case.
-3. Toql fields are lowerCamelCase, dependend structs are referred through a path, separated with an underscore.
+3. Toql fields are lowerCamelCase
+4. Joined and merged structs are referred through a Toql fields separated with an underscore. Aka _fields with a path_.
 
 
 ## Database
