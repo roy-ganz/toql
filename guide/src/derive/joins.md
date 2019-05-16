@@ -84,9 +84,9 @@ For composite keys use multiple `sql_join` attributes.
 Joining on an `Option` field will issue a LEFT JOIN rather than an INNER JOIN. 
 
 Selected columns from a join cannot always be converted into a struct. A LEFT JOIN is likely to
-produce null values. So the behaviour is 
-- For joins of `Option<>`, the field value will be `None`.
-- For non `Option<>` fields deserialization will raise an error. 
+produce null values. In case the result row cannot be deserialized into a joined struct, then: 
+- `Option<>` fields value will be `None`.
+- Non `Option<>` fields will raise an error. 
 
 
 
