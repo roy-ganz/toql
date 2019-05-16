@@ -17,7 +17,7 @@ ORDER BY user.age ASC
 for all your `Toql` derived structs.
 
 ### Resources
-Check out the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs). There is also a [guide]() and the [API documentation]().
+Check out the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs). There is also a [guide](https://github.com/roy-ganz/toql/blob/master/guide/src/introduction.md) and the [API documentation](https://docs.rs/toql/0.1.4/toql/).
 
 ### Installation
 
