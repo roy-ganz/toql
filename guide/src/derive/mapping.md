@@ -16,7 +16,7 @@ Supported renaming schemes are
 - SHOUTY\_SNAKE\_CASE
 - mixedCase
 
-#### Renaming Scheme Example:
+#### Renaming scheme example:
 ```rust
 #[derive(Toql)]
 #[toql(tables="SHOUTY_SNAKE_CASE", columns="UpperCase")]
@@ -29,7 +29,7 @@ is translated into
 
 `SELECT UserId, FullName FROM USER_REF;`
 
-#### Expicit Naming Example:
+#### Explicit naming example:
 Use `table` an the struct and `column` on the fields.
 
 
