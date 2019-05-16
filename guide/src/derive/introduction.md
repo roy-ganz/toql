@@ -4,7 +4,7 @@ The recommended way to use Toql in your project is to use the Toql derive.
 The derive builds a lot of code. This includes
 
 - Mapping of struct fields to Toql fields and database.
-- Creating query builder functions.
+- Creating field methods for the query builder.
 - Handling relationships through joins and merges.
 - Creating high level functions to load, insert, update and delete structs.
 
@@ -16,6 +16,7 @@ With this simple code
  ```rust
 	#[derive(Toql)]
 	struct User {
+		#[toql(delup_key)]
 		id: u32,
 		name: String,
 }
