@@ -3,7 +3,7 @@ The recommended way to use Toql in your project is to use the Toql derive.
 
 The derive builds a lot of code. This includes
 
-- Mapping of struct fields to Toql fields and database.
+- Mapping of Toql fields to struct fields and database columns or expressions.
 - Creating field methods for the query builder.
 - Handling relationships through joins and merges.
 - Creating high level functions to load, insert, update and delete structs.
