@@ -28,17 +28,16 @@ Add this to your `Cargo.toml`:
 toql ="0.1"
 ```
 
-## Project
+## Features
 
-Toql is made of
+Toql _Transfer object query language_ is a query language to build SQL statements. It can retrieve filtered, ordered and indiviually selected columns from a database and put the result into your structs.
 
-* A __query parser__ to parse query string from web clients.
-* A __query builder__ to modify or create queries on the fly.
-* A __SQL mapper__ that translates Toql fields into SQL columns or expressions.
-* A __SQL builder__ to turn a query into SQL with the help of the mapper.
-* A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
-* __3rd party integration__  to work well together with Rocket and MySQL.
-
+Toql
+ - can query, insert, update and delete single and multiple database records.
+ - handles dependencies in queries through SQL joins and merges. Cool!
+ - is fast, beause the mapper is only created once and than reused.
+ - has high level functions for speed and low level functions for edge cases.
+ 
 
 ## Contribution
 My near term goal is to support for more web frameworks and databases. However I would like to stabilize the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
