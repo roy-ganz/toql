@@ -20,9 +20,9 @@ Supported renaming schemes are
 ```rust
 #[derive(Toql)]
 #[toql(tables="SHOUTY_SNAKE_CASE", columns="UpperCase")]
-  struct UserRef {
-		user_id: u32
-		full_name: String,
+struct UserRef {
+  	user_id: u32
+	full_name: String,
 }
 ```
 is translated into 
@@ -36,10 +36,10 @@ Use `table` an the struct and `column` on the fields.
 ```rust
 #[derive(Toql)]
 #[toql(table="User")]
-  struct UserRef {
+struct UserRef {
 	#[toql(column="id")]
-		user_id: u32
-		full_name: String,
+	user_id: u32
+	full_name: String,
 }
 ```
 is translated into 
@@ -53,12 +53,12 @@ Toql fields on a struct are always mixed case, while dependencies are separated 
 ```rust
 #[derive(Toql)]
 #[toql(table="User")]
-  struct UserRef {
+struct UserRef {
 	#[toql(column="id")]
-		id: u32
-		full_name: String,
-		#[toql(self="counry_id", other="id")]
-		county: Country
+	id: u32
+	full_name: String,
+	#[toql(self="counry_id", other="id")]
+	county: Country
 }
 ```
 is referred to as
