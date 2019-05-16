@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - Toql guide</title>
+        <title>Reference - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -33,7 +33,7 @@
     <body class="light">
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = "light";
         </script>
 
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html" class="active"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html" class="active"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -108,7 +108,7 @@
                         <h1 class="menu-title">Toql guide</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                             
@@ -140,40 +140,40 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#toql-transfer-object-query-language" id="toql-transfer-object-query-language"><h1>Toql (<em>Transfer Object Query Language</em>)</h1></a>
-<p>This guide will explain you how to use Toql to query and modify data from a database.</p>
-<p>Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on <a href="www.github.com/roy-ganz/toql">Github</a>. Check out the API for technical details.</p>
-<a class="header" href="#getting-started" id="getting-started"><h2>Getting started</h2></a>
-<p>This book is split into several sections, with this introduction being the first. The others are:</p>
-<ul>
-<li><a href="concept.html">Concept</a> - The overall concept of Toql.</li>
-<li><a href="query-language/introduction.html">Query Language</a> - How queries look like.</li>
-<li><a href="derive/introduction.html">Toql Derive</a> - Let the derive do all the work!</li>
-</ul>
-<a class="header" href="#features" id="features"><h2>Features</h2></a>
-<p>Toql <em>Transfer Object Query Language</em> is a library that turns a query string into SQL to retrieve data records.
-It is useful for web clients to get database records from a REST interface.</p>
-<p>Toql</p>
-<ul>
-<li>can query, insert, update and delete single and multiple database records.</li>
-<li>handles dependencies in queries through SQL joins and merges. Cool!</li>
-<li>is fast, beause the mapper is only created once and than reused.</li>
-<li>has high level functions for speed and low level functions for edge cases.</li>
-</ul>
-<a class="header" href="#background" id="background"><h2>Background</h2></a>
-<p>I developped Toql about 10 years ago for a web project. I have refined it since then and it can be seen in action
-on my other website <a href="www.schoolsheet.com">www.schoolsheet.com</a>. I started the Toql project to learn Rust.</p>
+                        <a class="header" href="#toql-derive-reference" id="toql-derive-reference"><h1>Toql Derive reference</h1></a>
+<p>The derive provides struct level attributes and field level attributes. Here a list of all available attributes:</p>
+<a class="header" href="#attributes-for-structs" id="attributes-for-structs"><h2>Attributes for structs</h2></a>
+<table><thead><tr><th>Attribute </th><th> Description                             </th><th> Example / Remark</th></tr></thead><tbody>
+<tr><td>tables  </td><td>   Table renaming scheme for struct and joins </td><td>  <code>CamelCase</code>, <code>snake_case</code>, <code>SHOUTY_SNAKE_CASE</code> or <code>mixedCase</code></td></tr>
+<tr><td>columns        </td><td> Column renaming scheme </td></tr>
+<tr><td>table </td><td> Table name for a struct or join </td><td> table =&quot;User&quot; on struct <code>NewUser</code> will access table <code>User</code></td></tr>
+<tr><td>skip_query </td><td> No query methods  </td></tr>
+<tr><td>skip_query_builder </td><td> No field methods </td><td>  No <code>User::fields.id()</code>.</td></tr>
+<tr><td>skip_indelup </td><td>No insert, delete and update methods </td></tr>
+</tbody></table>
+<a class="header" href="#attributes-for-fields" id="attributes-for-fields"><h2>Attributes for fields</h2></a>
+<table><thead><tr><th>Attribute </th><th> Description </th><th> Example / Remark</th></tr></thead><tbody>
+<tr><td>delup_key </td><td> Field used as key by delete and update methods </td><td> For composite keys use multiple times.</td></tr>
+<tr><td>skip_inup </td><td> No insert, update for this field </td><td> Use for auto increment columns or columns calculated from database triggers.</td></tr>
+<tr><td>sql       </td><td> Field mapped to SQL expression instead of table column </td><td> Insert the table alias with two dots: <code>sql =&quot;SELECT COUNT (*) FROM Message m WHERE m.user_id = ..id&quot;</code>. Skipped for insert, update</td></tr>
+<tr><td>sql_join  </td><td> Required for fields that are structs.   </td><td> <code>sql join</code> needs column names in <code>self</code> and <code>other</code>, with <code>on</code> an extra sql condition can be given: <code>sql_join( self=&quot;column_name_on_this_table&quot;, other=&quot;column_name_on_joined_table&quot;, on=&quot;friend.best = true&quot;)</code>. For composite keys use multiple <code>sql_join</code>.</td></tr>
+<tr><td>merge     </td><td> required for fields that are Vec&lt;&gt;. </td><td> <code>merge</code> needs struct field names in <code>self</code> and <code>other</code>:  <code>merge(self=&quot;rust_field_name_in_this_struct&quot;, other=&quot;rust_field_name_on_other_struct&quot;)</code>. For composite fields use multiple <code>merge</code>.</td></tr>
+<tr><td>ignore_wildcard </td><td> No selection for <code>**</code> and <code>*</code></td></tr>
+<tr><td>alias </td><td> Alias for <code>sql_join</code>  </td></tr>
+<tr><td>table </td><td> Table name for joins and merges </td></tr>
+<tr><td>role </td><td> Required role for field access </td><td> <code>role=&quot;admin&quot;, role= &quot;superadmin&quot;</code> For multiple roles use multiple <code>role</code>.</td></tr>
+</tbody></table>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-
-                        
-                            <a rel="next" href="concept.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
+                            <a rel="prev" href="../derive/indelup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
                             </a>
+                        
+
                         
 
                         <div style="clear: both"></div>
@@ -183,46 +183,31 @@ on my other website <a href="www.schoolsheet.com">www.schoolsheet.com</a>. I sta
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-
-                
-                    <a href="concept.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
+                    <a href="../derive/indelup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
                     </a>
+                
+
                 
             </nav>
 
         </div>
 
         
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
-        
 
         
 
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

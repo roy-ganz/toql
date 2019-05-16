@@ -3,27 +3,27 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Concept - Toql guide</title>
+        <title>The Toql Derive - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
         <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
         
@@ -33,7 +33,7 @@
     <body class="light">
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = "light";
         </script>
 
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html" class="active"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html" class="active"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -108,7 +108,7 @@
                         <h1 class="menu-title">Toql guide</h1> 
 
                         <div class="right-buttons">
-                            <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <a href="../print.html" title="Print this book" aria-label="Print this book">
                                 <i id="print-button" class="fa fa-print"></i>
                             </a>
                             
@@ -140,69 +140,57 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#concept" id="concept"><h1>Concept</h1></a>
-<p>Toql is a set of crates that aim to simplify web development:</p>
-<ol>
-<li>A web client sends a Toql query to the REST Server.</li>
-<li>The server uses Toql to parse the query and create SQL.</li>
-<li>SQL is send to the Database.</li>
-<li>The database results are sent to the client.</li>
-</ol>
-<p>While all the low level functions are available for the programmer, the Toql derive produces also high level functions, so that the whole can be done with a single function call.</p>
+                        <a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The Toql Derive</h1></a>
+<p>The recommended way to use Toql in your project is to use the Toql derive.</p>
+<p>The derive builds a lot of code. This includes</p>
+<ul>
+<li>Mapping of Toql fields to struct fields and database columns or expressions.</li>
+<li>Creating field methods for the query builder.</li>
+<li>Handling relationships through joins and merges.</li>
+<li>Creating high level functions to load, insert, update and delete structs.</li>
+</ul>
 <a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>Here is part of the code that uses Rocket to serve users from a database.</p>
-<pre><pre class="playpen"><code class="language-rust">    #[derive(Toql)]
-    #[toql(skip_indelup)] // No insert / delete / update functionality
-    struct Country {
-        id: String,
-        name: Option&lt;String&gt;
-    }
+<p>With this simple code</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+   #[derive(Toql)]
+   struct User {
+       #[toql(delup_key)]
+       id: u32,
+       name: Option&lt;String&gt;
+}
+#}</code></pre></pre>
+<p>we can now do the following</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+use toql::mysql::load_one; // Load function from derive
+use toql::mysql::update_one; // Update function from derive
 
-    #[derive(Toql)]
-    #[toql(skip_indelup)]
-    struct User {
-        id: u32,
-        name: Option&lt;String&gt;,
-        #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;))]
-        country: Option&lt;Country&gt;
-    }
-    
-    #[query(&quot;/?&lt;toql..&gt;&quot;)]
-    fn query(toql: Form&lt;ToqlQuery&gt;,  conn: ExampleDbConnection, 
-        mappers: State&lt;SqlMapperCache&gt;) -&gt; Result&lt;Counted&lt;Json&lt;User&gt;&gt;&gt; {
-        let ExampleDbConnection(mut c) = conn;
+let conn = --snip--
+let cache = SqlMapperCache::new();
+SqlMapper::insert_new_mapper::&lt;User&gt;(&amp;mut cache); // Mapper function from derive
 
-        let r = toql::rocket::load_many(toql, mappers, &amp;mut c)?;
-        Ok(Counted(Json(r.0), r.1))
-    }
+let q = Query::wildcard().and(User::fields.id().eq(5)); // Builder fields from derive
+let user = load_one&lt;User&gt;(&amp;q, &amp;cache, &amp;mut conn); 
 
-    #[database(&quot;example_db&quot;)]
-    pub struct ExampleDbConnection(mysql::Conn);
-
-    fn main() {
-        let mut mappers = SqlMapperCache::new();
-        SqlMapper::insert_new_mapper::&lt;User&gt;(&amp;mut mappers);
-
-        rocket::ignite().mount(&quot;/query&quot;, routes![query]).launch();
-    }
-</code></pre></pre>
-<p>If you have a MySQL Server running, try the full CRUD example.</p>
-<pre><code class="language-bash">ROCKET_DATABASES={example_db={url=mysql://USER:PASSWORD@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
-
-</code></pre>
+user.age = Some(16);
+update_one(&amp;user); 
+#}</code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../query-language/filter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="query-language/introduction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/mapping.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -214,13 +202,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../query-language/filter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="query-language/introduction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/mapping.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -229,35 +217,20 @@
         </div>
 
         
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
-        
 
         
 
         
 
         
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
         
 
-        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
         

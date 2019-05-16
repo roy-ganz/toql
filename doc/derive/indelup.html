@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>The Toql Derive - Toql guide</title>
+        <title>Insert / Delete / Update - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html" class="active"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html" class="active"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -140,42 +140,91 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The Toql derive</h1></a>
-<p>The recommended way to use Toql in your project is to use the Toql derive.</p>
-<p>The derive builds a lot of code. This includes</p>
-<ul>
-<li>Mapping of struct fields to Toql fields and database.</li>
-<li>Creating query builder functions.</li>
-<li>Handling relationships through joins and merges.</li>
-<li>Creating high level functions to load, insert, update and delete structs.</li>
-</ul>
-<a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>With this simple code</p>
+                        <a class="header" href="#insert-update-and-delete" id="insert-update-and-delete"><h1>Insert, update and delete</h1></a>
+<p>Structs for toql queries include typically a lot of <code>Option&lt;&gt;</code> fields. The Toql derive can build proper insert, update and delete functions.</p>
+<a class="header" href="#keys-and-skipping" id="keys-and-skipping"><h2>Keys and skipping</h2></a>
+<p>To make this work you need to provide additional information about keys.</p>
+<pre><code class="language-struct">struct User {
+  #[toql(delup_key, skip_inup)] // Key for delete / update, never insert / update
+    id: u64
+
+    name: Option&lt;String&gt;
+}
+</code></pre>
+<p>For composite keys mark multiple columns with the <code>delup_key</code>.</p>
+<p>Join, merge and SQL fields are excluded. To skip other fields from insert or update functions use the <code>skip_inup</code> annotation. Useful for auto incremented primary keys or trigger generated values.</p>
+<a class="header" href="#example" id="example"><h3>Example</h3></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-   #[derive(Toql)]
-   struct User {
-       id: u32,
-       name: String,
+#[derive(Toql)]
+struct User {
+    #[toql(delup_key, skip_inup)]
+     id: u32,
+     name: Option&lt;String&gt;
+}
+
+--snip--
+use toql::mysql::insert_one;
+use toql::mysql::udate_one;
+use toql::mysql::delete_one;
+
+let mut conn = --snip--
+
+let u = User{id:0, name: Some(&quot;Susane&quot;)};
+let x = insert_one(&amp;u, &amp;mut conn); // returns key
+u.id = x;
+u.name= Some(&quot;Peter&quot;);
+update_one(&amp;u, &amp;mut conn);
+
+delete_one(&amp;u, &amp;mut conn);
+#}</code></pre></pre>
+<a class="header" href="#update-behaviour" id="update-behaviour"><h2>Update behaviour</h2></a>
+<p>The update function will update fields only if they contains some value. Look at this struct:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+struct User {
+    id: u64
+    username: String,			// Always updated
+    realname: Option&lt;String&gt;, 		// Updated conditionally
+    address: Option&lt;Option&lt;&lt;String&gt;&gt;, 	// Optional nullable column, updated conditionally
+    #[toql(select_always)]
+    info: Option&lt;String&gt; 		// Nullable column, always updated
+
+
 }
 #}</code></pre></pre>
-<p>we can now do the following</p>
+<a class="header" href="#collections" id="collections"><h1>Collections</h1></a>
+<p>Collections or dependend structs are <strong>not</strong> affected by insert, delete or update. You must do this manually (for safety reasons).</p>
+<p>However functions for collections are provided.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-use toql::mysql::load_one; // Load function from derive
-use toql::mysql::update_one; // Update function from derive
+#[derive(Toql)]
 
-let conn = --snip--
-let cache = SqlMapperCache::new();
-SqlMapper::insert_new_mapper::&lt;User&gt;(&amp;mut cache); // Mapper function from derive
+struct Phone {
+    #[toql(delup_key, skip_inup)]
+    id: u64
+}
 
-let q = Query::wildcard().and(User::fields.id().eq(5)); // Builder fields from derive
-let user = load_one&lt;User&gt;(&amp;q, &amp;cache, &amp;mut conn); 
+struct User {
+    #[toql(delup_key, skip_inup)]
+     id: u32,
+     phones: vec&lt;Phone&gt;
+}
 
-user.age = Some(16);
-update_one(&amp;user); 
+--snip--
+use toql::mysql::insert_one;
+use toql::mysql::insert_many;
+
+use toql::mysql::delete_one;
+use toql::mysql::delete_many;
+
+// TODO
+
+
+
 #}</code></pre></pre>
 
                     </main>
@@ -183,13 +232,13 @@ update_one(&amp;user);
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../query-language/filter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../derive/merges.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../derive/mapping.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/reference.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -201,13 +250,13 @@ update_one(&amp;user);
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../query-language/filter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../derive/merges.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../derive/mapping.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/reference.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -215,21 +264,6 @@ update_one(&amp;user);
 
         </div>
 
-        
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
         
 
         

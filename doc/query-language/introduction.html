@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Reference - Toql guide</title>
+        <title>The Query Language - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html" class="active"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html" class="active"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -140,40 +140,37 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#toql-derive-reference" id="toql-derive-reference"><h1>Toql Derive reference</h1></a>
-<p>The derive provides struct level attributes and field level attributes.</p>
-<a class="header" href="#attributes-for-structs" id="attributes-for-structs"><h2>Attributes for structs</h2></a>
-<table><thead><tr><th>Attribute </th><th> Description                             </th><th> Example / Remark</th></tr></thead><tbody>
-<tr><td>tables  </td><td>   Defines for struct and joins how table names are generated. </td><td>  Possible values are <code>CamelCase</code>, <code>snake_case</code>, <code>SHOUTY_SNAKE_CASE</code> and <code>mixedCase</code></td></tr>
-<tr><td>columns        </td><td> Same as attribute <code>tables</code> but for columns. </td></tr>
-<tr><td>table </td><td> Sets the table name for a struct or join. </td><td> table =&quot;User&quot; on struct <code>NewUser</code> will access table <code>User</code></td></tr>
-<tr><td>skip_query </td><td> Derive does not generate query functionality for the struct. </td></tr>
-<tr><td>skip_query_builder </td><td> Derive does not generate field methods. </td><td>  No <code>User::fields.id()</code>.</td></tr>
-<tr><td>skip_indelup </td><td> Derive does not generate insert, delete and update functionality. </td></tr>
-</tbody></table>
-<a class="header" href="#attributes-for-fields" id="attributes-for-fields"><h2>Attributes for fields</h2></a>
-<table><thead><tr><th>Attribute </th><th> Description </th><th> Example / Remark</th></tr></thead><tbody>
-<tr><td>delup_key </td><td> Field used as key for delete and update functions. For composite keys use multiple times. </td></tr>
-<tr><td>skip_inup </td><td> No insert, update for this field. </td><td> Use for auto increment columns or columns calculated from database triggers.</td></tr>
-<tr><td>sql       </td><td> Maps field to SQL expression instead of table column. To insert the table alias use two dots. Skipped for insert, update. </td><td> <code>sql =&quot;SELECT COUNT (*) FROM Message m WHERE m.user_id = ..id&quot;</code></td></tr>
-<tr><td>sql_join  </td><td> Loads a single struct with an sql join, where self and other defines columns with same values. For composite keys use multiple <code>sql_join</code>.    </td><td> <code>sql_join( self=&quot;friend_id&quot;, other=&quot;friend.id&quot;, on=&quot;friend.best = true&quot;)</code>If <em>self</em> is omitted it will be created from variable name.</td></tr>
-<tr><td>merge     </td><td> Loads a dependend Vec&lt;&gt;. Merges run an additional SELECT statemen. self and other define struct fields with same values. For composite fields use multiple merges </td><td> <code>merge(self=&quot;id&quot;, other=&quot;user_id&quot;)</code></td></tr>
-<tr><td>ignore_wildcard </td><td> No selection for <code>**</code> and <code>*</code></td></tr>
-<tr><td>alias </td><td> Builds sql_join with this alias. </td></tr>
-<tr><td>table </td><td> Joins or merges on this table. </td></tr>
-<tr><td>role </td><td> Field only accessable for queries with this role. Multiple use requires multiple roles. </td><td> <code>role=&quot;admin&quot;, role= &quot;superadmin&quot;</code></td></tr>
-</tbody></table>
+                        <a class="header" href="#the-query-language" id="the-query-language"><h1>The Query Language</h1></a>
+<p>The toql query language is a string that defines which fields should be selected from a database table.</p>
+<p>Fields can be filtered and ordered, they are separated by comma or semicolon to express AND or OR concatenation.</p>
+<p>Fields preceded by a path refer to a depended table.</p>
+<a class="header" href="#example-1" id="example-1"><h4>Example 1:</h4></a>
+<pre><code>id, +name, age gt 18
+</code></pre>
+<p>is translated into</p>
+<pre><code>SELECT id, name, age WHERE age &gt; 18 ORDER BY name ASC
+</code></pre>
+<a class="header" href="#example-2" id="example-2"><h4>Example 2:</h4></a>
+<pre><code>id , .age eq 12; .age eq 15
+</code></pre>
+<p>is translated into</p>
+<pre><code>SELECT id WHERE age = 12 OR age = 15
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../derive/indelup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../concept.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
+                        
+                            <a rel="next" href="../query-language/select.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         
 
                         <div style="clear: both"></div>
@@ -183,31 +180,20 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../derive/indelup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../concept.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
+                    <a href="../query-language/select.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
             </nav>
 
         </div>
 
-        
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
         
 
         

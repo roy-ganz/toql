@@ -144,11 +144,11 @@
 <p>A struct can refer to another struct. This is done with a SQL join.</p>
 <p>Joins are automatically added to the SQL statement in these situations:</p>
 <ul>
-<li>Fields in the Toql query refer to another struct. Example <code>user_phoneId</code></li>
-<li>Fields on a joined struct are always selected. <code>#[toql(select_always)</code></li>
-<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>. Example <code>id: u64</code></li>
+<li>Fields in the Toql query refer to another struct through a path: <code>user_phoneId</code>.</li>
+<li>Fields on a joined struct are always selected: <code>#[toql(select_always)</code>.</li>
+<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>: <code>id: u64</code>.</li>
 </ul>
-<a class="header" href="#example" id="example"><h4>Example</h4></a>
+<a class="header" href="#example" id="example"><h4>Example:</h4></a>
 <p>The Toql query <code>id</code> translates this</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
@@ -175,7 +175,7 @@ struct Phone {
 <pre><code class="language-sql">SELECT user.id, null, null, country.id FROM User user 
 INNER JOIN Country country ON (user.country_id = country.id)
 </code></pre>
-<p>While the same structs with the Toql query <code>id, mobilePhone_id</code> translates into</p>
+<p>While the Toql query <code>id, mobilePhone_id</code> for the same structs translates into</p>
 <pre><code class="language-sql">SELECT user.id, null, mobile_phone.id, country.id FROM User user 
 LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
 INNER JOIN Country country ON (user.country_id = country.id)
@@ -200,7 +200,7 @@ struct User {
 <a class="header" href="#join-attributes" id="join-attributes"><h2>Join Attributes</h2></a>
 <p>SQL joins can be defined with</p>
 <ul>
-<li><em>self</em>, the column on the referencing table. If omitted the field name is taken.</li>
+<li><em>self</em>, the column on the referencing table. If omitted the struct field's name is taken.</li>
 <li><em>other</em>, the column of the joined tabled.</li>
 <li><em>on</em>, an additional SQL predicate. Must include the table alias.</li>
 </ul>
@@ -212,12 +212,13 @@ struct User {
     #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;), sql_join(self=&quot;language_id&quot;, other=&quot;language_id&quot;, on=&quot;country.language_id = 'en'&quot;) ]  
     country : Option&lt;Country&gt;
 #}</code></pre></pre>
-<a class="header" href="#join-types" id="join-types"><h2>Join Types</h2></a>
+<a class="header" href="#left-and-inner-joins" id="left-and-inner-joins"><h2>Left and inner Joins</h2></a>
 <p>Joining on an <code>Option</code> field will issue a LEFT JOIN rather than an INNER JOIN.</p>
-<p>If the selected columns cannot be converted into a struct</p>
+<p>Selected columns from a join cannot always be converted into a struct. A LEFT JOIN is likely to
+produce null values. In case the database results cannot be put into a joined struct, then:</p>
 <ul>
-<li>then this will result in a field value of <code>None</code> for an <code>Option&lt;&gt;</code> type</li>
-<li>or will raise an error for non <code>Option&lt;&gt;</code> types</li>
+<li><code>Option&lt;&gt;</code> fields value will be <code>None</code>.</li>
+<li>Non <code>Option&lt;&gt;</code> fields will raise an error.</li>
 </ul>
 
                     </main>
@@ -257,21 +258,6 @@ struct User {
 
         </div>
 
-        
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
         
 
         

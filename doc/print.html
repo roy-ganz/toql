@@ -142,38 +142,27 @@
                     <main>
                         <a class="header" href="#toql-transfer-object-query-language" id="toql-transfer-object-query-language"><h1>Toql (<em>Transfer Object Query Language</em>)</h1></a>
 <p>This guide will explain you how to use Toql to query and modify data from a database.</p>
-<p>Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on <a href="www.github.com/roy-ganz/toql">Github</a>. Check out the API for technical details.</p>
-<a class="header" href="#getting-started" id="getting-started"><h2>Getting started</h2></a>
+<p>Toql is free and open source software, distributed under a dual license of MIT and Apache. The code is available on <a href="https://www.github.com/roy-ganz/toql">Github</a>. Check out the API for technical details.</p>
+<a class="header" href="#available-sections" id="available-sections"><h2>Available Sections</h2></a>
 <p>This book is split into several sections, with this introduction being the first. The others are:</p>
 <ul>
 <li><a href="concept.html">Concept</a> - The overall concept of Toql.</li>
 <li><a href="query-language/introduction.html">Query Language</a> - How queries look like.</li>
 <li><a href="derive/introduction.html">Toql Derive</a> - Let the derive do all the work!</li>
 </ul>
-<a class="header" href="#features" id="features"><h2>Features</h2></a>
-<p>Toql <em>Transfer Object Query Language</em> is a library that turns a query string into SQL to retrieve data records.
-It is useful for web clients to get database records from a REST interface.</p>
-<p>Toql</p>
-<ul>
-<li>can query, insert, update and delete single and multiple database records.</li>
-<li>handles dependencies in queries through SQL joins and merges. Cool!</li>
-<li>is fast, beause the mapper is only created once and than reused.</li>
-<li>has high level functions for speed and low level functions for edge cases.</li>
-</ul>
-<a class="header" href="#background" id="background"><h2>Background</h2></a>
-<p>I developped Toql about 10 years ago for a web project. I have refined it since then and it can be seen in action
-on my other website <a href="www.schoolsheet.com">www.schoolsheet.com</a>. I started the Toql project to learn Rust.</p>
 <a class="header" href="#concept" id="concept"><h1>Concept</h1></a>
 <p>Toql is a set of crates that aim to simplify web development:</p>
 <ol>
 <li>A web client sends a Toql query to the REST Server.</li>
 <li>The server uses Toql to parse the query and create SQL.</li>
 <li>SQL is send to the Database.</li>
-<li>The database results are sent to the client.</li>
+<li>The resulting datasets are put into structs.</li>
+<li>The structs are sent to the client.</li>
 </ol>
-<p>While all the low level functions are available for the programmer, the Toql derive produces also high level functions, so that the whole can be done with a single function call.</p>
+<p>The Toql derive produces high level functions, so that common operations can be done with a single function call.
+For edge cases all the low level functions are available for the programmer, too.</p>
 <a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>Here is part of the code that uses Rocket to serve users from a database.</p>
+<p>Here is an excerpt of code that uses Rocket to serve users from a database.</p>
 <pre><pre class="playpen"><code class="language-rust">    #[derive(Toql)]
     #[toql(skip_indelup)] // No insert / delete / update functionality
     struct Country {
@@ -317,12 +306,12 @@ selects with a wildcard, the field will just be ignored.</p>
 </tbody></table>
 <a class="header" href="#custom-functions" id="custom-functions"><h2>Custom functions</h2></a>
 <p>Custom functions are applied through the <code>FN</code> filter. They must be handled by a Field Handler. See API for details.</p>
-<a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The Toql derive</h1></a>
+<a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The Toql Derive</h1></a>
 <p>The recommended way to use Toql in your project is to use the Toql derive.</p>
 <p>The derive builds a lot of code. This includes</p>
 <ul>
-<li>Mapping of struct fields to Toql fields and database.</li>
-<li>Creating query builder functions.</li>
+<li>Mapping of Toql fields to struct fields and database columns or expressions.</li>
+<li>Creating field methods for the query builder.</li>
 <li>Handling relationships through joins and merges.</li>
 <li>Creating high level functions to load, insert, update and delete structs.</li>
 </ul>
@@ -333,8 +322,9 @@ selects with a wildcard, the field will just be ignored.</p>
 #fn main() {
    #[derive(Toql)]
    struct User {
+       #[toql(delup_key)]
        id: u32,
-       name: String,
+       name: Option&lt;String&gt;
 }
 #}</code></pre></pre>
 <p>we can now do the following</p>
@@ -359,39 +349,42 @@ update_one(&amp;user);
 <ol>
 <li>Table names are UpperCamelCase.</li>
 <li>Column names are snake_case.</li>
-<li>Toql fields are lowerCamelCase, dependend structs are separated with an underscore.</li>
+<li>Toql fields are lowerCamelCase.</li>
+<li>Toql paths are lowerCamelCase, separated with an underscore.</li>
 </ol>
 <a class="header" href="#database" id="database"><h2>Database</h2></a>
-<p>To adjust the default naming to an existing database scheme use the toql attributes <code>tables</code> and <code>columns</code> on the struct.
-Possible values are</p>
+<p>To adjust the default naming to an existing database scheme use the attributes <code>tables</code> and <code>columns</code> for a renaming scheme or <code>table</code> and <code>column</code> for explicit name.</p>
+<p>Supported renaming schemes are</p>
 <ul>
 <li>CamelCase</li>
 <li>snake_case</li>
 <li>SHOUTY_SNAKE_CASE</li>
 <li>mixedCase</li>
 </ul>
+<a class="header" href="#renaming-scheme-example" id="renaming-scheme-example"><h4>Renaming scheme example:</h4></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
 #[derive(Toql)]
 #[toql(tables=&quot;SHOUTY_SNAKE_CASE&quot;, columns=&quot;UpperCase&quot;)]
-  struct UserRef {
-        user_id: u32
-        full_name: String,
+struct UserRef {
+    user_id: u32
+    full_name: String,
 }
 #}</code></pre></pre>
 <p>is translated into</p>
-<p><code>SELECT UserId, FullName FROM USER_REF;</code></p>
-<p>Or use <code>table</code> an the struct and <code>column</code> on the fields.</p>
+<p><code>SELECT UserId, FullName FROM USER_REF</code></p>
+<a class="header" href="#explicit-naming-example" id="explicit-naming-example"><h4>Explicit naming example:</h4></a>
+<p>Use <code>table</code> an the struct and <code>column</code> on the fields.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
 #[derive(Toql)]
 #[toql(table=&quot;User&quot;)]
-  struct UserRef {
+struct UserRef {
     #[toql(column=&quot;id&quot;)]
-        user_id: u32
-        full_name: String,
+    user_id: u32
+    full_name: String,
 }
 #}</code></pre></pre>
 <p>is translated into</p>
@@ -403,20 +396,20 @@ Possible values are</p>
 #fn main() {
 #[derive(Toql)]
 #[toql(table=&quot;User&quot;)]
-  struct UserRef {
+struct UserRef {
     #[toql(column=&quot;id&quot;)]
-        id: u32
-        full_name: String,
-        #[toql(self=&quot;counry_id&quot;, other=&quot;id&quot;)]
-        county: Country
+    id: u32
+    full_name: String,
+    #[toql(self=&quot;counry_id&quot;, other=&quot;id&quot;)]
+    county: Country
 }
 #}</code></pre></pre>
 <p>is referred to as</p>
 <p><code>id, fullName, country_id</code></p>
 <a class="header" href="#exclusion" id="exclusion"><h2>Exclusion</h2></a>
-<p>To exclude fields from the query annotate it with <code>skip</code>.</p>
+<p>To exclude fields from mapping attribute them with <code>skip</code>.</p>
 <a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
-<p>Each field in a Toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement regardless of the query.</p>
+<p>Each field in a Toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement, regardless of the query.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -432,11 +425,11 @@ Possible values are</p>
 <p>A struct can refer to another struct. This is done with a SQL join.</p>
 <p>Joins are automatically added to the SQL statement in these situations:</p>
 <ul>
-<li>Fields in the Toql query refer to another struct. Example <code>user_phoneId</code></li>
-<li>Fields on a joined struct are always selected. <code>#[toql(select_always)</code></li>
-<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>. Example <code>id: u64</code></li>
+<li>Fields in the Toql query refer to another struct through a path: <code>user_phoneId</code>.</li>
+<li>Fields on a joined struct are always selected: <code>#[toql(select_always)</code>.</li>
+<li>Fields on a joined struct are not <code>Option&lt;&gt;</code>: <code>id: u64</code>.</li>
 </ul>
-<a class="header" href="#example-6" id="example-6"><h4>Example</h4></a>
+<a class="header" href="#example-6" id="example-6"><h4>Example:</h4></a>
 <p>The Toql query <code>id</code> translates this</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
@@ -463,7 +456,7 @@ struct Phone {
 <pre><code class="language-sql">SELECT user.id, null, null, country.id FROM User user 
 INNER JOIN Country country ON (user.country_id = country.id)
 </code></pre>
-<p>While the same structs with the Toql query <code>id, mobilePhone_id</code> translates into</p>
+<p>While the Toql query <code>id, mobilePhone_id</code> for the same structs translates into</p>
 <pre><code class="language-sql">SELECT user.id, null, mobile_phone.id, country.id FROM User user 
 LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
 INNER JOIN Country country ON (user.country_id = country.id)
@@ -488,7 +481,7 @@ struct User {
 <a class="header" href="#join-attributes" id="join-attributes"><h2>Join Attributes</h2></a>
 <p>SQL joins can be defined with</p>
 <ul>
-<li><em>self</em>, the column on the referencing table. If omitted the field name is taken.</li>
+<li><em>self</em>, the column on the referencing table. If omitted the struct field's name is taken.</li>
 <li><em>other</em>, the column of the joined tabled.</li>
 <li><em>on</em>, an additional SQL predicate. Must include the table alias.</li>
 </ul>
@@ -500,15 +493,16 @@ struct User {
     #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;), sql_join(self=&quot;language_id&quot;, other=&quot;language_id&quot;, on=&quot;country.language_id = 'en'&quot;) ]  
     country : Option&lt;Country&gt;
 #}</code></pre></pre>
-<a class="header" href="#join-types" id="join-types"><h2>Join Types</h2></a>
+<a class="header" href="#left-and-inner-joins" id="left-and-inner-joins"><h2>Left and inner Joins</h2></a>
 <p>Joining on an <code>Option</code> field will issue a LEFT JOIN rather than an INNER JOIN.</p>
-<p>If the selected columns cannot be converted into a struct</p>
+<p>Selected columns from a join cannot always be converted into a struct. A LEFT JOIN is likely to
+produce null values. In case the database results cannot be put into a joined struct, then:</p>
 <ul>
-<li>then this will result in a field value of <code>None</code> for an <code>Option&lt;&gt;</code> type</li>
-<li>or will raise an error for non <code>Option&lt;&gt;</code> types</li>
+<li><code>Option&lt;&gt;</code> fields value will be <code>None</code>.</li>
+<li>Non <code>Option&lt;&gt;</code> fields will raise an error.</li>
 </ul>
 <a class="header" href="#merge" id="merge"><h1>Merge</h1></a>
-<p>A struct can also contain a collection of other structs. Since this cannot be done directly in SQL Toql will execute multiple queries and merge the results afterwards.</p>
+<p>A struct can also contain a collection of other structs. Because this cannot be done directly in SQL, Toql will execute multiple queries and merge the results afterwards.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -525,6 +519,9 @@ struct Phone {
 }
 #}</code></pre></pre>
 <p>Selecting all fields from above with <code>**</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common value of <code>user.id</code> and <code>phone.user_id</code>.</p>
+<a class="header" href="#merge-attribute" id="merge-attribute"><h2>Merge attribute</h2></a>
+<p>Because merging is done by Rust, the merge fields must refer to the struct fields.</p>
+<p><code>#[toql(merge(self=&quot;rust_field_name_in_this_struct&quot;, other=&quot;rust_field_name_in_other_struct&quot;))]</code></p>
 <a class="header" href="#composite-fields" id="composite-fields"><h2>Composite fields</h2></a>
 <p>To merge on composite fields use the attribute multiple times <code>#[toql(merge(..), merge(..))</code>.</p>
 <a class="header" href="#insert-update-and-delete" id="insert-update-and-delete"><h1>Insert, update and delete</h1></a>
@@ -614,27 +611,27 @@ use toql::mysql::delete_many;
 
 #}</code></pre></pre>
 <a class="header" href="#toql-derive-reference" id="toql-derive-reference"><h1>Toql Derive reference</h1></a>
-<p>The derive provides struct level attributes and field level attributes.</p>
+<p>The derive provides struct level attributes and field level attributes. Here a list of all available attributes:</p>
 <a class="header" href="#attributes-for-structs" id="attributes-for-structs"><h2>Attributes for structs</h2></a>
 <table><thead><tr><th>Attribute </th><th> Description                             </th><th> Example / Remark</th></tr></thead><tbody>
-<tr><td>tables  </td><td>   Defines for struct and joins how table names are generated. </td><td>  Possible values are <code>CamelCase</code>, <code>snake_case</code>, <code>SHOUTY_SNAKE_CASE</code> and <code>mixedCase</code></td></tr>
-<tr><td>columns        </td><td> Same as attribute <code>tables</code> but for columns. </td></tr>
-<tr><td>table </td><td> Sets the table name for a struct or join. </td><td> table =&quot;User&quot; on struct <code>NewUser</code> will access table <code>User</code></td></tr>
-<tr><td>skip_query </td><td> Derive does not generate query functionality for the struct. </td></tr>
-<tr><td>skip_query_builder </td><td> Derive does not generate field methods. </td><td>  No <code>User::fields.id()</code>.</td></tr>
-<tr><td>skip_indelup </td><td> Derive does not generate insert, delete and update functionality. </td></tr>
+<tr><td>tables  </td><td>   Table renaming scheme for struct and joins </td><td>  <code>CamelCase</code>, <code>snake_case</code>, <code>SHOUTY_SNAKE_CASE</code> or <code>mixedCase</code></td></tr>
+<tr><td>columns        </td><td> Column renaming scheme </td></tr>
+<tr><td>table </td><td> Table name for a struct or join </td><td> table =&quot;User&quot; on struct <code>NewUser</code> will access table <code>User</code></td></tr>
+<tr><td>skip_query </td><td> No query methods  </td></tr>
+<tr><td>skip_query_builder </td><td> No field methods </td><td>  No <code>User::fields.id()</code>.</td></tr>
+<tr><td>skip_indelup </td><td>No insert, delete and update methods </td></tr>
 </tbody></table>
 <a class="header" href="#attributes-for-fields" id="attributes-for-fields"><h2>Attributes for fields</h2></a>
 <table><thead><tr><th>Attribute </th><th> Description </th><th> Example / Remark</th></tr></thead><tbody>
-<tr><td>delup_key </td><td> Field used as key for delete and update functions. For composite keys use multiple times. </td></tr>
-<tr><td>skip_inup </td><td> No insert, update for this field. </td><td> Use for auto increment columns or columns calculated from database triggers.</td></tr>
-<tr><td>sql       </td><td> Maps field to SQL expression instead of table column. To insert the table alias use two dots. Skipped for insert, update. </td><td> <code>sql =&quot;SELECT COUNT (*) FROM Message m WHERE m.user_id = ..id&quot;</code></td></tr>
-<tr><td>sql_join  </td><td> Loads a single struct with an sql join, where self and other defines columns with same values. For composite keys use multiple <code>sql_join</code>.    </td><td> <code>sql_join( self=&quot;friend_id&quot;, other=&quot;friend.id&quot;, on=&quot;friend.best = true&quot;)</code>If <em>self</em> is omitted it will be created from variable name.</td></tr>
-<tr><td>merge     </td><td> Loads a dependend Vec&lt;&gt;. Merges run an additional SELECT statemen. self and other define struct fields with same values. For composite fields use multiple merges </td><td> <code>merge(self=&quot;id&quot;, other=&quot;user_id&quot;)</code></td></tr>
+<tr><td>delup_key </td><td> Field used as key by delete and update methods </td><td> For composite keys use multiple times.</td></tr>
+<tr><td>skip_inup </td><td> No insert, update for this field </td><td> Use for auto increment columns or columns calculated from database triggers.</td></tr>
+<tr><td>sql       </td><td> Field mapped to SQL expression instead of table column </td><td> Insert the table alias with two dots: <code>sql =&quot;SELECT COUNT (*) FROM Message m WHERE m.user_id = ..id&quot;</code>. Skipped for insert, update</td></tr>
+<tr><td>sql_join  </td><td> Required for fields that are structs.   </td><td> <code>sql join</code> needs column names in <code>self</code> and <code>other</code>, with <code>on</code> an extra sql condition can be given: <code>sql_join( self=&quot;column_name_on_this_table&quot;, other=&quot;column_name_on_joined_table&quot;, on=&quot;friend.best = true&quot;)</code>. For composite keys use multiple <code>sql_join</code>.</td></tr>
+<tr><td>merge     </td><td> required for fields that are Vec&lt;&gt;. </td><td> <code>merge</code> needs struct field names in <code>self</code> and <code>other</code>:  <code>merge(self=&quot;rust_field_name_in_this_struct&quot;, other=&quot;rust_field_name_on_other_struct&quot;)</code>. For composite fields use multiple <code>merge</code>.</td></tr>
 <tr><td>ignore_wildcard </td><td> No selection for <code>**</code> and <code>*</code></td></tr>
-<tr><td>alias </td><td> Builds sql_join with this alias. </td></tr>
-<tr><td>table </td><td> Joins or merges on this table. </td></tr>
-<tr><td>role </td><td> Field only accessable for queries with this role. Multiple use requires multiple roles. </td><td> <code>role=&quot;admin&quot;, role= &quot;superadmin&quot;</code></td></tr>
+<tr><td>alias </td><td> Alias for <code>sql_join</code>  </td></tr>
+<tr><td>table </td><td> Table name for joins and merges </td></tr>
+<tr><td>role </td><td> Required role for field access </td><td> <code>role=&quot;admin&quot;, role= &quot;superadmin&quot;</code> For multiple roles use multiple <code>role</code>.</td></tr>
 </tbody></table>
 
                     </main>
@@ -658,21 +655,6 @@ use toql::mysql::delete_many;
 
         </div>
 
-        
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
         
 
         

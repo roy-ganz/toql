@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Optional Fields - Toql guide</title>
+        <title>Merges - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html" class="active"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html" class="active"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -140,32 +140,42 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
-<p>Each field in a Toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement regardless of the query.</p>
+                        <a class="header" href="#merge" id="merge"><h1>Merge</h1></a>
+<p>A struct can also contain a collection of other structs. Because this cannot be done directly in SQL, Toql will execute multiple queries and merge the results afterwards.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-    struct User {
-        id: u32,				// Always selected in SQL
-        name: Option&lt;String&gt;			// Optional field
-        middlename: Option&lt;Option&lt;String&gt;&gt;	// Optional field of nullable column
-        #[toql(select_always)]
-        middlename: Option&lt;String&gt;  		// Nullable column, always selected in SQL
-  }
+struct User {
+     id: u32,
+     name: Option&lt;String&gt;
+     #[toql(merge(self=&quot;id&quot;, other=&quot;user_id&quot;))]  // Struct fields for Rust comparison
+     mobile_phones : Vec&lt;Phone&gt;
+}
+
+struct Phone {
+    number: Option&lt;String&gt;
+    user_id : Option&lt;u32&gt;
+}
 #}</code></pre></pre>
+<p>Selecting all fields from above with <code>**</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common value of <code>user.id</code> and <code>phone.user_id</code>.</p>
+<a class="header" href="#merge-attribute" id="merge-attribute"><h2>Merge attribute</h2></a>
+<p>Because merging is done by Rust, the merge fields must refer to the struct fields.</p>
+<p><code>#[toql(merge(self=&quot;rust_field_name_in_this_struct&quot;, other=&quot;rust_field_name_in_other_struct&quot;))]</code></p>
+<a class="header" href="#composite-fields" id="composite-fields"><h2>Composite fields</h2></a>
+<p>To merge on composite fields use the attribute multiple times <code>#[toql(merge(..), merge(..))</code>.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../derive/mapping.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../derive/joins.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../derive/joins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/indelup.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -177,13 +187,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../derive/mapping.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../derive/joins.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../derive/joins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/indelup.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -191,21 +201,6 @@
 
         </div>
 
-        
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
         
 
         

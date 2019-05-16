@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Selection - Toql guide</title>
+        <title>Filtering - Toql guide</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html" class="active"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html" class="active"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -140,65 +140,45 @@
 
                 <div id="content" class="content">
                     <main>
-                        <a class="header" href="#selecting-fields" id="selecting-fields"><h1>Selecting fields</h1></a>
-<p>Fields are selected if they are mentioned in the query.</p>
+                        <a class="header" href="#filtering" id="filtering"><h1>Filtering</h1></a>
+<p>Fields can be filtered by adding a filter to the field name.</p>
 <ul>
-<li>
-<p>Names without underscore represent typically columns or expressions from the table the query is run against. <code>id, name, fullName, emailAddress</code></p>
-</li>
-<li>
-<p>Fields with underscores are called <em>fields with a path</em>. They are mapped to a joined or a merged dependency. For a join relationship, the join will be added to the SQL statement if the field is selected. For a merge relationship a second SQL query must be run to query and merge the dependency. <code>book_id, book_title, book_createdBy_id</code></p>
-</li>
-<li>
-<p>To use a field only for filtering, but not for selection hide it with a dot. <code>.age, .book_id</code></p>
-</li>
+<li>Filters are case insensitiv.</li>
+<li>Arguments are separated by whitespace.</li>
+<li>Strings and enum arguments are enclosed with single quotes.</li>
+<li>Boolean arguments are expressed with numbers 0 and 1.</li>
 </ul>
-<a class="header" href="#example" id="example"><h4>Example</h4></a>
-<pre><code>id, book_id, .age eq 50
-</code></pre>
-<p>is translated into (SQL Mapper must be told how to join)</p>
-<pre><code>SELECT a.id, b.id, null FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50
-</code></pre>
-<a class="header" href="#wildcards" id="wildcards"><h2>Wildcards</h2></a>
-<p>There are two wildcards to select multiple fields. They can neither be filtered nor ordered.</p>
-<ul>
-<li>
-<p><strong>**</strong> selects all mapped fields (top level and dependencies). Useful for development.</p>
-</li>
-<li>
-<p><strong>*</strong> selects all fields from the top level.</p>
-</li>
-<li>
-<p><strong><em>path_</em>*</strong> selects all fields from <em>path</em>.</p>
-</li>
-</ul>
-<p>Fields can be excluded from the wildcard by setting them to <code>ignore wildcard</code>.</p>
-<a class="header" href="#example-1" id="example-1"><h4>Example</h4></a>
-<p><code>id, age, book_id, .age eq 50</code></p>
-<p>can be expressed as</p>
-<p><code>*, book_*, .age eq 50</code></p>
-<p>can be expressed as</p>
-<p><code>**, .age eq 50</code></p>
-<p>and is translation into</p>
-<p><code>SELECT id, book_id, age FROM FROM User a JOIN Book b ON (a.book_id = b.id) WHERE a.age &gt; 50</code></p>
-<p><em>Note that the <code>age</code> field is selected with **</em>.</p>
-<a class="header" href="#roles" id="roles"><h2>Roles</h2></a>
-<p>Fields can require roles from the query. This is the permission system from Toql.
-An error is raised, if a query selects a field that it's not allowed to. However if the query
-selects with a wildcard, the field will just be ignored.</p>
+<a class="header" href="#filter-operations" id="filter-operations"><h2>Filter operations</h2></a>
+<table><thead><tr><th>Toql</th><th> Operation </th><th> Example </th><th> SQL <em>MySQL</em></th></tr></thead><tbody>
+<tr><td>eq </td><td> <em>equal</em>    </td><td>   age eq 50  </td><td> age = 50</td></tr>
+<tr><td>eqn</td><td> <em>equal null</em>   </td><td>age eqn    </td><td>   age IS NULL</td></tr>
+<tr><td>ne  </td><td> <em>not equal</em>   </td><td>name ne 'foo'  </td><td>name &lt;&gt; 'foo'</td></tr>
+<tr><td>nen </td><td> <em>not equal null</em></td><td> age nen</td><td>    age IS NOT NULL</td></tr>
+<tr><td>gt </td><td> <em>greater than</em> </td><td> age gt 16 </td><td> age &gt; 16</td></tr>
+<tr><td>ge </td><td> <em>greater than or equal</em> </td><td> age ge 16 </td><td> age &gt;= 16</td></tr>
+<tr><td>lt </td><td> <em>less than</em> </td><td> age lt 16 </td><td> age &lt; 16</td></tr>
+<tr><td>le </td><td> <em>less than or equal</em> </td><td> age le 16 </td><td> age &lt;= 16</td></tr>
+<tr><td>bw </td><td> <em>between</em> </td><td> age bw 16 20 </td><td> age BETWEEN 16 AND 20</td></tr>
+<tr><td>in </td><td> <em>includes</em> </td><td> name in 'Peter' 'Susan' </td><td> name in ('Peter, 'Susan')</td></tr>
+<tr><td>out </td><td> <em>excludes</em> </td><td> age out 1 2 3 </td><td> name not in (1, 2, 3)</td></tr>
+<tr><td>re </td><td> <em>matches regular expression</em> </td><td> name re &quot;.*&quot; </td><td> name REGEXP '.*'</td></tr>
+<tr><td>fn </td><td> <em>custom function</em> </td><td> search fn ma 'arg1' </td><td> <em>depends on implementation</em></td></tr>
+</tbody></table>
+<a class="header" href="#custom-functions" id="custom-functions"><h2>Custom functions</h2></a>
+<p>Custom functions are applied through the <code>FN</code> filter. They must be handled by a Field Handler. See API for details.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="../query-language/introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../query-language/order.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="../query-language/order.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/introduction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -210,13 +190,13 @@ selects with a wildcard, the field will just be ignored.</p>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a href="../query-language/introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a href="../query-language/order.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a href="../query-language/order.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/introduction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
@@ -224,21 +204,6 @@ selects with a wildcard, the field will just be ignored.</p>
 
         </div>
 
-        
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload(true); // force reload from server (not from cache)
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
         
 
         

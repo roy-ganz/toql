@@ -1,5 +1,10 @@
 [book]
-authors = ["roy-ganz"]
+authors = ["Artos <roy.ganz@glanis.biz>"]
 multilingual = false
 src = "src"
 title = "Toql guide"
+
+[build]
+build-dir= "../doc"
+preprocess = ["links", "index"]
+
