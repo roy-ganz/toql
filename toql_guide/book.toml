@@ -5,6 +5,6 @@ src = "src"
 title = "Toql guide"
 
 [build]
-build-dir= "../doc"
+build-dir= "../docs"
 preprocess = ["links", "index"]
 
