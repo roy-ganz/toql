@@ -8,7 +8,8 @@ Toql is a set of crates that aim to simplify web development:
 4. The resulting datasets are put into structs.
 4. The structs are sent to the client.
 
-While all the low level functions are available for the programmer, the Toql derive produces also high level functions, so that comon operations can be done with a single function call.
+The Toql derive produces high level functions, so that common operations can be done with a single function call.
+For edge cases all the low level functions are available for the programmer, too.
 
 ## Example
 
