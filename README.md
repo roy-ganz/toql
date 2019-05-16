@@ -17,7 +17,7 @@ ORDER BY user.age ASC
 for all your `Toql` derived structs.
 
 ### Resources
-Check out the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs). There is also a [guide](https://github.com/roy-ganz/toql/blob/master/guide/src/introduction.md) and the [API documentation](https://docs.rs/toql/0.1.4/toql/).
+Check out the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs). There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.1.4/toql/).
 
 ### Installation
 
@@ -48,7 +48,7 @@ My near term goal is to support for more web frameworks and databases. However I
 
 
 ## Background
-I have developed the initial Toql language about 7 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](http://www.schoolsheet.com), a web service I created in Java for my teaching. The Rust implementation is must faster though ;)
+I have developed the initial Toql language about 7 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](https://www.schoolsheet.com), a web service I created in Java for my teaching. The Rust implementation is must faster though ;)
 
 
 ## License
