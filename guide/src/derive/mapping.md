@@ -29,7 +29,7 @@ is translated into
 `SELECT UserId, FullName FROM USER_REF;`
 
 #### Example 2:
-Or use `table` an the struct and `column` on the fields.
+Use `table` an the struct and `column` on the fields.
 
 
 ```rust
