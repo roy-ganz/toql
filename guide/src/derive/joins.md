@@ -3,9 +3,9 @@
 A struct can refer to another struct. This is done with a SQL join. 
 
 Joins are automatically added to the SQL statement in these situations:
--  Fields in the Toql query refer to another struct. Example `user_phoneId`
--  Fields on a joined struct are always selected. `#[toql(select_always)` 
--  Fields on a joined struct are not `Option<>`. Example `id: u64`
+-  Fields in the Toql query refer to another struct through a path: `user_phoneId`.
+-  Fields on a joined struct are always selected: `#[toql(select_always)`. 
+-  Fields on a joined struct are not `Option<>`: `id: u64`.
 
 #### Example
 
