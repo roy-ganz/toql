@@ -1,6 +1,6 @@
 # Toql Derive reference
 
-The derive provides struct level attributes and field level attributes. Here a list of all available attributes.
+The derive provides struct level attributes and field level attributes. Here a list of all available attributes:
 
 ## Attributes for structs
 
