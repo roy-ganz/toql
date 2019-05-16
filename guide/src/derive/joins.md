@@ -67,7 +67,7 @@ SELECT u.id, null, p.id FROM Users u LEFT JOIN Phones p ON (u.mobile_id = p.id)
 
 ## Join Attributes
 SQL joins can be defined with
-- *self*, the column on the referencing table. If omitted the field name is taken.
+- *self*, the column on the referencing table. If omitted the struct field's name is taken.
 - *other*, the column of the joined tabled.
 - *on*, an additional SQL predicate. Must include the table alias.
 
