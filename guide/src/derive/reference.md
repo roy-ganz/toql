@@ -9,9 +9,9 @@ Attribute | Description                             | Example / Remark
 tables  |   Defines for struct and joins how table names are generated. |  Possible values are `CamelCase`, `snake_case`, `SHOUTY_SNAKE_CASE` and `mixedCase`
 columns        | Same as attribute `tables` but for columns. |
 table | Sets the table name for a struct or join. | table ="User" on struct `NewUser` will access table `User`
-skip_query | Derive does not generate query functionality for the struct. | 
-skip_query_builder | Derive does not generate field methods. |  No `User::fields.id()`.
-skip_indelup | Derive does not generate insert, delete and update functionality. |
+skip_query | No query methods are generated. | 
+skip_query_builder | No field methods are generated. |  No `User::fields.id()`.
+skip_indelup |No insert, delete and update methods are generated. |
 
 ## Attributes for fields  
 
