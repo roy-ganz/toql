@@ -14,8 +14,7 @@ This book is split into several sections, with this introduction being the first
 
 ## Features
 
-Toql _Transfer Object Query Language_ can turns a query string into SQL to retrieve data records. 
-It is useful for web clients to get database records from a REST interface. 
+Toql _Transfer object query language_ is a query language to build SQL statements. It can retrieve filtered, ordered and indiviually selected columns from a database and put the result into your structs.
 
 Toql
  - can query, insert, update and delete single and multiple database records.
