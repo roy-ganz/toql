@@ -21,6 +21,9 @@ Selecting all fields from above with `**` will run 2 SELECT statements and merge
 ## Merge attribute
 Because merging is done by Rust, the merge fields must be named after the struct fields.
 
+`#[toql(merge(self="rust field name in this struct", other="rust field name in other struct"))] `
+
+
 ## Composite fields
 
 To merge on composite fields use the attribute multiple times `#[toql(merge(..), merge(..))`.
