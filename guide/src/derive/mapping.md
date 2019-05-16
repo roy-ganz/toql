@@ -15,7 +15,7 @@ Possible values are
 - SHOUTY\_SNAKE\_CASE
 - mixedCase
 
-
+#### Example 1:
 ```rust
 #[derive(Toql)]
 #[toql(tables="SHOUTY_SNAKE_CASE", columns="UpperCase")]
@@ -28,6 +28,7 @@ is translated into
 
 `SELECT UserId, FullName FROM USER_REF;`
 
+#### Example 2:
 Or use `table` an the struct and `column` on the fields.
 
 
