@@ -41,7 +41,7 @@ Toql is made of
 
 
 ## Contribution
-My near term goal is to support for more web frameworks and databases. However I would like to stabilise the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
+My near term goal is to support for more web frameworks and databases. However I would like to stabilize the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
 
 ## Other database projects
 - [Diesel](http://diesel.rs/)
