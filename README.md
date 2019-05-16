@@ -9,8 +9,8 @@ id, (+age eq 16; age eq 18), adress_street
 ```
 into
 ```sql
-SELECT user.id, user.age, adress.street
-FROM User user LEFt JOIN Adress adress ON (user.address_id= address.id)
+SELECT user.id, user.age, address.street
+FROM User user LEFt JOIN Address address ON (user.address_id= address.id)
 WHERE user.age = 16 OR user.age = 18
 ORDER BY user.age ASC
 ```
