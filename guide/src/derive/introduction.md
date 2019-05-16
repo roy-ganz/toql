@@ -1,4 +1,4 @@
-# The Toql derive
+# The Toql Derive
 The recommended way to use Toql in your project is to use the Toql derive.
 
 The derive builds a lot of code. This includes
