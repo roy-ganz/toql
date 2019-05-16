@@ -12,15 +12,15 @@ This book is split into several sections, with this introduction being the first
 * [Query Language](query-language/introduction.md) - How queries look like.
 * [Toql Derive](derive/introduction.md) - Let the derive do all the work!
 
-## Features
+## Project structure
 
-Toql _Transfer object query language_ is a query language to build SQL statements. It can retrieve filtered, ordered and indiviually selected columns from a database and put the result into your structs.
-
-Toql
- - can query, insert, update and delete single and multiple database records.
- - handles dependencies in queries through SQL joins and merges. Cool!
- - is fast, beause the mapper is only created once and than reused.
- - has high level functions for speed and low level functions for edge cases.
+Toql is made of
+* A __query parser__ to parse query string from web clients.
+* A __query builder__ to modify or create queries on the fly.
+* A __SQL mapper__ that translates Toql fields into SQL columns or expressions.
+* A __SQL builder__ to turn a query into SQL with the help of the mapper.
+* A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
+* __3rd party integration__  to work well together with Rocket and MySQL.
  
  ## Background
  I developed Toql about 10 years ago for a web project. I have refined it since then and it can be seen in action
