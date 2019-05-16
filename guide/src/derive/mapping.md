@@ -8,7 +8,7 @@ Struct fields are mapped to Toql and database by default in a predictable way:
 
 
 ## Database
-To adjust the default naming to an existing database scheme use the toql attributes `tables` and `columns` on the struct.
+To adjust the default naming to an existing database scheme use the attributes `tables` and `columns` on the struct.
 Possible values are 
 - CamelCase
 - snake_case
