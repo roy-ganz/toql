@@ -7,7 +7,7 @@ Joins are automatically added to the SQL statement in these situations:
 -  Fields on a joined struct are always selected: `#[toql(select_always)`. 
 -  Fields on a joined struct are not `Option<>`: `id: u64`.
 
-#### Example
+#### Example:
 
 The Toql query `id` translates this
 
