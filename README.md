@@ -1,10 +1,21 @@
 # Toql
 
 ### Description
-Toql *Transfer object query language* is a query language to build SQL statements to retrieve filtered, ordered and indiviually selected columns from a database. It's aim is to give web clients an easy way to get data from a server over a REST interface.
+Toql *Transfer object query language* is a query language to build SQL statements to retrieve filtered, ordered and indiviually selected columns from a database.
 
-Toql is **not** an ORM. It's purpose is not to hide SQL but to make it more easy to build boilerplate SQL. 
-*Don't be afraid of SQuirreLs 🐿️*
+Toql turns this
+```toql
+id, (+age eq 16; age eq 18), adress_street
+```
+into
+```sql
+SELECT user.id, user.age, adress.street
+FROM User user LEFt JOIN Adress adress ON (user.address_id= address.id)
+WHERE user.age = 16 OR user.age = 18
+ORDER BY user.age ASC
+```
+### Resources
+Check out the [CRUD example](). There is also a [guide]() and the [API documentation]().
 
 ### Installation
 
@@ -17,7 +28,7 @@ toql ="0.1"
 
 ## Project
 
-The toql project consists of 
+Toql is made of
 
 * A __query parser__ to parse query string from web clients.
 * A __query builder__ to modify or create queries on the fly.
@@ -26,23 +37,17 @@ The toql project consists of
 * A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
 * __3rd party integration __  to work well together with Rocket and MySQL.
 
-Make sure you check out the [guide](https://github.com/roy-ganz/toql/blob/master/guide/src/introduction.md) or run the example of a full CRUD with Rocket and MySQL. 
-
-```bash
-ROCKET_DATABASES={example_db={url=mysql://USER:PASS@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
-```
-
 
 ## Contribution
 My near term goal is to support for more web frameworks and databases. However I would like to stabilise the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
 
-## Related projects
-[Diesel](www.http://diesel.rs/) is an  ORM for RUST
-[GraphQL](https://github.com/graphql-rust) can query data.
+## Other database projects
+- [Diesel](www.http://diesel.rs/)
+- [GraphQL](https://github.com/graphql-rust)
+
 
 ## Background
-
-I developped the initial Toql language about 5 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com] (www.schoolsheet.com), a webservice I created in JAVA for my teaching. The Rust implementation is must faster though ;)
+I have developed the initial Toql language about 7 years ago for a web project. I have refined it since then and you can see it in action on [www.schoolsheet.com](www.schoolsheet.com), a web service I created in Java for my teaching. The Rust implementation is must faster though ;)
 
 
 ## License
