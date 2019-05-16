@@ -6,8 +6,8 @@ The derive provides struct level attributes and field level attributes. Here a l
 
 Attribute | Description                             | Example / Remark
 ---- |---| ---|
-tables  |   Renaming scheme for struct and joins. |  `CamelCase`, `snake_case`, `SHOUTY_SNAKE_CASE` or `mixedCase`
-columns        | Same as attribute `tables` but for columns. |
+tables  |   Table renaming scheme for struct and joins. |  `CamelCase`, `snake_case`, `SHOUTY_SNAKE_CASE` or `mixedCase`
+columns        | Column renaming scheme. |
 table | Table name for a struct or join. | table ="User" on struct `NewUser` will access table `User`
 skip_query | No query methods are generated. | 
 skip_query_builder | No field methods are generated. |  No `User::fields.id()`.
