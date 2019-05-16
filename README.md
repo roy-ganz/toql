@@ -1,7 +1,7 @@
 # Toql
 
 ### Description
-Toql *Transfer object query language* is a query language to build SQL statements to retrieve filtered, ordered and indiviually selected columns from a database.
+Toql *Transfer object query language* is a query language to build SQL statements. It can retrieve filtered, ordered and indiviually selected columns from a database and put the result into your structs.
 
 Toql turns this
 ```toql
