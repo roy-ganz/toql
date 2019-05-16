@@ -23,6 +23,6 @@ sql       | Maps field to SQL expression instead of table column. To insert the 
 sql_join  | Loads a single struct with an sql join, where self and other defines columns with same values.    | For composite keys use multiple `sql_join`.  `sql_join( self="column_name_on_this_table", other="column_name_on_joined_table", on="friend.best = true")`
 merge     | Loads a dependend Vec<>. Merges multiple SELECT results by common fields values.  | `merge(self="rust_field_name_in_this_struct", other="rust_field_name_on_other_struct")` For composite fields use multiple `merge`.
 ignore_wildcard | No selection for `**` and `*`| 
-alias | Builds sql_join with this alias. | 
-table | Joins or merges on this table. | 
-role | Field only accessable for queries with this role. Multiple use requires multiple roles. | `role="admin", role= "superadmin"`
+alias | Alias for `sql_join` . | 
+table | Table name for joins and merges. | 
+role | Required role for field access. | `role="admin", role= "superadmin"` For multiple roles use multiple `role`.
