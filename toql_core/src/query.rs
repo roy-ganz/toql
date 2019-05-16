@@ -494,18 +494,24 @@ impl ToString for QueryToken {
 ///
 /// To build a big query simple add fields and wildcards with _and_ resp. _or_ function.
 ///
-/// Watch out: Logical AND has precendence over OR. So _a AND b OR c_ is the same as _a AND (b OR c)_.
-/// To insert parens in a query, build a separate query and add it with or. This will add parens automatically.
+/// Watch out: Logical AND has precendence over OR. So `a OR b AND c` is the same as `a OR (b AND c)`.
+/// Avoid to restrict your query with a permission field WITHOUT parenthesize the incoming query. 
+/// Malicious users will circumvent your permission filter with a simple OR clause at the beginning.
+/// Consider this: `(*, id nen); id, permission ne ""` vs `((*, id nen); id), permission ne ""`.
+/// To parenthesize a query use the [parenthesize()](struct.Query.html#method.parenthesize) method.
 ///
 /// ``` ignore
 /// let q1 = Query::new().and(Field("b").eq(3)).and(Field("c").eq(2));
-/// let q2 = Query::new().and(Field("a").eq(1)).or(q1);
+/// let q2 = Query::new().and(Field("a").eq(1)).or(q1.parens());
 ///
 /// assert_eq!("a eq 1; (b eq 3, c eq 2)", q2.to_string())
 #[derive(Clone, Debug)]
 pub struct Query {
     pub(crate) tokens: Vec<QueryToken>,
+    /// Select DISTINCT
     pub distinct: bool,
+    /// Roles a query has to access fields.
+    /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: BTreeSet<String>,
 }
 
@@ -534,60 +540,46 @@ impl Query {
             roles: BTreeSet::new(),
         }
     }
-    /// Concatenate field or query with AND to query
+    /// Wrap query with parentheses.
+    pub fn parenthesize(mut self) -> Self  {
+        if self.tokens.is_empty() {
+            return self;
+        }
+        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::And));   
+        self.tokens.push(QueryToken::RightBracket);
+        self
+    }
+    /// Concatenate field or query with AND.
     pub fn and<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
     {
+        // All tokens are by default concatenated with AND
         self.tokens.append(&mut query.into().tokens);
         self
     }
-    /// Concatenate field or query with OR to query. Puts parens around queries with more than one field.
+    /// Concatenate field or query with OR.
     pub fn or<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
     {
+        // Change first token of query to concatenate with OR
         let mut query = query.into();
-
-        // Put parens around both expressions because logical OR has higher precendence
-        // Example:  a AND b OR c != (a AND b) OR c
-        // Reason: "b OR c" is evaluated first in "a AND b OR C"
-
-        let bracket_needed = query.tokens.len() > 1;
-        if self.tokens.len() > 1 {
-            self.tokens
-                .insert(0, QueryToken::LeftBracket(Concatenation::And));
-            self.tokens.push(QueryToken::RightBracket);
+        if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
+            *c = Concatenation::Or;
+        } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
+            field.concatenation = Concatenation::Or;
+        } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
+            wildcard.concatenation = Concatenation::Or;
+        } else if let QueryToken::DoubleWildcard(w) = query.tokens.get_mut(0).unwrap() {
+            *w = Concatenation::Or;
         }
-        if bracket_needed {
-            self.tokens.push(QueryToken::LeftBracket(Concatenation::Or));
-        }
-        // Prevent brackets on single token
-        else {
-            // Make single token concat with or
-            if query.tokens.len() == 1 {
-                // TODO Make this work with "match {}"
-
-                if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
-                    *c = Concatenation::Or;
-                } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
-                    field.concatenation = Concatenation::Or;
-                } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
-                    wildcard.concatenation = Concatenation::Or;
-                } else if let QueryToken::DoubleWildcard(w) = query.tokens.get_mut(0).unwrap() {
-                    *w = Concatenation::Or;
-                }
-            }
-        }
+        
         self.tokens.append(&mut query.tokens);
-        if bracket_needed {
-            self.tokens.push(QueryToken::RightBracket {});
-        }
-
         self
     }
-
-    pub fn prepend<T>(mut self, query: T) -> Self
+    // Not sure if needed
+    /* pub fn prepend<T>(mut self, query: T) -> Self
     where
         T: Into<Query>,
     {
@@ -597,7 +589,7 @@ impl Query {
         std::mem::swap(&mut q.tokens, &mut self.tokens);
 
         self
-    }
+    } */
 }
 
 // Doc: Display  implements automatically .to_string()

@@ -49,10 +49,10 @@ fn build_wildcards() {
 
 #[test]
 fn build_logical() {
-    let  q = Query::new().and("foo").and("bar").or("foo");
+    let  q = Query::new().and("foo").and("bar").parenthesize().or("foo");
     assert_eq!("(foo,bar);foo", q.to_string());
 
-    let q = Query::new().and("foo").and("bar").or("foo").or("bar");
+    let q = Query::new().and("foo").and("bar").parenthesize().or("foo").parenthesize().or("bar");
     assert_eq!("((foo,bar);foo);bar", q.to_string());
 }
 
@@ -62,7 +62,7 @@ fn build_logical2() {
 
     let q2 = Query::new().and("foo").and("bar");
 
-    let q = q1.or(q2);
+    let q = q1.parenthesize().or(q2.parenthesize());
 
     assert_eq!("(foo,bar);(foo,bar)", q.to_string());
 }

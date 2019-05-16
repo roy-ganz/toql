@@ -87,7 +87,7 @@ impl MapperOptions {
             roles: BTreeSet::new(),
         }
     }
-    /// Field is always selected, regardless of the query
+    /// Field is always selected, regardless of the query.
     pub fn select_always(mut self, always_selected: bool) -> Self {
         self.always_selected = always_selected;
         self
@@ -101,21 +101,21 @@ impl MapperOptions {
         self.count_filter = count_filter;
         self
     }
-    // Any selected field is also used for the count query
-    // Only used in rare cases where you fiddle with distinct results
+    /// Any selected field is also used for the count query.
+    /// Only used in rare cases where you fiddle with distinct results.
     pub fn count_select(mut self, count_select: bool) -> Self {
         self.count_select = count_select;
         self
     }
-    // Field must be ignored by the wildcard
+    /// Field is ignored by the wildcard.
     pub fn ignore_wildcard(mut self, ignore_wildcard: bool) -> Self {
         self.ignore_wildcard = ignore_wildcard;
         self
     }
-    // The field can only be selected and filtered for queries that have
-    // certain roles.
-    // Use case: The real email addess is only allowed for users with
-    // the _admin_ role.
+    /// The field can only be selected and filtered by queries that have
+    /// these roles.
+    /// Example: The email address is only visible to users with
+    /// the _admin_ role.
     pub fn restrict_roles(mut self, roles: BTreeSet<String>) -> Self {
         self.roles = roles;
         self
