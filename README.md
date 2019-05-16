@@ -14,8 +14,10 @@ FROM User user LEFt JOIN Address address ON (user.address_id= address.id)
 WHERE user.age = 16 OR user.age = 18
 ORDER BY user.age ASC
 ```
+for all your `Toql` derived structs.
+
 ### Resources
-Check out the [CRUD example](). There is also a [guide]() and the [API documentation]().
+Check out the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs). There is also a [guide]() and the [API documentation]().
 
 ### Installation
 
@@ -32,10 +34,10 @@ Toql is made of
 
 * A __query parser__ to parse query string from web clients.
 * A __query builder__ to modify or create queries on the fly.
-* An __SQL mapper__, that translates Toql fields into SQL columns or expressions.
+* A __SQL mapper__, that translates Toql fields into SQL columns or expressions.
 * A __SQL builder__ to turn a query into SQL with the help of the mapper.
 * A __Toql derive__ that generates mappings of structs, functions to handle dependencies and helper functions.
-* __3rd party integration __  to work well together with Rocket and MySQL.
+* __3rd party integration__  to work well together with Rocket and MySQL.
 
 
 ## Contribution
