@@ -18,11 +18,11 @@
 //! 
 //! The project consists of the following main parts:
 //!
-//!  * A [Query Parser](https://docs.rs/toql_core/0.1.1/toql_core/query_parser/index.html) to build a Toql query from a string. 
-//!  * A [Query](https://docs.rs/toql_core/0.1.1/toql_core/query/index.html) that can be built with methods.
-//!  * A [SQL Mapper](https://docs.rs/toql_core/0.1.1/toql_core/sql_mapper/index.html) to map Toql fields to database columns or expressions.
-//!  * A [SQL Builder](https://docs.rs/toql_core/0.1.1/toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
-//!  * A [Toql Derive](https://docs.rs/toql_derive/0.1.2/index.html) to build all the boilerplate code to make some ✨ happen.
+//!  * A [Query Parser](https://docs.rs/toql_core/0.1/toql_core/query_parser/index.html) to build a Toql query from a string. 
+//!  * A [Query](https://docs.rs/toql_core/0.1/toql_core/query/index.html) that can be built with methods.
+//!  * A [SQL Mapper](https://docs.rs/toql_core/0.1/toql_core/sql_mapper/index.html) to map Toql fields to database columns or expressions.
+//!  * A [SQL Builder](https://docs.rs/toql_core/0.1/toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
+//!  * A [Toql Derive](https://docs.rs/toql_derive/0.1/index.html) to build all the boilerplate code to make some ✨ happen.
 //!  * Integration with
 //!      * [MySQL](https://docs.rs/toql_mysql/0.1/index.html)
 //!      * [Rocket](https://docs.rs/toql_rocket/0.1/index.html)

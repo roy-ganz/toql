@@ -17,7 +17,7 @@ use mysql::error::Error;
  pub enum ToqlError {
     /// No single record found for the Toql query.
     NotFound,
-    /// Many records found, while exactly one was expected.
+    /// Many records found, when exactly one was expected.
     NotUnique,
     /// The query parser encountered a syntax error.
     QueryParserError(pest::error::Error<Rule>),
@@ -25,7 +25,7 @@ use mysql::error::Error;
     EncodingError(std::str::Utf8Error),
     /// No mapper was found for a given struct. Contains the struct name.
     MapperMissing(String),
-    /// TODO unclear
+    /// Unable to put database result into struct. Contains field name.
     ValueMissing(String),
     /// SQL Builder failed to turn Toql query into SQL query.
     SqlBuilderError(SqlBuilderError),
@@ -34,7 +34,7 @@ use mysql::error::Error;
     MySqlError(Error)
 } 
 
-/// A result with a [`ToqlError`](struct.ToqlError.html)
+/// A result with a [`ToqlError`](enum.ToqlError.html)
 pub type Result<T> = std::result::Result<T, ToqlError>;
 
 

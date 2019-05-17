@@ -1,9 +1,9 @@
 //!
-//! The SQL Mapper translates Toql fields into databaae columns or SQL expressions.
+//! The SQL Mapper translates Toql fields into database columns or SQL expressions.
 //! 
 //! It's needed by the  [SQL Builder](../sql_builder/struct.SqlBuilder.html) to turn a [Query](../query/struct.Query.html)
-//! into a [Sql Builder Result](../sql_builder_result/SqlBuilderResult.html).
-//! The result hold the different parts of an SQL query and can be turned into SQL that can be sent to the database.
+//! into a [SQL Builder Result](../sql_builder_result/SqlBuilderResult.html).
+//! The result holds the different parts of an SQL query. It can be turned into SQL that can be sent to the database.
 //! 
 //! ## Example
 //! ``` ignore
@@ -14,24 +14,24 @@
 //!     .join("fuu", "LEFT JOIN Fuu u ON (b.foo_id = u.id)");
 //! ```
 //! 
-//! To map a full struct it's possible to implement the [Mapped](trait.Mapped.html) trait and call [map](struct.SqlMapper.html#method.map).
-//! The Toql derive implements the trait for any derived struct.
+//! To map a full struct with [map()](struct.SqlMapper.html#method.map), the struct must implement the [Mapped](trait.Mapped.html) trait.
+//! The [Toql derive](https://docs.rs/toql_derive/0.1/index.html) implements that trait for any derived struct.
 //!   
 //! ### Options
 //! Field can have options. They can be hidden for example or require a certain role (permission). 
-//! Use [map_with_options](struct.SqlMapper.html#method.map_with_options).
+//! Use [map_with_options()](struct.SqlMapper.html#method.map_with_options).
 //! 
 //! ### Filter operations
-//! Besides fields and joins the mapper also contains all filter operations. 
+//! Beside fields and joins the SQL Mapper also registers all filter operations. 
 //! To add a custom operation you must define a new [Fieldhandler](trait.FieldHandler.html)
 //! and add it either
-//!  - to a single field with [map_handler](struct.SqlMapper.html#method.map_handler)
-//!  - to all fields with [new_with_handler](struct.SqlMapper.html#method.new_with_handler)
+//!  - to a single field with [map_handler()](struct.SqlMapper.html#method.map_handler).
+//!  - to all fields with [new_with_handler()](struct.SqlMapper.html#method.new_with_handler).
 //! 
 //! ### Caching
-//! If a struct contains collections of other structs then the SQL Builder must create multiple SQL queries.
-//! To give high level functions all the mappers they must be put into a cache. This allows to
-//! load the whole dependency tree.
+//! If a struct contains merged fields (collections of structs) then the SQL Builder must build multiple SQL queries with different mappers.
+//! To give high level functions all SQL Mappers, they must be put into a cache. This allows to
+//! load the full dependency tree.
 //! 
 
 use crate::query::FieldFilter;
@@ -60,7 +60,7 @@ pub(crate) struct SqlTarget {
 }
 
 /// Handles the standart filters as documented in the guide.
-/// Throws an error upon all FN calls.
+/// Returns [FilterInvalid](../sql_builder/enum.SqlBuilderError.html) for any attempt to use FN filters.
 #[derive(Debug, Clone)]
 pub struct BasicFieldHandler {}
 
@@ -244,7 +244,7 @@ impl FieldHandler for BasicFieldHandler {
 /// A cache that holds mappers.
 pub type SqlMapperCache = HashMap<String, SqlMapper>;
 
-/// Maps from Toql fields onto columns or SQL expressions.
+/// Translates Toql fields into columns or SQL expressions.
 #[derive(Debug)]
 pub struct SqlMapper {
     pub(crate) handler: Arc<FieldHandler + Send + Sync>,

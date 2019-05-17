@@ -1,6 +1,6 @@
 //!
 //! The SQL Builder turns a [Query](../query/struct.Query.html) with the help of a [SQL Mapper](../sql_mapper/struct.SqlMapper.html)
-//! into a [Sql Builder Result](../sql_builder_result/SqlBuilderResult.html) 
+//! into a [SQL Builder Result](../sql_builder_result/SqlBuilderResult.html) 
 //! The result hold the different parts of an SQL query and can be turned into an SQL query that can be sent to the database.
 //! 
 //! ## Example

@@ -13,6 +13,7 @@ use toql_core::indelup::Indelup;
 
 pub mod load;
 pub mod row;
+pub use mysql;  // Reexport for derive produced code
 
 
     /// Insert one struct. 

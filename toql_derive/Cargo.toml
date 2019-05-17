@@ -19,7 +19,7 @@ quote = "0.6"
 heck = "0.3"
 darling ="0.9"
 proc-macro2 = "0.4"
-mysql = {version="14.2", optional=true}
+mysql = {version="^14", optional=true}
 log = "0.4"
 env_logger="0.6"
 

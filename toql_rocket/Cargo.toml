@@ -14,7 +14,7 @@ toql_core = { version = "0.1", path = "../toql_core", features = ["rocketweb"] }
 toql_mysql = { version = "0.1", path = "../toql_mysql" }
 rocket = "0.4"
 log = "0.4"
-mysql = { version = "14.2",  optional = true }
+mysql = { version = "^14",  optional = true }
 
 [features]
 mysqldb = ["mysql"]
