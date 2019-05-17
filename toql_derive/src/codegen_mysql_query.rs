@@ -157,13 +157,13 @@ impl<'a> GeneratedMysqlQuery<'a> {
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
                 pub fn load_dependencies_from_mysql(mut _entities: &mut Vec< #struct_ident >,
-                _query: &toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut mysql::Conn)
+                _query: &toql::query::Query,  _mappers: &toql::sql_mapper::SqlMapperCache, _conn: &mut toql::mysql::mysql::Conn)
                 -> toql::error::Result<()> { Ok(())}
             )
         } else {
             quote!(
                 pub fn load_dependencies_from_mysql(mut entities: &mut Vec< #struct_ident >,
-                query: &toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn)
+                query: &toql::query::Query,  mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut toql::myql::mysql::Conn)
                 -> toql::error::Result<()>
                 {
                     #(#path_loaders)*
@@ -202,7 +202,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
         quote!(
             impl #struct_ident {
 
-                pub fn load_path_from_mysql(path: &str, query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,  conn: &mut mysql::Conn)
+                pub fn load_path_from_mysql(path: &str, query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,  conn: &mut toql::mysql::mysql::Conn)
                 -> toql::error::Result<std::vec::Vec< #struct_ident >>
                 {
                     let mapper = mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
@@ -222,7 +222,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
             }
             impl toql::mysql::load::Load<#struct_ident> for #struct_ident
             {
-                fn load_one(query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut mysql::Conn )
+                fn load_one(query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache, conn: &mut toql::mysql::mysql::Conn )
                     -> toql::error::Result<# struct_ident>
                 {
                     let mapper= mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
@@ -252,7 +252,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
 
 
                 fn load_many(query: &toql::query::Query, mappers: &toql::sql_mapper::SqlMapperCache,
-                mut conn: &mut mysql::Conn, count:bool, first:u64, max:u16)
+                mut conn: &mut toql::mysql::mysql::Conn, count:bool, first:u64, max:u16)
                 -> toql::error::Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>)> {
 
                     let mapper = mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
@@ -318,7 +318,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlQuery<'a> {
                 i
             }
 
-            fn from_row_with_index ( mut row : & mut mysql :: Row , i : &mut usize) -> std::result::Result < #struct_ident , mysql :: error :: Error > {
+            fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize) -> std::result::Result < #struct_ident , toql::mysql::mysql :: error :: Error > {
 
                 Ok ( #struct_ident {
                     #(#mysql_deserialize_fields),*
