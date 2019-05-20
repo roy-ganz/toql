@@ -12,6 +12,3 @@ pub mod sql_mapper;
 pub mod error;
 pub mod indelup;
 pub mod merge;
-
-#[cfg(feature = "rocketweb")]
-pub mod rocket;

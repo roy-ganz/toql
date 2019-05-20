@@ -17,7 +17,7 @@ ORDER BY user.age ASC
 for all your `Toql` derived structs.
 
 ### Resources
-Check out the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs). There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.1.4/toql/).
+There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.1.4/toql/).
 
 ### Installation
 
@@ -25,8 +25,18 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-toql = { version = "0.1", features= ["rocket_mysql"] }
+toql = { version = "0.1", features = ["mysql"] }
 ```
+
+### Integration 
+Toql works well with [Rocket](https://crates.io/crates/rocket): Add this to your `Cargo.toml`
+
+```toml
+[dependencies]
+toql_rocket = { version = "0.1", features = ["mysql"] }
+```
+
+Right now there is only support for `MySql`. Add `features = ["mysql"]` to your `Cargo.toml` dependencies.
 
 ## Features
 

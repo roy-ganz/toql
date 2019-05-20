@@ -1,10 +1,10 @@
 [package]
 name = "toql"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["Artos <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "The toql query language"
-keywords = ["toql", "sql", "database", "rest", "rocket"]
+keywords = ["toql", "sql", "database"]
 readme = "README.md"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/roy-ganz/toql"
@@ -12,7 +12,6 @@ repository = "https://github.com/roy-ganz/toql"
 [dependencies]
 toql_core = { path = "toql_core", version = "0.1" }
 toql_mysql = { path = "toql_mysql", version = "0.1", optional = true }
-toql_rocket = { path = "toql_rocket", version = "0.1", optional = true }
 toql_derive = { path = "toql_derive", version = "0.1" }
 
 log = "0.4"
@@ -21,24 +20,10 @@ log = "0.4"
 members =  [
     "toql_core",
     "toql_mysql",
-    "toql_rocket",
     "toql_derive"
 ]
 
 [features]
-mysql = [ "toql_core/mysqldb", "toql_mysql", "toql_derive/mysqldb"]
-rocket_mysql = ["toql_core/mysqldb","toql_core/rocketweb", "toql_rocket/mysqldb", "toql_derive/mysqldb", "toql_mysql"]
+mysql = [ "toql_mysql", "toql_derive/mysqldb"]
 
-[dev-dependencies]
-rocket = "0.4" 
-rocket_contrib =  {version = "0.4", default-features = false, features = ["mysql_pool", "json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toql = { version = "0.1", path = "../toql", features= ["rocket_mysql"] }
 
-[[example]]
-name = "crud_rocket_mysql"
-path = "examples/rocket_mysql/main.rs"
-required-features = ["rocket_mysql"]
-
- 

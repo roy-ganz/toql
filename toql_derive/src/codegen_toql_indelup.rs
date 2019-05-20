@@ -233,10 +233,11 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
         let delup_key_params_code = &self.delup_key_params_code;
 
         let mods = if self.delup_keys.is_empty() {
-            quote_spanned! {
+            quote!( /* Skipped code generation, because #[toql(delup_key)] is missing */ ) 
+           /*  quote_spanned! {
                 struct_ident.span() =>
                 compile_error!( "cannot find key(s) to delete and update: add `#[toql(delup_key)]` to at the field(s) in your struct that are the primary key in your table");
-            }
+            } */
         } else {
             let sql_table_name = &self.sql_table_ident.to_string();
             let update_one_statement = format!("UPDATE {} {{alias}} SET ", self.sql_table_ident);

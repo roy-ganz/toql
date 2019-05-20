@@ -62,11 +62,5 @@ pub use toql_derive as derive;
 
 pub use log; // Reexport for generated code from Toql derive
 
-
-
-
-#[cfg(any(feature = "rocket_mysql", feature ="rocket"))]
-pub use toql_rocket as rocket;
-
-#[cfg(any(feature = "mysql", feature = "rocket_mysql"))]
+#[cfg(feature = "mysql")]
 pub use toql_mysql as mysql;

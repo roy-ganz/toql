@@ -10,7 +10,7 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
-toql_core = { version="0.1", path="../toql_core", features=["mysqldb"]}
+toql_core = { version="0.1", path="../toql_core"}
 mysql = "^14"
 log= "0.4"
 
