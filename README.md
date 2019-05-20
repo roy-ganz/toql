@@ -36,17 +36,14 @@ toql = { version = "0.1", features = ["mysql"] }
 toql_rocket = { version = "0.1", features = ["mysql"] }
 ```
 
-Right now there is only support for `MySql`. Add `features = ["mysql"]` to your `Cargo.toml` dependencies.
+Right now there is only support for `MySQL`. Add `features = ["mysql"]` to your `Cargo.toml` dependencies.
 
 ## Features
-
-Toql _Transfer object query language_ is a query language to build SQL statements. It can retrieve filtered, ordered and indiviually selected columns from a database and put the result into your structs.
-
-Toql
- - can query, insert, update and delete single and multiple database records.
- - handles dependencies in queries through SQL joins and merges. Cool!
- - is fast, beause the mapper is only created once and than reused.
- - has high level functions for speed and low level functions for edge cases.
+ - Can query, insert, update and delete single and multiple database records.
+ - Handles dependencies in queries through SQL joins and merges. Cool!
+ - Is fast, beause the mapper is only created once and than reused.
+ - Has high level functions for speed and low level functions for edge cases.
+ - Easy to use.
  
 
 ## Contribution
