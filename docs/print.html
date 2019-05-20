@@ -616,7 +616,7 @@ use toql::mysql::delete_many;
 <table><thead><tr><th>Attribute </th><th> Description                             </th><th> Example / Remark</th></tr></thead><tbody>
 <tr><td>tables  </td><td>   Table renaming scheme for struct and joins </td><td>  <code>CamelCase</code>, <code>snake_case</code>, <code>SHOUTY_SNAKE_CASE</code> or <code>mixedCase</code></td></tr>
 <tr><td>columns        </td><td> Column renaming scheme </td></tr>
-<tr><td>table </td><td> Table name for a struct or join </td><td> table =&quot;User&quot; on struct <code>NewUser</code> will access table <code>User</code></td></tr>
+<tr><td>table </td><td> Table name for a struct or join </td><td> <code>table =&quot;User&quot;</code> on struct <code>NewUser</code> will access table <code>User</code></td></tr>
 <tr><td>skip_query </td><td> No query methods  </td></tr>
 <tr><td>skip_query_builder </td><td> No field methods </td><td>  No <code>User::fields.id()</code>.</td></tr>
 <tr><td>skip_indelup </td><td>No insert, delete and update methods </td></tr>
@@ -626,8 +626,8 @@ use toql::mysql::delete_many;
 <tr><td>delup_key </td><td> Field used as key by delete and update methods </td><td> For composite keys use multiple times.</td></tr>
 <tr><td>skip_inup </td><td> No insert, update for this field </td><td> Use for auto increment columns or columns calculated from database triggers.</td></tr>
 <tr><td>sql       </td><td> Field mapped to SQL expression instead of table column </td><td> Insert the table alias with two dots: <code>sql =&quot;SELECT COUNT (*) FROM Message m WHERE m.user_id = ..id&quot;</code>. Skipped for insert, update</td></tr>
-<tr><td>sql_join  </td><td> Required for fields that are structs.   </td><td> <code>sql join</code> needs column names in <code>self</code> and <code>other</code>, with <code>on</code> an extra sql condition can be given: <code>sql_join( self=&quot;column_name_on_this_table&quot;, other=&quot;column_name_on_joined_table&quot;, on=&quot;friend.best = true&quot;)</code>. For composite keys use multiple <code>sql_join</code>.</td></tr>
-<tr><td>merge     </td><td> required for fields that are Vec&lt;&gt;. </td><td> <code>merge</code> needs struct field names in <code>self</code> and <code>other</code>:  <code>merge(self=&quot;rust_field_name_in_this_struct&quot;, other=&quot;rust_field_name_on_other_struct&quot;)</code>. For composite fields use multiple <code>merge</code>.</td></tr>
+<tr><td>sql_join  </td><td> Required for fields that are structs   </td><td> <code>sql join</code> needs column names in <code>self</code> and <code>other</code>, with <code>on</code> an extra sql condition can be given: <code>sql_join( self=&quot;column_name_on_this_table&quot;, other=&quot;column_name_on_joined_table&quot;, on=&quot;friend.best = true&quot;)</code>. For composite keys use multiple <code>sql_join</code>.</td></tr>
+<tr><td>merge     </td><td> Required for fields that are Vec&lt;&gt; </td><td> <code>merge</code> needs struct field names in <code>self</code> and <code>other</code>:  <code>merge(self=&quot;rust_field_name_in_this_struct&quot;, other=&quot;rust_field_name_on_other_struct&quot;)</code>. For composite fields use multiple <code>merge</code>.</td></tr>
 <tr><td>ignore_wildcard </td><td> No selection for <code>**</code> and <code>*</code></td></tr>
 <tr><td>alias </td><td> Alias for <code>sql_join</code>  </td></tr>
 <tr><td>table </td><td> Table name for joins and merges </td></tr>
