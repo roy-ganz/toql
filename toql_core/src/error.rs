@@ -20,7 +20,7 @@ use mysql::error::Error;
     /// Many records found, when exactly one was expected.
     NotUnique,
     /// The query parser encountered a syntax error.
-    QueryParserError(pest::error::Error<Rule>),
+    QueryParserError(PestError<Rule>),
     /// The query encoding was not valid UTF-8.
     EncodingError(std::str::Utf8Error),
     /// No mapper was found for a given struct. Contains the struct name.

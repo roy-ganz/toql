@@ -24,6 +24,6 @@ members =  [
 ]
 
 [features]
-mysql = [ "toql_mysql", "toql_derive/mysqldb"]
+mysql = [ "toql_core/mysqldb", "toql_mysql", "toql_derive/mysqldb"]
 
 
