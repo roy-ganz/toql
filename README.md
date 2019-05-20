@@ -17,7 +17,7 @@ ORDER BY user.age ASC
 for all your `Toql` derived structs.
 
 ### Resources
-There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.1.4/toql/).
+There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.1/toql/).
 
 ### Installation
 
@@ -29,7 +29,7 @@ toql = { version = "0.1", features = ["mysql"] }
 ```
 
 ### Integration 
-Toql works well with [Rocket](https://crates.io/crates/rocket): Add this to your `Cargo.toml`
+[Toql Rocket](https://crates.io/crates/toql_rocket) plays well with [Rocket](https://crates.io/crates/rocket): Add this to your `Cargo.toml`
 
 ```toml
 [dependencies]
