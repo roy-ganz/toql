@@ -514,7 +514,7 @@ pub struct Query {
     /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: BTreeSet<String>,
-    pub parameters: HashMap<String, String> // generic params
+    pub params: HashMap<String, String> // generic params
 }
 
 impl Query {
@@ -524,7 +524,7 @@ impl Query {
             tokens: vec![],
             distinct: false,
             roles: BTreeSet::new(),
-            parameters: HashMap::new()
+            params: HashMap::new()
         }
     }
     /// Create a new query that select all top fields.
@@ -533,7 +533,7 @@ impl Query {
             tokens: vec![QueryToken::Wildcard(Wildcard::new())],
             distinct: false,
             roles: BTreeSet::new(),
-            parameters: HashMap::new()
+            params: HashMap::new()
         }
     }
     /// Create a new query that select all top fields and all dependend fields. This is the best :)
@@ -542,7 +542,7 @@ impl Query {
             tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)],
             distinct: false,
             roles: BTreeSet::new(),
-            parameters: HashMap::new()
+            params: HashMap::new()
         }
     }
     /// Wrap query with parentheses.

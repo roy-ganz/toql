@@ -493,7 +493,7 @@ impl SqlBuilder {
 
                                 if let Some(f) = &query_field.filter {
                                     
-                                    if let Some(f) = sql_target.handler.build_filter(&sql_target.expression, &f, &query.parameters)?
+                                    if let Some(f) = sql_target.handler.build_filter(&sql_target.expression, &f, &query.params)?
                                         
                                     {
                                         if query_field.aggregation == true {
@@ -550,14 +550,14 @@ impl SqlBuilder {
                                             need_where_concatenation = true;
                                         }
                                     }
-                                    let mut p = sql_target.handler.build_param(&f, &query.parameters);
+                                    let mut p = sql_target.handler.build_param(&f, &query.params);
                                     if query_field.aggregation == true {
                                         result.having_params.append(&mut p);
                                     } else {
                                         result.where_params.append(&mut p);
                                     }
 
-                                    if let Some(j) = sql_target.handler.build_join(&query.parameters) {
+                                    if let Some(j) = sql_target.handler.build_join(&query.params) {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
                                     }
@@ -613,14 +613,14 @@ impl SqlBuilder {
         if self.count_query {
             Self::build_count_select_clause(
                 &mut result,
-                &query.parameters,
+                &query.params,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
             );
         } else {
             Self::build_ordering(
                 &mut result,
-                &query.parameters,
+                &query.params,
                 &sql_target_data,
                 &sql_mapper.fields,
                 &ordinals,
@@ -628,7 +628,7 @@ impl SqlBuilder {
             );
             Self::build_select_clause(
                 &mut result,
-                &query.parameters,
+                &query.params,
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
