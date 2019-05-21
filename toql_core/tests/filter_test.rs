@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 use toql_core::query::FieldFilter;
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
@@ -94,10 +95,10 @@ fn filter_joined_eq() {
 fn filter_fnc() {
     struct CustomFieldHandler {};
     impl FieldHandler for CustomFieldHandler {
-        fn build_select(&self, sql_expression: &str) -> Option<String> {
+        fn build_select(&self, sql_expression: &str,  _params: &HashMap<String, String>) -> Option<String> {
             Some(sql_expression.to_string())
         }
-        fn build_filter(&self, sql_expression: &str, filter: &FieldFilter) -> Result<Option<String>, SqlBuilderError> {
+        fn build_filter(&self, sql_expression: &str, filter: &FieldFilter, _params: &HashMap<String, String>) -> Result<Option<String>, SqlBuilderError> {
             match filter {
                 FieldFilter::Fn(name, _args) => match (*name).as_ref() {
                     "MA" => Ok(Some(format!("MATCH ({}) AGAINST (?)", sql_expression))),
@@ -106,7 +107,7 @@ fn filter_fnc() {
                 _ => Ok(None),
             }
         }
-        fn build_param(&self, filter: &FieldFilter) -> Vec<String> {
+        fn build_param(&self, filter: &FieldFilter, _params: &HashMap<String, String>) -> Vec<String> {
             match filter {
                 FieldFilter::Fn(name, args) => match (*name).as_ref() {
                     "MA" => {

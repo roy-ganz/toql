@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 use toql_core::query::FieldFilter;
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
@@ -20,11 +21,11 @@ fn custom_handler() {
 
     impl<T : FieldHandler> FieldHandler for CustomHandler<T> {
 
-        fn build_select(&self, sql: &str) -> Option<String> {
-            self.base.build_select(sql) 
+        fn build_select(&self, sql: &str, params: &HashMap<String, String>) -> Option<String> {
+            self.base.build_select(sql, params) 
 
         }
-        fn build_filter(&self, sql: &str, filter: &FieldFilter) ->Result<Option<String>, SqlBuilderError>{
+        fn build_filter(&self, sql: &str, filter: &FieldFilter,  params: &HashMap<String, String>) ->Result<Option<String>, SqlBuilderError>{
 
             match filter {
                 FieldFilter::Fn(name, args) => {
@@ -35,28 +36,28 @@ fn custom_handler() {
                             }
                             Ok(Some(format!("LENGTH({}) = ?", sql)))
                         },
-                        _ => self.base.build_filter(sql, filter)
+                        _ => self.base.build_filter(sql, filter, params)
                     }
                 }
-                _ => self.base.build_filter(sql, filter)
+                _ => self.base.build_filter(sql, filter, params)
             }
 
             
 
         }
-        fn build_param(&self, filter: &FieldFilter) -> Vec<String> {
+        fn build_param(&self, filter: &FieldFilter, params: &HashMap<String, String>) -> Vec<String> {
            match filter {
                 FieldFilter::Fn(name, args) => {
                     match name.as_str()  {
                         "LN" => args.clone(),
-                        _ => self.base.build_param(filter)
+                        _ => self.base.build_param(filter, params)
                     }
                 }
-                _ => self.base.build_param(filter)
+                _ => self.base.build_param(filter, params)
             }
         }
-        fn build_join(&self) -> Option<String> {
-            self.base.build_join()
+        fn build_join(&self, params: &HashMap<String, String>) -> Option<String> {
+            self.base.build_join(params)
         }
 
     }

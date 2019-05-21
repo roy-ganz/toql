@@ -154,18 +154,18 @@ trait MapperFilter {
 /// 
 pub trait FieldHandler {
     /// Return sql if you want to select it.
-    fn build_select(&self, sql: &str) -> Option<String> {
+    fn build_select(&self, sql: &str, query_params: &HashMap<String, String>) -> Option<String> {
        Some(format!("{}", sql))
     }
     
     /// Match filter and return SQL expression.
     /// Do not insert parameters in the SQL expression, use `?` instead.
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
-    fn build_filter(&self, sql: &str, _filter: &FieldFilter) ->Result<Option<String>, crate::sql_builder::SqlBuilderError>;
+    fn build_filter(&self, sql: &str, _filter: &FieldFilter, query_params: &HashMap<String, String>) ->Result<Option<String>, crate::sql_builder::SqlBuilderError>;
     /// Return the parameters for your `?`
-    fn build_param(&self, _filter: &FieldFilter) -> Vec<String>;
+    fn build_param(&self, _filter: &FieldFilter, query_params: &HashMap<String, String>) -> Vec<String>;
     /// Return addition SQL join clause for this field or None
-     fn build_join(&self) -> Option<String> {
+     fn build_join(&self,  params: &HashMap<String, String>) -> Option<String> {
         None
     } 
 }
@@ -186,7 +186,7 @@ pub fn sql_param(s: String) -> String {
 
 impl FieldHandler for BasicFieldHandler {
     
-    fn build_param(&self, filter: &FieldFilter) -> Vec<String> {
+    fn build_param(&self, filter: &FieldFilter,  params: &HashMap<String, String>) -> Vec<String> {
         match filter {
             FieldFilter::Eq(criteria) => vec![sql_param(criteria.clone()) ],
             FieldFilter::Eqn => vec![],
@@ -206,7 +206,7 @@ impl FieldHandler for BasicFieldHandler {
         }
     }
 
-    fn build_filter(&self, expression: &str, filter: &FieldFilter) ->Result<Option<String>,  crate::sql_builder::SqlBuilderError> {
+    fn build_filter(&self, expression: &str, filter: &FieldFilter, params: &HashMap<String, String>) ->Result<Option<String>,  crate::sql_builder::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(_) => Ok(Some(format!("{} = ?", expression))),
             FieldFilter::Eqn => Ok(Some(format!("{} IS NULL", expression))),

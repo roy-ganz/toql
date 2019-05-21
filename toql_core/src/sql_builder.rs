@@ -173,6 +173,7 @@ impl SqlBuilder {
 
     fn build_ordering(
         result: &mut SqlBuilderResult,
+        query_parameters: &HashMap<String, String>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &BTreeSet<u8>,
@@ -188,7 +189,7 @@ impl SqlBuilder {
                     };
                     if let Some(_sql_target_data) = sql_target_data.get(toql_field.as_str()) {
                         if let Some(sql_target) = sql_targets.get(toql_field) {
-                            if let Some(s) = sql_target.handler.build_select(&sql_target.expression)
+                            if let Some(s) = sql_target.handler.build_select(&sql_target.expression, query_parameters)
                             {
                                 result.order_by_clause.push_str(&s);
                             }
@@ -204,6 +205,7 @@ impl SqlBuilder {
 
     fn build_count_select_clause(
         result: &mut SqlBuilderResult,
+          query_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
     ) {
@@ -212,7 +214,7 @@ impl SqlBuilder {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
                 if sql_target.options.count_select {
-                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression)
+                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression, query_params)
                     {
                         result.select_clause.push_str(&sql_field);
                         result.select_clause.push_str(", ");
@@ -232,6 +234,7 @@ impl SqlBuilder {
 
     fn build_select_clause(
         result: &mut SqlBuilderResult,
+        query_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
@@ -247,7 +250,7 @@ impl SqlBuilder {
                         .map_or(false, |d| d.selected);
 
                 if selected {
-                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression)
+                    if let Some(sql_field) = sql_target.handler.build_select(&sql_target.expression, query_params)
                     {
                         result.select_clause.push_str(&sql_field);
                         any_selected = true;
@@ -490,7 +493,7 @@ impl SqlBuilder {
 
                                 if let Some(f) = &query_field.filter {
                                     
-                                    if let Some(f) = sql_target.handler.build_filter(&sql_target.expression, &f)?
+                                    if let Some(f) = sql_target.handler.build_filter(&sql_target.expression, &f, &query.parameters)?
                                         
                                     {
                                         if query_field.aggregation == true {
@@ -547,14 +550,14 @@ impl SqlBuilder {
                                             need_where_concatenation = true;
                                         }
                                     }
-                                    let mut p = sql_target.handler.build_param(&f);
+                                    let mut p = sql_target.handler.build_param(&f, &query.parameters);
                                     if query_field.aggregation == true {
                                         result.having_params.append(&mut p);
                                     } else {
                                         result.where_params.append(&mut p);
                                     }
 
-                                    if let Some(j) = sql_target.handler.build_join() {
+                                    if let Some(j) = sql_target.handler.build_join(&query.parameters) {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
                                     }
@@ -610,12 +613,14 @@ impl SqlBuilder {
         if self.count_query {
             Self::build_count_select_clause(
                 &mut result,
+                &query.parameters,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
             );
         } else {
             Self::build_ordering(
                 &mut result,
+                &query.parameters,
                 &sql_target_data,
                 &sql_mapper.fields,
                 &ordinals,
@@ -623,6 +628,7 @@ impl SqlBuilder {
             );
             Self::build_select_clause(
                 &mut result,
+                &query.parameters,
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
