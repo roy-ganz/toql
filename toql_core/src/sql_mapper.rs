@@ -87,6 +87,9 @@ impl MapperOptions {
             roles: BTreeSet::new(),
         }
     }
+   
+
+
     /// Field is always selected, regardless of the query.
     pub fn select_always(mut self, always_selected: bool) -> Self {
         self.always_selected = always_selected;

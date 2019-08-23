@@ -12,7 +12,7 @@ repository = "https://github.com/roy-ganz/toql"
 [dependencies]
 pest = "2.0"
 pest_derive = "2.0"
-mysql = {version = "^14", optional = true} # Needed for error integration
+mysql = {version = ">=15", optional = true} # Needed for error integration
 
 
 enquote="1"

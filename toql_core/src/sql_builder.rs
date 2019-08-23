@@ -74,6 +74,7 @@ pub struct SqlBuilder {
     subpath: String,         // Build only subpath
     joins: BTreeSet<String>, // Use this joins
     ignored_paths: Vec<String>, // Ignore paths, no errors are raised for them
+    selected_paths: BTreeSet<String> // Selected paths
                              // alias: String,           // Alias all fields with this
 }
 
@@ -110,11 +111,16 @@ impl SqlBuilder {
             subpath: "".to_string(),
             joins: BTreeSet::new(),
             ignored_paths: Vec::new(),
+            selected_paths: BTreeSet::new(),
         }
     }
     /// Add path to list of ignore paths.
     pub fn ignore_path<T: Into<String>>(mut self, path: T) -> Self {
         self.ignored_paths.push(path.into());
+        self
+    }
+     pub fn select_path<T: Into<String>>(mut self, path: T) -> Self {
+        self.selected_paths.insert(path.into());
         self
     }
     /* pub fn for_role<T: Into<String>>(mut self, role: T) -> Self {
@@ -238,13 +244,21 @@ impl SqlBuilder {
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
+        used_paths: &BTreeSet<String>
     ) {
         // Build select clause
         let mut any_selected = false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
+
                 // For selected fields there exists target data
-                let selected = sql_target.options.always_selected
+                // For always selected fields, check if path is used by query
+                let selected = ( sql_target.options.always_selected &&
+                    { 
+                        let path :String = toql_field.split('_').rev().skip(1).collect();
+                        used_paths.contains(&path )   
+                    }
+                )
                     || sql_target_data
                         .get(toql_field.as_str())
                         .map_or(false, |d| d.selected);
@@ -316,6 +330,8 @@ impl SqlBuilder {
 
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
         let mut sql_join_data: HashMap<&str, SqlJoinData> = HashMap::new();
+
+        let mut used_paths: BTreeSet<String> = BTreeSet::new();
 
         let mut result = SqlBuilderResult {
             table: sql_mapper.table.clone(),
@@ -483,6 +499,12 @@ impl SqlBuilder {
                                     }
                                 }
 
+                                // Add path to used path list
+                                let path :String = fieldname.split('_').rev().skip(1).collect();
+                                if !used_paths.contains(&path) {
+                                    used_paths.insert(path);
+                                }
+
                                 data.selected = if self.count_query {
                                     sql_target.options.count_select
                                 } else {
@@ -632,6 +654,7 @@ impl SqlBuilder {
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
+                &used_paths
             );
         }
 

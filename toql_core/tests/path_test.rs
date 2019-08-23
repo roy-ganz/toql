@@ -14,7 +14,9 @@ fn setup_mapper() -> SqlMapper {
             MapperOptions::new().select_always(true)
         )
         .map_field("username", "username")
+        .map_field_with_options("book", "IS_NULL(id)",  MapperOptions::new().select_always(true)) // on this path 
         .map_field("book_id", "b.id");
+        
     mapper
 }
 
