@@ -74,7 +74,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 self.mysql_deserialize_fields.push(quote!(
                     #field_ident : {
                         #increment
-                        if row.columns_ref()[*i].column_type() == MYSQL_TYPE_NULL {
+                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                             None
                         } else {
                             row.take_opt( *i).unwrap()?
@@ -122,7 +122,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                      2 =>  quote!(
                                 #field_ident : {  
                                        #increment
-                                       if row.columns_ref()[*i].column_type() == MYSQL_TYPE_NULL {
+                                       if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                                         None
                                        } 
                                        else if row.take_opt::<bool,_>(*i).unwrap()? == false {
@@ -153,7 +153,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                                 quote!(
                                 #field_ident : { 
                                      #increment
-                                     if row.columns_ref()[*i].column_type() == MYSQL_TYPE_NULL {
+                                     if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                                         None
                                     } else {
                                     Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)

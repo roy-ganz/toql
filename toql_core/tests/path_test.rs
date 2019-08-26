@@ -7,7 +7,7 @@ use toql_core::sql_mapper::SqlMapper;
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("User");
     mapper
-        .join("book", "JOIN Book b ON (id = b.id)")
+        .join("book", "JOIN Book b ON (id = b.id)", false)
         .map_field_with_options(
             "id",
             "id",

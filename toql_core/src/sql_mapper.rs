@@ -259,7 +259,8 @@ pub struct SqlMapper {
 
 #[derive(Debug)]
 pub(crate) struct Join {
-    pub(crate) join_clause: String,
+    pub(crate) join_clause: String,    // LEFT JOIN ... ON ..
+    pub(crate) selected: bool          // This join will always appear in query and fields should be selected
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 /// 

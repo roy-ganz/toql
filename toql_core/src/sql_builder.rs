@@ -244,21 +244,30 @@ impl SqlBuilder {
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
-        used_paths: &BTreeSet<String>
+        used_paths: &BTreeSet<String>,
+        joins: &HashMap<String, Join>
     ) {
         // Build select clause
         let mut any_selected = false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
+            let path :String = toql_field.split('_').rev().skip(1).collect();
+
+             let join_selected = if sql_target.options.always_selected  {
+                                     if let Some(sql_join) = joins.get(path.as_str()) {
+                                        sql_join.selected 
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        false
+                                    };
+            
+
 
                 // For selected fields there exists target data
                 // For always selected fields, check if path is used by query
-                let selected = ( sql_target.options.always_selected &&
-                    { 
-                        let path :String = toql_field.split('_').rev().skip(1).collect();
-                        used_paths.contains(&path )   
-                    }
-                )
+                let selected = ( join_selected || sql_target.options.always_selected &&  used_paths.contains(&path ))  
                     || sql_target_data
                         .get(toql_field.as_str())
                         .map_or(false, |d| d.selected);
@@ -622,9 +631,29 @@ impl SqlBuilder {
         // Ensure implicitly selected subfields are joined
         for toql_field in &sql_mapper.field_order {
             if let Some(sql_target) = sql_mapper.fields.get(toql_field.as_str()) {
+                
+                let path :String = toql_field.split('_').rev().skip(1).collect();
+              
+              
+                // Fields that are markd `always selected` are selected, if either
+                // their path is in use or their path belongs to a join that is always selected
+                let join_selected =  if path.is_empty() { 
+                        false 
+                    } else { 
+                        if let Some(sql_join) = sql_mapper.joins.get(path.as_str()) {
+                           sql_join.selected 
+                        } else {
+                            false
+                        }
+                    };
+            
+               
+                
+                
+
+
                 if sql_target.options.always_selected
-                &&  { let path :String = toql_field.split('_').rev().skip(1).collect();
-                        used_paths.contains(&path )   }
+                &&  (join_selected || used_paths.contains(&path ) )  
                  && sql_target.subfields {
                     for subfield in toql_field.split('_').rev().skip(1) {
                         if !sql_join_data.contains_key(subfield) {
@@ -657,7 +686,8 @@ impl SqlBuilder {
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
-                &used_paths
+                &used_paths,
+                &sql_mapper.joins
             );
         }
 

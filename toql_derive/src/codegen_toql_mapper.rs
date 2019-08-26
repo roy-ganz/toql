@@ -101,17 +101,13 @@ impl<'a> GeneratedToqlMapper<'a> {
                 join_table, join_alias,
                 join_condition.join( " AND " )
            );
-           
           
-            
-          
-           
-
         
             let join_clause = quote!(&format!( #format_string, alias = sql_alias));
+            let join_selected =  field.number_of_options() == 0 || (field.number_of_options() == 1 && field.select_always == true); 
             self.field_mappings.push(quote! {
                 mapper.map_join::<#joined_struct_ident>(  #toql_field, #join_alias);
-                mapper.join( #toql_field, #join_clause );
+                mapper.join( #toql_field, #join_clause, #join_selected );
             });
         } 
         // Regular field
