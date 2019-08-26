@@ -63,6 +63,30 @@ impl<'a> GeneratedToqlMapper<'a> {
             let join_table = &field.table.as_ref().unwrap_or(&renamed_join_table);
             let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias); 
 
+            // Map field with none condition
+            // if this condition is true, the following joined entity is NONE 
+ 
+            
+              if field.number_of_options() > 0  {
+                    let none_condition :String =  field.sql_join.iter().map(|j| {
+                        let auto_self_key= crate::util::rename(&field_ident.to_string(),&toql.columns);
+                        let this_key = j.this.as_ref().unwrap_or(&auto_self_key);
+                        format!("({{alias}}{{sep}}{} IS NOT NULL)", this_key)
+                    }).collect::<Vec<String>>().join(" AND ");
+
+                self.field_mappings.push(quote!( 
+                        mapper.map_field_with_options(
+                        &format!("{}_", #toql_field),
+                            &format!(#none_condition, 
+                                sep = if sql_alias.is_empty() { "" } else { "." },
+                                alias = sql_alias),
+                                toql::sql_mapper::MapperOptions::new().select_always(true) 
+                            );
+                        
+                            ));
+              }
+
+            // Map join field
             let join_condition :Vec<String> =   field.sql_join.iter().map(|j| {
                 let auto_self_key= crate::util::rename(&field_ident.to_string(),&toql.columns);
                 let this_key = j.this.as_ref().unwrap_or(&auto_self_key);
@@ -72,11 +96,16 @@ impl<'a> GeneratedToqlMapper<'a> {
                 } else {String::from("")};
                 format!("{{alias}}.{} = {}.{}{}",this_key, join_alias, other_key, on) }).collect();
 
-           let format_string = format!("{} JOIN {} {} ON ({})",
-                if field._first_type() == "Option" {"LEFT"} else {"INNER"},
+           let format_string = format!("{}JOIN {} {} ON ({})",
+                if field.number_of_options() == 2 || (field.number_of_options() == 1 && field.select_always == true) {"LEFT "} else {""},
                 join_table, join_alias,
                 join_condition.join( " AND " )
            );
+           
+          
+            
+          
+           
 
         
             let join_clause = quote!(&format!( #format_string, alias = sql_alias));

@@ -63,9 +63,30 @@ impl<'a> GeneratedMysqlQuery<'a> {
                     *i
                 })
             };
-            self.mysql_deserialize_fields.push(quote!(
-                    #field_ident : row . take_opt ( #assignment ) . unwrap ( )?
-            ));
+
+            let increment =  if self.mysql_deserialize_fields.is_empty() { quote!()
+            } else {
+                quote!(*i += 1;)
+            };
+
+            // Check selection for optional Toql fields: Option<Option<..> or Option<..> 
+            if field.number_of_options() > 0 && field.select_always == false {
+                self.mysql_deserialize_fields.push(quote!(
+                    #field_ident : {
+                        #increment
+                        if row.columns_ref()[*i].column_type() == MYSQL_TYPE_NULL {
+                            None
+                        } else {
+                            row.take_opt( *i).unwrap()?
+                        }
+                    }
+                    
+                ));
+            } else {
+                self.mysql_deserialize_fields.push(quote!(
+                    #field_ident : row.take_opt( #assignment).unwrap()?
+                ));
+            }
         }
         // Joined fields
         else if !field.sql_join.is_empty() {
@@ -81,20 +102,148 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 })
             };
 
+            let increment =  if self.mysql_deserialize_fields.is_empty() { quote!(s)
+            } else {
+                quote!(*i += 1;)
+            };
+
+            // There are 4 situations with joined entities
+            //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
+            //    #[toql(select_always)] Option<T>  -> Nullable Join -> Left Join
+            //    Option<T>                         -> Selectable Join -> Inner Join
+            //    T                                 -> Selected Join -> InnerJoin       
+
+            // If any Option is present discriminator field must be added to check
+            // - for unselected entity (discriminator column is NULL Type)
+            // - for null entity (discriminator column is false) - only left joins
+          
+             self.mysql_deserialize_fields.push( 
+                 match   field.number_of_options() {
+                     2 =>  quote!(
+                                #field_ident : {  
+                                       #increment
+                                       if row.columns_ref()[*i].column_type() == MYSQL_TYPE_NULL {
+                                        None
+                                       } 
+                                       else if row.take_opt::<bool,_>(*i).unwrap()? == false {
+                                        *i += 1;
+                                        *i = < #join_type > ::forward_row(*i);
+                                        Some(None)
+                                    } else {
+                                        *i += 1;
+                                        Some(Some(< #join_type > :: from_row_with_index ( & mut row , i )?))
+                                    }
+                                }
+                        ),
+                     1 => {
+                         if field.select_always {
+                            quote!(
+                                #field_ident : { 
+                                     #increment
+                                     
+                                     if row.take_opt::<bool,_>(*i).unwrap()? == false {
+                                        *i = < #join_type > ::forward_row({*i += 1; *i});
+                                        None
+                                    } else {
+                                        Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                    }
+                                }
+                            )
+                         } else {
+                                quote!(
+                                #field_ident : { 
+                                     #increment
+                                     if row.columns_ref()[*i].column_type() == MYSQL_TYPE_NULL {
+                                        None
+                                    } else {
+                                    Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                    }
+                                }
+                        )
+                         }
+                         
+
+                     },
+                     _ => quote!( 
+                #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment )?
+            )
+                 }
+             );
+
+
+/* 
+                 }
+                if field.number_of_options() > 0   {
+                    // Join can be NONE
+                    if field.number_of_options() == 2 
+                    || field.number_of_options() == 1 && field.select_always == true {
+                        quote!(
+                                                        #field_ident : {  
+                                                                if 
+                                                                if row.take(#assignment) == false {
+                                                                *i += 1;
+                                                                i = < #join_type > ::forward_row(i);
+                                                                Some(None)
+                                                            } else {
+                                                             Some(< #join_type > :: from_row_with_index ( & mut row , #assignment )?)
+                                                            }
+                                                        }
+                                                )
+                    } else {
+
+                        quote!(
+                                #field_ident : {  if row.take(#assignment) == false {
+                                        *i += 1;
+                                        i = < #join_type > ::forward_row(i);
+                                        None
+                                    } else {
+                                    < #join_type > :: from_row_with_index ( & mut row , #assignment )?
+                                    }
+                                }
+                        )
+                    }
+            } else { 
+            quote!( 
+                #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment )?
+            )
+            }
+             );
+/* */
+            self.mysql_deserialize_fields.push( quote!(
+                    #field_ident : {  if #none_assignment
+                                    } else {
+                                     
+                                        let j = *i;
+                                        let #field_ident = < #join_type > :: from_row_with_index ( & mut row , #assignment ).ok();
+                                        *i = if #field_ident .is_none() { < #join_type > :: forward_row (j)} else {*i}; // Recover index from error
+                                        #field_ident
+                                    }
+                            
+                ));
+                */
+/*
             // If join is optional, assign None if deserialization fails
             if field._first_type() == "Option" {
+
                 self.mysql_deserialize_fields.push( quote!(
-                    #field_ident : { let j = *i;
+                    #field_ident : {  if row.take(*i) == true { // Key is null, forward and return None
+                                        i = < #join_type > ::forward_row(i);
+                                        None
+                                    } else {
+                                     
+                                    let j = *i;
                                     let #field_ident = < #join_type > :: from_row_with_index ( & mut row , #assignment ).ok();
                                     *i = if #field_ident .is_none() { < #join_type > :: forward_row (j)} else {*i}; // Recover index from error
                                     #field_ident
                                     }
+                            }
                 ));
             } else {
                 self.mysql_deserialize_fields.push( quote!(
                     #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? 
                 ));
             }
+            */
         }
         // Merged fields
         else {

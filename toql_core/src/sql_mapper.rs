@@ -437,11 +437,12 @@ impl SqlMapper {
     }
     /// Adds a join for a given path to the mapper. 
     /// Example: `map.join("foo", "LEFT JOIN Foo f ON (foo_id = f.id)")`
-    pub fn join<'a>(&'a mut self, toql_path: &str, join_clause: &str) -> &'a mut Self {
+    pub fn join<'a>(&'a mut self, toql_path: &str, join_clause: &str, selected: bool) -> &'a mut Self {
         self.joins.insert(
             toql_path.to_string(),
             Join {
                 join_clause: join_clause.to_string(),
+                selected: selected
             },
         );
 

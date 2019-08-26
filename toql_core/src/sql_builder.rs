@@ -622,7 +622,10 @@ impl SqlBuilder {
         // Ensure implicitly selected subfields are joined
         for toql_field in &sql_mapper.field_order {
             if let Some(sql_target) = sql_mapper.fields.get(toql_field.as_str()) {
-                if sql_target.options.always_selected && sql_target.subfields {
+                if sql_target.options.always_selected
+                &&  { let path :String = toql_field.split('_').rev().skip(1).collect();
+                        used_paths.contains(&path )   }
+                 && sql_target.subfields {
                     for subfield in toql_field.split('_').rev().skip(1) {
                         if !sql_join_data.contains_key(subfield) {
                             sql_join_data.insert(subfield, SqlJoinData::default());
