@@ -245,7 +245,42 @@ impl FieldHandler for BasicFieldHandler {
 }
 
 /// A cache that holds mappers.
-pub type SqlMapperCache = HashMap<String, SqlMapper>;
+//pub type SqlMapperCache = HashMap<String, SqlMapper>;
+
+#[derive(Debug)]
+pub struct SqlMapperCache {
+    pub mappers: HashMap<String, SqlMapper>,
+    
+}
+impl SqlMapperCache {
+    pub fn new() -> SqlMapperCache {
+        SqlMapperCache {
+            mappers: HashMap::new()
+        }
+    }   
+    pub fn insert_new_mapper<M:Mapped>(
+        &mut self,
+        ) -> String {
+            let  m = SqlMapper::from_mapped::<M>();
+            self.mappers.insert(String::from(M::table_name()), m);
+            M::table_name()
+            //self.cache.get_mut(&M::table_name()).unwrap()
+        }
+        pub fn insert_new_mapper_with_handler<M:Mapped,H>(
+            &mut self,
+            
+            handler: H,
+        ) -> String
+        where
+            H: 'static + FieldHandler + Send + Sync,
+        {
+            let m = SqlMapper::from_mapped_with_handler::<M, _>( handler);
+            self.mappers.insert(String::from(M::table_name()), m);
+            M::table_name()
+        }
+
+}
+
 
 /// Translates Toql fields into columns or SQL expressions.
 #[derive(Debug)]
@@ -266,14 +301,8 @@ pub(crate) struct Join {
 /// 
 /// The Toql derive implements this trait for derived structs.
 pub trait Mapped {
-    fn insert_new_mapper(cache: &mut SqlMapperCache) -> &mut SqlMapper;     // Create new SQL Mapper and insert into mapper cache
-    fn insert_new_mapper_with_handler<H>(cache: &mut SqlMapperCache,  handler: H) -> &mut SqlMapper   // Create new SQL Mapper and insert into mapper cache
-    where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
-    ;   
-    fn new_mapper(sql_alias: &str) -> SqlMapper;                            // Create new SQL Mapper and map entity fields
-    fn new_mapper_with_handler<H>(sql_alias: &str, handler: H) -> SqlMapper
-    where  H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
-     ;                            // Create new SQL Mapper and map entity fields
+    fn table_name() -> String;
+    fn table_alias() -> String;
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str);       // Map entity fields
 }
 
@@ -304,7 +333,29 @@ impl SqlMapper {
             field_order: Vec::new(),
         }
     }
-    /// Creates and inserts a new mapper into a cache.
+    fn from_mapped<M:Mapped>() -> SqlMapper                           // Create new SQL Mapper and map entity fields
+    {
+         let s = format!("{} {}", M::table_name(), M::table_alias());
+        let mut m =
+            Self::new(if M::table_alias().is_empty() { M::table_name() } else { s });
+        M::map(&mut m, "", &M::table_alias());
+        m
+    }
+    fn from_mapped_with_handler<M: Mapped,H>(handler: H) -> SqlMapper
+      where
+        H: 'static + FieldHandler + Send + Sync,
+    {
+              let s = format!("{} {}",M::table_name(), M::table_alias());
+        let mut m = SqlMapper::new_with_handler(
+            if M::table_alias().is_empty() { M::table_name() } else { s },
+            handler,
+        );
+        M::map(&mut m, "", &M::table_alias());
+        m
+    }
+
+
+   /*  /// Creates and inserts a new mapper into a cache.
     /// Returns a mutable reference to the created mapper. Use it for configuration.
     pub fn insert_new_mapper<T: Mapped>(cache: &mut SqlMapperCache) -> &mut SqlMapper {
         T::insert_new_mapper(cache)
@@ -322,7 +373,7 @@ impl SqlMapper {
     pub fn map<T: Mapped>(sql_alias: &str) -> Self {
         // Mappable must create mapper for top level table
         T::new_mapper(sql_alias)
-    }
+    } */
     /// Maps all fields from a struct as a joined dependency. 
     /// Example: To map for a user an `Address` struct that implements `Mapped`
     /// ``` ignore

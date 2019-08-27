@@ -46,6 +46,8 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt;
 
+
+
 struct SqlTargetData {
     selected: bool, // Target is selected
     used: bool,     // Target is either selected or filtered
@@ -356,6 +358,7 @@ impl SqlBuilder {
             combined_params: vec![],
         };
 
+     
         for t in &query.tokens {
             {
                 match t {

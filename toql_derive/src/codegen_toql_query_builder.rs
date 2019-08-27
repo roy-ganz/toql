@@ -97,14 +97,12 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
             impl toql::fields_type::FieldsType for #struct_ident {
                 type FieldsType = #builder_fields_struct ;
+
+                fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
+                fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
             }
 
-            impl #struct_ident {
-                #vis fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
-                #vis fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
-            }
-
-
+           
             #vis struct #builder_fields_struct ( String ) ;
             impl #builder_fields_struct {
                 #vis fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }

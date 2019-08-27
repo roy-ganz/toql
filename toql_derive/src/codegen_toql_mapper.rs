@@ -240,35 +240,13 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let builder = quote!(
 
             impl toql::sql_mapper::Mapped for #struct_ident {
-                fn insert_new_mapper(cache: &mut toql::sql_mapper::SqlMapperCache) ->  &mut toql::sql_mapper::SqlMapper {
-                    let m = Self::new_mapper( #sql_table_alias);
-                    cache.insert( String::from( #struct_name ), m);
-                    cache.get_mut( #struct_name ).unwrap()
-                }
                 
-                 fn insert_new_mapper_with_handler<H>(cache: &mut toql::sql_mapper::SqlMapperCache,  handler: H) -> &mut toql::sql_mapper::SqlMapper   // Create new SQL Mapper and insert into mapper cache
-                  where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
-                 {
-                    let m = Self::new_mapper_with_handler( #sql_table_alias, handler);
-                    cache.insert( String::from( #struct_name ), m);
-                    cache.get_mut( #struct_name ).unwrap()
-                  }
-
-                fn new_mapper(table_alias: &str) -> toql::sql_mapper::SqlMapper {
-                    let s = format!("{} {}",#sql_table_name, table_alias );
-                    let mut m = toql::sql_mapper::SqlMapper::new( if table_alias.is_empty() { #sql_table_name } else { &s });
-                    Self::map(&mut m, "", table_alias);
-                    m
+                fn table_name() -> String {
+                    String::from(#sql_table_name)
                 }
-                fn new_mapper_with_handler<H>(table_alias: &str,  handler: H) -> toql::sql_mapper::SqlMapper 
-                  where  H: 'static + toql::sql_mapper::FieldHandler + Send + Sync 
-                {
-                    let s = format!("{} {}",#sql_table_name, table_alias );
-                    let mut m = toql::sql_mapper::SqlMapper::new_with_handler( if table_alias.is_empty() { #sql_table_name } else { &s }, handler);
-                    Self::map(&mut m, "", table_alias);
-                    m
+                fn table_alias() -> String {
+                    String::from(#sql_table_alias)
                 }
-
                 fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str, sql_alias: &str) {
                     #(#field_mappings)*
                 }
