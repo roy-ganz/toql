@@ -8,7 +8,7 @@ struct UpdateBook {
     id: u8,
     title: Option<String>, // Selectable, update if some value
 
-    #[toql(select_always)]
+    #[toql(preselect)]
     pages: Option<u8>, // Nullable column, update always
 
     isbn: Option<Option<String>>, // Selectable nullable column, update if some value

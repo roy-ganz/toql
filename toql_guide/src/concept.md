@@ -5,15 +5,16 @@ Toql is a set of crates that aim to simplify web development:
 1. A web client sends a Toql query to the REST Server.
 2. The server uses Toql to parse the query and create SQL.
 3. SQL is send to the Database.
-4. The resulting datasets are put into structs.
+4. Toql puts the resulting datasets into Rust structs.
 4. The structs are sent to the client.
 
-The Toql derive produces high level functions, so that common operations can be done with a single function call.
+The Toql derive produces various high level functions, so that common operations can be done with a single function call.
 For edge cases all the low level functions are available for the programmer, too.
 
 ## Example
 
 Here is an excerpt of code that uses Rocket to serve users from a database. 
+Notice the two Toql derived structs at the beginning. The rest of the code is fairly boilerplate.
 
 ```rust
 	#[derive(Toql)]

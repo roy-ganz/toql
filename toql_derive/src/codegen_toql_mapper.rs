@@ -80,7 +80,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                             &format!(#none_condition, 
                                 sep = if sql_alias.is_empty() { "" } else { "." },
                                 alias = sql_alias),
-                                toql::sql_mapper::MapperOptions::new().select_always(true) 
+                                toql::sql_mapper::MapperOptions::new().preselect(true) 
                             );
                         
                             ));
@@ -97,14 +97,14 @@ impl<'a> GeneratedToqlMapper<'a> {
                 format!("{{alias}}.{} = {}.{}{}",this_key, join_alias, other_key, on) }).collect();
 
            let format_string = format!("{}JOIN {} {} ON ({})",
-                if field.number_of_options() == 2 || (field.number_of_options() == 1 && field.select_always == true) {"LEFT "} else {""},
+                if field.number_of_options() == 2 || (field.number_of_options() == 1 && field.preselect == true) {"LEFT "} else {""},
                 join_table, join_alias,
                 join_condition.join( " AND " )
            );
           
         
             let join_clause = quote!(&format!( #format_string, alias = sql_alias));
-            let join_selected =  field.number_of_options() == 0 || (field.number_of_options() == 1 && field.select_always == true); 
+            let join_selected =  field.number_of_options() == 0 || (field.number_of_options() == 1 && field.preselect == true); 
             self.field_mappings.push(quote! {
                 mapper.map_join::<#joined_struct_ident>(  #toql_field, #join_alias);
                 mapper.join( #toql_field, #join_clause, #join_selected );
@@ -149,8 +149,8 @@ impl<'a> GeneratedToqlMapper<'a> {
             } else {
                 quote!()
             };
-            let select_ident = if field.select_always || (base.to_string() != "Option") {
-                quote!( .select_always(true))
+            let select_ident = if field.preselect || (base.to_string() != "Option") {
+                quote!( .preselect(true))
             } else {
                 quote!()
             };

@@ -10,4 +10,4 @@ This book is split into several sections, with this introduction being the first
 
 * [Concept](concept.md) - The overall concept of Toql.
 * [Query Language](query-language/introduction.md) - How queries look like.
-* [Toql Derive](derive/introduction.md) - Let the derive do all the work!
+* [Toql Derive](derive/introduction.md) - Map query fields onto Rust structs and SQL databases.

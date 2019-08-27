@@ -67,7 +67,7 @@ pub struct BasicFieldHandler {}
 #[derive(Debug)]
 /// Options for a mapped field.
 pub struct MapperOptions {
-    pub(crate) always_selected: bool,   // Always select this field, regardless of query fields
+    pub(crate) preselect: bool,   // Always select this field, regardless of query fields
     pub(crate) count_filter: bool,      // Filter field on count query
     pub(crate) count_select: bool,      // Select field on count query
     pub(crate) ignore_wildcard: bool,   // Ignore field for wildcard selection
@@ -80,7 +80,7 @@ impl MapperOptions {
     /// Create new mapper options
     pub fn new() -> Self {
         MapperOptions {
-            always_selected: false,
+            preselect: false,
             count_filter: false,
             count_select: false,
             ignore_wildcard: false,
@@ -90,9 +90,9 @@ impl MapperOptions {
    
 
 
-    /// Field is always selected, regardless of the query.
-    pub fn select_always(mut self, always_selected: bool) -> Self {
-        self.always_selected = always_selected;
+    /// Field is selected, regardless of the query.
+    pub fn preselect(mut self, preselect: bool) -> Self {
+        self.preselect = preselect;
         self
     }
     /// Any filter on the field is considered when creating a count query.

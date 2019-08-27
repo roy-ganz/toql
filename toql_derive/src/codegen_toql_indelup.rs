@@ -76,7 +76,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                             )
                         } 
                         // Option<T>  (nullable column)
-                        else if options == 1 && field.select_always {
+                        else if options == 1 && field.preselect {
                             quote!(
                                     .as_ref()
                                     .map_or(String::from("null"), |x| x.to_string().to_owned())
@@ -151,7 +151,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                 let set_statement = format!("{{}}.{} = ?, ", &sql_column); 
                 
                 // Option<T>, <Option<Option<T>>
-                if field._first_type() == "Option" && !field.select_always {
+                if field._first_type() == "Option" && !field.preselect {
                     let unwrap_null = if 2 == field.number_of_options(){
                                         quote!(.as_ref().map_or(String::from("null"), |x| x.to_string()))
                                     } else { quote!() };

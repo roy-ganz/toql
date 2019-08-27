@@ -9,6 +9,7 @@
 - [The Toql Derive](derive/introduction.md)
 	- [Mapping](derive/mapping.md)
 	- [Optional Fields](derive/optional-fields.md)
+	- [Always selected Fields](derive/selected-fields.md)
 	- [Joins](derive/joins.md)
 	- [Merges](derive/merges.md)
 	- [Insert / Delete / Update](derive/indelup.md)

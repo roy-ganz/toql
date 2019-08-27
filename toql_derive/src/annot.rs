@@ -51,7 +51,7 @@ pub struct ToqlField {
     #[darling(default)]
     pub count_select: bool,
     #[darling(default)]
-    pub select_always: bool,
+    pub preselect: bool,
     #[darling(default)]
     pub ignore_wildcard: bool,
     #[darling(default)]

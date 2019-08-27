@@ -15,7 +15,7 @@ fn setup_mapper() -> SqlMapper {
         .map_field_with_options(
             "id",
             "id",
-            MapperOptions::new().select_always(true)
+            MapperOptions::new().preselect(true)
         )
         .map_field("title", "title")
         .map_field("published", "publishedAt")

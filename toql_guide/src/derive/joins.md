@@ -80,13 +80,43 @@ For composite keys use multiple `sql_join` attributes.
 ```
 
 
-## Left and inner Joins
-Joining on an `Option` field will issue a LEFT JOIN rather than an INNER JOIN. 
+## Left joins and inner joins
+There are four different join situations in a Rust struct. Depending on the situation a LEFT JOIN or INNER JOIN is added to the generated SQL.
 
-Selected columns from a join cannot always be converted into a struct. A LEFT JOIN is likely to
-produce null values. In case the database results cannot be put into a joined struct, then: 
-- `Option<>` fields value will be `None`.
-- Non `Option<>` fields will raise an error. 
+Notice that inner joins are **always** added to the generated SQL, because inner joins filter the resulting dataset and this behaviour must usually be preserved.
+(Table rows that have no valid inner join to another table row do not appear in the output result).
+
+Left joins however are only added, if the query string refers to the related table. Left joins do not filter output rows.
+
+### `Option<Option<T>>`  
+A selectable optional relation. A LEFT JOIN is invoked if the query requests it.
+
+Possible results are:
+- `None`, Field is not selected by query or mapper.
+-  `Some(None)`, Field is selected, but no related table exists (Foreign key is NULL).
+-  `Some(Some(T))`, Field is selected and related table exists.
+
+### `#[toql(preselect)] Option<T>>`  
+An always selected optional relation. A LEFT JOIN is invoked if the query requests it.
+
+Possible results are:
+- `None`, The related table does not exist  (Foreign key is NULL).
+- `Some(T)`, The value of the related table. 
+
+### `Option<T>>`  
+A selectable relation that must not be null. An INNER JOIN is always invoked.
+
+Possible results are:
+- `None`, Field is not selected by query or mapper.
+- `Some(T)`, The value of the related table. 
+
+### `T`  
+An always selected relation, that must not be null. An INNER JOIN is always invoked.
+
+
+
+
+
 
 
 

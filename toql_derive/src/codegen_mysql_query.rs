@@ -70,7 +70,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
             };
 
             // Check selection for optional Toql fields: Option<Option<..> or Option<..> 
-            if field.number_of_options() > 0 && field.select_always == false {
+            if field.number_of_options() > 0 && field.preselect == false {
                 self.mysql_deserialize_fields.push(quote!(
                     #field_ident : {
                         #increment
@@ -109,7 +109,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
 
             // There are 4 situations with joined entities
             //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
-            //    #[toql(select_always)] Option<T>  -> Nullable Join -> Left Join
+            //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
             //    Option<T>                         -> Selectable Join -> Inner Join
             //    T                                 -> Selected Join -> InnerJoin       
 
@@ -136,7 +136,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                                 }
                         ),
                      1 => {
-                         if field.select_always {
+                         if field.preselect {
                             quote!(
                                 #field_ident : { 
                                      #increment
@@ -176,7 +176,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 if field.number_of_options() > 0   {
                     // Join can be NONE
                     if field.number_of_options() == 2 
-                    || field.number_of_options() == 1 && field.select_always == true {
+                    || field.number_of_options() == 1 && field.preselect == true {
                         quote!(
                                                         #field_ident : {  
                                                                 if 

@@ -11,10 +11,10 @@ fn setup_mapper() -> SqlMapper {
         .map_field_with_options(
             "id",
             "id",
-            MapperOptions::new().select_always(true)
+            MapperOptions::new().preselect(true)
         )
         .map_field("username", "username")
-        .map_field_with_options("book_", "IS_NULL(id)",  MapperOptions::new().select_always(true)) // on this path 
+        .map_field_with_options("book_", "IS_NULL(id)",  MapperOptions::new().preselect(true)) // on this path 
         .map_field("book_id", "b.id");
         
     mapper

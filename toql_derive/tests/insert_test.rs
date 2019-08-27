@@ -9,7 +9,7 @@ struct NewBook {
     id: u8,
     title: Option<String>, // Selectable
 
-    #[toql(select_always)]
+    #[toql(preselect)]
     pages: Option<u8>, // Nullable column
 
     isbn: Option<Option<String>>, // Selectable nullable column

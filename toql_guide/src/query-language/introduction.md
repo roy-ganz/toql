@@ -1,11 +1,10 @@
 # The Query Language
 
-The toql query language is a string that defines which fields should be selected from a database table.
+The Toql query language is a normal string that list all query fields, that should be retrieved from a database. 
 
-Fields can be filtered and ordered, they are separated by comma or semicolon to express AND or OR concatenation.
+Besides selection, query fields can also be filtered and ordered. 
 
-Fields preceded by a path refer to a depended table.
-
+They are separated either by comma or semicolon. If a filter is applied a comma will join the filters with AND, a semicolon with OR.
 
 #### Example 1:
     id, +name, age gt 18
@@ -13,11 +12,15 @@ Fields preceded by a path refer to a depended table.
 
     SELECT id, name, age WHERE age > 18 ORDER BY name ASC
  
- #### Example 2:
-    id , .age eq 12; .age eq 15
+#### Example 2:
+    id, .age eq 12; .age eq 15
  is translated into
  
     SELECT id WHERE age = 12 OR age = 15
+
+
+The actual SQL depends not only of the query but also of the mapper. 
+ 
  
  
 
