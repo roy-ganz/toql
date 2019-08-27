@@ -19,7 +19,7 @@ They are separated either by comma or semicolon. If a filter is applied a comma 
     SELECT id WHERE age = 12 OR age = 15
 
 
-The actual SQL depends not only of the query but also of the mapper. 
+The actual SQL depends not only of the query but also of the mapper setup. 
  
  
  

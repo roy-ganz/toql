@@ -54,7 +54,7 @@ struct User {
 	username: String,			// Always updated
 	realname: Option<String>, 		// Updated conditionally
 	address: Option<Option<<String>>, 	// Optional nullable column, updated conditionally
-	#[toql(select_always)]
+	#[toql(preselect)]
 	info: Option<String> 		// Nullable column, always updated
 
 

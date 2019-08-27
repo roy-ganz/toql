@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html" class="active"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html" class="active"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/selected-fields.html"><strong aria-hidden="true">4.3.</strong> Always selected Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.4.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.5.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.6.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.7.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -141,9 +141,9 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#the-query-language" id="the-query-language"><h1>The Query Language</h1></a>
-<p>The toql query language is a string that defines which fields should be selected from a database table.</p>
-<p>Fields can be filtered and ordered, they are separated by comma or semicolon to express AND or OR concatenation.</p>
-<p>Fields preceded by a path refer to a depended table.</p>
+<p>The Toql query language is a normal string that list all query fields, that should be retrieved from a database.</p>
+<p>Besides selection, query fields can also be filtered and ordered.</p>
+<p>They are separated either by comma or semicolon. If a filter is applied a comma will join the filters with AND, a semicolon with OR.</p>
 <a class="header" href="#example-1" id="example-1"><h4>Example 1:</h4></a>
 <pre><code>id, +name, age gt 18
 </code></pre>
@@ -151,11 +151,12 @@
 <pre><code>SELECT id, name, age WHERE age &gt; 18 ORDER BY name ASC
 </code></pre>
 <a class="header" href="#example-2" id="example-2"><h4>Example 2:</h4></a>
-<pre><code>id , .age eq 12; .age eq 15
+<pre><code>id, .age eq 12; .age eq 15
 </code></pre>
 <p>is translated into</p>
 <pre><code>SELECT id WHERE age = 12 OR age = 15
 </code></pre>
+<p>The actual SQL depends not only of the query but also of the mapper setup.</p>
 
                     </main>
 

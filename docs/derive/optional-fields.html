@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html" class="active"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html" class="active"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/selected-fields.html"><strong aria-hidden="true">4.3.</strong> Always selected Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.4.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.5.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.6.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.7.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -142,15 +142,19 @@
                     <main>
                         <a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
 <p>Each field in a Toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement, regardless of the query.</p>
+<p>Fields that should always be selected, but are <code>Option&lt;&gt;</code> must be annotated with <code>preselect</code>.</p>
+<a class="header" href="#example" id="example"><h2>Example:</h2></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
+  #[derive(Toql)]
     struct User {
         id: u32,				// Always selected in SQL
-        name: Option&lt;String&gt;			// Optional field
+        firstname: Option&lt;String&gt;			// Optional field of non nullable column
         middlename: Option&lt;Option&lt;String&gt;&gt;	// Optional field of nullable column
-        #[toql(select_always)]
-        middlename: Option&lt;String&gt;  		// Nullable column, always selected in SQL
+
+        #[toql(preselect)]	
+        lastname: Option&lt;String&gt;			// Optional field non nullable column, always selected in SQL
   }
 #}</code></pre></pre>
 
@@ -165,7 +169,7 @@
                         
 
                         
-                            <a rel="next" href="../derive/joins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../derive/selected-fields.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -183,7 +187,7 @@
                 
 
                 
-                    <a href="../derive/joins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a href="../derive/selected-fields.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 

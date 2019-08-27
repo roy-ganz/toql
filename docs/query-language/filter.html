@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html" class="active"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="../concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="../query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="../query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="../query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="../query-language/filter.html" class="active"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="../derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="../derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="../derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="../derive/selected-fields.html"><strong aria-hidden="true">4.3.</strong> Always selected Fields</a></li><li><a href="../derive/joins.html"><strong aria-hidden="true">4.4.</strong> Joins</a></li><li><a href="../derive/merges.html"><strong aria-hidden="true">4.5.</strong> Merges</a></li><li><a href="../derive/indelup.html"><strong aria-hidden="true">4.6.</strong> Insert / Delete / Update</a></li><li><a href="../derive/reference.html"><strong aria-hidden="true">4.7.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -154,7 +154,7 @@
 <tr><td>eqn</td><td> <em>equal null</em>   </td><td>age eqn    </td><td>   age IS NULL</td></tr>
 <tr><td>ne  </td><td> <em>not equal</em>   </td><td>name ne 'foo'  </td><td>name &lt;&gt; 'foo'</td></tr>
 <tr><td>nen </td><td> <em>not equal null</em></td><td> age nen</td><td>    age IS NOT NULL</td></tr>
-<tr><td>gt </td><td> <em>greater than</em> </td><td> age gt 16 </td><td> age &gt; 16</td></tr>
+<tr><td>gt </td><td> <em>greater than</em> </td><td> age gt 16 </td><td> age &gt; 16com</td></tr>
 <tr><td>ge </td><td> <em>greater than or equal</em> </td><td> age ge 16 </td><td> age &gt;= 16</td></tr>
 <tr><td>lt </td><td> <em>less than</em> </td><td> age lt 16 </td><td> age &lt; 16</td></tr>
 <tr><td>le </td><td> <em>less than or equal</em> </td><td> age le 16 </td><td> age &lt;= 16</td></tr>
@@ -166,6 +166,33 @@
 </tbody></table>
 <a class="header" href="#custom-functions" id="custom-functions"><h2>Custom functions</h2></a>
 <p>Custom functions are applied through the <code>FN</code> filter. They must be handled by a Field Handler. See API for details.</p>
+<a class="header" href="#joining-filters" id="joining-filters"><h2>Joining filters</h2></a>
+<p>A field can be filtered multiple times by adding multiple the filter expressions in the query.</p>
+<p>To build complex filter expressions join filters by comma to express logical AND or semicolon for logical OR.
+Keep in mind that logical AND has higher precendence than logical OR.</p>
+<p>Use parens if required:</p>
+<pre><code class="language-toql">age eq 12, animal eq 'chicken'; animal eq 'cow
+</code></pre>
+<p>is the same as</p>
+<pre><code class="language-toql">(age eq 12, animal eq 'chicken'); animal eq 'cow
+</code></pre>
+<p>but different than</p>
+<pre><code class="language-toql">age eq 12, (animal eq 'chicken'; animal eq 'cow)
+</code></pre>
+<p>Use the dot notation if you only want to filter a field without selecting it:</p>
+<pre><code class="language-toql">age eq 12, .animal eq 'chicken'; .animal eq 'cow'
+</code></pre>
+<a class="header" href="#argument-types" id="argument-types"><h2>Argument types</h2></a>
+<p>Toql onyl knows integers, floats and strings. Use the following table to express more types:</p>
+<table><thead><tr><th>Type</th><th> Toql Example </th><th>Remark</th></tr></thead><tbody>
+<tr><td>bool</td><td> admin eq 1</td><td> 0, 1</td></tr>
+<tr><td>integer</td><td> limit  bw -12 5</td><td> </td></tr>
+<tr><td>float </td><td> price le 0.5e2</td><td> </td></tr>
+<tr><td>string</td><td> name in 'peter'</td><td> With ticks</td></tr>
+<tr><td>date </td><td>subscribeUntil le '2050-12-31'</td><td>SQL format</td></tr>
+<tr><td>time </td><td>start ge '08:30:00'</td><td> SQL format</td></tr>
+<tr><td>date time </td><td>finishedAt ge '2005-12-31 08:30:00'</td><td> SQL format</td></tr>
+</tbody></table>
 
                     </main>
 

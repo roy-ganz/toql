@@ -1,5 +1,5 @@
 # The Toql Derive
-The recommended way to use Toql in your project is to use the Toql derive.
+The recommended way to map Toql fields onto Rust structs is to use the Toql derive.
 
 The derive builds a lot of code. This includes
 

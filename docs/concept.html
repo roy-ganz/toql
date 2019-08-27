@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html" class="active"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html" class="active"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/selected-fields.html"><strong aria-hidden="true">4.3.</strong> Always selected Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.4.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.5.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.6.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.7.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -146,13 +146,14 @@
 <li>A web client sends a Toql query to the REST Server.</li>
 <li>The server uses Toql to parse the query and create SQL.</li>
 <li>SQL is send to the Database.</li>
-<li>The resulting datasets are put into structs.</li>
+<li>Toql puts the resulting datasets into Rust structs.</li>
 <li>The structs are sent to the client.</li>
 </ol>
-<p>The Toql derive produces high level functions, so that common operations can be done with a single function call.
+<p>The Toql derive produces various high level functions, so that common operations can be done with a single function call.
 For edge cases all the low level functions are available for the programmer, too.</p>
 <a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>Here is an excerpt of code that uses Rocket to serve users from a database.</p>
+<p>Here is an excerpt of code that uses Rocket to serve users from a database.
+Notice the two Toql derived structs at the beginning. The rest of the code is fairly boilerplate.</p>
 <pre><pre class="playpen"><code class="language-rust">    #[derive(Toql)]
     #[toql(skip_indelup)] // No insert / delete / update functionality
     struct Country {

@@ -75,7 +75,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.3.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.4.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.5.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.6.</strong> Reference</a></li></ol></li></ol>
+            <ol class="chapter"><li><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li><a href="concept.html"><strong aria-hidden="true">2.</strong> Concept</a></li><li><a href="query-language/introduction.html"><strong aria-hidden="true">3.</strong> The Query Language</a></li><li><ol class="section"><li><a href="query-language/select.html"><strong aria-hidden="true">3.1.</strong> Selection</a></li><li><a href="query-language/order.html"><strong aria-hidden="true">3.2.</strong> Ordering</a></li><li><a href="query-language/filter.html"><strong aria-hidden="true">3.3.</strong> Filtering</a></li></ol></li><li><a href="derive/introduction.html"><strong aria-hidden="true">4.</strong> The Toql Derive</a></li><li><ol class="section"><li><a href="derive/mapping.html"><strong aria-hidden="true">4.1.</strong> Mapping</a></li><li><a href="derive/optional-fields.html"><strong aria-hidden="true">4.2.</strong> Optional Fields</a></li><li><a href="derive/selected-fields.html"><strong aria-hidden="true">4.3.</strong> Always selected Fields</a></li><li><a href="derive/joins.html"><strong aria-hidden="true">4.4.</strong> Joins</a></li><li><a href="derive/merges.html"><strong aria-hidden="true">4.5.</strong> Merges</a></li><li><a href="derive/indelup.html"><strong aria-hidden="true">4.6.</strong> Insert / Delete / Update</a></li><li><a href="derive/reference.html"><strong aria-hidden="true">4.7.</strong> Reference</a></li></ol></li></ol>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
@@ -148,7 +148,7 @@
 <ul>
 <li><a href="concept.html">Concept</a> - The overall concept of Toql.</li>
 <li><a href="query-language/introduction.html">Query Language</a> - How queries look like.</li>
-<li><a href="derive/introduction.html">Toql Derive</a> - Let the derive do all the work!</li>
+<li><a href="derive/introduction.html">Toql Derive</a> - Map query fields onto Rust structs and SQL databases.</li>
 </ul>
 <a class="header" href="#concept" id="concept"><h1>Concept</h1></a>
 <p>Toql is a set of crates that aim to simplify web development:</p>
@@ -156,13 +156,14 @@
 <li>A web client sends a Toql query to the REST Server.</li>
 <li>The server uses Toql to parse the query and create SQL.</li>
 <li>SQL is send to the Database.</li>
-<li>The resulting datasets are put into structs.</li>
+<li>Toql puts the resulting datasets into Rust structs.</li>
 <li>The structs are sent to the client.</li>
 </ol>
-<p>The Toql derive produces high level functions, so that common operations can be done with a single function call.
+<p>The Toql derive produces various high level functions, so that common operations can be done with a single function call.
 For edge cases all the low level functions are available for the programmer, too.</p>
 <a class="header" href="#example" id="example"><h2>Example</h2></a>
-<p>Here is an excerpt of code that uses Rocket to serve users from a database.</p>
+<p>Here is an excerpt of code that uses Rocket to serve users from a database.
+Notice the two Toql derived structs at the beginning. The rest of the code is fairly boilerplate.</p>
 <pre><pre class="playpen"><code class="language-rust">    #[derive(Toql)]
     #[toql(skip_indelup)] // No insert / delete / update functionality
     struct Country {
@@ -203,9 +204,9 @@ For edge cases all the low level functions are available for the programmer, too
 
 </code></pre>
 <a class="header" href="#the-query-language" id="the-query-language"><h1>The Query Language</h1></a>
-<p>The toql query language is a string that defines which fields should be selected from a database table.</p>
-<p>Fields can be filtered and ordered, they are separated by comma or semicolon to express AND or OR concatenation.</p>
-<p>Fields preceded by a path refer to a depended table.</p>
+<p>The Toql query language is a normal string that list all query fields, that should be retrieved from a database.</p>
+<p>Besides selection, query fields can also be filtered and ordered.</p>
+<p>They are separated either by comma or semicolon. If a filter is applied a comma will join the filters with AND, a semicolon with OR.</p>
 <a class="header" href="#example-1" id="example-1"><h4>Example 1:</h4></a>
 <pre><code>id, +name, age gt 18
 </code></pre>
@@ -213,11 +214,12 @@ For edge cases all the low level functions are available for the programmer, too
 <pre><code>SELECT id, name, age WHERE age &gt; 18 ORDER BY name ASC
 </code></pre>
 <a class="header" href="#example-2" id="example-2"><h4>Example 2:</h4></a>
-<pre><code>id , .age eq 12; .age eq 15
+<pre><code>id, .age eq 12; .age eq 15
 </code></pre>
 <p>is translated into</p>
 <pre><code>SELECT id WHERE age = 12 OR age = 15
 </code></pre>
+<p>The actual SQL depends not only of the query but also of the mapper setup.</p>
 <a class="header" href="#selecting-fields" id="selecting-fields"><h1>Selecting fields</h1></a>
 <p>Fields are selected if they are mentioned in the query.</p>
 <ul>
@@ -294,7 +296,7 @@ selects with a wildcard, the field will just be ignored.</p>
 <tr><td>eqn</td><td> <em>equal null</em>   </td><td>age eqn    </td><td>   age IS NULL</td></tr>
 <tr><td>ne  </td><td> <em>not equal</em>   </td><td>name ne 'foo'  </td><td>name &lt;&gt; 'foo'</td></tr>
 <tr><td>nen </td><td> <em>not equal null</em></td><td> age nen</td><td>    age IS NOT NULL</td></tr>
-<tr><td>gt </td><td> <em>greater than</em> </td><td> age gt 16 </td><td> age &gt; 16</td></tr>
+<tr><td>gt </td><td> <em>greater than</em> </td><td> age gt 16 </td><td> age &gt; 16com</td></tr>
 <tr><td>ge </td><td> <em>greater than or equal</em> </td><td> age ge 16 </td><td> age &gt;= 16</td></tr>
 <tr><td>lt </td><td> <em>less than</em> </td><td> age lt 16 </td><td> age &lt; 16</td></tr>
 <tr><td>le </td><td> <em>less than or equal</em> </td><td> age le 16 </td><td> age &lt;= 16</td></tr>
@@ -306,8 +308,35 @@ selects with a wildcard, the field will just be ignored.</p>
 </tbody></table>
 <a class="header" href="#custom-functions" id="custom-functions"><h2>Custom functions</h2></a>
 <p>Custom functions are applied through the <code>FN</code> filter. They must be handled by a Field Handler. See API for details.</p>
+<a class="header" href="#joining-filters" id="joining-filters"><h2>Joining filters</h2></a>
+<p>A field can be filtered multiple times by adding multiple the filter expressions in the query.</p>
+<p>To build complex filter expressions join filters by comma to express logical AND or semicolon for logical OR.
+Keep in mind that logical AND has higher precendence than logical OR.</p>
+<p>Use parens if required:</p>
+<pre><code class="language-toql">age eq 12, animal eq 'chicken'; animal eq 'cow
+</code></pre>
+<p>is the same as</p>
+<pre><code class="language-toql">(age eq 12, animal eq 'chicken'); animal eq 'cow
+</code></pre>
+<p>but different than</p>
+<pre><code class="language-toql">age eq 12, (animal eq 'chicken'; animal eq 'cow)
+</code></pre>
+<p>Use the dot notation if you only want to filter a field without selecting it:</p>
+<pre><code class="language-toql">age eq 12, .animal eq 'chicken'; .animal eq 'cow'
+</code></pre>
+<a class="header" href="#argument-types" id="argument-types"><h2>Argument types</h2></a>
+<p>Toql onyl knows integers, floats and strings. Use the following table to express more types:</p>
+<table><thead><tr><th>Type</th><th> Toql Example </th><th>Remark</th></tr></thead><tbody>
+<tr><td>bool</td><td> admin eq 1</td><td> 0, 1</td></tr>
+<tr><td>integer</td><td> limit  bw -12 5</td><td> </td></tr>
+<tr><td>float </td><td> price le 0.5e2</td><td> </td></tr>
+<tr><td>string</td><td> name in 'peter'</td><td> With ticks</td></tr>
+<tr><td>date </td><td>subscribeUntil le '2050-12-31'</td><td>SQL format</td></tr>
+<tr><td>time </td><td>start ge '08:30:00'</td><td> SQL format</td></tr>
+<tr><td>date time </td><td>finishedAt ge '2005-12-31 08:30:00'</td><td> SQL format</td></tr>
+</tbody></table>
 <a class="header" href="#the-toql-derive" id="the-toql-derive"><h1>The Toql Derive</h1></a>
-<p>The recommended way to use Toql in your project is to use the Toql derive.</p>
+<p>The recommended way to map Toql fields onto Rust structs is to use the Toql derive.</p>
 <p>The derive builds a lot of code. This includes</p>
 <ul>
 <li>Mapping of Toql fields to struct fields and database columns or expressions.</li>
@@ -410,26 +439,82 @@ struct UserRef {
 <p>To exclude fields from mapping attribute them with <code>skip</code>.</p>
 <a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
 <p>Each field in a Toql query can individually be selected. However fields must be <code>Option&lt;&gt;</code> for this, otherwise they will always be selected in the SQL statement, regardless of the query.</p>
+<p>Fields that should always be selected, but are <code>Option&lt;&gt;</code> must be annotated with <code>preselect</code>.</p>
+<a class="header" href="#example-6" id="example-6"><h2>Example:</h2></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
+  #[derive(Toql)]
     struct User {
         id: u32,				// Always selected in SQL
-        name: Option&lt;String&gt;			// Optional field
+        firstname: Option&lt;String&gt;			// Optional field of non nullable column
         middlename: Option&lt;Option&lt;String&gt;&gt;	// Optional field of nullable column
-        #[toql(select_always)]
-        middlename: Option&lt;String&gt;  		// Nullable column, always selected in SQL
+
+        #[toql(preselect)]	
+        lastname: Option&lt;String&gt;			// Optional field non nullable column, always selected in SQL
   }
 #}</code></pre></pre>
+<a class="header" href="#preselection" id="preselection"><h1>Preselection</h1></a>
+<p>Fields on a struct that are <strong>not</strong> <code>Option&lt;&gt;</code> will always be selected and put into the struct regardless the query string.
+Optional fields however can also be always selected with the <code>preselect</code> annotation.</p>
+<a class="header" href="#example-1-1" id="example-1-1"><h4>Example 1</h4></a>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+  #[derive(Toql)]
+    struct User {
+        id: u32,
+        #[toql(preselect)]
+        name: Option&lt;String&gt;,
+    }
+#}</code></pre></pre>
+<p>Both <code>id</code> and <code>name</code> are always selected from the table regardless the query string.</p>
+<a class="header" href="#preselection-and-joins" id="preselection-and-joins"><h2>Preselection and Joins</h2></a>
+<p>The behaviour of preselected fields on <em>joined</em> structs depends on the join type:</p>
+<ul>
+<li>On inner joins preselected fields are always selected.</li>
+<li>On left joins (optional relation) preselected fields will only appear in the SQL statement if at least one other field is selected.</li>
+</ul>
+<a class="header" href="#example-2-1" id="example-2-1"><h4>Example 2</h4></a>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+  #[derive(Toql)]
+    struct User {
+        id: u32,
+        native_language: Language,
+        foreign_language: Option&lt;Option&lt;Language&gt;&gt;,
+    }
+    struct Language {
+            id: u32,
+            code: Option&lt;String&gt;
+    }
+#}</code></pre></pre>
+<p>In the above Example <code>id</code> in <code>User</code> is always selected, because it's <em>not</em> <code>Option&lt;&gt;</code>.
+As <code>native_language</code> is an inner join, its <code>id</code> will also always be selected.
+But on the contrary <code>foreign_language</code> is a selectable optional relation (left join), <code>id</code> will only be selected automatically if the query requests any additional field from the related struct. For example with <code>id, foreignLanguage_code</code>.</p>
+<a class="header" href="#preselection-on-parent-paths" id="preselection-on-parent-paths"><h2>Preselection on parent paths</h2></a>
+<p>One more important thing: If a field on a related struct is selected, all preselected fields from the path line will be selected too.</p>
+<p>Lets assume we have a user that has an address, which contains country information. The query</p>
+<pre><code class="language-toql">address_country_code
+</code></pre>
+<p>would therefore</p>
+<ul>
+<li>select <code>code</code> from the table <code>Country</code></li>
+<li>select all preseleted fields from table <code>Country</code></li>
+<li>select all preseleted fields from table <code>Address</code></li>
+<li>select all preseleted fields from table <code>User</code></li>
+</ul>
 <a class="header" href="#joins" id="joins"><h1>Joins</h1></a>
 <p>A struct can refer to another struct. This is done with a SQL join.</p>
 <p>Joins are automatically added to the SQL statement in these situations:</p>
 <ul>
 <li>Fields in the Toql query refer to another struct through a path: <code>user_phoneId</code>.</li>
-<li>Fields on a joined struct are always selected: <code>#[toql(select_always)</code>.</li>
+<li>Fields on a joined struct are always selected: <code>#[toql(preselect)</code>.</li>
 <li>Fields on a joined struct are not <code>Option&lt;&gt;</code>: <code>id: u64</code>.</li>
+<li>A related struct is an inner join.</li>
 </ul>
-<a class="header" href="#example-6" id="example-6"><h4>Example:</h4></a>
+<a class="header" href="#example-7" id="example-7"><h4>Example:</h4></a>
 <p>The Toql query <code>id</code> translates this</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
@@ -438,10 +523,10 @@ struct User {
      id: u32,	
      name: Option&lt;String&gt;
      #[toql(sql_join(self=&quot;mobile_id&quot; other=&quot;id&quot;))]  
-     mobile_phone : Option&lt;Phone&gt;
+     mobile_phone : Option&lt;Phone&gt; // Selectable inner join
 
      #[toql(sql_join(self=&quot;country_id&quot; other=&quot;id&quot;))]  
-     country : Country
+     country : Country // Inner Join
 }
 
 struct Country {
@@ -449,15 +534,15 @@ struct Country {
 }
 
 struct Phone {
-    id : Option&lt;u64&gt;, 
+    id : Option&lt;u64&gt;, // Can be null
 }
 #}</code></pre></pre>
 <p>into</p>
-<pre><code class="language-sql">SELECT user.id, null, null, country.id FROM User user 
+<pre><code class="language-sql">SELECT user.id, -snip-, country.id FROM User user 
 INNER JOIN Country country ON (user.country_id = country.id)
 </code></pre>
 <p>While the Toql query <code>id, mobilePhone_id</code> for the same structs translates into</p>
-<pre><code class="language-sql">SELECT user.id, null, mobile_phone.id, country.id FROM User user 
+<pre><code class="language-sql">SELECT user.id, -snip-, mobile_phone.id, country.id FROM User user 
 LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
 INNER JOIN Country country ON (user.country_id = country.id)
 </code></pre>
@@ -471,7 +556,7 @@ INNER JOIN Country country ON (user.country_id = country.id)
 struct User {
      id: u32,	
      name: Option&lt;String&gt;
-     #[toql(sql_join(self=&quot;mobil_id&quot;, other=&quot;id&quot;), table=&quot;Phones&quot;, alias=&quot;p&quot;)]  
+     #[toql(preselect, sql_join(self=&quot;mobil_id&quot;, other=&quot;id&quot;), table=&quot;Phones&quot;, alias=&quot;p&quot;)]  
      mobile_phone : Option&lt;Phone&gt;
 }
 #}</code></pre></pre>
@@ -486,21 +571,42 @@ struct User {
 <li><em>on</em>, an additional SQL predicate. Must include the table alias.</li>
 </ul>
 <p>For composite keys use multiple <code>sql_join</code> attributes.</p>
-<a class="header" href="#example-7" id="example-7"><h4>Example</h4></a>
+<a class="header" href="#example-8" id="example-8"><h4>Example</h4></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-    #[toql(sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;), sql_join(self=&quot;language_id&quot;, other=&quot;language_id&quot;, on=&quot;country.language_id = 'en'&quot;) ]  
+    #[toql(preselect, sql_join(self=&quot;country_id&quot;, other=&quot;id&quot;), sql_join(self=&quot;language_id&quot;, other=&quot;language_id&quot;, on=&quot;country.language_id = 'en'&quot;) ]  
     country : Option&lt;Country&gt;
 #}</code></pre></pre>
-<a class="header" href="#left-and-inner-joins" id="left-and-inner-joins"><h2>Left and inner Joins</h2></a>
-<p>Joining on an <code>Option</code> field will issue a LEFT JOIN rather than an INNER JOIN.</p>
-<p>Selected columns from a join cannot always be converted into a struct. A LEFT JOIN is likely to
-produce null values. In case the database results cannot be put into a joined struct, then:</p>
+<a class="header" href="#left-joins-and-inner-joins" id="left-joins-and-inner-joins"><h2>Left joins and inner joins</h2></a>
+<p>There are four different join situations in a Rust struct. Depending on the situation a LEFT JOIN or INNER JOIN is added to the generated SQL.</p>
+<p>Notice that inner joins are <strong>always</strong> added to the generated SQL, because inner joins filter the resulting dataset and this behaviour must usually be preserved.
+(Table rows that have no valid inner join to another table row do not appear in the output result).</p>
+<p>Left joins however are only added, if the query string refers to the related table. Left joins do not filter output rows.</p>
+<a class="header" href="#optionoptiont" id="optionoptiont"><h3><code>Option&lt;Option&lt;T&gt;&gt;</code></h3></a>
+<p>A selectable optional relation. A LEFT JOIN is invoked if the query requests it.</p>
+<p>Possible results are:</p>
 <ul>
-<li><code>Option&lt;&gt;</code> fields value will be <code>None</code>.</li>
-<li>Non <code>Option&lt;&gt;</code> fields will raise an error.</li>
+<li><code>None</code>, Field is not selected by query or mapper.</li>
+<li><code>Some(None)</code>, Field is selected, but no related table exists (Foreign key is NULL).</li>
+<li><code>Some(Some(T))</code>, Field is selected and related table exists.</li>
 </ul>
+<a class="header" href="#toqlpreselect-optiont" id="toqlpreselect-optiont"><h3><code>#[toql(preselect)] Option&lt;T&gt;&gt;</code></h3></a>
+<p>An always selected optional relation. A LEFT JOIN is invoked if the query requests it.</p>
+<p>Possible results are:</p>
+<ul>
+<li><code>None</code>, The related table does not exist  (Foreign key is NULL).</li>
+<li><code>Some(T)</code>, The value of the related table.</li>
+</ul>
+<a class="header" href="#optiont" id="optiont"><h3><code>Option&lt;T&gt;&gt;</code></h3></a>
+<p>A selectable relation that must not be null. An INNER JOIN is always invoked.</p>
+<p>Possible results are:</p>
+<ul>
+<li><code>None</code>, Field is not selected by query or mapper.</li>
+<li><code>Some(T)</code>, The value of the related table.</li>
+</ul>
+<a class="header" href="#t" id="t"><h3><code>T</code></h3></a>
+<p>An always selected relation, that must not be null. An INNER JOIN is always invoked.</p>
 <a class="header" href="#merge" id="merge"><h1>Merge</h1></a>
 <p>A struct can also contain a collection of other structs. Because this cannot be done directly in SQL, Toql will execute multiple queries and merge the results afterwards.</p>
 <pre><pre class="playpen"><code class="language-rust">
@@ -537,7 +643,7 @@ struct Phone {
 </code></pre>
 <p>For composite keys mark multiple columns with the <code>delup_key</code>.</p>
 <p>Join, merge and SQL fields are excluded. To skip other fields from insert or update functions use the <code>skip_inup</code> annotation. Useful for auto incremented primary keys or trigger generated values.</p>
-<a class="header" href="#example-8" id="example-8"><h3>Example</h3></a>
+<a class="header" href="#example-9" id="example-9"><h3>Example</h3></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -573,7 +679,7 @@ struct User {
     username: String,			// Always updated
     realname: Option&lt;String&gt;, 		// Updated conditionally
     address: Option&lt;Option&lt;&lt;String&gt;&gt;, 	// Optional nullable column, updated conditionally
-    #[toql(select_always)]
+    #[toql(preselect)]
     info: Option&lt;String&gt; 		// Nullable column, always updated
 
 

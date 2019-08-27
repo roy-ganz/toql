@@ -4,8 +4,9 @@ A struct can refer to another struct. This is done with a SQL join.
 
 Joins are automatically added to the SQL statement in these situations:
 -  Fields in the Toql query refer to another struct through a path: `user_phoneId`.
--  Fields on a joined struct are always selected: `#[toql(select_always)`. 
+-  Fields on a joined struct are always selected: `#[toql(preselect)`. 
 -  Fields on a joined struct are not `Option<>`: `id: u64`.
+-  A related struct is an inner join.
 
 #### Example:
 
@@ -16,10 +17,10 @@ struct User {
 	 id: u32,	
 	 name: Option<String>
 	 #[toql(sql_join(self="mobile_id" other="id"))]  
-	 mobile_phone : Option<Phone>
+	 mobile_phone : Option<Phone> // Selectable inner join
 
 	 #[toql(sql_join(self="country_id" other="id"))]  
-	 country : Country
+	 country : Country // Inner Join
 }
 
 struct Country {
@@ -27,20 +28,20 @@ struct Country {
 }
 
 struct Phone {
-	id : Option<u64>, 
+	id : Option<u64>, // Can be null
 }
 ```
 into
 
 ```sql 
-SELECT user.id, null, null, country.id FROM User user 
+SELECT user.id, -snip-, country.id FROM User user 
 INNER JOIN Country country ON (user.country_id = country.id)
 ```
 
 While the Toql query `id, mobilePhone_id` for the same structs translates into
 
 ```sql 
-SELECT user.id, null, mobile_phone.id, country.id FROM User user 
+SELECT user.id, -snip-, mobile_phone.id, country.id FROM User user 
 LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
 INNER JOIN Country country ON (user.country_id = country.id)
 ```
@@ -55,7 +56,7 @@ The Toql query `id` for this struct
 struct User {
 	 id: u32,	
 	 name: Option<String>
-	 #[toql(sql_join(self="mobil_id", other="id"), table="Phones", alias="p")]  
+	 #[toql(preselect, sql_join(self="mobil_id", other="id"), table="Phones", alias="p")]  
 	 mobile_phone : Option<Phone>
 }
 ```
@@ -74,8 +75,8 @@ SQL joins can be defined with
 For composite keys use multiple `sql_join` attributes.
 
 #### Example
-``` rust
- 	#[toql(sql_join(self="country_id", other="id"), sql_join(self="language_id", other="language_id", on="country.language_id = 'en'") ]  
+```rust
+ 	#[toql(preselect, sql_join(self="country_id", other="id"), sql_join(self="language_id", other="language_id", on="country.language_id = 'en'") ]  
 	country : Option<Country>
 ```
 
