@@ -26,13 +26,14 @@ struct MyUser {
 
 #[test]
 fn rename() {
-    let mapper = toql::sql_mapper::SqlMapper::map::<MyBook>("b");
+    let mapper = toql::sql_mapper::SqlMapper::from_mapped_with_alias::<MyBook>("b");
     
     let query = toql::query_parser::QueryParser::parse("*, author_id, coAuthor_id"); // Select all top fields and id from author and co-author
     let result = toql::sql_builder::SqlBuilder::new().build(&mapper, &query.unwrap());
     // Sometimes failes becuse join order different
-    assert_eq!("SELECT b.book_id, b.longTitle, a.ID, null, r.ID, null FROM MY_BOOK b LEFT JOIN UserTable r ON (b.coAuthor = r.ID AND (r.reader = true)) LEFT JOIN UserTable a ON (b.author_id = a.id)", result.unwrap().to_sql());
+    //assert_eq!("SELECT b.book_id, b.longTitle, a.ID, null, r.ID, null FROM MY_BOOK b LEFT JOIN UserTable r ON (b.coAuthor = r.ID AND (r.reader = true)) LEFT JOIN UserTable a ON (b.author_id = a.id)", result.unwrap().to_sql());
    
+   assert_eq!("SELECT b.book_id, b.longTitle, (b.author_id IS NOT NULL), a.ID, null, (b.coAuthor IS NOT NULL), r.ID, null FROM MY_BOOK b JOIN UserTable r ON (b.coAuthor = r.ID AND (r.reader = true)) JOIN UserTable a ON (b.author_id = a.id)", result.unwrap().to_sql());
                 
 
 }

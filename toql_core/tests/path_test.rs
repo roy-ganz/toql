@@ -14,7 +14,7 @@ fn setup_mapper() -> SqlMapper {
             MapperOptions::new().select_always(true)
         )
         .map_field("username", "username")
-        .map_field_with_options("book", "IS_NULL(id)",  MapperOptions::new().select_always(true)) // on this path 
+        .map_field_with_options("book_", "IS_NULL(id)",  MapperOptions::new().select_always(true)) // on this path 
         .map_field("book_id", "b.id");
         
     mapper
@@ -34,7 +34,7 @@ fn build_path() {
         .unwrap();
 
     assert_eq!(
-        "SELECT id, username, b.id FROM User JOIN Book b ON (id = b.id) WHERE b.id = ?",
+        "SELECT id, username, IS_NULL(id), b.id FROM User JOIN Book b ON (id = b.id) WHERE b.id = ?",
         result.to_sql()
     );
 }
@@ -50,5 +50,5 @@ fn ignore_path() {
         .build(&mapper, &query)
         .unwrap();
 
-    assert_eq!("SELECT id, username, null FROM User", result.to_sql());
+    assert_eq!("SELECT id, username, null, null FROM User", result.to_sql());
 }

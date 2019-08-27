@@ -333,15 +333,19 @@ impl SqlMapper {
             field_order: Vec::new(),
         }
     }
-    fn from_mapped<M:Mapped>() -> SqlMapper                           // Create new SQL Mapper and map entity fields
+    pub fn from_mapped<M:Mapped>() -> SqlMapper                           // Create new SQL Mapper and map entity fields
     {
-         let s = format!("{} {}", M::table_name(), M::table_alias());
+        Self::from_mapped_with_alias::<M>(&M::table_alias())
+    }
+    pub fn from_mapped_with_alias<M:Mapped>(sql_alias: &str) -> SqlMapper                           // Create new SQL Mapper and map entity fields
+    {
+         let s = format!("{} {}", M::table_name(), sql_alias);
         let mut m =
-            Self::new(if M::table_alias().is_empty() { M::table_name() } else { s });
-        M::map(&mut m, "", &M::table_alias());
+            Self::new(if sql_alias.is_empty() { M::table_name() } else { s });
+        M::map(&mut m, "", sql_alias);
         m
     }
-    fn from_mapped_with_handler<M: Mapped,H>(handler: H) -> SqlMapper
+    pub fn from_mapped_with_handler<M: Mapped,H>(handler: H) -> SqlMapper
       where
         H: 'static + FieldHandler + Send + Sync,
     {

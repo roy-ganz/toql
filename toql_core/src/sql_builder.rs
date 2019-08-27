@@ -269,7 +269,7 @@ impl SqlBuilder {
 
                 // For selected fields there exists target data
                 // For always selected fields, check if path is used by query
-                let selected = ( join_selected || sql_target.options.always_selected &&  used_paths.contains(&path ))  
+                let selected = ( join_selected || sql_target.options.always_selected && ( path.is_empty() || used_paths.contains(&path)))  
                     || sql_target_data
                         .get(toql_field.as_str())
                         .map_or(false, |d| d.selected);
@@ -638,7 +638,7 @@ impl SqlBuilder {
                 let path :String = toql_field.split('_').rev().skip(1).collect();
               
               
-                // Fields that are markd `always selected` are selected, if either
+                // Fields that are marked `always selected` are selected, if either
                 // their path is in use or their path belongs to a join that is always selected
                 let join_selected =  if path.is_empty() { 
                         false 
@@ -656,7 +656,7 @@ impl SqlBuilder {
 
 
                 if sql_target.options.always_selected
-                &&  (join_selected || used_paths.contains(&path ) )  
+                &&  (join_selected || used_paths.contains(&path))   
                  && sql_target.subfields {
                     for subfield in toql_field.split('_').rev().skip(1) {
                         if !sql_join_data.contains_key(subfield) {

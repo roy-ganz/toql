@@ -306,7 +306,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
                 pub fn load_dependencies_from_mysql(mut _entities: &mut Vec< #struct_ident >,
-                _query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache, _conn: &mut toql::mysql::mysql::Conn)
+                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache, _conn: &mut toql::mysql::mysql::Conn)
                 -> toql::error::Result<()> { Ok(())}
             )
         } else {

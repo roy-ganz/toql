@@ -229,7 +229,7 @@ impl<'a> GeneratedToqlMapper<'a> {
 impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
-        let struct_name= format!("{}", struct_ident);
+        //let struct_name= format!("{}", struct_ident);
         let sql_table_name =  &self.sql_table_name;
         let sql_table_alias = &self.sql_table_alias;
                

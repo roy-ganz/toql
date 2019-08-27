@@ -53,7 +53,7 @@ pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
 pub use toql_core::sql_builder_result;
 pub use toql_core::sql_mapper;
-pub use toql_core::fields_type;
+pub use toql_core::query_builder;
 pub use toql_core::merge;
 pub use toql_core::indelup;
 

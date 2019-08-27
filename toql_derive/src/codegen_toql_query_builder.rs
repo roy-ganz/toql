@@ -63,7 +63,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
         
             let type_ident: &Ident = field_type;
-            let path_fields_struct =  quote!( < #type_ident as toql::fields_type::FieldsType>::FieldsType); 
+            let path_fields_struct =  quote!( < #type_ident as toql::query_builder::QueryFields>::FieldsType); 
 
             self.builder_fields.push(quote!(
                         #vis fn #field_ident (mut self) -> #path_fields_struct {
@@ -95,7 +95,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
         let builder = quote!(
 
-            impl toql::fields_type::FieldsType for #struct_ident {
+            impl toql::query_builder::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;
 
                 fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
