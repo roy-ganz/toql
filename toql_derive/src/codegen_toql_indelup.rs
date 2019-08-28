@@ -72,14 +72,14 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                 .as_ref()
                                 .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
                                 .as_ref()
-                                .map_or(String::from("null"), |x| x.to_string().to_owned())
+                                .map_or(String::from("NULL"), |x| x.to_string().to_owned())
                             )
                         } 
                         // Option<T>  (nullable column)
                         else if options == 1 && field.preselect {
                             quote!(
                                     .as_ref()
-                                    .map_or(String::from("null"), |x| x.to_string().to_owned())
+                                    .map_or(String::from("NULL"), |x| x.to_string().to_owned())
                             )
                         } 
                         // Option<T>  (toql selectable)
@@ -104,6 +104,42 @@ impl<'a> GeneratedToqlIndelup<'a> {
                       self.insert_columns.push(self_column.to_owned());
 
                     let other_field = Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
+            self.insert_params_code.push(
+                      match field.number_of_options()  {
+                                2 => { // Option<Option<T>>
+                                        quote!(
+                                                params.push(entity
+                                                    . #field_ident .as_ref()
+                                                    .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
+                                                    .as_ref()
+                                                    . map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                        )
+                                    },
+                                1 if field.preselect => { // #[toql(preselect)] Option<T>
+                                    quote!(
+                                            params.push(entity. #field_ident 
+                                                .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                    )
+                                },
+
+                                1 if !field.preselect => { // Option<T>
+                                    quote!(
+                                          
+                                                params.push(entity. #field_ident 
+                                                    .as_ref()
+                                                    .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
+                                                    . #other_field .to_string());
+                                    )
+                                },
+                                _ => { // T
+                                    quote!(
+                                        params.push(entity. #field_ident . #other_field .to_string());
+                                    )
+                                }
+                            }
+                );
+
+                   /*  // TODO joins
                     if field._first_type() == "Option" {
 
                         self.insert_params_code.push( quote!( params.push(entity. #field_ident 
@@ -113,7 +149,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                         // String fields will not turn into owned string, so add to_owned()
                         self.insert_params_code
                             .push(quote!( params.push(entity. #field_ident . #other_field .to_string().to_owned()); )); 
-                    }
+                    } */
                  }
             }
     }
@@ -153,7 +189,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                 // Option<T>, <Option<Option<T>>
                 if field._first_type() == "Option" && !field.preselect {
                     let unwrap_null = if 2 == field.number_of_options(){
-                                        quote!(.as_ref().map_or(String::from("null"), |x| x.to_string()))
+                                        quote!(.as_ref().map_or(String::from("NULL"), |x| x.to_string()))
                                     } else { quote!() };
                     
                     self.update_set_code.push(quote!(
@@ -166,7 +202,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                 // T, Option<T> (nullable column)
                 else {
                     let unwrap_null = if 1 == field.number_of_options(){
-                                            quote!(.map_or(String::from("null"), |x| x.to_string()))
+                                            quote!(.map_or(String::from("NULL"), |x| x.to_string()))
                                         } else { quote!() };
                     self.update_set_code.push(quote!(
                     update_stmt.push_str( &format!(#set_statement, alias));
@@ -183,21 +219,48 @@ impl<'a> GeneratedToqlIndelup<'a> {
                     let other_field = Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
                     let set_statement = format!("{{}}.{} = ?, ", &self_column);
 
-                    // Option (LEFT JOIN)
-                    if field._first_type() == "Option" {
-                        self.update_set_code.push(quote!(
-                            if entity. #field_ident .is_some() {
-                                update_stmt.push_str( &format!(#set_statement, alias));
-                                params.push(entity. #field_ident 
-                                    .as_ref().unwrap(). #other_field .to_string().to_owned());
+                    self.update_set_code.push( 
+                        
+                            match field.number_of_options()  {
+                                2 => { // Option<Option<T>>
+                                    quote!(
+                                        if entity. #field_ident .is_some() {
+                                            update_stmt.push_str( &format!(#set_statement, alias));
+                                            params.push(entity. #field_ident 
+                                                    .as_ref()
+                                                    .unwrap()
+                                                    .as_ref()
+                                                    .map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                        }
+                                    )
+                                    },
+                                1 if field.preselect => { // #[toql(preselect)] Option<T>
+                                    quote!(
+                                            update_stmt.push_str( &format!(#set_statement, alias));
+                                            params.push(entity. #field_ident 
+                                                .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                    )
+                                },
+
+                                1 if !field.preselect => { // Option<T>
+                                    quote!(
+                                            if entity. #field_ident .is_some() {
+                                                update_stmt.push_str( &format!(#set_statement, alias));
+                                                params.push(entity. #field_ident 
+                                                    .as_ref().unwrap(). #other_field .to_string());
+                                            }
+                                    )
+                                },
+                                _ => { // T
+                                    quote!(
+                                        update_stmt.push_str( &format!(#set_statement, alias));
+                                        params.push(entity. #field_ident . #other_field .to_string());
+                                    )
+                                }
                             }
-                        ));
-                    } else {
-                        self.update_set_code.push(quote!(
-                            update_stmt.push_str( &format!(#set_statement), alias);
-                            params.push( entity. #field_ident . #other_field.to_string() .to_owned());
-                        ));
-                    }
+                    );
+                     
+
                 }
             }
         }
@@ -240,7 +303,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
             } */
         } else {
             let sql_table_name = &self.sql_table_ident.to_string();
-            let update_one_statement = format!("UPDATE {} {{alias}} SET ", self.sql_table_ident);
+           // let update_one_statement = format!("UPDATE {} {{alias}} SET ", self.sql_table_ident);
 
             let insert_cols = format!(" ({})",self
                 .insert_columns
@@ -254,20 +317,20 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                 self.insert_columns.join(",")
             );
 
-            let update_where_statement = format!(" WHERE {}", delup_key_comparison);
+           /*  let update_where_statement = format!(" WHERE {}", delup_key_comparison);
             let delete_one_statement = format!(
                 "DELETE {{alias}} FROM {} {{alias}} WHERE {}",
                 self.sql_table_ident, delup_key_comparison
-            );
+            ); */
             let delete_many_statement = format!("DELETE {{alias}} FROM {} {{alias}} WHERE ", self.sql_table_ident);
 
             quote! {
                 impl<'a> toql::indelup::Indelup<'a, #struct_ident> for #struct_ident {
                  
 
-                     fn insert_one_sql(entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)> {
+                   /*   fn insert_one_sql(entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)> {
                         Self::insert_many_sql(std::iter::once(entity))
-                    }
+                    } */
 
                      fn insert_many_sql<I>(entities: I)-> toql::error::Result<(String, Vec<String>)>
                      where I: IntoIterator<Item=&'a #struct_ident> + 'a
@@ -284,7 +347,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                             Ok((insert_stmt, params))
                     }
 
-                    fn update_one_sql(  entity: & #struct_ident)  -> toql::error::Result<(String, Vec<String>)>
+                   /*  fn update_one_sql(  entity: & #struct_ident)  -> toql::error::Result<(String, Vec<String>)>
                     {
                         let alias= "t";
                         let mut params :Vec<String> = Vec::new();
@@ -306,7 +369,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
 
                         Ok((update_stmt, params))
 
-                    }
+                    } */
                     fn update_many_sql<I>(entities:I) -> toql::error::Result<(String, Vec<String>)>
                     where I: IntoIterator<Item=&'a #struct_ident> + 'a + Clone
                     {
@@ -354,7 +417,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         Ok((update_stmt, params))
                        
                     }
-                    fn delete_one_sql(  entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)>
+                  /*   fn delete_one_sql(  entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)>
                     {
                         let alias="t";
                         let mut params :Vec<String>= Vec::new();
@@ -363,7 +426,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         #(#delup_key_params_code)*
 
                         Ok((delete_stmt, params))
-                     }
+                     } */
 
                         fn delete_many_sql<I>(entities: I) -> toql::error::Result<(String, Vec<String>)>
                         where I:  IntoIterator<Item=&'a #struct_ident> +'a

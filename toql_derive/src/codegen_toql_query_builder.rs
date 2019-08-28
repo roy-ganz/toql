@@ -85,7 +85,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
         let wildcard = if self.build_wildcard {
             quote!(
-                pub fn wildcard(mut self) -> toql::query::Wildcard {
+                pub fn wildcard( self) -> toql::query::Wildcard {
                     toql::query::Wildcard::from(self.0)
                 }
             )

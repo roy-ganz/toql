@@ -135,8 +135,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                                     }
                                 }
                         ),
-                     1 => {
-                         if field.preselect {
+                     1 if field.preselect => 
                             quote!(
                                 #field_ident : { 
                                      #increment
@@ -148,22 +147,18 @@ impl<'a> GeneratedMysqlQuery<'a> {
                                         Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
                                     }
                                 }
-                            )
-                         } else {
-                                quote!(
-                                #field_ident : { 
-                                     #increment
-                                     if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                        None
-                                    } else {
-                                    Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                            ),
+                         1 if !field.preselect =>
+                                    quote!(
+                                    #field_ident : { 
+                                        #increment
+                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                            None
+                                        } else {
+                                        Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                        }
                                     }
-                                }
-                        )
-                         }
-                         
-
-                     },
+                                ),
                      _ => quote!( 
                 #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment )?
             )
@@ -171,79 +166,6 @@ impl<'a> GeneratedMysqlQuery<'a> {
              );
 
 
-/* 
-                 }
-                if field.number_of_options() > 0   {
-                    // Join can be NONE
-                    if field.number_of_options() == 2 
-                    || field.number_of_options() == 1 && field.preselect == true {
-                        quote!(
-                                                        #field_ident : {  
-                                                                if 
-                                                                if row.take(#assignment) == false {
-                                                                *i += 1;
-                                                                i = < #join_type > ::forward_row(i);
-                                                                Some(None)
-                                                            } else {
-                                                             Some(< #join_type > :: from_row_with_index ( & mut row , #assignment )?)
-                                                            }
-                                                        }
-                                                )
-                    } else {
-
-                        quote!(
-                                #field_ident : {  if row.take(#assignment) == false {
-                                        *i += 1;
-                                        i = < #join_type > ::forward_row(i);
-                                        None
-                                    } else {
-                                    < #join_type > :: from_row_with_index ( & mut row , #assignment )?
-                                    }
-                                }
-                        )
-                    }
-            } else { 
-            quote!( 
-                #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment )?
-            )
-            }
-             );
-/* */
-            self.mysql_deserialize_fields.push( quote!(
-                    #field_ident : {  if #none_assignment
-                                    } else {
-                                     
-                                        let j = *i;
-                                        let #field_ident = < #join_type > :: from_row_with_index ( & mut row , #assignment ).ok();
-                                        *i = if #field_ident .is_none() { < #join_type > :: forward_row (j)} else {*i}; // Recover index from error
-                                        #field_ident
-                                    }
-                            
-                ));
-                */
-/*
-            // If join is optional, assign None if deserialization fails
-            if field._first_type() == "Option" {
-
-                self.mysql_deserialize_fields.push( quote!(
-                    #field_ident : {  if row.take(*i) == true { // Key is null, forward and return None
-                                        i = < #join_type > ::forward_row(i);
-                                        None
-                                    } else {
-                                     
-                                    let j = *i;
-                                    let #field_ident = < #join_type > :: from_row_with_index ( & mut row , #assignment ).ok();
-                                    *i = if #field_ident .is_none() { < #join_type > :: forward_row (j)} else {*i}; // Recover index from error
-                                    #field_ident
-                                    }
-                            }
-                ));
-            } else {
-                self.mysql_deserialize_fields.push( quote!(
-                    #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment ) ? 
-                ));
-            }
-            */
         }
         // Merged fields
         else {
@@ -401,7 +323,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
 
 
                 fn load_many(query: &toql::query::Query, cache: &toql::sql_mapper::SqlMapperCache,
-                mut conn: &mut toql::mysql::mysql::Conn, count:bool, first:u64, max:u16)
+                conn: &mut toql::mysql::mysql::Conn, count:bool, first:u64, max:u16)
                 -> toql::error::Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>)> {
 
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;

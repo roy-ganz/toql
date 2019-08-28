@@ -20,7 +20,7 @@ pub use mysql;  // Reexport for derive produced code
     /// 
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
- pub fn insert_one<'a, T>( entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+ pub fn insert_one<'a, T>( entity: &'a T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where T:'a + Indelup<'a, T>
  {
      let (insert_stmt, params) = T::insert_one_sql(&entity)?;
@@ -51,7 +51,7 @@ pub use mysql;  // Reexport for derive produced code
     /// 
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_one<'a, T >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    pub fn delete_one<'a, T >(entity: &'a T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where T:'a + Indelup<'a, T>
     {
         let (delete_stmt, params) = T::delete_one_sql(&entity)?;
@@ -104,7 +104,7 @@ pub use mysql;  // Reexport for derive produced code
     /// Optional fields with value `None` are not updated. See guide for details.
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of updated rows.
-    pub fn update_one<'a, T >(entity: &T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
+    pub fn update_one<'a, T >(entity: &'a T, conn: &mut mysql::Conn) -> Result<u64, ToqlError> 
     where T:'a + Indelup<'a, T>
     {
         let (update_stmt, params) = T::update_one_sql(&entity)?;

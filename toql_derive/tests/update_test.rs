@@ -41,7 +41,7 @@ fn update_one() {
     let (sql, params) = UpdateBook::update_one_sql(&b).unwrap();
 
     assert_eq!(
-        "UPDATE UpdateBook t SET t.title = ?, t.pages = ?, t.isbn = ?, t.author_id = ? WHERE t.id = ?",
+        "UPDATE UpdateBook t0 SET t0.title = ?, t0.pages = ?, t0.isbn = ?, t0.author_id = ? WHERE t0.id = ?",
         sql
     );
     assert_eq!(["Foo", "6", "12345678-9", "16", "5"], *params);
@@ -81,6 +81,6 @@ fn update_optional() {
 
     let (sql, params) = UpdateBook::update_one_sql(&b).unwrap();
 
-    assert_eq!("UPDATE UpdateBook t SET t.pages = ? WHERE t.id = ?", sql);
+    assert_eq!("UPDATE UpdateBook t0 SET t0.pages = ? WHERE t0.id = ?", sql);
     assert_eq!(["6", "5"], *params);
 }

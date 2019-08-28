@@ -34,15 +34,22 @@ use crate::error::Result;
 /// Trait for insert delete and update functions.
 pub trait Indelup<'a, T: 'a> {
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
-    fn insert_one_sql (entity: & T) -> Result<(String, Vec<String>)>;
+    fn insert_one_sql (entity: &'a T) -> Result<(String, Vec<String>)> {
+        Self::insert_many_sql(std::iter::once(entity))
+    }
     /// Insert many structs, returns tuple with SQL statement and SQL params or error.
     fn insert_many_sql<I> (entities: I) -> Result<(String, Vec<String>)> where I: IntoIterator<Item = &'a T> + 'a; 
     /// Delete one structs, returns tuple with SQL statement and SQL params or error.
-    fn delete_one_sql (entity: & T) -> Result<(String, Vec<String>)>;
+    fn delete_one_sql (entity: &'a T) -> Result<(String, Vec<String>)> {
+        Self::delete_many_sql(std::iter::once(entity))
+    }
     /// Delete many structs, returns tuple with SQL statement and SQL params or error.
     fn delete_many_sql<I> (entities: I) -> Result<(String, Vec<String>)> where I: IntoIterator<Item = &'a T> + 'a; 
      /// Update one struct, returns tuple with SQL statement and SQL params or error.
-    fn update_one_sql (entity: & T) -> Result<(String, Vec<String>)>;
+    fn update_one_sql (entity: &'a T) -> Result<(String, Vec<String>)>{
+        Self::update_many_sql(std::iter::once(entity))
+    }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
     fn update_many_sql<I> (entities: I) -> Result<(String, Vec<String>)> where I: IntoIterator<Item = &'a T> + 'a + Clone;
 }
+

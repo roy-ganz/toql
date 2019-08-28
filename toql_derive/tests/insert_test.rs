@@ -14,7 +14,7 @@ struct NewBook {
 
     isbn: Option<Option<String>>, // Selectable nullable column
 
-    #[toql(sql_join(self = "author_id", other = "id"))]
+    #[toql(preselect, sql_join(self = "author_id", other = "id"))]
     author: Option<NewUser>, // Nullable column
 }
 
