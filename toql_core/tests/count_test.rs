@@ -1,4 +1,3 @@
-
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_mapper::MapperOptions;

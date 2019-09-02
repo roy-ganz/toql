@@ -52,6 +52,9 @@ fn delete_many() {
 
     let (sql, params) = DeleteBook::delete_many_sql(&books).unwrap();
 
-    assert_eq!("DELETE t FROM DeleteBook t WHERE (t.id = ?) OR (t.id = ?)", sql);
+    assert_eq!(
+        "DELETE t FROM DeleteBook t WHERE (t.id = ?) OR (t.id = ?)",
+        sql
+    );
     assert_eq!(["5", "24"], *params);
 }

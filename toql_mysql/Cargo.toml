@@ -1,6 +1,6 @@
 [package]
 name = "toql_mysql"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Artos <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with mysql integration for toql"

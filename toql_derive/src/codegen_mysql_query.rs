@@ -10,10 +10,8 @@ use proc_macro2::Span;
 
 use syn::Ident;
 
-
 pub(crate) struct GeneratedMysqlQuery<'a> {
     struct_ident: &'a Ident,
-    
 
     mysql_deserialize_fields: Vec<proc_macro2::TokenStream>,
     path_loaders: Vec<proc_macro2::TokenStream>,
@@ -26,7 +24,6 @@ pub(crate) struct GeneratedMysqlQuery<'a> {
 
 impl<'a> GeneratedMysqlQuery<'a> {
     pub(crate) fn from_toql(toql: &Toql) -> GeneratedMysqlQuery {
-
         GeneratedMysqlQuery {
             struct_ident: &toql.ident,
             mysql_deserialize_fields: Vec::new(),
@@ -39,7 +36,6 @@ impl<'a> GeneratedMysqlQuery<'a> {
         }
     }
 
-    
     pub(crate) fn add_mysql_deserialize_skip_field(&mut self, field: &'a ToqlField) {
         let field_ident = &field.ident;
         let field_type = &field.ty;
@@ -64,12 +60,13 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 })
             };
 
-            let increment =  if self.mysql_deserialize_fields.is_empty() { quote!()
+            let increment = if self.mysql_deserialize_fields.is_empty() {
+                quote!()
             } else {
                 quote!(*i += 1;)
             };
 
-            // Check selection for optional Toql fields: Option<Option<..> or Option<..> 
+            // Check selection for optional Toql fields: Option<Option<..> or Option<..>
             if field.number_of_options() > 0 && field.preselect == false {
                 self.mysql_deserialize_fields.push(quote!(
                     #field_ident : {
@@ -80,7 +77,6 @@ impl<'a> GeneratedMysqlQuery<'a> {
                             row.take_opt( *i).unwrap()?
                         }
                     }
-                    
                 ));
             } else {
                 self.mysql_deserialize_fields.push(quote!(
@@ -102,7 +98,8 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 })
             };
 
-            let increment =  if self.mysql_deserialize_fields.is_empty() { quote!(s)
+            let increment = if self.mysql_deserialize_fields.is_empty() {
+                quote!(s)
             } else {
                 quote!(*i += 1;)
             };
@@ -111,20 +108,20 @@ impl<'a> GeneratedMysqlQuery<'a> {
             //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
             //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
             //    Option<T>                         -> Selectable Join -> Inner Join
-            //    T                                 -> Selected Join -> InnerJoin       
+            //    T                                 -> Selected Join -> InnerJoin
 
             // If any Option is present discriminator field must be added to check
             // - for unselected entity (discriminator column is NULL Type)
             // - for null entity (discriminator column is false) - only left joins
-          
-             self.mysql_deserialize_fields.push( 
+
+            self.mysql_deserialize_fields.push(
                  match   field.number_of_options() {
                      2 =>  quote!(
-                                #field_ident : {  
+                                #field_ident : {
                                        #increment
                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                                         None
-                                       } 
+                                       }
                                        else if row.take_opt::<bool,_>(*i).unwrap()? == false {
                                         *i += 1;
                                         *i = < #join_type > ::forward_row(*i);
@@ -135,11 +132,10 @@ impl<'a> GeneratedMysqlQuery<'a> {
                                     }
                                 }
                         ),
-                     1 if field.preselect => 
+                     1 if field.preselect =>
                             quote!(
-                                #field_ident : { 
+                                #field_ident : {
                                      #increment
-                                     
                                      if row.take_opt::<bool,_>(*i).unwrap()? == false {
                                         *i = < #join_type > ::forward_row({*i += 1; *i});
                                         None
@@ -150,7 +146,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                             ),
                          1 if !field.preselect =>
                                     quote!(
-                                    #field_ident : { 
+                                    #field_ident : {
                                         #increment
                                         if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                                             None
@@ -159,13 +155,11 @@ impl<'a> GeneratedMysqlQuery<'a> {
                                         }
                                     }
                                 ),
-                     _ => quote!( 
+                     _ => quote!(
                 #field_ident :  < #join_type > :: from_row_with_index ( & mut row , #assignment )?
             )
                  }
              );
-
-
         }
         // Merged fields
         else {
@@ -267,8 +261,6 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, cache, &mut conn)?;
             )
         };
-        
-        
 
         quote!(
             impl #struct_ident {
@@ -298,7 +290,7 @@ impl<'a> GeneratedMysqlQuery<'a> {
                 {
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
 
-                  
+
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
@@ -375,8 +367,6 @@ impl<'a> quote::ToTokens for GeneratedMysqlQuery<'a> {
         let regular_fields = self.regular_fields;
         let forward_joins = &self.forward_joins;
 
-              
-
         let mysql = quote!(
 
             #loader
@@ -400,9 +390,12 @@ impl<'a> quote::ToTokens for GeneratedMysqlQuery<'a> {
 
 
         );
-        
-        
-        log::debug!("Source code for `{}`:\n{}", &self.struct_ident, mysql.to_string());
+
+        log::debug!(
+            "Source code for `{}`:\n{}",
+            &self.struct_ident,
+            mysql.to_string()
+        );
 
         tokens.extend(mysql);
     }

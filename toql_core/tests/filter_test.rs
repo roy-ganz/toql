@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 use toql_core::query::FieldFilter;
 use toql_core::query_parser::QueryParser;
@@ -12,11 +11,7 @@ fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("Book");
     mapper
         .join("author", "JOIN User a ON (id = a.book_id)", false) // join on demand
-        .map_field_with_options(
-            "id",
-            "id",
-            MapperOptions::new().preselect(true)
-        )
+        .map_field_with_options("id", "id", MapperOptions::new().preselect(true))
         .map_field("title", "title")
         .map_field("published", "publishedAt")
         .map_field("author_id", "a.id")
@@ -76,8 +71,6 @@ fn filter_in() {
     assert_eq!(*result.params(), ["0", "1", "5"]);
 }
 
-
-
 #[test]
 fn filter_joined_eq() {
     let mapper = setup_mapper();
@@ -89,16 +82,23 @@ fn filter_joined_eq() {
     assert_eq!(*result.params(), ["5"]);
 }
 
-
-
 #[test]
 fn filter_fnc() {
     struct CustomFieldHandler {};
     impl FieldHandler for CustomFieldHandler {
-        fn build_select(&self, sql_expression: &str,  _params: &HashMap<String, String>) -> Option<String> {
+        fn build_select(
+            &self,
+            sql_expression: &str,
+            _params: &HashMap<String, String>,
+        ) -> Option<String> {
             Some(sql_expression.to_string())
         }
-        fn build_filter(&self, sql_expression: &str, filter: &FieldFilter, _params: &HashMap<String, String>) -> Result<Option<String>, SqlBuilderError> {
+        fn build_filter(
+            &self,
+            sql_expression: &str,
+            filter: &FieldFilter,
+            _params: &HashMap<String, String>,
+        ) -> Result<Option<String>, SqlBuilderError> {
             match filter {
                 FieldFilter::Fn(name, _args) => match (*name).as_ref() {
                     "MA" => Ok(Some(format!("MATCH ({}) AGAINST (?)", sql_expression))),
@@ -107,7 +107,11 @@ fn filter_fnc() {
                 _ => Ok(None),
             }
         }
-        fn build_param(&self, filter: &FieldFilter, _params: &HashMap<String, String>) -> Vec<String> {
+        fn build_param(
+            &self,
+            filter: &FieldFilter,
+            _params: &HashMap<String, String>,
+        ) -> Vec<String> {
             match filter {
                 FieldFilter::Fn(name, args) => match (*name).as_ref() {
                     "MA" => {

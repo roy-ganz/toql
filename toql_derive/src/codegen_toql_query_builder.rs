@@ -1,41 +1,35 @@
-
-
 use crate::annot::Toql;
 use crate::annot::ToqlField;
-use quote::quote;
-use proc_macro2::Span;
 use heck::MixedCase;
+use proc_macro2::Span;
+use quote::quote;
 use syn::Ident;
 
 pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     struct_ident: &'a Ident,
     vis: &'a syn::Visibility,
-   // sql_table_name: String,
-   // sql_table_alias: String,
+    // sql_table_name: String,
+    // sql_table_alias: String,
     builder_fields_struct: Ident,
     build_wildcard: bool,
     builder_fields: Vec<proc_macro2::TokenStream>,
-  
 }
 
 impl<'a> GeneratedToqlQueryBuilder<'a> {
     pub(crate) fn from_toql(toql: &Toql) -> GeneratedToqlQueryBuilder {
-       
         GeneratedToqlQueryBuilder {
             struct_ident: &toql.ident,
             vis: &toql.vis,
-         
+
             builder_fields_struct: syn::Ident::new(
                 &format!("{}Fields", toql.ident.to_string()),
                 Span::call_site(),
             ),
             build_wildcard: true,
             builder_fields: Vec::new(),
-           
         }
     }
 
-    
     pub(crate) fn add_field_for_builder(&mut self, _toql: &Toql, field: &'a ToqlField) {
         let field_ident = &field.ident;
         let vis = &_toql.vis;
@@ -61,9 +55,9 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
             let field_type = field.first_non_generic_type().unwrap();
 
-        
             let type_ident: &Ident = field_type;
-            let path_fields_struct =  quote!( < #type_ident as toql::query_builder::QueryFields>::FieldsType); 
+            let path_fields_struct =
+                quote!( < #type_ident as toql::query_builder::QueryFields>::FieldsType);
 
             self.builder_fields.push(quote!(
                         #vis fn #field_ident (mut self) -> #path_fields_struct {
@@ -77,8 +71,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
 impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-      
-        let vis = self.vis;        
+        let vis = self.vis;
         let builder_fields_struct = &self.builder_fields_struct;
         let builder_fields = &self.builder_fields;
         let struct_ident = &self.struct_ident;
@@ -102,7 +95,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                 fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
             }
 
-           
+
             #vis struct #builder_fields_struct ( String ) ;
             impl #builder_fields_struct {
                 #vis fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
@@ -112,9 +105,13 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                 #wildcard
             }
         );
-        
-        log::debug!("Source code for `{}`:\n{}", &self.struct_ident, builder.to_string());
-        
+
+        log::debug!(
+            "Source code for `{}`:\n{}",
+            &self.struct_ident,
+            builder.to_string()
+        );
+
         tokens.extend(builder);
     }
 }

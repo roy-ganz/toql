@@ -7,11 +7,7 @@ fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("Book b");
     mapper
         .join("author", "JOIN User a ON (b.id = a.book_id)", false)
-        .map_field_with_options(
-            "id",
-            "b.id",
-            MapperOptions::new().preselect(true)
-        )
+        .map_field_with_options("id", "b.id", MapperOptions::new().preselect(true))
         .map_field("title", "b.title")
         .map_field("publishedAt", "b.published_at")
         .map_field("author_id", "a.id")
@@ -46,7 +42,7 @@ fn select_double_wildcard() {
 fn select_path_wildcard() {
     let mapper = setup_mapper();
     let query = QueryParser::parse("author_*").unwrap(); // select all top fields
-     println!("{:?}", query);
+    println!("{:?}", query);
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(
@@ -82,9 +78,9 @@ fn select_optional_join() {
 #[test]
 fn select_hidden() {
     let mapper = setup_mapper();
-    
+
     // id must always be selected (see mapper), title is hidden
-    let query = QueryParser::parse(".id, .title, publishedAt").unwrap(); 
+    let query = QueryParser::parse(".id, .title, publishedAt").unwrap();
 
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
@@ -97,7 +93,7 @@ fn select_hidden() {
 #[test]
 fn select_missing_field() {
     let mapper = setup_mapper();
-     
+
     // Field fail does not exist in mapper
     let query = QueryParser::parse("id, fail").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query);

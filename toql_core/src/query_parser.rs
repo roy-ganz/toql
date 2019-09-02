@@ -2,40 +2,40 @@
 //! The query parser can turn a string that follows the Toql query syntax into a [Query](../query/struct.Query.html).
 //!
 //! ## Example
-//! 
+//!
 //! ``` ignore
 //! let  query = QueryParser::parse("*, +username").unwrap();
 //! assert_eq!("*, +username", query.to_string());
 //! ```
 //! Read the guide for more information on the query syntax.
-//! 
-//! The parser is written with [Pest](https://pest.rs/) and is fast. It should be used to parse query request from users. 
-//! To build a query within your program, build it programmatically with the provided methods. 
+//!
+//! The parser is written with [Pest](https://pest.rs/) and is fast. It should be used to parse query request from users.
+//! To build a query within your program, build it programmatically with the provided methods.
 //! This avoids typing mistakes and - unlike parsing - cannot fail.
-//! 
+//!
+use crate::error::ToqlError;
 use crate::query::Concatenation;
 use crate::query::Field;
-use crate::query::Wildcard;
 use crate::query::FieldFilter;
 use crate::query::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
+use crate::query::Wildcard;
 use pest::error::Error;
 use pest::error::ErrorVariant::CustomError;
 use pest::Parser;
-use crate::error::ToqlError;
 
 #[derive(Parser)]
 #[grammar = "toql.pest"]
 struct PestQueryParser;
 
-/// The query parser. 
+/// The query parser.
 /// It contains only a single static method to turn a string into a Query struct.
 pub struct QueryParser;
 
 impl QueryParser {
     /// Method to parse a string
-    /// This fails if the syntax is wrong. The original PEST error is wrapped with the ToqlError and 
+    /// This fails if the syntax is wrong. The original PEST error is wrapped with the ToqlError and
     /// can be used to examine to problem in detail.
     pub fn parse(toql_string: &str) -> Result<Query, ToqlError> {
         let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
@@ -97,7 +97,7 @@ impl QueryParser {
                         }
                     }
                 }
-                 Rule::wildcard_path => {
+                Rule::wildcard_path => {
                     let token = query.tokens.last_mut();
                     if let Some(t) = token {
                         if let QueryToken::Wildcard(ref mut wildcard) = t {
@@ -129,7 +129,7 @@ impl QueryParser {
                                     iter.next().unwrap().to_string(),
                                 )),
                                 "RE" => Some(FieldFilter::Re(iter.next().unwrap().to_string())),
-                           //     "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
+                                //     "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
                                 "FN" => Some(FieldFilter::Fn(
                                     iter.next().unwrap().to_string(),
                                     iter.map(String::from).collect(),
@@ -150,11 +150,10 @@ impl QueryParser {
                     query.tokens.push(QueryToken::DoubleWildcard(con.clone()));
                 }
                 Rule::wildcard => {
-                    query.tokens.push(QueryToken::Wildcard( 
-                        Wildcard { 
-                            concatenation: con.clone(), 
-                            path: String::from("")
-                        }));
+                    query.tokens.push(QueryToken::Wildcard(Wildcard {
+                        concatenation: con.clone(),
+                        path: String::from(""),
+                    }));
                 }
                 Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);

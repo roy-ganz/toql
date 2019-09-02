@@ -14,5 +14,6 @@
 	- [Merges](derive/merges.md)
 	- [Insert / Delete / Update](derive/indelup.md)
 	- [Reference](derive/reference.md)
+	- [Debugging](derive/debugging.md)
 
 

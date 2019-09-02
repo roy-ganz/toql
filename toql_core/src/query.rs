@@ -5,7 +5,7 @@
 //!
 //! ```ignore
 //! use toql::query::{Query, Field};
-//! 
+//!
 //! let  q = Query::new()
 //!        .and(Field::from("foo").hide().eq(5).aggregate().asc(1))
 //!        .and(Field::from("bar").desc(2));
@@ -496,7 +496,7 @@ impl ToString for QueryToken {
 /// To build a big query simple add fields and wildcards with _and_ resp. _or_ function.
 ///
 /// Watch out: Logical AND has precendence over OR. So `a OR b AND c` is the same as `a OR (b AND c)`.
-/// Avoid to restrict your query with a permission field WITHOUT parenthesize the incoming query. 
+/// Avoid to restrict your query with a permission field WITHOUT parenthesize the incoming query.
 /// Malicious users will circumvent your permission filter with a simple OR clause at the beginning.
 /// Consider this: `(*, id nen); id, permission ne ""` vs `((*, id nen); id), permission ne ""`.
 /// To parenthesize a query use the [parenthesize()](struct.Query.html#method.parenthesize) method.
@@ -514,7 +514,7 @@ pub struct Query {
     /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: BTreeSet<String>,
-    pub params: HashMap<String, String> // generic params
+    pub params: HashMap<String, String>, // generic params
 }
 
 impl Query {
@@ -524,7 +524,7 @@ impl Query {
             tokens: vec![],
             distinct: false,
             roles: BTreeSet::new(),
-            params: HashMap::new()
+            params: HashMap::new(),
         }
     }
     /// Create a new query that select all top fields.
@@ -533,7 +533,7 @@ impl Query {
             tokens: vec![QueryToken::Wildcard(Wildcard::new())],
             distinct: false,
             roles: BTreeSet::new(),
-            params: HashMap::new()
+            params: HashMap::new(),
         }
     }
     /// Create a new query that select all top fields and all dependend fields. This is the best :)
@@ -542,15 +542,16 @@ impl Query {
             tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)],
             distinct: false,
             roles: BTreeSet::new(),
-            params: HashMap::new()
+            params: HashMap::new(),
         }
     }
     /// Wrap query with parentheses.
-    pub fn parenthesize(mut self) -> Self  {
+    pub fn parenthesize(mut self) -> Self {
         if self.tokens.is_empty() {
             return self;
         }
-        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::And));   
+        self.tokens
+            .insert(0, QueryToken::LeftBracket(Concatenation::And));
         self.tokens.push(QueryToken::RightBracket);
         self
     }
@@ -579,7 +580,7 @@ impl Query {
         } else if let QueryToken::DoubleWildcard(w) = query.tokens.get_mut(0).unwrap() {
             *w = Concatenation::Or;
         }
-        
+
         self.tokens.append(&mut query.tokens);
         self
     }

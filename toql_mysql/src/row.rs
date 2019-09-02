@@ -1,22 +1,25 @@
-
 use mysql;
-
 
 /// Trait to convert MySQL result row into Toql structs.
 /// This is implements by Toql Derive for all dervied structs.
 pub trait FromResultRow<T> {
     // Skip row values for struct.
     // Returns a new index that points to next struct.
-    fn forward_row( i: usize)-> usize;
+    fn forward_row(i: usize) -> usize;
     // Read row values into struct, starting from index `i`.
-    fn from_row_with_index( row: &mut mysql::Row, i: &mut usize) -> Result<T,mysql::error::Error> ;
+    fn from_row_with_index(row: &mut mysql::Row, i: &mut usize) -> Result<T, mysql::error::Error>;
 }
 
 /// Function to convert MySQL query result into Toql struct.
-pub fn from_query_result<T: FromResultRow<T>>(result: mysql::QueryResult) -> Result<Vec<T>, mysql::error::Error> {
+pub fn from_query_result<T: FromResultRow<T>>(
+    result: mysql::QueryResult,
+) -> Result<Vec<T>, mysql::error::Error> {
     let mut i: usize = 0;
     result
-        .map(|row| { i = 0; T::from_row_with_index( &mut row?, &mut i)})
+        .map(|row| {
+            i = 0;
+            T::from_row_with_index(&mut row?, &mut i)
+        })
         .collect()
 }
 
@@ -25,5 +28,3 @@ pub fn from_row<T: FromResultRow<T>>(mut row: mysql::Row) -> Result<T, mysql::er
     let mut i: usize = 0;
     T::from_row_with_index(&mut row, &mut i)
 }
-
-

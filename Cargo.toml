@@ -1,6 +1,6 @@
 [package]
 name = "toql"
-version = "0.1.9"
+version = "0.1.10"
 authors = ["Artos <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "The toql query language"

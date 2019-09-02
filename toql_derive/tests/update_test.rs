@@ -49,7 +49,6 @@ fn update_one() {
 
 #[test]
 fn update_many() {
-   
     let u1 = UpdateUser {
         id: 11,
         username: Some(String::from("Foo")),
@@ -64,10 +63,7 @@ fn update_many() {
 
     assert_eq!("UPDATE UpdateUser t0 INNER JOIN UpdateUser t1 SET t0.username = ?, t1.username = ? WHERE t0.id = ? AND t1.id = ?", sql);
     assert_eq!(["Foo", "Bar", "11", "22"], *params);
-
 }
-
-
 
 #[test]
 fn update_optional() {

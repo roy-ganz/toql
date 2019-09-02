@@ -1,6 +1,5 @@
-
-use toql_derive::Toql;
 use toql::indelup::Indelup;
+use toql_derive::Toql;
 
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
@@ -11,18 +10,17 @@ struct Book {
     #[toql(sql_join(self = "author1_id", other = "id"))] // Non nullable column
     author1: User,
 
-     #[toql(preselect, sql_join(self = "author2_id", other = "id"))] // Nullable column
+    #[toql(preselect, sql_join(self = "author2_id", other = "id"))] // Nullable column
     author2: Option<User>,
 
     #[toql(sql_join(self = "author3_id", other = "id"))]
-    author3: Option<User>,   // Selectable non nullable column
+    author3: Option<User>, // Selectable non nullable column
 
     #[toql(sql_join(self = "author4_id", other = "id"))]
     author4: Option<Option<User>>, // Selectable nullable column */
-    
 }
 
-#[derive(Debug, PartialEq,Clone, Toql)]
+#[derive(Debug, PartialEq, Clone, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct User {
     #[toql(delup_key, skip_inup)]
@@ -32,16 +30,18 @@ struct User {
 
 #[test]
 fn insert_all_fields() {
-    let a = User { id:4, username: Some(String::from("Foo"))};
+    let a = User {
+        id: 4,
+        username: Some(String::from("Foo")),
+    };
 
     let b = Book {
         id: 5,
-        author1 :a.clone(),
-         author2: Some(a.clone()) ,
-         author3: Some(a.clone()) ,
-        author4: Some(Some(a)), 
-        };
-   
+        author1: a.clone(),
+        author2: Some(a.clone()),
+        author3: Some(a.clone()),
+        author4: Some(Some(a)),
+    };
 
     let (sql, params) = Book::insert_one_sql(&b).unwrap();
 
@@ -54,16 +54,18 @@ fn insert_all_fields() {
 
 #[test]
 fn update_all_fields() {
-    let a = User { id:4, username: Some(String::from("Foo"))};
+    let a = User {
+        id: 4,
+        username: Some(String::from("Foo")),
+    };
 
     let b = Book {
         id: 5,
-        author1 :a.clone(),
-        author2: Some(a.clone()) ,
-        author3: Some(a.clone()) ,
-        author4: Some(Some(a)), 
-        };
-   
+        author1: a.clone(),
+        author2: Some(a.clone()),
+        author3: Some(a.clone()),
+        author4: Some(Some(a)),
+    };
 
     let (sql, params) = Book::insert_one_sql(&b).unwrap();
 
@@ -76,16 +78,18 @@ fn update_all_fields() {
 
 #[test]
 fn update_required_fields() {
-    let a = User { id:4, username: Some(String::from("Foo"))};
+    let a = User {
+        id: 4,
+        username: Some(String::from("Foo")),
+    };
 
     let b = Book {
         id: 5,
         author1: a.clone(),
-        author2: None ,  // Nullable column
-        author3: None , // Selectable don't update if None
-        author4: None,  // Selectable, don't update if None
-        };
-   
+        author2: None, // Nullable column
+        author3: None, // Selectable don't update if None
+        author4: None, // Selectable, don't update if None
+    };
 
     let (sql, params) = Book::update_one_sql(&b).unwrap();
 
@@ -95,4 +99,3 @@ fn update_required_fields() {
     );
     assert_eq!(["4", "NULL", "5"], *params);
 }
-

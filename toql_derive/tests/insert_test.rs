@@ -1,6 +1,5 @@
-
-use toql_derive::Toql;
 use toql::indelup::Indelup;
+use toql_derive::Toql;
 
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
