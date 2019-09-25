@@ -22,6 +22,11 @@ pub(crate) struct GeneratedToqlIndelup<'a> {
     delup_key_params_code: Vec<proc_macro2::TokenStream>,
 
     update_set_code: Vec<proc_macro2::TokenStream>,
+    diff_set_code: Vec<proc_macro2::TokenStream>,
+
+    diff_merge_code: Vec<proc_macro2::TokenStream>,
+
+  
 }
 
 impl<'a> GeneratedToqlIndelup<'a> {
@@ -42,8 +47,15 @@ impl<'a> GeneratedToqlIndelup<'a> {
             delup_key_params_code: Vec::new(),
 
             update_set_code: Vec::new(),
+            diff_set_code: Vec::new(),
+
+            diff_merge_code: Vec::new(),
+
         }
     }
+
+    
+
 
     fn add_insert_field(&mut self, toql: &Toql, field: &'a ToqlField) {
         if !field.merge.is_empty() || field.skip_inup || field.sql.is_some() {
@@ -57,30 +69,33 @@ impl<'a> GeneratedToqlIndelup<'a> {
             let field_ident = field.ident.as_ref().unwrap();
             let sql_column = crate::util::rename(&field_ident.to_string(), &toql.columns);
             self.insert_columns.push(sql_column);
-            let options = field.number_of_options();
+           
             let unwrap_null =
-                        // Option<Option<T>> (toql selectable of nullable column)
-                        if  options == 2 {
+                match field.number_of_options() {
+                    2 =>  { // Option<Option<T>> (toql selectable of nullable column)
+                        quote!( 
+                            .as_ref()
+                            .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
+                            .as_ref()
+                            .map_or(String::from("NULL"), |x| x.to_string().to_owned())
+                        )
+                        },
+                        1 if field.preselect => {  // Option<T>  (nullable column)
                             quote!(
-                                .as_ref()
-                                .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
                                 .as_ref()
                                 .map_or(String::from("NULL"), |x| x.to_string().to_owned())
                             )
-                        }
-                        // Option<T>  (nullable column)
-                        else if options == 1 && field.preselect {
-                            quote!(
-                                    .as_ref()
-                                    .map_or(String::from("NULL"), |x| x.to_string().to_owned())
-                            )
-                        }
-                        // Option<T>  (toql selectable)
-                        else if options == 1 { quote!(
+                        },
+                            1 if !field.preselect => {  // Option<T>  (toql selectable)
+                                quote!(
                             .as_ref().ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
-                        ) } else {
-                            quote!()
-                        };
+                            )
+                            },
+                            _ =>  quote!()
+
+
+                };
+                       
 
             let params = quote!( params.push( entity . #field_ident  #unwrap_null .to_string().to_owned()); );
 
@@ -146,7 +161,9 @@ impl<'a> GeneratedToqlIndelup<'a> {
     }
 
     fn add_delup_field(&mut self, toql: &Toql, field: &'a ToqlField) {
-        if !field.merge.is_empty() || field.sql.is_some() {
+
+        // SQL code cannot be updated, skip field
+        if field.sql.is_some() {
             return;
         }
 
@@ -167,13 +184,17 @@ impl<'a> GeneratedToqlIndelup<'a> {
                 self.delup_key_params_code
                     .push(quote!(params.push(entity. #field_ident.to_string().to_owned()); ));
             }
+
+            // Add field to keys, struct may contain multiple keys (composite key) 
             self.delup_keys
                 .push(field.ident.as_ref().unwrap().to_string());
         }
+
         // Field is not skipped for update
-        else if !field.skip_inup {
+         if !field.skip_inup {
             // Regular field
-            if field.sql_join.is_empty() {
+            if field.sql_join.is_empty() && field.merge.is_empty() {
+                   
                 let set_statement = format!("{{}}.{} = ?, ", &sql_column);
 
                 // Option<T>, <Option<Option<T>>
@@ -184,10 +205,23 @@ impl<'a> GeneratedToqlIndelup<'a> {
                         quote!()
                     };
 
-                    self.update_set_code.push(quote!(
-                        if entity. #field_ident .is_some() {
-                            update_stmt.push_str( &format!(#set_statement, alias));
-                            params.push(entity . #field_ident .as_ref().unwrap() #unwrap_null .to_string() .to_owned());
+                    // update statement
+                    // Doesn't update primary key
+                    if !field.delup_key {
+                        self.update_set_code.push(quote!(
+                            if entity. #field_ident .is_some() {
+                                update_stmt.push_str( &format!(#set_statement, alias));
+                                params.push(entity . #field_ident .as_ref().unwrap() #unwrap_null .to_string() .to_owned());
+                            }
+                            ));
+                    }
+                    // diff statement
+                    self.diff_set_code.push(quote!(
+                        if entity. #field_ident .is_some()
+                         && outdated. #field_ident  .as_ref().ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))? != entity. #field_ident .as_ref().unwrap()
+                         {
+                                update_stmt.push_str( &format!(#set_statement, alias));
+                                params.push(entity . #field_ident .as_ref().unwrap() #unwrap_null .to_string() .to_owned());
                         }
                     ));
                 }
@@ -198,14 +232,29 @@ impl<'a> GeneratedToqlIndelup<'a> {
                     } else {
                         quote!()
                     };
-                    self.update_set_code.push(quote!(
-                    update_stmt.push_str( &format!(#set_statement, alias));
-                    params.push( entity . #field_ident #unwrap_null .to_string() .to_owned());
-                        ));
+                    //update statement
+                    if !field.delup_key {
+                        self.update_set_code.push(quote!(
+                        update_stmt.push_str( &format!(#set_statement, alias));
+                        params.push( entity . #field_ident #unwrap_null .to_string() .to_owned());
+                            ));
+                    }
+
+                    // diff statement
+                    self.diff_set_code.push(quote!(
+                        if outdated. #field_ident != entity. #field_ident
+                        {
+                                update_stmt.push_str( &format!(#set_statement, alias));
+                                 params.push( entity . #field_ident #unwrap_null .to_string() .to_owned());
+                            
+                        }
+                    ));
+
                 }
             }
             // Join Field
-            else {
+            else if field.merge.is_empty(){
+
                 for j in &field.sql_join {
                     let auto_self_key =
                         crate::util::rename(&field_ident.to_string(), &toql.columns);
@@ -214,11 +263,57 @@ impl<'a> GeneratedToqlIndelup<'a> {
                         Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
                     let set_statement = format!("{{}}.{} = ?, ", &self_column);
 
-                    self.update_set_code.push(
+                    // update code
+                    if !field.delup_key {
+                        self.update_set_code.push(
+                                match field.number_of_options()  {
+                                    2 => { // Option<Option<T>>
+                                        quote!(
+                                            if entity. #field_ident .is_some() {
+                                                update_stmt.push_str( &format!(#set_statement, alias));
+                                                params.push(entity. #field_ident
+                                                        .as_ref()
+                                                        .unwrap()
+                                                        .as_ref()
+                                                        .map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                            }
+                                        )
+                                        },
+                                    1 if field.preselect => { // #[toql(preselect)] Option<T>
+                                        quote!(
+                                                update_stmt.push_str( &format!(#set_statement, alias));
+                                                params.push(entity. #field_ident
+                                                    .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                        )
+                                    },
+
+                                    1 if !field.preselect => { // Option<T>
+                                        quote!(
+                                                if entity. #field_ident .is_some() {
+                                                    update_stmt.push_str( &format!(#set_statement, alias));
+                                                    params.push(entity. #field_ident
+                                                        .as_ref().unwrap(). #other_field .to_string());
+                                                }
+                                        )
+                                    },
+                                    _ => { // T
+                                        quote!(
+                                            update_stmt.push_str( &format!(#set_statement, alias));
+                                            params.push(entity. #field_ident . #other_field .to_string());
+                                        )
+                                    }
+                                }
+                        );
+                    }
+                    // diff code
+                    self.diff_set_code.push(
                             match field.number_of_options()  {
                                 2 => { // Option<Option<T>>
                                     quote!(
-                                        if entity. #field_ident .is_some() {
+                                        if entity. #field_ident .is_some() 
+                                        &&  outdated. #field_ident .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  != entity .  #field_ident .unwrap()
+                                        {
+                                            
                                             update_stmt.push_str( &format!(#set_statement, alias));
                                             params.push(entity. #field_ident
                                                     .as_ref()
@@ -230,15 +325,19 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                     },
                                 1 if field.preselect => { // #[toql(preselect)] Option<T>
                                     quote!(
-                                            update_stmt.push_str( &format!(#set_statement, alias));
-                                            params.push(entity. #field_ident
-                                                .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                            if outdated. #field_ident != entity. #field_ident {
+                                                update_stmt.push_str( &format!(#set_statement, alias));
+                                                params.push(entity. #field_ident
+                                                    .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                            }
                                     )
                                 },
 
                                 1 if !field.preselect => { // Option<T>
                                     quote!(
-                                            if entity. #field_ident .is_some() {
+                                            if entity. #field_ident .is_some() 
+                                             &&  outdated. #field_ident .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  != entity .  #field_ident .unwrap()
+                                            {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
                                                     .as_ref().unwrap(). #other_field .to_string());
@@ -247,16 +346,65 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                 },
                                 _ => { // T
                                     quote!(
-                                        update_stmt.push_str( &format!(#set_statement, alias));
-                                        params.push(entity. #field_ident . #other_field .to_string());
+                                         if outdated. #field_ident != entity. #field_ident {
+                                            update_stmt.push_str( &format!(#set_statement, alias));
+                                            params.push(entity. #field_ident . #other_field .to_string());
+                                         }
                                     )
                                 }
                             }
                     );
                 }
+            } 
+            // merge fields
+            else {
+
+                let merge_type_ident = field.first_non_generic_type();
+                
+                let optional =  field.number_of_options() > 0 ;
+                
+                let optional_unwrap = if optional { quote!( .unwrap())} else {quote!()};
+                let optional_if = if optional { quote!(if entity .  #field_ident  .is_some() )} else {quote!()};
+                let optional_ok_or = if optional { quote!(  .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?)} else {quote!()};
+                
+                self.diff_merge_code.push( quote!(
+                        let mut insert : Vec<& #merge_type_ident> = Vec::new();
+                        let mut diff : Vec<(& #merge_type_ident, & #merge_type_ident)> = Vec::new();
+                        let mut delete : Vec<& #merge_type_ident> = Vec::new();
+
+                        for (outdated, entity) in entities.clone() {
+                            #optional_if {
+                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, entity. #field_ident .as_ref()  #optional_unwrap )))?;
+                            
+                                insert.append(&mut delta.0);
+                                diff.append(&mut delta.1);
+                                delete.append(&mut delta.2);
+                            }
+                        }
+
+                        let insert_sql =  #merge_type_ident::insert_many_sql(insert)?;
+                        let diff_sql =  #merge_type_ident::shallow_diff_many_sql(diff)?; // shallow_diff (Exclude merge tables)
+                        let delete_sql =  #merge_type_ident::delete_many_sql(delete)?;
+
+                        if let Some( s) = insert_sql {
+                            sql.push(s);
+                        }
+                        if let Some( s) = diff_sql {
+                            sql.push(s);
+                        }
+                        if let Some( s) = delete_sql {
+                            sql.push(s);
+                        }
+
+                ));
+
+
+
             }
         }
+        
     }
+    
 
     pub(crate) fn add_indelup_field(&mut self, toql: &Toql, field: &'a ToqlField) {
         self.add_insert_field(toql, field);
@@ -275,9 +423,12 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
             .join(" AND ");
 
         let update_set_code = &self.update_set_code;
+         let diff_set_code = &self.diff_set_code;
 
         let insert_params_code = &self.insert_params_code;
         let delup_key_params_code = &self.delup_key_params_code;
+
+        let diff_merge_code = &self.diff_merge_code;
 
         let mods = if self.delup_keys.is_empty() {
             quote!( /* Skipped code generation, because #[toql(delup_key)] is missing */ )
@@ -313,15 +464,17 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                 self.sql_table_ident
             );
 
+             
             quote! {
+
+               
+                
+
                 impl<'a> toql::indelup::Indelup<'a, #struct_ident> for #struct_ident {
 
 
-                   /*   fn insert_one_sql(entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)> {
-                        Self::insert_many_sql(std::iter::once(entity))
-                    } */
 
-                     fn insert_many_sql<I>(entities: I)-> toql::error::Result<(String, Vec<String>)>
+                     fn insert_many_sql<I>(entities: I)-> toql::error::Result<Option<(String, Vec<String>)>>
                      where I: IntoIterator<Item=&'a #struct_ident> + 'a
                      {
 
@@ -333,7 +486,10 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                                 insert_stmt.push_str( #insert_cols );
                                 #(#insert_params_code)*
                             }
-                            Ok((insert_stmt, params))
+                             if params.is_empty() {
+                                return Ok(None);
+                            }
+                            Ok(Some((insert_stmt, params)))
                     }
 
                    /*  fn update_one_sql(  entity: & #struct_ident)  -> toql::error::Result<(String, Vec<String>)>
@@ -359,7 +515,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         Ok((update_stmt, params))
 
                     } */
-                    fn update_many_sql<I>(entities:I) -> toql::error::Result<(String, Vec<String>)>
+                    fn update_many_sql<I>(entities:I) -> toql::error::Result<Option<(String, Vec<String>)>>
                     where I: IntoIterator<Item=&'a #struct_ident> + 'a + Clone
                     {
                         let mut params: Vec<String> = Vec::new();
@@ -387,7 +543,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                          update_stmt.pop();
 
                          if params.is_empty() {
-                            return Ok((String::from("-- Nothing to update"), params));
+                            return Ok(None);
                         }
                         update_stmt.push_str(" WHERE ");
                         let mut first = true;
@@ -403,9 +559,82 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                             #(#delup_key_params_code)*
                          }
 
-                        Ok((update_stmt, params))
+                        Ok(Some((update_stmt, params)))
 
                     }
+                    fn shallow_diff_many_sql<I>(entities:I) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    where I: IntoIterator<Item=(&'a #struct_ident, &'a #struct_ident)> + 'a + Clone
+                    {
+                        let mut params: Vec<String> = Vec::new();
+                        let mut update_stmt = String::from("UPDATE ");
+                        let mut first = true;
+
+                        // Generate  join
+                        for (i, (outdated, entity)) in entities.clone().into_iter().enumerate() {
+                            let alias =  &format!("t{}", i);
+                            if first {
+                                first = false;
+                            } else {
+                                update_stmt.push_str("INNER JOIN ");
+                            }
+                            update_stmt.push_str( &format!("{} {} ", #sql_table_name, alias)) ;
+                        }
+
+                        // Generate SET
+                         update_stmt.push_str("SET ");
+                         for (i, (outdated, entity)) in entities.clone().into_iter().enumerate() {
+                                let alias = &format!("t{}", i);
+                                 #(#diff_set_code)*
+                         }
+                         update_stmt.pop(); // Remove trailing ", "
+                         update_stmt.pop();
+
+                         if params.is_empty() {
+                            return Ok(None);
+                        }
+                        update_stmt.push_str(" WHERE ");
+                        let mut first = true;
+                         for (i, (outdated, entity)) in entities.clone().into_iter().enumerate() {
+                            let alias = &format!("t{}", i);
+                            if first {
+                                first = false;
+                            } else {
+                                update_stmt.push_str(" AND ");
+                            }
+                            update_stmt.push_str( &format!(#delup_key_comparison, alias = alias));
+
+                            #(#delup_key_params_code)*
+                         }
+
+                        if params.is_empty() {
+                            return Ok(None);
+                        }
+                        Ok(Some((update_stmt, params)))
+
+                    }
+                    fn diff_many_sql<I> (entities: I) -> toql::error::Result<Option<Vec<(String,Vec<String>)>>>
+                    where I: IntoIterator<Item = (&'a #struct_ident, &'a #struct_ident)>  +'a +  Clone,
+                    {
+                        
+                        let mut sql: Vec<(String, Vec<String>)> = Vec::new();
+
+                        let update = #struct_ident::shallow_diff_many_sql(entities.clone())?;
+                        if update.is_some() {
+                            sql.push(update.unwrap());
+                        }
+
+                            #(#diff_merge_code)*
+
+                            if sql.is_empty() {
+                                return Ok(None);
+                            }
+
+                            Ok(Some(sql))
+
+                    }
+                    
+
+
                   /*   fn delete_one_sql(  entity: & #struct_ident) -> toql::error::Result<(String, Vec<String>)>
                     {
                         let alias="t";
@@ -417,7 +646,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         Ok((delete_stmt, params))
                      } */
 
-                        fn delete_many_sql<I>(entities: I) -> toql::error::Result<(String, Vec<String>)>
+                        fn delete_many_sql<I>(entities: I) -> toql::error::Result<Option<(String, Vec<String>)>>
                         where I:  IntoIterator<Item=&'a #struct_ident> +'a
                         {
                             let alias= "t";
@@ -437,8 +666,11 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
 
                                   #(#delup_key_params_code)*
                             }
+                            if params.is_empty() {
+                                return Ok(None);
+                            }
 
-                            Ok((delete_stmt, params))
+                            Ok(Some((delete_stmt, params)))
                      }
 
                 }

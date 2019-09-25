@@ -3,7 +3,10 @@ use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
 #[cfg(feature = "mysqldb")]
-use crate::codegen_mysql_query::GeneratedMysqlQuery;
+use crate::codegen_mysql_load::GeneratedMysqlLoad;
+
+#[cfg(feature = "mysqldb")]
+use crate::codegen_mysql_select::GeneratedMysqlSelect;
 
 use syn::GenericArgument::Type;
 use syn::Ident;
@@ -201,7 +204,10 @@ impl quote::ToTokens for Toql {
         let mut toql_indelup = GeneratedToqlIndelup::from_toql(&self);
 
         #[cfg(feature = "mysqldb")]
-        let mut mysql_query = GeneratedMysqlQuery::from_toql(&self);
+        let mut mysql_load = GeneratedMysqlLoad::from_toql(&self);
+
+        #[cfg(feature = "mysqldb")]
+        let mut mysql_select = GeneratedMysqlSelect::from_toql(&self);
 
         let Toql {
             vis: _,
@@ -232,7 +238,7 @@ impl quote::ToTokens for Toql {
             if query_enabled {
                 if field.skip {
                     #[cfg(feature = "mysqldb")]
-                    mysql_query.add_mysql_deserialize_skip_field(field);
+                    mysql_load.add_mysql_deserialize_skip_field(field);
                     continue;
                 }
                 let result = toql_mapper.add_field_mapping(&self, field);
@@ -250,17 +256,22 @@ impl quote::ToTokens for Toql {
                     toql_mapper.add_merge_function(&self, field);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_query.add_ignored_path(&self, field);
+                    mysql_load.add_ignored_path(&self, field);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_query.add_path_loader(&self, field);
+                    mysql_load.add_path_loader(&self, field);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_query.add_merge_predicates(&self, field);
+                    mysql_load.add_merge_predicates(&self, field);
+
+                    
                 }
 
                 #[cfg(feature = "mysqldb")]
-                mysql_query.add_mysql_deserialize(&self, field);
+                mysql_load.add_mysql_deserialize(&self, field);
+
+                 #[cfg(feature = "mysqldb")]
+                mysql_select.add_select_field(&self, field);
             }
 
             // Generate insert/delete/update functionality
@@ -278,7 +289,10 @@ impl quote::ToTokens for Toql {
             tokens.extend(quote!(#toql_mapper));
 
             #[cfg(feature = "mysqldb")]
-            tokens.extend(quote!(#mysql_query));
+            tokens.extend(quote!(#mysql_load));
+
+            #[cfg(feature = "mysqldb")]
+            tokens.extend(quote!(#mysql_select));
         }
 
         if indelup_enabled {

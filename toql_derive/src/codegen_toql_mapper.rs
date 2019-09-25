@@ -245,7 +245,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     toql :: merge :: merge ( t , o ,
                     | t | #self_fnc ,
                     | o | #other_fnc ,
-                    | t , o | t . #field_ident . push ( o )
+                    | t , o |  {let t : Option<&mut Vec<#joined_struct_ident>>= Option::from( &mut t. #field_ident ); if t.is_some() { t.unwrap().push(o);}}
                     ) ;
             }
          ));

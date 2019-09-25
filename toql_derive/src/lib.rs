@@ -51,7 +51,10 @@ mod codegen_toql_mapper;
 mod codegen_toql_query_builder;
 
 #[cfg(feature = "mysqldb")]
-mod codegen_mysql_query;
+mod codegen_mysql_load;
+
+#[cfg(feature = "mysqldb")]
+mod codegen_mysql_select;
 
 mod util;
 

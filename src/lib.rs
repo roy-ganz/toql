@@ -50,7 +50,13 @@ pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::indelup;
 pub use toql_core::merge;
+pub use toql_core::diff;
 pub use toql_core::query;
+pub use toql_core::key;
+
+
+pub use toql_core::log_sql; // Export macro (lives at top level)
+
 pub use toql_core::query_builder;
 pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
