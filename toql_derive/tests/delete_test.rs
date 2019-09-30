@@ -4,7 +4,7 @@ use toql::indelup::Indelup;
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct DeleteBook {
-    #[toql(delup_key)]
+    #[toql(key)]
     id: u8,
     title: Option<String>,
 
@@ -15,9 +15,9 @@ struct DeleteBook {
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct DeleteUser {
-    #[toql(delup_key)]
+    #[toql(key)]
     id: u8, // Always selected
-    #[toql(delup_key)]
+    #[toql(key)]
     id2: u8,
     username: Option<String>,
 }

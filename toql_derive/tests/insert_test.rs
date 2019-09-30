@@ -4,7 +4,7 @@ use toql_derive::Toql;
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct NewBook {
-    #[toql(delup_key)]
+    #[toql(key)]
     id: u8,
     title: Option<String>, // Selectable
 
@@ -20,7 +20,7 @@ struct NewBook {
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct NewUser {
-    #[toql(delup_key, skip_inup)]
+    #[toql(key, skip_mut)]
     id: u8, // Always selected (auto value, no insert)
     username: Option<String>,
 }

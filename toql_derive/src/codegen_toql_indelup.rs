@@ -18,8 +18,8 @@ pub(crate) struct GeneratedToqlIndelup<'a> {
     insert_columns: Vec<String>,
     insert_params_code: Vec<proc_macro2::TokenStream>,
 
-    delup_keys: Vec<String>,
-    delup_key_params_code: Vec<proc_macro2::TokenStream>,
+    keys: Vec<String>,
+    key_params_code: Vec<proc_macro2::TokenStream>,
 
     update_set_code: Vec<proc_macro2::TokenStream>,
     diff_set_code: Vec<proc_macro2::TokenStream>,
@@ -43,8 +43,8 @@ impl<'a> GeneratedToqlIndelup<'a> {
             insert_columns: Vec::new(),
             insert_params_code: Vec::new(),
 
-            delup_keys: Vec::new(),
-            delup_key_params_code: Vec::new(),
+            keys: Vec::new(),
+            key_params_code: Vec::new(),
 
             update_set_code: Vec::new(),
             diff_set_code: Vec::new(),
@@ -58,7 +58,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
 
     fn add_insert_field(&mut self, toql: &Toql, field: &'a ToqlField) {
-        if !field.merge.is_empty() || field.skip_inup || field.sql.is_some() {
+        if !field.merge.is_empty() || field.skip_mut || field.sql.is_some() {
             return;
         }
 
@@ -172,26 +172,26 @@ impl<'a> GeneratedToqlIndelup<'a> {
         let sql_column = crate::util::rename(&field_ident.to_string(), &toql.columns);
 
         // Key field
-        if field.delup_key {
+        if field.key {
             // Option<key> (Toql selectable)
             // Keys for insert and delete may never be null
             if field._first_type() == "Option" {
-                self.delup_key_params_code.push( quote!(
+                self.key_params_code.push( quote!(
                     params.push(entity. #field_ident. as_ref()
                     .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?.to_string().to_owned() );
                 ));
             } else {
-                self.delup_key_params_code
+                self.key_params_code
                     .push(quote!(params.push(entity. #field_ident.to_string().to_owned()); ));
             }
 
             // Add field to keys, struct may contain multiple keys (composite key) 
-            self.delup_keys
+            self.keys
                 .push(field.ident.as_ref().unwrap().to_string());
         }
 
         // Field is not skipped for update
-         if !field.skip_inup {
+         if !field.skip_mut {
             // Regular field
             if field.sql_join.is_empty() && field.merge.is_empty() {
                    
@@ -207,7 +207,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
                     // update statement
                     // Doesn't update primary key
-                    if !field.delup_key {
+                    if !field.key {
                         self.update_set_code.push(quote!(
                             if entity. #field_ident .is_some() {
                                 update_stmt.push_str( &format!(#set_statement, alias));
@@ -233,7 +233,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                         quote!()
                     };
                     //update statement
-                    if !field.delup_key {
+                    if !field.key {
                         self.update_set_code.push(quote!(
                         update_stmt.push_str( &format!(#set_statement, alias));
                         params.push( entity . #field_ident #unwrap_null .to_string() .to_owned());
@@ -264,7 +264,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                     let set_statement = format!("{{}}.{} = ?, ", &self_column);
 
                     // update code
-                    if !field.delup_key {
+                    if !field.key {
                         self.update_set_code.push(
                                 match field.number_of_options()  {
                                     2 => { // Option<Option<T>>
@@ -374,7 +374,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
                         for (outdated, entity) in entities.clone() {
                             #optional_if {
-                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, entity. #field_ident .as_ref()  #optional_unwrap )))?;
+                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, updated. #field_ident .as_ref()  #optional_unwrap )))?;
                             
                                 insert.append(&mut delta.0);
                                 diff.append(&mut delta.1);
@@ -415,8 +415,8 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
 
-        let delup_key_comparison = self
-            .delup_keys
+        let key_comparison = self
+            .keys
             .iter()
             .map(|k| format!("{{alias}}.{} = ?", k))
             .collect::<Vec<String>>()
@@ -426,15 +426,15 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
          let diff_set_code = &self.diff_set_code;
 
         let insert_params_code = &self.insert_params_code;
-        let delup_key_params_code = &self.delup_key_params_code;
+        let key_params_code = &self.key_params_code;
 
         let diff_merge_code = &self.diff_merge_code;
 
-        let mods = if self.delup_keys.is_empty() {
-            quote!( /* Skipped code generation, because #[toql(delup_key)] is missing */ )
+        let mods = if self.keys.is_empty() {
+            quote!( /* Skipped code generation, because #[toql(key)] is missing */ )
         /*  quote_spanned! {
             struct_ident.span() =>
-            compile_error!( "cannot find key(s) to delete and update: add `#[toql(delup_key)]` to at the field(s) in your struct that are the primary key in your table");
+            compile_error!( "cannot find key(s) to delete and update: add `#[toql(key)]` to at the field(s) in your struct that are the primary key in your table");
         } */
         } else {
             let sql_table_name = &self.sql_table_ident.to_string();
@@ -454,10 +454,10 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                 self.insert_columns.join(",")
             );
 
-            /*  let update_where_statement = format!(" WHERE {}", delup_key_comparison);
+            /*  let update_where_statement = format!(" WHERE {}", key_comparison);
             let delete_one_statement = format!(
                 "DELETE {{alias}} FROM {} {{alias}} WHERE {}",
-                self.sql_table_ident, delup_key_comparison
+                self.sql_table_ident, key_comparison
             ); */
             let delete_many_statement = format!(
                 "DELETE {{alias}} FROM {} {{alias}} WHERE ",
@@ -510,7 +510,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                             return Ok((String::from("-- Nothing to update"), params));
                         }
 
-                        #(#delup_key_params_code)*
+                        #(#key_params_code)*
 
                         Ok((update_stmt, params))
 
@@ -554,9 +554,9 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                             } else {
                                 update_stmt.push_str(" AND ");
                             }
-                            update_stmt.push_str( &format!(#delup_key_comparison, alias = alias));
+                            update_stmt.push_str( &format!(#key_comparison, alias = alias));
 
-                            #(#delup_key_params_code)*
+                            #(#key_params_code)*
                          }
 
                         Ok(Some((update_stmt, params)))
@@ -601,9 +601,9 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                             } else {
                                 update_stmt.push_str(" AND ");
                             }
-                            update_stmt.push_str( &format!(#delup_key_comparison, alias = alias));
+                            update_stmt.push_str( &format!(#key_comparison, alias = alias));
 
-                            #(#delup_key_params_code)*
+                            #(#key_params_code)*
                          }
 
                         if params.is_empty() {
@@ -641,7 +641,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                         let mut params :Vec<String>= Vec::new();
                         let delete_stmt = format!(#delete_one_statement, alias = alias);
 
-                        #(#delup_key_params_code)*
+                        #(#key_params_code)*
 
                         Ok((delete_stmt, params))
                      } */
@@ -661,10 +661,10 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                                        delete_stmt.push_str(" OR ");
                                     }
                                    delete_stmt.push('(');
-                                   delete_stmt.push_str( &format!( #delup_key_comparison, alias = alias));
+                                   delete_stmt.push_str( &format!( #key_comparison, alias = alias));
                                    delete_stmt.push(')');
 
-                                  #(#delup_key_params_code)*
+                                  #(#key_params_code)*
                             }
                             if params.is_empty() {
                                 return Ok(None);

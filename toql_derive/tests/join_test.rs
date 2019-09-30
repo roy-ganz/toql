@@ -4,7 +4,7 @@ use toql_derive::Toql;
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct Book {
-    #[toql(delup_key)]
+    #[toql(key)]
     id: u8,
 
     #[toql(sql_join(self = "author1_id", other = "id"))] // Non nullable column
@@ -23,7 +23,7 @@ struct Book {
 #[derive(Debug, PartialEq, Clone, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct User {
-    #[toql(delup_key, skip_inup)]
+    #[toql(key, skip_mut)]
     id: u8, // Always selected (auto value, no insert)
     username: Option<String>,
 }

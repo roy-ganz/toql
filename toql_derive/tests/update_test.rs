@@ -4,7 +4,7 @@ use toql::indelup::Indelup;
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct UpdateBook {
-    #[toql(delup_key)]
+    #[toql(key)]
     id: u8,
     title: Option<String>, // Selectable, update if some value
 
@@ -20,7 +20,7 @@ struct UpdateBook {
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
 struct UpdateUser {
-    #[toql(delup_key)]
+    #[toql(key)]
     id: u8, // Always selected
     username: Option<String>,
 }
@@ -80,3 +80,6 @@ fn update_optional() {
     assert_eq!("UPDATE UpdateBook t0 SET t0.pages = ? WHERE t0.id = ?", sql);
     assert_eq!(["6", "5"], *params);
 }
+
+
+

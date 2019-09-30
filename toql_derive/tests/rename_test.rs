@@ -2,7 +2,7 @@ extern crate toql_derive;
 use toql_derive::Toql;
 
 #[derive(Debug, Clone, Toql)]
-#[toql(tables = "SHOUTY_SNAKE_CASE", columns = "mixedCase", skip_indelup)]
+#[toql(tables = "SHOUTY_SNAKE_CASE", columns = "mixedCase", skip_mut)]
 struct MyBook {
     #[toql(column = "book_id")]
     id: u8,
@@ -25,7 +25,7 @@ struct MyBook {
 }
 
 #[derive(Debug, Clone, Toql)]
-#[toql(table = "UserTable", skip_indelup)]
+#[toql(table = "UserTable", skip_mut)]
 struct MyUser {
     #[toql(column = "ID")]
     id: u8,

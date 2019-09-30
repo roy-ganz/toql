@@ -40,7 +40,7 @@ pub struct ToqlField {
     #[darling(default)]
     pub skip: bool,
     #[darling(default)]
-    pub skip_inup: bool,
+    pub skip_mut: bool,
     #[darling(default)]
     pub count_filter: bool,
     #[darling(default)]
@@ -50,7 +50,7 @@ pub struct ToqlField {
     #[darling(default)]
     pub ignore_wildcard: bool,
     #[darling(default)]
-    pub delup_key: bool,
+    pub key: bool,
     #[darling(default)]
     pub field: Option<String>,
     #[darling(default)]
@@ -187,7 +187,7 @@ pub struct Toql {
     #[darling(default)]
     pub alias: Option<String>,
     #[darling(default)]
-    pub skip_indelup: bool,
+    pub skip_mut: bool,
     #[darling(default)]
     pub skip_query: bool,
     #[darling(default)]
@@ -217,13 +217,13 @@ impl quote::ToTokens for Toql {
             table: _,
             columns: _,
             alias: _,
-            skip_indelup,
+            skip_mut,
             skip_query,
             skip_query_builder,
             ref data,
         } = *self;
 
-        let indelup_enabled = !skip_indelup;
+        let mut_enabled = !skip_mut;
         let query_enabled = !skip_query;
         let query_builder_enabled = !skip_query_builder;
 
@@ -275,7 +275,7 @@ impl quote::ToTokens for Toql {
             }
 
             // Generate insert/delete/update functionality
-            if indelup_enabled {
+            if mut_enabled {
                 toql_indelup.add_indelup_field(&self, field);
             }
         }
@@ -295,7 +295,7 @@ impl quote::ToTokens for Toql {
             tokens.extend(quote!(#mysql_select));
         }
 
-        if indelup_enabled {
+        if mut_enabled {
             tokens.extend(quote!(#toql_indelup));
         }
     }
