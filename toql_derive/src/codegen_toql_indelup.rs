@@ -65,7 +65,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
         let field_name = field.ident.as_ref().unwrap().to_string();
 
         // Regular field
-        if field.sql_join.is_empty() {
+        if field.join.is_empty() {
             let field_ident = field.ident.as_ref().unwrap();
             let sql_column = crate::util::rename(&field_ident.to_string(), &toql.columns);
             self.insert_columns.push(sql_column);
@@ -102,15 +102,20 @@ impl<'a> GeneratedToqlIndelup<'a> {
             self.insert_params_code.push(params);
         }
         // Join field
+        // Get the sql column value from the related struct
+        // Because we don't know whether the struct field is Option<>
+        // We convert in any case to Option and unwrap
+
         else {
             let field_ident = field.ident.as_ref().unwrap();
-            for j in &field.sql_join {
-                let auto_self_key = crate::util::rename(&field_ident.to_string(), &toql.columns);
-                let self_column = j.this.as_ref().unwrap_or(&auto_self_key);
+            for j in &field.join {
+                let auto_self_key = crate::util::rename(&format!("{}_id", field_name), &toql.columns);
+                let self_column = j.this_column.as_ref().unwrap_or(&auto_self_key);
                 self.insert_columns.push(self_column.to_owned());
-
+                let default_other_column = crate::util::rename("id", &toql.columns);
                 let other_field =
-                    Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
+                    Ident::new(&j.other_column.as_ref().unwrap_or(&default_other_column), Span::call_site());
+
                 self.insert_params_code.push(
                       match field.number_of_options()  {
                                 2 => { // Option<Option<T>>
@@ -123,6 +128,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                         )
                                     },
                                 1 if field.preselect => { // #[toql(preselect)] Option<T>
+                                // TODO Option wrapping
                                     quote!(
                                             params.push(entity. #field_ident
                                                 .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
@@ -130,12 +136,25 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                 },
 
                                 1 if !field.preselect => { // Option<T>
-                                    quote!(
-                                                params.push(entity. #field_ident
+                                // TODO object tolerance on foreign field
+                                let composite_field_name = format!("{}.{}",&field_name , &other_field );
+                                quote!(
+                                                params.push(
+                                                   entity. #field_ident
                                                     .as_ref()
                                                     .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
-                                                    . #other_field .to_string());
+                                                    . #other_field
+                                                     .to_string());
                                     )
+                                    /* quote!(
+                                                params.push(
+                                                    Option::from(entity. #field_ident
+                                                    .as_ref()
+                                                    .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
+                                                    . #other_field)
+                                                    .ok_or(toql::error::ToqlError::ValueMissing(String::from(#composite_field_name)))?
+                                                     .to_string());
+                                    ) */
                                 },
                                 _ => { // T
                                     quote!(
@@ -173,6 +192,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
         // Key field
         if field.key {
+            if field.join.is_empty() {
             // Option<key> (Toql selectable)
             // Keys for insert and delete may never be null
             if field._first_type() == "Option" {
@@ -188,12 +208,41 @@ impl<'a> GeneratedToqlIndelup<'a> {
             // Add field to keys, struct may contain multiple keys (composite key) 
             self.keys
                 .push(field.ident.as_ref().unwrap().to_string());
+            } 
+            // Join used as field
+            else {
+                // Quick and dirty solution
+                 // Option<key> (Toql selectable)
+
+                for j in &field.join {
+
+                    let key_field = Ident::new(j.key_field.as_ref().unwrap(), Span::call_site()); // TODO compiler error
+
+                    // Keys for insert and delete may never be null
+                    if field._first_type() == "Option" {
+                        self.key_params_code.push( quote!(
+                            params.push(entity. #field_ident. as_ref()
+                            .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?. #key_field. to_string().to_owned() );
+                        ));
+                    } else {
+                        self.key_params_code
+                            .push(quote!(params.push(entity. #field_ident. #key_field. to_string().to_owned()); ));
+                    }
+
+                    // Add field to keys, struct may contain multiple keys (composite key) 
+                    self.keys
+                        .push(j.this_column.as_ref().unwrap().to_string());
+                    } 
+                
+
+
+            }
         }
 
         // Field is not skipped for update
          if !field.skip_mut {
             // Regular field
-            if field.sql_join.is_empty() && field.merge.is_empty() {
+            if field.join.is_empty() && field.merge.is_empty() {
                    
                 let set_statement = format!("{{}}.{} = ?, ", &sql_column);
 
@@ -242,7 +291,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
                     // diff statement
                     self.diff_set_code.push(quote!(
-                        if outdated. #field_ident != entity. #field_ident
+                        if outdated.  #field_ident != entity. #field_ident
                         {
                                 update_stmt.push_str( &format!(#set_statement, alias));
                                  params.push( entity . #field_ident #unwrap_null .to_string() .to_owned());
@@ -255,12 +304,14 @@ impl<'a> GeneratedToqlIndelup<'a> {
             // Join Field
             else if field.merge.is_empty(){
 
-                for j in &field.sql_join {
+                for j in &field.join {
                     let auto_self_key =
-                        crate::util::rename(&field_ident.to_string(), &toql.columns);
-                    let self_column = j.this.as_ref().unwrap_or(&auto_self_key);
+                        crate::util::rename(&format!("{}_id", field_name), &toql.columns);
+                    let self_column = j.this_column.as_ref().unwrap_or(&auto_self_key);
+                    let default_other_column = crate::util::rename("id", &toql.columns);
+                
                     let other_field =
-                        Ident::new(&j.other.to_string().to_snake_case(), Span::call_site());
+                        Ident::new(&j.other_column.as_ref().unwrap_or(&default_other_column).to_snake_case(), Span::call_site());
                     let set_statement = format!("{{}}.{} = ?, ", &self_column);
 
                     // update code
@@ -291,7 +342,8 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                         quote!(
                                                 if entity. #field_ident .is_some() {
                                                     update_stmt.push_str( &format!(#set_statement, alias));
-                                                    params.push(entity. #field_ident
+                                                    params.push(
+                                                        entity. #field_ident
                                                         .as_ref().unwrap(). #other_field .to_string());
                                                 }
                                         )
@@ -311,7 +363,9 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                 2 => { // Option<Option<T>>
                                     quote!(
                                         if entity. #field_ident .is_some() 
-                                        &&  outdated. #field_ident .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  != entity .  #field_ident .unwrap()
+                                        &&  outdated. #field_ident .as_ref() 
+                                        .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  
+                                        != entity .  #field_ident .as_ref() .unwrap()
                                         {
                                             
                                             update_stmt.push_str( &format!(#set_statement, alias));
@@ -325,7 +379,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                     },
                                 1 if field.preselect => { // #[toql(preselect)] Option<T>
                                     quote!(
-                                            if outdated. #field_ident != entity. #field_ident {
+                                            if outdated. #field_ident .as_ref() != entity. #field_ident.as_ref() {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
                                                     .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
@@ -336,7 +390,10 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                 1 if !field.preselect => { // Option<T>
                                     quote!(
                                             if entity. #field_ident .is_some() 
-                                             &&  outdated. #field_ident .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  != entity .  #field_ident .unwrap()
+                                             &&  outdated. #field_ident .as_ref()
+                                             .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  
+                                             .  #other_field
+                                             != entity .  #field_ident .as_ref().unwrap() .  #other_field
                                             {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
@@ -346,7 +403,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
                                 },
                                 _ => { // T
                                     quote!(
-                                         if outdated. #field_ident != entity. #field_ident {
+                                         if outdated. #field_ident .as_ref() != entity. #field_ident.as_ref() {
                                             update_stmt.push_str( &format!(#set_statement, alias));
                                             params.push(entity. #field_ident . #other_field .to_string());
                                          }
@@ -479,7 +536,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                      {
 
 
-                            let mut params= Vec::new();
+                            let mut params :Vec<String>= Vec::new();
                             let mut insert_stmt = String::from( #insert_statement);
 
                             for entity in entities {

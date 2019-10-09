@@ -14,3 +14,35 @@ pub(crate) fn rename(string: &str, renaming: &Option<RenameCase>) -> String {
         None => string.to_owned(),
     }
 }
+
+
+pub(crate) struct JoinInfo {
+
+    pub(crate) joined_table: String,
+    pub(crate) on_expr : String,
+    pub (crate) key_names: Vec<String>,
+    pub (crate) key_types: Vec<String>
+}
+
+pub(crate) fn join_info() -> JoinInfo {
+
+    JoinInfo {
+        joined_table: String::from(""),
+        on_expr: String::from(""),
+        key_names: Vec::new(),
+        key_types: Vec::new()
+
+    }
+}
+/* 
+pub(crate) enum FieldType {
+    Regular,
+    Join,   // JOin(JoinInfo)
+    Merge
+}
+
+pub(crate) fn field_type() ->FieldType {
+    FieldType::Regular
+
+}
+ */

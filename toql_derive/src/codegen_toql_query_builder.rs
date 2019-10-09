@@ -39,7 +39,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
             self.build_wildcard = false;
         }
 
-        if field.sql_join.is_empty() && field.merge.is_empty() {
+        if field.join.is_empty() && field.merge.is_empty() {
             let toql_field = format!("{}", field_ident.as_ref().unwrap()).to_mixed_case();
             self.builder_fields.push(quote!(
                 #vis fn #field_ident (mut self) -> toql :: query :: Field {

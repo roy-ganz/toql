@@ -36,6 +36,16 @@ impl FilterArg<&str> for &str {
         s
     }
 }
+// TODO combine with above
+impl FilterArg<String> for String {
+    fn to_sql(self) -> String {
+        let mut s = String::from("'");
+        // TODO escape for swl
+        s.push_str(&self);
+        s.push('\'');
+        s
+    }
+}
 
 impl FilterArg<u8> for u8 {
     fn to_sql(self) -> String {

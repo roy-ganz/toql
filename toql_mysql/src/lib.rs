@@ -201,6 +201,25 @@ where  T: 'a + Indelup<'a, T>
 
 
 
+/// Selects a single struct for a given key.
+/// This will select all base fields and join. Merged fields will be skipped
+pub fn select_one<T>(key: &<T as toql_core::key::Key<T>>::Key, conn: &mut Conn) -> Result<T, ToqlError>
+where T : select::Select<T> + toql_core::key::Key<T>
+{
+    T::select_one(key, conn)
+
+}
+
+/* /// Selects many structs for a given key. (DOENS)
+/// This will select all base fields and join. Merged fields will be skipped
+pub fn select_many<T>( key: &<T as toql_core::key::Key<T>>::Key,conn: &mut Conn, first: u64,max: u16) -> Result<Vec<T> , ToqlError>
+where T : select::Select<T> + toql_core::key::Key<T>
+{
+    T::select_many(key, conn, first, max)
+} */
+
+
+
 /// Load a struct with dependencies for a given Toql query.
 ///
 /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
@@ -227,4 +246,3 @@ pub fn load_many<T: load::Load<T>>(
 ) -> Result<(Vec<T>, Option<(u32, u32)>), ToqlError> {
     T::load_many(query, mappers, conn, count, first, max)
 }
-

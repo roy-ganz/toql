@@ -51,7 +51,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         };
 
         // Joined field
-        if !field.sql_join.is_empty() {
+        if !field.join.is_empty() {
             // let renamed_join_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
 
             let joined_struct_ident = field.first_non_generic_type();
@@ -66,12 +66,12 @@ impl<'a> GeneratedToqlMapper<'a> {
 
             if field.number_of_options() > 0 {
                 let none_condition: String = field
-                    .sql_join
+                    .join
                     .iter()
                     .map(|j| {
                         let auto_self_key =
                             crate::util::rename(&field_ident.to_string(), &toql.columns);
-                        let this_key = j.this.as_ref().unwrap_or(&auto_self_key);
+                        let this_key = j.this_column.as_ref().unwrap_or(&auto_self_key);
                         format!("({{alias}}{{sep}}{} IS NOT NULL)", this_key)
                     })
                     .collect::<Vec<String>>()
@@ -91,14 +91,17 @@ impl<'a> GeneratedToqlMapper<'a> {
 
             // Map join field
             let join_condition: Vec<String> = field
-                .sql_join
+                .join
                 .iter()
                 .map(|j| {
                     let auto_self_key =
-                        crate::util::rename(&field_ident.to_string(), &toql.columns);
-                    let this_key = j.this.as_ref().unwrap_or(&auto_self_key);
-                    let other_key = &j.other; //crate::util::rename(&j.other, &toql.columns);
-                    let on = if let Some(predicate) = &j.on {
+                        crate::util::rename(&format!("{}_id", &field_ident), &toql.columns);
+                    let this_key = j.this_column.as_ref().unwrap_or(&auto_self_key);
+                      let default_other_column = crate::util::rename("id", &toql.columns);
+                
+                 
+                    let other_key = &j.other_column.as_ref().unwrap_or(&default_other_column); //crate::util::rename(&j.other, &toql.columns);
+                    let on = if let Some(predicate) = &j.on_sql {
                         format!(" AND ({})", predicate)
                     } else {
                         String::from("")

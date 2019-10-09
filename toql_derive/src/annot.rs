@@ -20,11 +20,16 @@ pub struct KeyPair {
 
 #[derive(Debug, FromMeta)]
 pub struct JoinArg {
-    #[darling(rename = "self", default)]
-    pub this: Option<String>,
-    pub other: String,
+    #[darling(rename = "self_column", default)]
+    pub this_column: Option<String>,
     #[darling(default)]
-    pub on: Option<String>,
+    pub other_column: Option<String>,
+    #[darling(default)]
+    pub on_sql: Option<String>,
+      #[darling(default)]
+    pub key_field: Option<String>,
+      #[darling(default)]
+    pub key_type: Option<String>,
 }
 
 // Attribute on struct field
@@ -34,7 +39,7 @@ pub struct ToqlField {
     pub ident: Option<syn::Ident>,
     pub ty: syn::Type,
     #[darling(default, multiple)]
-    pub sql_join: Vec<JoinArg>,
+    pub join: Vec<JoinArg>,
     #[darling(default)]
     pub column: Option<String>,
     #[darling(default)]
@@ -271,7 +276,11 @@ impl quote::ToTokens for Toql {
                 mysql_load.add_mysql_deserialize(&self, field);
 
                  #[cfg(feature = "mysqldb")]
-                mysql_select.add_select_field(&self, field);
+                let result = mysql_select.add_select_field(&self, field);
+                if result.is_err() {
+                   // tokens.extend(result.err());
+                    continue;
+                }
             }
 
             // Generate insert/delete/update functionality
