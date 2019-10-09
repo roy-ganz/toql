@@ -57,6 +57,7 @@ pub(crate) struct SqlTarget {
     pub(crate) handler: Arc<FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool, // Target name has subfields separated by underscore
     pub(crate) expression: String, // Column name or SQL expression
+    pub(crate) sql_query_params: Vec<String> // Query_params for SQL expressions
 }
 
 /// Handles the standart filters as documented in the guide.
@@ -298,6 +299,7 @@ pub struct SqlMapper {
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
     pub(crate) joins: HashMap<String, Join>,
+    
 }
 
 #[derive(Debug)]
@@ -420,6 +422,7 @@ impl SqlMapper {
             subfields: toql_field.find('_').is_some(),
             handler: Arc::new(handler),
             expression: expression.to_string(),
+            sql_query_params: Vec::new()
         };
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);
@@ -486,12 +489,25 @@ impl SqlMapper {
         sql_expression: &str,
         options: MapperOptions,
     ) -> &'a mut Self {
+
+        // If sql_expression contains query params replace them with ?
+        let query_param_regex= regex::Regex::new(r"<([\w_]+)>").unwrap();
+        let sql_expression =  sql_expression.to_string();
+        let mut sql_query_params= Vec::new();
+        let sql_expression = query_param_regex.replace(&sql_expression, |e : &regex::Captures| {
+            let name= &e[1];
+            sql_query_params.push(name.to_string());
+            "?"    
+        });
+
+
         let t = SqlTarget {
             expression: sql_expression.to_string(),
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
             handler: Arc::clone(&self.handler),
+            sql_query_params:sql_query_params
         };
 
         self.field_order.push(toql_field.to_string());

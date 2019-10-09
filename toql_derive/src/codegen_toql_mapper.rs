@@ -196,7 +196,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             let sql_mapping = if field_sql.is_none() {
                 quote! {&format!("{}{}{}",sql_alias, if sql_alias.is_empty() {"" }else {"."}, #sql_field)}
             } else {
-                quote! {& #field_sql .replace("..",&format!("{}.",sql_alias ))}
+                quote! {&format!("({})", #field_sql .replace("..",&format!("{}.",sql_alias )))}
             };
 
             self.field_mappings.push(quote! {

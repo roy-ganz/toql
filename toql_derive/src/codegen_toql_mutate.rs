@@ -463,7 +463,7 @@ impl<'a> GeneratedToqlMutate<'a> {
     }
     
 
-    pub(crate) fn add_indelup_field(&mut self, toql: &Toql, field: &'a ToqlField) {
+    pub(crate) fn add_mutate_field(&mut self, toql: &Toql, field: &'a ToqlField) {
         self.add_insert_field(toql, field);
         self.add_delup_field(toql, field);
     }
@@ -527,7 +527,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
                
                 
 
-                impl<'a> toql::indelup::Mutate<'a, #struct_ident> for #struct_ident {
+                impl<'a> toql::mutate::Mutate<'a, #struct_ident> for #struct_ident {
 
 
 

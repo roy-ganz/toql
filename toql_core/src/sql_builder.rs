@@ -87,6 +87,8 @@ pub enum SqlBuilderError {
     RoleRequired(String),
     /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
     FilterInvalid(String),
+    /// A query expression requires a query parameter, that is not provided. Contains the parameter.
+    QueryParamMissing(String)
 }
 
 impl fmt::Display for SqlBuilderError {
@@ -95,6 +97,7 @@ impl fmt::Display for SqlBuilderError {
             SqlBuilderError::FieldMissing(ref s) => write!(f, "field `{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
+            SqlBuilderError::QueryParamMissing(ref s) => write!(f, "query parameter `{}` is missing ", s),
         }
     }
 }
@@ -246,7 +249,9 @@ impl SqlBuilder {
         field_order: &Vec<String>,
         used_paths: &BTreeSet<String>,
         joins: &HashMap<String, Join>,
-    ) {
+    ) -> Result<(), SqlBuilderError> 
+    
+    {
         // Build select clause
         let mut any_selected = false;
         for toql_field in field_order {
@@ -278,6 +283,14 @@ impl SqlBuilder {
                         .build_select(&sql_target.expression, query_params)
                     {
                         result.select_clause.push_str(&sql_field);
+
+                        // Replace query params with actual values
+                        for p in &sql_target.sql_query_params {
+                            let qp= query_params.get(p)
+                            .ok_or(SqlBuilderError::QueryParamMissing( p.to_string()))?;
+                            result.select_params.push(qp.to_string());
+                        }
+
                         any_selected = true;
                     } else {
                         result.select_clause.push_str("null");
@@ -291,6 +304,7 @@ impl SqlBuilder {
         result.any_selected = any_selected;
         // Remove last ,
         result.select_clause = result.select_clause.trim_end_matches(", ").to_string();
+        Ok(())
     }
     fn build_join_clause(
         sql_join_data: &mut HashMap<&str, SqlJoinData>,
@@ -353,6 +367,7 @@ impl SqlBuilder {
             where_clause: String::from(""),
             order_by_clause: String::from(""),
             having_clause: String::from(""),
+            select_params: vec![],  // query parameters in select clause, due to sql expr with <param>
             where_params: vec![],
             having_params: vec![],
             combined_params: vec![],
@@ -527,6 +542,18 @@ impl SqlBuilder {
 
                                 data.used = !query_field.hidden;
 
+                                // Resolve query params in sql expression
+                                for p in &sql_target.sql_query_params {
+                                    let qp = query.params.get(p)
+                                            .ok_or(SqlBuilderError::QueryParamMissing( p.to_string()))?;
+
+                                    if query_field.aggregation == true {
+                                        result.having_params.push(qp.to_string());
+                                    } else {
+                                        result.where_params.push(qp.to_string());
+                                    }
+                                }
+
                                 if let Some(f) = &query_field.filter {
                                     if let Some(f) = sql_target.handler.build_filter(
                                         &sql_target.expression,
@@ -587,6 +614,8 @@ impl SqlBuilder {
                                             need_where_concatenation = true;
                                         }
                                     }
+
+                                    // Add filter param to result
                                     let mut p = sql_target.handler.build_param(&f, &query.params);
                                     if query_field.aggregation == true {
                                         result.having_params.append(&mut p);
@@ -690,7 +719,7 @@ impl SqlBuilder {
                 &sql_mapper.field_order,
                 &used_paths,
                 &sql_mapper.joins,
-            );
+            )?;
         }
 
         Self::build_join_clause(&mut sql_join_data, &sql_mapper.joins, &mut result);
@@ -717,15 +746,20 @@ impl SqlBuilder {
             result.order_by_clause = result.order_by_clause.trim_end().to_owned();
         }
 
+        
+        result.combined_params.extend_from_slice(&result.select_params);
+        result.combined_params.extend_from_slice(&result.where_params);
+        result.combined_params.extend_from_slice(&result.having_params);
+
         // Create combined params if needed
-        if !result.having_params.is_empty() && !result.where_params.is_empty() {
+        /* if !result.having_params.is_empty() && !result.where_params.is_empty() {
             result
                 .combined_params
                 .extend_from_slice(&result.where_params);
             result
                 .combined_params
                 .extend_from_slice(&result.having_params);
-        }
+        } */
 
         Ok(result)
     }

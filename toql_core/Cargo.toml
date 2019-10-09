@@ -14,6 +14,7 @@ pest = "2.0"
 pest_derive = "2.0"
 mysql = {version = ">=15", optional = true} # Needed for error integration
 log= "0.4"
+regex="1.3"
 
 enquote="1"
 

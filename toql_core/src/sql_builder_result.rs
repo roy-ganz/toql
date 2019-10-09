@@ -13,6 +13,7 @@ pub struct SqlBuilderResult {
     pub(crate) where_clause: String,
     pub(crate) order_by_clause: String,
     pub(crate) having_clause: String,
+    pub(crate) select_params: Vec<String>,
     pub(crate) where_params: Vec<String>,
     pub(crate) having_params: Vec<String>,
     pub(crate) combined_params: Vec<String>,
@@ -76,13 +77,16 @@ impl SqlBuilderResult {
     }
     /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
     pub fn params(&self) -> &Vec<String> {
-        if self.where_params.is_empty() {
+
+        &self.combined_params
+
+        /* if self.where_params.is_empty() {
             &self.having_params
         } else if self.having_params.is_empty() {
             &self.where_params
         } else {
             &self.combined_params
-        }
+        } */
     }
 
     pub(crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {

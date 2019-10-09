@@ -1,4 +1,4 @@
-use crate::codegen_toql_indelup::GeneratedToqlIndelup;
+use crate::codegen_toql_mutate::GeneratedToqlMutate;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
@@ -206,7 +206,7 @@ impl quote::ToTokens for Toql {
 
         let mut toql_mapper = GeneratedToqlMapper::from_toql(&self);
         let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&self);
-        let mut toql_indelup = GeneratedToqlIndelup::from_toql(&self);
+        let mut toql_mutate = GeneratedToqlMutate::from_toql(&self);
 
         #[cfg(feature = "mysqldb")]
         let mut mysql_load = GeneratedMysqlLoad::from_toql(&self);
@@ -285,7 +285,7 @@ impl quote::ToTokens for Toql {
 
             // Generate insert/delete/update functionality
             if mut_enabled {
-                toql_indelup.add_indelup_field(&self, field);
+                toql_mutate.add_mutate_field(&self, field);
             }
         }
 
@@ -305,7 +305,7 @@ impl quote::ToTokens for Toql {
         }
 
         if mut_enabled {
-            tokens.extend(quote!(#toql_indelup));
+            tokens.extend(quote!(#toql_mutate));
         }
     }
 }
