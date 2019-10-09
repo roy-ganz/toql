@@ -5,7 +5,7 @@ extern crate pest_derive;
 
 #[macro_use]
 pub mod error;
-pub mod indelup;
+pub mod mutate;
 pub mod key;
 
 #[macro_use]

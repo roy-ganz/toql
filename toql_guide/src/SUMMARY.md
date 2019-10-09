@@ -12,7 +12,7 @@
 	- [Always selected Fields](derive/selected-fields.md)
 	- [Joins](derive/joins.md)
 	- [Merges](derive/merges.md)
-	- [Insert / Delete / Update](derive/indelup.md)
+	- [Insert / Delete / Update](derive/mutate.md)
 	- [Reference](derive/reference.md)
 	- [Debugging](derive/debugging.md)
 
