@@ -38,11 +38,11 @@ pub(crate) fn join_info() -> JoinInfo {
 pub fn extract_query_params(expression: &str) -> (String, Vec<String>){
 
         
-        let  REGEX : regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        let  regex : regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
              
 
         let mut query_params= Vec::new();
-        let sql = REGEX.replace(expression, |e : &regex::Captures| {
+        let sql = regex.replace(expression, |e : &regex::Captures| {
             let name= &e[1];
             query_params.push(name.to_string());
             "?"    

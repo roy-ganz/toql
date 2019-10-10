@@ -6,6 +6,7 @@
 use crate::annot::Toql;
 use crate::annot::ToqlField;
 use heck::MixedCase;
+use heck::SnakeCase;
 use proc_macro2::Span;
 
 use syn::Ident;
@@ -182,10 +183,13 @@ impl<'a> GeneratedMysqlLoad<'a> {
          let sql_merge_table_ident = Ident::new(&sql_merge_table_name, Span::call_site());
 
         for merge in &field.merge {
-            let toql_merge_field = format!("{}_{}", toql_field, merge.other_field.to_mixed_case());
-            let merge_struct_key_ident = Ident::new(&merge.this_field, Span::call_site());
+           // let toql_merge_field = format!("{}_{}", toql_field, merge.other_field.to_mixed_case());
+            let auto_self_field= format!("{}_id",&field_type.to_string().to_snake_case());
+            let auto_other_field= "id".to_string();
+
+            let merge_struct_key_ident = Ident::new(&merge.this_field.as_ref().unwrap_or(&auto_self_field), Span::call_site());
             
-            let other_column = crate::util::rename(&merge.other_field.to_string(), &toql.columns);
+            let other_column = crate::util::rename(&merge.other_field.as_ref().unwrap_or(&auto_other_field).to_string(), &toql.columns);
             
 
             let merge_one = format!("{{}}.{} = ?", other_column);

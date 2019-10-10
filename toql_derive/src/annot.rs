@@ -14,8 +14,8 @@ use syn::Ident;
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
     #[darling(rename = "self_field")]
-    pub this_field: String, // TODO MAKE optional
-    pub other_field: String,
+    pub this_field: Option<String>, 
+    pub other_field: Option<String>,
     pub on_sql: Option<String>
 }
 

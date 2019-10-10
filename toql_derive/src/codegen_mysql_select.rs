@@ -213,9 +213,12 @@ impl<'a> GeneratedMysqlSelect<'a> {
              let mut on_condition: Vec<String>= Vec::new();
             for j in &field.merge {
                 //let auto_self_key : String = crate::util::rename(&field_ident.to_string(), &toql.columns);
-                let self_column :String = crate::util::rename(&j.this_field.to_string(), &toql.columns);
+                let auto_self_field= format!("{}_id",&field_type.to_string().to_snake_case());
+                let auto_other_field= "id".to_string();
 
-                let other_column = crate::util::rename(&j.other_field.to_string(), &toql.columns);
+                let self_column :String = crate::util::rename(&j.this_field.as_ref().unwrap_or(&auto_self_field).to_string(), &toql.columns);
+
+                let other_column = crate::util::rename(&j.other_field.as_ref().unwrap_or(&auto_other_field).to_string(), &toql.columns);
                 on_condition.push(format!("{}.{} = {}.{}",sql_table_alias, self_column, join_alias,other_column, ));
             }
 
