@@ -431,7 +431,7 @@ impl<'a> GeneratedToqlMutate<'a> {
 
                         for (outdated, entity) in entities.clone() {
                             #optional_if {
-                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, updated. #field_ident .as_ref()  #optional_unwrap )))?;
+                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, entity. #field_ident .as_ref()  #optional_unwrap )))?;
                             
                                 insert.append(&mut delta.0);
                                 diff.append(&mut delta.1);

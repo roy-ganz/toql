@@ -171,23 +171,77 @@ impl<'a> GeneratedMysqlLoad<'a> {
             );
         }
     }
-    pub(crate) fn add_merge_predicates(&mut self, _toql: &Toql, field: &'a ToqlField) {
+    pub(crate) fn add_merge_predicates(&mut self, toql: &Toql, field: &'a ToqlField) {
         let field_name = &field.ident.as_ref().unwrap().to_string();
         let toql_field = field_name.to_mixed_case();
         //let vk :Vec<&str>= field.merge.as_ref().expect("Merge self struct field <= other struct field").split("<=").collect();
         //let toql_merge_field =format!("{}_{}",toql_field, vk.get(1).unwrap().trim().to_mixed_case());
         //let merge_struct_key_ident = Ident::new( vk.get(0).unwrap().trim(), Span::call_site());
+        let field_type = field.first_non_generic_type().unwrap();
+         let sql_merge_table_name = crate::util::rename(&field_type.to_string(), &toql.tables);
+         let sql_merge_table_ident = Ident::new(&sql_merge_table_name, Span::call_site());
 
         for merge in &field.merge {
-            let toql_merge_field = format!("{}_{}", toql_field, merge.other.to_mixed_case());
-            let merge_struct_key_ident = Ident::new(&merge.this, Span::call_site());
+            let toql_merge_field = format!("{}_{}", toql_field, merge.other_field.to_mixed_case());
+            let merge_struct_key_ident = Ident::new(&merge.this_field, Span::call_site());
+            
+            let other_column = crate::util::rename(&merge.other_field.to_string(), &toql.columns);
+            
+
+            let merge_one = format!("{{}}.{} = ?", other_column);
+            let merge_many = format!("{{}}.{} IN {{}}", other_column);
+
+            let additional_merge_predicate = if merge.on_sql.is_some() {
+                let merge_on= merge.on_sql.as_ref().unwrap();
+
+                let (merge_with_params, merge_params) = crate::util::extract_query_params(merge_on);
+                // if on_sql contains .. replace them with table alias
+                let merge_on = if merge_with_params.contains("..") {
+                        let aliased_merge_on = merge_with_params.replace("..", "{alias}.");
+                        quote!(
+                            format!(#aliased_merge_on, alias = toql::sql_mapper::Mapped::table_alias::<#sql_merge_table_ident>() )
+                        )
+                } else {
+                    quote!( #merge_with_params)
+                };
+                
+                let params = merge_params.iter().map(|p| {
+                    quote!( query.where_predicates_params.push( query.params
+                                .get(  #p)
+                                .ok_or(toql::sql_builder::SqlBuilderError::QueryParamMissing(#p))?);
+                        )   
+                }).collect::<proc_macro2::TokenStream>();
+
+                quote!( 
+                    query.where_predicates.push_str(#merge_on);
+
+                    #(#params)*
+                    
+                )
+            } else {
+                quote!()
+            };
+             
+
             self.merge_one_predicates.push( quote!(
+                query.where_predicates.push( format!(#merge_one, toql::sql_mapper::Mapped::table_alias::<#sql_merge_table_ident>()));
+                query.where_predicates_params.push(_entity. #merge_struct_key_ident);
+                #additional_merge_predicate
+            ));
+            self.merge_many_predicates.push( quote!(
+                let q = entities.iter().map(|entity| '?' ).collect::<Vec<char>>().join(" ");
+                query.where_predicates.push(format!(#merge_many, toql::sql_mapper::Mapped::table_alias::<#sql_merge_table_ident>(), q));
+                query.where_predicates_params.extend_from_slice(entities.iter().map(|entity| entity. #merge_struct_key_ident).collect());
+                #additional_merge_predicate
+            ));
+
+            /* self.merge_one_predicates.push( quote!(
                    let query = query.and(toql::query::Field::from(#toql_merge_field).eq( _entity. #merge_struct_key_ident));
             ));
 
             self.merge_many_predicates.push( quote!(
                   let query =  query.and(toql::query::Field::from(#toql_merge_field).ins(entities.iter().map(|entity| entity. #merge_struct_key_ident).collect()));
-            ));
+            )); */
         }
     }
     pub(crate) fn add_ignored_path(&mut self, _toql: &Toql, field: &'a ToqlField) {

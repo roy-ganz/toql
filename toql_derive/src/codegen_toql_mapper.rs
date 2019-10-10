@@ -142,7 +142,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             if base == "Vec" {
                 let error = format!("Missing attribute `merge`. \
                                      Tell Toql which field in this struct and the other struct share the same value. \
-                                     Add `#[toql( merge(self=\"id\", other=\" {}_id\") )]`", toql.ident.to_string().to_snake_case());
+                                     Add `#[toql( merge(self_field=\"id\", other_field=\" {}_id\") )]`", toql.ident.to_string().to_snake_case());
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
                     compile_error!( #error);
@@ -218,7 +218,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             .merge
             .iter()
             .map(|k| {
-                let key = Ident::new(&k.this, Span::call_site());
+                let key = Ident::new(&k.this_field, Span::call_site());
                 quote!(t. #key)
             })
             .collect();
@@ -227,7 +227,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             .merge
             .iter()
             .map(|k| {
-                let key = Ident::new(&k.other, Span::call_site());
+                let key = Ident::new(&k.other_field, Span::call_site());
                 quote!( o. #key )
             })
             .collect();

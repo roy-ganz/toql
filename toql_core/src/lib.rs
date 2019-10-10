@@ -11,6 +11,9 @@ pub mod key;
 #[macro_use]
 pub mod log_helper;
 
+#[macro_use]
+extern crate lazy_static;
+
 pub mod diff;
 pub mod merge;
 pub mod query;

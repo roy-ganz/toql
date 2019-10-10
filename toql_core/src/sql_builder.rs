@@ -46,6 +46,8 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt;
 
+
+
 struct SqlTargetData {
     selected: bool, // Target is selected
     used: bool,     // Target is either selected or filtered
@@ -284,6 +286,7 @@ impl SqlBuilder {
                     {
                         result.select_clause.push_str(&sql_field);
 
+                        
                         // Replace query params with actual values
                         for p in &sql_target.sql_query_params {
                             let qp= query_params.get(p)
@@ -654,6 +657,8 @@ impl SqlBuilder {
             }
         }
 
+               
+
         // Select all fields for count queries that are marked with count_select
         if self.count_query {
             for (field_name, mapper_field) in &sql_mapper.fields {
@@ -746,7 +751,14 @@ impl SqlBuilder {
             result.order_by_clause = result.order_by_clause.trim_end().to_owned();
         }
 
-        
+        // Add additional where predicates if provided
+        if query.where_predicates.len() > 0 {
+            result.where_clause.push_str( " AND (");
+            result.where_clause.push_str(&query.where_predicates.join("AND"));
+            result.where_clause.push(')');
+            result.where_params.extend_from_slice(&query.where_predicate_params);
+        }
+
         result.combined_params.extend_from_slice(&result.select_params);
         result.combined_params.extend_from_slice(&result.where_params);
         result.combined_params.extend_from_slice(&result.having_params);
@@ -762,6 +774,36 @@ impl SqlBuilder {
         } */
 
         Ok(result)
+    }
+
+    pub fn resolve_query_params(expression: &str, query_params: &HashMap<String, String>) 
+    -> Result<(String, Vec<String>), SqlBuilderError> {
+
+        let (sql, params) = Self::extract_query_params(expression);
+
+        let mut resolved : Vec<String> = Vec::new();
+        for p in params {
+            let v =   query_params.get(&p)
+                            .ok_or(SqlBuilderError::QueryParamMissing( p.to_string()))?;
+            resolved.push(v.to_string());
+        }
+
+        Ok((sql, resolved))
+    }
+       
+    pub fn extract_query_params(expression: &str) -> (String, Vec<String>){
+
+        lazy_static! {
+            static ref REGEX : regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        }     
+
+        let mut query_params= Vec::new();
+        let sql = REGEX.replace(expression, |e : &regex::Captures| {
+            let name= &e[1];
+            query_params.push(name.to_string());
+            "?"    
+        });
+        (sql.to_string(), query_params)
     }
 
     fn path_ignored(&self, fieldname: &str) -> bool {

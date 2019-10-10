@@ -12,10 +12,11 @@ use syn::GenericArgument::Type;
 use syn::Ident;
 
 #[derive(Debug, FromMeta)]
-pub struct KeyPair {
-    #[darling(rename = "self")]
-    pub this: String,
-    pub other: String,
+pub struct MergeArg {
+    #[darling(rename = "self_field")]
+    pub this_field: String, // TODO MAKE optional
+    pub other_field: String,
+    pub on_sql: Option<String>
 }
 
 #[derive(Debug, FromMeta)]
@@ -63,7 +64,7 @@ pub struct ToqlField {
     #[darling(multiple)]
     pub role: Vec<String>,
     #[darling(default, multiple)]
-    pub merge: Vec<KeyPair>,
+    pub merge: Vec<MergeArg>,
     #[darling(default)]
     pub alias: Option<String>,
     #[darling(default)]
