@@ -11,11 +11,12 @@ pub struct SqlBuilderResult {
     pub(crate) join_clause: String,
     pub(crate) select_clause: String,
     pub(crate) where_clause: String,
-    pub(crate) order_by_clause: String,
+    pub(crate) order_clause: String,
     pub(crate) having_clause: String,
     pub(crate) select_params: Vec<String>,
     pub(crate) where_params: Vec<String>,
     pub(crate) having_params: Vec<String>,
+    pub(crate) order_params: Vec<String>,
     pub(crate) combined_params: Vec<String>,
 }
 
@@ -44,9 +45,9 @@ impl SqlBuilderResult {
             s.push_str(" HAVING ");
             s.push_str(&self.having_clause);
         }
-        if !self.order_by_clause.is_empty() {
+        if !self.order_clause.is_empty() {
             s.push_str(" ORDER BY ");
-            s.push_str(&self.order_by_clause);
+            s.push_str(&self.order_clause);
         }
     }
 

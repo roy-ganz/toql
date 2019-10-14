@@ -90,7 +90,9 @@ pub enum SqlBuilderError {
     /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
     FilterInvalid(String),
     /// A query expression requires a query parameter, that is not provided. Contains the parameter.
-    QueryParamMissing(String)
+    QueryParamMissing(String),
+    /// The query parameter that isrequired by the query expression is wrong. Contains the parameter and the details.
+    QueryParamInvalid(String, String),
 }
 
 impl fmt::Display for SqlBuilderError {
@@ -100,6 +102,7 @@ impl fmt::Display for SqlBuilderError {
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
             SqlBuilderError::QueryParamMissing(ref s) => write!(f, "query parameter `{}` is missing ", s),
+               SqlBuilderError::QueryParamInvalid(ref s, ref d) => write!(f, "query parameter `{}` is invalid: {} ", s, d),
         }
     }
 }
@@ -185,7 +188,9 @@ impl SqlBuilder {
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &BTreeSet<u8>,
         ordering: &HashMap<u8, Vec<(FieldOrder, String)>>,
-    ) {
+    ) 
+    -> Result<(), SqlBuilderError>
+    {
         // Build ordering clause
         for n in ordinals {
             if let Some(fields) = ordering.get(n) {
@@ -198,18 +203,20 @@ impl SqlBuilder {
                         if let Some(sql_target) = sql_targets.get(toql_field) {
                             if let Some(s) = sql_target
                                 .handler
-                                .build_select(&sql_target.expression, query_parameters)
+                                .build_select(&sql_target.expression, query_parameters)?
                             {
-                                result.order_by_clause.push_str(&s);
+                                result.order_clause.push_str(&s.0);
+                                result.order_params.extend_from_slice(&s.1);
                             }
                         }
                     }
-                    result.order_by_clause.push_str(o);
-                    result.order_by_clause.push_str(", ");
+                    result.order_clause.push_str(o);
+                    result.order_clause.push_str(", ");
                 }
             }
         }
-        result.order_by_clause = result.order_by_clause.trim_end_matches(", ").to_string();
+        result.order_clause = result.order_clause.trim_end_matches(", ").to_string();
+        Ok(())
     }
 
     fn build_count_select_clause(
@@ -217,7 +224,9 @@ impl SqlBuilder {
         query_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
-    ) {
+    ) 
+    -> Result<(), SqlBuilderError>
+    {
         let mut any_selected = false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
@@ -225,9 +234,10 @@ impl SqlBuilder {
                 if sql_target.options.count_select {
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select(&sql_target.expression, query_params)
+                        .build_select(&sql_target.expression, query_params)?
                     {
-                        result.select_clause.push_str(&sql_field);
+                        result.select_clause.push_str(&sql_field.0);
+                        result.select_params.extend_from_slice(&sql_field.1);
                         result.select_clause.push_str(", ");
                         any_selected = true;
                     }
@@ -241,6 +251,7 @@ impl SqlBuilder {
         } else {
             result.select_clause = "1".to_string();
         }
+        Ok(())
     }
 
     fn build_select_clause(
@@ -282,9 +293,10 @@ impl SqlBuilder {
                 if selected {
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select(&sql_target.expression, query_params)
+                        .build_select(&sql_target.expression, query_params)?
                     {
-                        result.select_clause.push_str(&sql_field);
+                        result.select_clause.push_str(&sql_field.0);
+                        result.select_params.extend_from_slice(&sql_field.1);
 
                         
                         // Replace query params with actual values
@@ -368,11 +380,12 @@ impl SqlBuilder {
             join_clause: String::from(""),
             select_clause: String::from(""),
             where_clause: String::from(""),
-            order_by_clause: String::from(""),
+            order_clause: String::from(""),
             having_clause: String::from(""),
             select_params: vec![],  // query parameters in select clause, due to sql expr with <param>
             where_params: vec![],
             having_params: vec![],
+            order_params: vec![],
             combined_params: vec![],
         };
 
@@ -585,8 +598,13 @@ impl SqlBuilder {
 
                                             SqlBuilderResult::push_filter(
                                                 &mut result.having_clause,
-                                                &f,
+                                                &f.0,
                                             );
+                                            if query_field.aggregation == true {
+                                                result.having_params.extend_from_slice(&f.1);
+                                            } else {
+                                                result.where_params.extend_from_slice(&f.1);
+                                            }
 
                                             need_having_concatenation = true;
                                             pending_having_parens = 0;
@@ -610,8 +628,14 @@ impl SqlBuilder {
                                             );
                                             SqlBuilderResult::push_filter(
                                                 &mut result.where_clause,
-                                                &f,
+                                                &f.0,
                                             );
+                                             if query_field.aggregation == true {
+                                                result.having_params.extend_from_slice(&f.1);
+                                            } else {
+                                                result.where_params.extend_from_slice(&f.1);
+                                            }
+
 
                                             pending_where_parens = 0;
                                             need_where_concatenation = true;
@@ -619,14 +643,14 @@ impl SqlBuilder {
                                     }
 
                                     // Add filter param to result
-                                    let mut p = sql_target.handler.build_param(&f, &query.params);
+                                    /* let mut p = sql_target.handler.build_param(&f, &query.params);
                                     if query_field.aggregation == true {
                                         result.having_params.append(&mut p);
                                     } else {
                                         result.where_params.append(&mut p);
                                     }
-
-                                    if let Some(j) = sql_target.handler.build_join(&query.params) {
+ */
+                                    if let Some(j) = sql_target.handler.build_join(&query.params)? {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
                                     }
@@ -741,14 +765,14 @@ impl SqlBuilder {
             result.join_clause = result.join_clause.trim_end().to_owned();
         }
         if result
-            .order_by_clause
+            .order_clause
             .chars()
             .rev()
             .next()
             .unwrap_or('_')
             .is_whitespace()
         {
-            result.order_by_clause = result.order_by_clause.trim_end().to_owned();
+            result.order_clause = result.order_clause.trim_end().to_owned();
         }
 
         // Add additional where predicates if provided
@@ -762,6 +786,7 @@ impl SqlBuilder {
         result.combined_params.extend_from_slice(&result.select_params);
         result.combined_params.extend_from_slice(&result.where_params);
         result.combined_params.extend_from_slice(&result.having_params);
+        result.combined_params.extend_from_slice(&result.order_params);
 
         // Create combined params if needed
         /* if !result.having_params.is_empty() && !result.where_params.is_empty() {

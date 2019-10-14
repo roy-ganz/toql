@@ -123,7 +123,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
             for j in &field.join {
 
                 if field.key == true {
-                     if j.key_type.is_none() {
+                    /*  if j.key_type.is_none() {
                        
                        self.select_key_types.push(quote_spanned! {
                             field_ident.span() =>
@@ -135,19 +135,19 @@ impl<'a> GeneratedMysqlSelect<'a> {
                             field_ident.span() =>
                             compile_error!("Key type is missing on joined struct: add `#[toql( join(key_type=\"..\"))]`")
                         }); */
-                    } 
-                    if j.key_field.is_none() {
+                    }  */
+                    /* if j.key_field.is_none() {
                         self.select_key_types.push(quote_spanned! {
                             field_ident.span() =>
                             compile_error!("Key field is missing on joined struct: add `#[toql( join(key_field=\"..\"))]`")
                         });
                         return Err(());
-                    }
+                    } */
 
 
-                    let key_field = Ident::new(&j.key_field.as_ref().unwrap(), Span::call_site());
+                    let key_field = Ident::new(&j.key_field.as_ref().unwrap_or(&String::from("id")), Span::call_site());
 
-                    let key_type = Ident::new(&j.key_type.as_ref().unwrap(), Span::call_site());
+                    let key_type = Ident::new(&j.key_type.as_ref().unwrap_or(&String::from("u64")), Span::call_site());
                     self.select_key_types.push(quote!( #key_type));
                      let composite_key_field = format!("{}.{}", field_name, key_field);
 

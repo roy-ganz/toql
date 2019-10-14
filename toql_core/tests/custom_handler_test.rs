@@ -15,15 +15,16 @@ fn custom_handler() {
     }
 
     impl<T: FieldHandler> FieldHandler for CustomHandler<T> {
-        fn build_select(&self, sql: &str, params: &HashMap<String, String>) -> Option<String> {
+        fn build_select(&self, sql: &str, params: &HashMap<String, String>) -> Result<Option<(String, Vec<String>)>,SqlBuilderError > {
             self.base.build_select(sql, params)
         }
+
         fn build_filter(
             &self,
             sql: &str,
             filter: &FieldFilter,
             params: &HashMap<String, String>,
-        ) -> Result<Option<String>, SqlBuilderError> {
+        ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
             match filter {
                 FieldFilter::Fn(name, args) => match name.as_str() {
                     "LN" => {
@@ -33,14 +34,14 @@ fn custom_handler() {
                                 name
                             )));
                         }
-                        Ok(Some(format!("LENGTH({}) = ?", sql)))
-                    }
+                        Ok(Some((format!("LENGTH({}) = ?", sql),args.clone() )))
+                    },
                     _ => self.base.build_filter(sql, filter, params),
                 },
                 _ => self.base.build_filter(sql, filter, params),
             }
         }
-        fn build_param(
+       /*  fn build_param(
             &self,
             filter: &FieldFilter,
             params: &HashMap<String, String>,
@@ -52,8 +53,8 @@ fn custom_handler() {
                 },
                 _ => self.base.build_param(filter, params),
             }
-        }
-        fn build_join(&self, params: &HashMap<String, String>) -> Option<String> {
+        } */
+        fn build_join(&self, params: &HashMap<String, String>) -> Result<Option<String>, SqlBuilderError> {
             self.base.build_join(params)
         }
     }

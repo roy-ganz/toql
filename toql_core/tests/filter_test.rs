@@ -90,24 +90,33 @@ fn filter_fnc() {
             &self,
             sql_expression: &str,
             _params: &HashMap<String, String>,
-        ) -> Option<String> {
-            Some(sql_expression.to_string())
+        ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
+            Ok(Some((sql_expression.to_string(), Vec::new())))
         }
         fn build_filter(
             &self,
             sql_expression: &str,
             filter: &FieldFilter,
             _params: &HashMap<String, String>,
-        ) -> Result<Option<String>, SqlBuilderError> {
+        ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
             match filter {
-                FieldFilter::Fn(name, _args) => match (*name).as_ref() {
-                    "MA" => Ok(Some(format!("MATCH ({}) AGAINST (?)", sql_expression))),
+                FieldFilter::Fn(name, args) => match (*name).as_ref() {
+                    "MA" => {
+                            if args.len() != 1  {
+                                return Err(SqlBuilderError::FilterInvalid(format!(
+                                "filter `{}` expected exactly 1 argument",
+                                name
+                                )));
+                            }
+                            Ok(Some((format!("MATCH ({}) AGAINST (?)", sql_expression),args.clone() )))
+
+                    },
                     _ => Ok(None),
                 },
                 _ => Ok(None),
             }
         }
-        fn build_param(
+        /* fn build_param(
             &self,
             filter: &FieldFilter,
             _params: &HashMap<String, String>,
@@ -125,7 +134,7 @@ fn filter_fnc() {
                 },
                 _ => vec![],
             }
-        }
+        } */
     }
 
     let mut mapper = setup_mapper();
