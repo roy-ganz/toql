@@ -777,9 +777,14 @@ impl SqlBuilder {
 
         // Add additional where predicates if provided
         if query.where_predicates.len() > 0 {
-            result.where_clause.push_str( " AND (");
+            let concatenate = !result.where_clause.is_empty();
+            if concatenate {
+                result.where_clause.push_str( " AND (");
+            }
             result.where_clause.push_str(&query.where_predicates.join(" AND "));
-            result.where_clause.push(')');
+            if concatenate {
+                result.where_clause.push(')');
+            }
             result.where_params.extend_from_slice(&query.where_predicate_params);
         }
 

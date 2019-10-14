@@ -193,7 +193,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             
 
             let merge_one = format!("{{}}.{} = ?", other_column);
-            let merge_many = format!("{{}}.{} IN {{}}", other_column);
+            let merge_many = format!("{{}}.{} IN ({{}})", other_column);
 
             let additional_merge_predicate = if merge.on_sql.is_some() {
                 let merge_on= merge.on_sql.as_ref().unwrap();
@@ -227,15 +227,15 @@ impl<'a> GeneratedMysqlLoad<'a> {
             };
              
 
-            self.merge_one_predicates.push( quote!(
+            /* self.merge_one_predicates.push( quote!(
                 query.where_predicates.push( format!(#merge_one, <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias()));
                 query.where_predicate_params.push(_entity. #merge_struct_key_ident .to_string());
                 #additional_merge_predicate
-            ));
+            )); */
             self.merge_many_predicates.push( quote!(
-                let q = entities.iter().map(|entity| "?" ).collect::<Vec<&str>>().join(" ");
-                query.where_predicates.push(format!(#merge_many, <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias(), q));
-                query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #merge_struct_key_ident .to_string()).collect::<Vec<String>>().as_ref());
+                let q = entities.iter().map(|entity| "?" ).collect::<Vec<&str>>().join(", ");
+                dep_query.where_predicates.push(format!(#merge_many, <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias(), q));
+                dep_query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #merge_struct_key_ident .to_string()).collect::<Vec<String>>().as_ref());
                 #additional_merge_predicate
             ));
 
@@ -255,12 +255,73 @@ impl<'a> GeneratedMysqlLoad<'a> {
         self.ignored_paths.push(quote!(
                     .ignore_path( #toql_field)));
     }
-    pub(crate) fn add_path_loader(&mut self, _toql: &Toql, field: &'a ToqlField) {
+    pub(crate) fn add_path_loader(&mut self, toql: &Toql, field: &'a ToqlField) {
         let struct_ident = &self.struct_ident;
         let field_ident = &field.ident;
         let field_name = &field.ident.as_ref().unwrap().to_string();
         let toql_field = field_name.to_mixed_case();
         let merge_type = field.first_non_generic_type().unwrap();
+
+        // handle merge keys fields and on_sql 
+         let sql_merge_table_name = crate::util::rename(&merge_type.to_string(), &toql.tables);
+         let sql_merge_table_ident = Ident::new(&sql_merge_table_name, Span::call_site());
+
+        let mut merge_many_predicates :Vec<proc_macro2::TokenStream> = Vec::new();
+
+        for merge in &field.merge {
+           // let toql_merge_field = format!("{}_{}", toql_field, merge.other_field.to_mixed_case());
+            let auto_other_field= format!("{}_id", self.struct_ident.to_string().to_snake_case());
+            let auto_self_field= "id".to_string();
+
+            let merge_struct_key_ident = Ident::new(&merge.this_field.as_ref().unwrap_or(&auto_self_field), Span::call_site());
+            
+            let other_column = crate::util::rename(&merge.other_field.as_ref().unwrap_or(&auto_other_field).to_string(), &toql.columns);
+            
+
+            let merge_one = format!("{{}}.{} = ?", other_column);
+            let merge_many = format!("{{}}.{} IN ({{}})", other_column);
+
+            let additional_merge_predicate = if merge.on_sql.is_some() {
+                let merge_on= merge.on_sql.as_ref().unwrap();
+
+                let (merge_with_params, merge_params) = crate::util::extract_query_params(merge_on);
+                // if on_sql contains .. replace them with table alias
+                let merge_on = if merge_with_params.contains("..") {
+                        let aliased_merge_on = merge_with_params.replace("..", "{alias}.");
+                        quote!(
+                            format!(#aliased_merge_on, alias = <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias() )
+                        )
+                } else {
+                    quote!( #merge_with_params)
+                };
+                
+                let params = merge_params.iter().map(|p| {
+                    quote!( dep_query.where_predicate_params.push( query.params
+                                .get(  #p)
+                                .ok_or(toql::sql_builder::SqlBuilderError::QueryParamMissing(#p .to_string()))? .to_owned() );
+                        )   
+                }).collect::<proc_macro2::TokenStream>();
+
+                quote!( 
+                    dep_query.where_predicates.push(#merge_on);
+
+                    #(#params)*
+                    
+                )
+            } else {
+                quote!()
+            };
+             merge_many_predicates.push( quote!(
+                let q = entities.iter().map(|entity| "?" ).collect::<Vec<&str>>().join(", ");
+                dep_query.where_predicates.push(format!(#merge_many, <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias(), q));
+                dep_query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #merge_struct_key_ident .to_string()).collect::<Vec<String>>().as_ref());
+                #additional_merge_predicate
+            ));
+        }
+             
+
+
+        
 
         let merge_function = Ident::new(
             &format!("merge_{}", &field.ident.as_ref().unwrap()),
@@ -273,8 +334,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 quote!(Vec::new()) 
             };
 
+        let sql_merge_table_ident = Ident::new(&sql_merge_table_name, Span::call_site());
+
         self.path_loaders.push( quote!(
-                let #field_ident = #merge_type ::load_path_from_mysql(#toql_field, &query, cache, conn)?;
+
+                let mut dep_query = query.clone();
+                #(#merge_many_predicates)*
+               
+                let #field_ident = #merge_type ::load_path_from_mysql(#toql_field, &dep_query, cache, conn)?;
                 if #field_ident .is_some() {
                     for e in entities.iter_mut() { e . #field_ident = #merge_field_init; }
                     #struct_ident :: #merge_function (&mut entities, #field_ident .unwrap());
@@ -313,9 +380,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!(
              // Restrict dependencies to parent entity
                 // query.and( "parent_child_id eq XX" )
-                let mut query = query.clone();
-                let _entity = entities.get(0).unwrap();
-                #(#merge_one_predicates)*
+                //let mut query = query.clone();
+                //let _entity = entities.get(0).unwrap();
+                //#(#merge_one_predicates)*
                 #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, cache, conn)?;
             )
         };
@@ -326,7 +393,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 let mut query = query.clone();
                 // Resolve dependencies
                 // Restrict query to keys
-                #(#merge_many_predicates)*
+                //#(#merge_many_predicates)*
 
                 #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, cache, conn)?;
             )

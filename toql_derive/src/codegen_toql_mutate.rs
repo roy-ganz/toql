@@ -512,7 +512,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
                     .iter()
                     .map(|_v| "?".to_string())
                     .collect::<Vec<String>>()
-                    .join(",")
+                    .join(", ")
             );
             let insert_statement = format!(
                 "INSERT INTO {} ({}) VALUES",
