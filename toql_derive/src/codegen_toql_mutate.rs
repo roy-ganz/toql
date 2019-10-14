@@ -216,7 +216,8 @@ impl<'a> GeneratedToqlMutate<'a> {
 
                 for j in &field.join {
 
-                    let key_field = Ident::new(j.key_field.as_ref().unwrap(), Span::call_site()); // TODO compiler error
+                    let auto_key_field= String::from("id");
+                    let key_field = Ident::new(j.key_field.as_ref().unwrap_or(&auto_key_field), Span::call_site()); // TODO compiler error
 
                     // Keys for insert and delete may never be null
                     if field._first_type() == "Option" {
@@ -230,8 +231,16 @@ impl<'a> GeneratedToqlMutate<'a> {
                     }
 
                     // Add field to keys, struct may contain multiple keys (composite key) 
+
+                    // auto 
+                   let auto_self_column = crate::util::rename(&format!("{}_id", field_name), &toql.columns);
+                 let self_column = j.this_column.as_ref().unwrap_or(&auto_self_column);
+
+                    /* self.keys
+                        .push(j.this_column.as_ref().unwrap_or().to_string());
+                    } */ 
                     self.keys
-                        .push(j.this_column.as_ref().unwrap().to_string());
+                        .push(self_column.to_string());
                     } 
                 
 

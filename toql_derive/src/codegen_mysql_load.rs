@@ -184,8 +184,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
         for merge in &field.merge {
            // let toql_merge_field = format!("{}_{}", toql_field, merge.other_field.to_mixed_case());
-            let auto_self_field= format!("{}_id",&field_type.to_string().to_snake_case());
-            let auto_other_field= "id".to_string();
+            let auto_other_field= format!("{}_id", self.struct_ident.to_string().to_snake_case());
+            let auto_self_field= "id".to_string();
 
             let merge_struct_key_ident = Ident::new(&merge.this_field.as_ref().unwrap_or(&auto_self_field), Span::call_site());
             
@@ -203,21 +203,21 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 let merge_on = if merge_with_params.contains("..") {
                         let aliased_merge_on = merge_with_params.replace("..", "{alias}.");
                         quote!(
-                            format!(#aliased_merge_on, alias = toql::sql_mapper::Mapped::table_alias::<#sql_merge_table_ident>() )
+                            format!(#aliased_merge_on, alias = <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias() )
                         )
                 } else {
                     quote!( #merge_with_params)
                 };
                 
                 let params = merge_params.iter().map(|p| {
-                    quote!( query.where_predicates_params.push( query.params
+                    quote!( query.where_predicate_params.push( query.params
                                 .get(  #p)
                                 .ok_or(toql::sql_builder::SqlBuilderError::QueryParamMissing(#p))?);
                         )   
                 }).collect::<proc_macro2::TokenStream>();
 
                 quote!( 
-                    query.where_predicates.push_str(#merge_on);
+                    query.where_predicates.push(#merge_on);
 
                     #(#params)*
                     
@@ -228,14 +228,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
              
 
             self.merge_one_predicates.push( quote!(
-                query.where_predicates.push( format!(#merge_one, toql::sql_mapper::Mapped::table_alias::<#sql_merge_table_ident>()));
-                query.where_predicates_params.push(_entity. #merge_struct_key_ident);
+                query.where_predicates.push( format!(#merge_one, <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias()));
+                query.where_predicate_params.push(_entity. #merge_struct_key_ident .to_string());
                 #additional_merge_predicate
             ));
             self.merge_many_predicates.push( quote!(
-                let q = entities.iter().map(|entity| '?' ).collect::<Vec<char>>().join(" ");
-                query.where_predicates.push(format!(#merge_many, toql::sql_mapper::Mapped::table_alias::<#sql_merge_table_ident>(), q));
-                query.where_predicates_params.extend_from_slice(entities.iter().map(|entity| entity. #merge_struct_key_ident).collect());
+                let q = entities.iter().map(|entity| "?" ).collect::<Vec<&str>>().join(" ");
+                query.where_predicates.push(format!(#merge_many, <#sql_merge_table_ident as toql::sql_mapper::Mapped>::table_alias(), q));
+                query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #merge_struct_key_ident .to_string()).collect::<Vec<String>>().as_ref());
                 #additional_merge_predicate
             ));
 
@@ -313,7 +313,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!(
              // Restrict dependencies to parent entity
                 // query.and( "parent_child_id eq XX" )
-                let query = query.clone();
+                let mut query = query.clone();
                 let _entity = entities.get(0).unwrap();
                 #(#merge_one_predicates)*
                 #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, cache, conn)?;
@@ -323,7 +323,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!()
         } else {
             quote!(
-                let query = query.clone();
+                let mut query = query.clone();
                 // Resolve dependencies
                 // Restrict query to keys
                 #(#merge_many_predicates)*

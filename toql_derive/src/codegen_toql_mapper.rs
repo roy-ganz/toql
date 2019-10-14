@@ -140,9 +140,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             let (base, _generic, _gegeneric) = field.get_types();
 
             if base == "Vec" {
-                let error = format!("Missing attribute `merge`. \
-                                     Tell Toql which field in this struct and the other struct share the same value. \
-                                     Add `#[toql( merge(self_field=\"id\", other_field=\" {}_id\") )]`", toql.ident.to_string().to_snake_case());
+                let error = format!("Missing attribute `merge`. Add `#[toql( merge()]`");
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
                     compile_error!( #error);
@@ -214,8 +212,8 @@ impl<'a> GeneratedToqlMapper<'a> {
         let field_ident = &field.ident.as_ref().unwrap();
         let function_ident = syn::Ident::new(&format!("merge_{}", field_ident), Span::call_site());
 
-    let auto_self_field= format!("{}_id",&joined_struct_ident.to_string().to_snake_case());
-    let auto_other_field= "id".to_string();
+    let auto_other_field= format!("{}_id", self.struct_ident.to_string().to_snake_case());
+    let auto_self_field= "id".to_string();
         let ref self_tuple: Vec<proc_macro2::TokenStream> = field
             .merge
             .iter()

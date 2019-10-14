@@ -13,9 +13,11 @@ use syn::Ident;
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-    #[darling(rename = "self_field")]
+    #[darling(rename = "self_field", default)]
     pub this_field: Option<String>, 
+    #[darling(default)]
     pub other_field: Option<String>,
+    #[darling(default)]
     pub on_sql: Option<String>
 }
 
