@@ -12,7 +12,7 @@ pub fn collections_delta<'a, I, T>(collections: I)
 -> crate::error::Result<( Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<&'a T>)>
     where
         I: IntoIterator<Item = (&'a Vec<T>, &'a Vec<T>)> + 'a + Clone,
-        T: crate::indelup::Indelup<'a, T> + crate::key::Key<T> + 'a
+        T: crate::mutate::Mutate<'a, T> + crate::key::Key<T> + 'a
     {
         let mut diff: Vec<(&T, &T)> = Vec::new(); // Vector with entities to diff
         let mut insert: Vec<&T> = Vec::new(); // Vector with entities to insert
@@ -51,7 +51,7 @@ pub fn collections_delta<'a, I, T>(collections: I)
 -> crate::error::Result<((String, Vec<String>),Vec<(String, Vec<String>)>,(String, Vec<String>))>
     where
         I: IntoIterator<Item = (&'a Vec<T>, &'a Vec<T>)> + 'a + Clone,
-        T: crate::indelup::Indelup<'a, T> + crate::key::Key<T> + 'a
+        T: crate::mutate::Mutate<'a, T> + crate::key::Key<T> + 'a
     {
         let mut diff: Vec<(&T, &T)> = Vec::new(); // Vector with entities to diff
         let mut insert: Vec<&T> = Vec::new(); // Vector with entities to insert

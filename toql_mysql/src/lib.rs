@@ -1,12 +1,12 @@
 //!
 //! The Toql MySQL integration facade functions to load a struct from a MySQL database and insert, delete and update it.
 //! The actual functionality is created by the Toql Derive that implements
-//! the trait [Indelup](../toql_core/indelup/trait.Indelup.html).
+//! the trait [Mutate](../toql_core/mutate/trait.Mutate.html).
 //!
 
 use mysql::Conn;
 use toql_core::error::ToqlError;
-use toql_core::indelup::Indelup;
+use toql_core::mutate::Mutate;
 use toql_core::query::Query;
 use toql_core::sql_mapper::SqlMapperCache;
 
@@ -28,7 +28,7 @@ pub use mysql; // Reexport for derive produced code
 /// Returns the last generated id.
 pub fn insert_one<'a, T>(entity: &'a T, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::insert_one_sql(&entity)?;
     Ok ( if let Some((insert_stmt, params)) = sql {
@@ -48,7 +48,7 @@ where
 pub fn insert_many<'a, I, T>(entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = &'a T> + 'a,
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::insert_many_sql(entities)?;
     
@@ -68,7 +68,7 @@ where
 /// Returns the number of deleted rows.
 pub fn delete_one<'a, T>(entity: &'a T, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::delete_one_sql(&entity)?;
 
@@ -89,7 +89,7 @@ where
 pub fn delete_many<'a, I, T>(entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = &'a T> + 'a,
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::delete_many_sql(entities)?;
 
@@ -112,7 +112,7 @@ where
 pub fn update_many<'a, I, T>(entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = &'a T> + Clone + 'a,
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::update_many_sql(entities)?;
 
@@ -144,7 +144,7 @@ where
 
 pub fn update_one<'a, T>(entity: &'a T, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::update_one_sql(&entity)?;
 
@@ -168,7 +168,7 @@ where
 pub fn diff_many<'a, I, T>(entities: I, conn: &mut mysql::Conn) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = (&'a T, &'a T)> + Clone + 'a,
-    T: 'a + Indelup<'a, T>,
+    T: 'a + Mutate<'a, T>,
 {
     let sql = T::diff_many_sql(entities)?;
     Ok( if let Some(statements) = sql {
@@ -193,7 +193,7 @@ where
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
 pub fn diff_one<'a, T>(outdated: &'a T, current: &'a T, conn: &mut Conn) -> Result<u64, ToqlError>
-where  T: 'a + Indelup<'a, T>
+where  T: 'a + Mutate<'a, T>
 {
     diff_many(std::iter::once((outdated, current)), conn)
 

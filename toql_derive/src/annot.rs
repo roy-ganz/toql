@@ -1,4 +1,4 @@
-use crate::codegen_toql_indelup::GeneratedToqlIndelup;
+use crate::codegen_toql_mutate::GeneratedToqlMutate;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
@@ -12,10 +12,11 @@ use syn::GenericArgument::Type;
 use syn::Ident;
 
 #[derive(Debug, FromMeta)]
-pub struct KeyPair {
-    #[darling(rename = "self")]
-    pub this: String,
-    pub other: String,
+pub struct MergeArg {
+    #[darling(rename = "self_field")]
+    pub this_field: Option<String>, 
+    pub other_field: Option<String>,
+    pub on_sql: Option<String>
 }
 
 #[derive(Debug, FromMeta)]
@@ -63,7 +64,7 @@ pub struct ToqlField {
     #[darling(multiple)]
     pub role: Vec<String>,
     #[darling(default, multiple)]
-    pub merge: Vec<KeyPair>,
+    pub merge: Vec<MergeArg>,
     #[darling(default)]
     pub alias: Option<String>,
     #[darling(default)]
@@ -206,7 +207,7 @@ impl quote::ToTokens for Toql {
 
         let mut toql_mapper = GeneratedToqlMapper::from_toql(&self);
         let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&self);
-        let mut toql_indelup = GeneratedToqlIndelup::from_toql(&self);
+        let mut toql_mutate = GeneratedToqlMutate::from_toql(&self);
 
         #[cfg(feature = "mysqldb")]
         let mut mysql_load = GeneratedMysqlLoad::from_toql(&self);
@@ -285,7 +286,7 @@ impl quote::ToTokens for Toql {
 
             // Generate insert/delete/update functionality
             if mut_enabled {
-                toql_indelup.add_indelup_field(&self, field);
+                toql_mutate.add_mutate_field(&self, field);
             }
         }
 
@@ -305,7 +306,7 @@ impl quote::ToTokens for Toql {
         }
 
         if mut_enabled {
-            tokens.extend(quote!(#toql_indelup));
+            tokens.extend(quote!(#toql_mutate));
         }
     }
 }

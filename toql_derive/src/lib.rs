@@ -46,7 +46,7 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 
 mod annot;
-mod codegen_toql_indelup;
+mod codegen_toql_mutate;
 mod codegen_toql_mapper;
 mod codegen_toql_query_builder;
 

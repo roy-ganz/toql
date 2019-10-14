@@ -11,7 +11,7 @@ use syn::Ident;
 
 use heck::SnakeCase;
 
-pub(crate) struct GeneratedToqlIndelup<'a> {
+pub(crate) struct GeneratedToqlMutate<'a> {
     struct_ident: &'a Ident,
     sql_table_ident: Ident,
 
@@ -29,15 +29,15 @@ pub(crate) struct GeneratedToqlIndelup<'a> {
   
 }
 
-impl<'a> GeneratedToqlIndelup<'a> {
-    pub(crate) fn from_toql(toql: &Toql) -> GeneratedToqlIndelup {
+impl<'a> GeneratedToqlMutate<'a> {
+    pub(crate) fn from_toql(toql: &Toql) -> GeneratedToqlMutate {
         let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
         let sql_table_ident = Ident::new(
             &toql.table.clone().unwrap_or(renamed_table),
             Span::call_site(),
         );
 
-        GeneratedToqlIndelup {
+        GeneratedToqlMutate {
             struct_ident: &toql.ident,
             sql_table_ident: sql_table_ident,
             insert_columns: Vec::new(),
@@ -431,7 +431,7 @@ impl<'a> GeneratedToqlIndelup<'a> {
 
                         for (outdated, entity) in entities.clone() {
                             #optional_if {
-                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, updated. #field_ident .as_ref()  #optional_unwrap )))?;
+                                let mut delta  = toql::diff::collections_delta(std::iter::once((outdated. #field_ident  .as_ref() #optional_ok_or, entity. #field_ident .as_ref()  #optional_unwrap )))?;
                             
                                 insert.append(&mut delta.0);
                                 diff.append(&mut delta.1);
@@ -463,12 +463,12 @@ impl<'a> GeneratedToqlIndelup<'a> {
     }
     
 
-    pub(crate) fn add_indelup_field(&mut self, toql: &Toql, field: &'a ToqlField) {
+    pub(crate) fn add_mutate_field(&mut self, toql: &Toql, field: &'a ToqlField) {
         self.add_insert_field(toql, field);
         self.add_delup_field(toql, field);
     }
 }
-impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
+impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
 
@@ -527,7 +527,7 @@ impl<'a> quote::ToTokens for GeneratedToqlIndelup<'a> {
                
                 
 
-                impl<'a> toql::indelup::Indelup<'a, #struct_ident> for #struct_ident {
+                impl<'a> toql::mutate::Mutate<'a, #struct_ident> for #struct_ident {
 
 
 

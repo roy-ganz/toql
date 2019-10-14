@@ -32,7 +32,7 @@
 use crate::error::Result;
 
 /// Trait for insert delete and update functions.
-pub trait Indelup<'a, T: 'a> {
+pub trait Mutate<'a, T: 'a> {
 
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
     fn insert_one_sql(entity: &'a T) -> Result<Option<(String, Vec<String>)>> {

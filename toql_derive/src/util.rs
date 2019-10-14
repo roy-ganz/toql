@@ -34,6 +34,21 @@ pub(crate) fn join_info() -> JoinInfo {
 
     }
 }
+
+pub fn extract_query_params(expression: &str) -> (String, Vec<String>){
+
+        
+        let  regex : regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+             
+
+        let mut query_params= Vec::new();
+        let sql = regex.replace(expression, |e : &regex::Captures| {
+            let name= &e[1];
+            query_params.push(name.to_string());
+            "?"    
+        });
+        (sql.to_string(), query_params)
+    }
 /* 
 pub(crate) enum FieldType {
     Regular,

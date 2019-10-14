@@ -48,7 +48,7 @@
 
 pub use toql_core::error;
 pub use toql_core::error::Result;
-pub use toql_core::indelup;
+pub use toql_core::mutate;
 pub use toql_core::merge;
 pub use toql_core::diff;
 pub use toql_core::query;

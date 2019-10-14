@@ -142,7 +142,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             if base == "Vec" {
                 let error = format!("Missing attribute `merge`. \
                                      Tell Toql which field in this struct and the other struct share the same value. \
-                                     Add `#[toql( merge(self=\"id\", other=\" {}_id\") )]`", toql.ident.to_string().to_snake_case());
+                                     Add `#[toql( merge(self_field=\"id\", other_field=\" {}_id\") )]`", toql.ident.to_string().to_snake_case());
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
                     compile_error!( #error);
@@ -196,7 +196,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             let sql_mapping = if field_sql.is_none() {
                 quote! {&format!("{}{}{}",sql_alias, if sql_alias.is_empty() {"" }else {"."}, #sql_field)}
             } else {
-                quote! {& #field_sql .replace("..",&format!("{}.",sql_alias ))}
+                quote! {&format!("({})", #field_sql .replace("..",&format!("{}.",sql_alias )))}
             };
 
             self.field_mappings.push(quote! {
@@ -210,15 +210,18 @@ impl<'a> GeneratedToqlMapper<'a> {
 
     pub(crate) fn add_merge_function(&mut self, _toql: &Toql, field: &'a ToqlField) {
         let struct_ident = self.struct_ident;
-        let joined_struct_ident = field.first_non_generic_type();
+        let joined_struct_ident = field.first_non_generic_type().unwrap();
         let field_ident = &field.ident.as_ref().unwrap();
         let function_ident = syn::Ident::new(&format!("merge_{}", field_ident), Span::call_site());
 
+    let auto_self_field= format!("{}_id",&joined_struct_ident.to_string().to_snake_case());
+    let auto_other_field= "id".to_string();
         let ref self_tuple: Vec<proc_macro2::TokenStream> = field
             .merge
             .iter()
             .map(|k| {
-                let key = Ident::new(&k.this, Span::call_site());
+               
+                let key = Ident::new(&k.this_field.as_ref().unwrap_or(&auto_self_field), Span::call_site());
                 quote!(t. #key)
             })
             .collect();
@@ -227,7 +230,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             .merge
             .iter()
             .map(|k| {
-                let key = Ident::new(&k.other, Span::call_site());
+                let key = Ident::new(&k.other_field.as_ref().unwrap_or(&auto_other_field), Span::call_site());
                 quote!( o. #key )
             })
             .collect();
