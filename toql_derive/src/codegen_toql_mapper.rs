@@ -70,7 +70,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .iter()
                     .map(|j| {
                         let auto_self_key =
-                            crate::util::rename(&field_ident.to_string(), &toql.columns);
+                            crate::util::rename(&format!("{}_id", &field_ident), &toql.columns);
                         let this_key = j.this_column.as_ref().unwrap_or(&auto_self_key);
                         format!("({{alias}}{{sep}}{} IS NOT NULL)", this_key)
                     })
