@@ -1,4 +1,5 @@
-use mysql::Conn;
+
+use mysql::prelude::GenericConnection;
 use toql_core::error::ToqlError;
 use toql_core::key::Key;
 
@@ -19,14 +20,14 @@ pub trait Select<T :Key<T>> {
     /// Select a struct with all dependencies for a given key.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    fn select_one(key: &<T as Key<T>>::Key, conn: &mut Conn) -> Result<T, ToqlError>;
+    fn select_one<C:GenericConnection>(key: &<T as Key<T>>::Key, conn: &mut C) -> Result<T, ToqlError>;
 
     /// Select a vector of structs with all dependencies for a given key.
     ///
     /// Returns a tuple with the structs.
-    fn select_many(
+    fn select_many<C:GenericConnection>(
         key: &<T as Key<T>>::Key,
-        conn: &mut Conn,
+        conn: &mut C,
         first: u64,
         max: u16
     ) -> Result<Vec<T> , ToqlError>;
@@ -34,6 +35,6 @@ pub trait Select<T :Key<T>> {
     /// Select a vector of structs with all dependencies for a given JOIN clause.
     /// This function is used internally to fetch merged fields.
     /// Returns a tuple with the structs.
-    fn select_dependencies(join: &str, params: &Vec<String>,conn: &mut Conn) -> Result<Vec<T> , ToqlError>;
+    fn select_dependencies<C:GenericConnection>(join: &str, params: &Vec<String>,conn: &mut C) -> Result<Vec<T> , ToqlError>;
   
 }

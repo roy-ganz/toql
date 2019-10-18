@@ -324,8 +324,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     }
 
 
-                     fn select_one(key: &<#struct_ident as toql::key::Key<#struct_ident>>::Key, conn: &mut toql::mysql::mysql::Conn) 
+                     fn select_one<C>(key: &<#struct_ident as toql::key::Key<#struct_ident>>::Key, conn: &mut C) 
                      -> Result<#struct_ident,  toql::error::ToqlError>
+                     where C: toql::mysql::mysql::prelude::GenericConnection
                      {
                         let select_stmt = format!( "{} WHERE {} LIMIT 0,2", Self::select_sql(None), #merge_key_predicate);
 
@@ -349,19 +350,23 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                      }
 
                        
-                        fn select_many(
+                        fn select_many<C>(
                             key: &<#struct_ident as toql::key::Key<#struct_ident>>::Key,
-                            conn: &mut toql::mysql::mysql::Conn,
+                            conn: &mut C,
                             first: u64,
                             max: u16
-                        ) -> Result<Vec< #struct_ident> ,  toql::error::ToqlError>{
+                        ) -> Result<Vec< #struct_ident> ,  toql::error::ToqlError>
+                            where C: toql::mysql::mysql::prelude::GenericConnection
+                        {
                                 unimplemented!();
 
 
                         }
 
-                        fn select_dependencies(join: &str, params:&Vec<String>,
-                            conn: &mut toql::mysql::mysql::Conn) -> Result<Vec<#struct_ident> ,  toql::error::ToqlError>{
+                        fn select_dependencies<C>(join: &str, params:&Vec<String>,
+                            conn: &mut C) -> Result<Vec<#struct_ident> ,  toql::error::ToqlError>
+                            where C: toql::mysql::mysql::prelude::GenericConnection
+                            {
                                 let select_stmt =  Self::select_sql(Some(join));
                                 //let select_stmt = format!( #select_dependend_stmt, Self::columns_sql(), Self::joins_sql(), join);
 

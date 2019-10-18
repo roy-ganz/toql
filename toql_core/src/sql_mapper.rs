@@ -40,6 +40,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+
 use enquote::unquote;
 
 #[derive(Debug)]
@@ -64,6 +65,14 @@ pub(crate) struct SqlTarget {
 /// Returns [FilterInvalid](../sql_builder/enum.SqlBuilderError.html) for any attempt to use FN filters.
 #[derive(Debug, Clone)]
 pub struct BasicFieldHandler {}
+
+
+impl BasicFieldHandler {
+
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 
 #[derive(Debug)]
 /// Options for a mapped field.
@@ -163,7 +172,7 @@ pub trait FieldHandler {
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
     fn build_filter(
         &self,
-        sql: &str,
+        _select: (String, Vec<String>),
         _filter: &FieldFilter,
         query_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError>;
@@ -221,39 +230,39 @@ impl FieldHandler for BasicFieldHandler {
 
     fn build_filter(
         &self,
-        expression: &str,
+        mut select: (String, Vec<String>),
         filter: &FieldFilter,
         _query_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         match filter {
-            FieldFilter::Eq(criteria) => Ok(Some( (format!("{} = ?", expression),vec![sql_param(criteria.clone())] ))),
-            FieldFilter::Eqn => Ok(Some( (format!("{} IS NULL", expression), Vec::new() ))),
-            FieldFilter::Ne(criteria) => Ok(Some( (format!("{} <> ?", expression),vec![sql_param(criteria.clone())] ) )),
-            FieldFilter::Nen => Ok(Some((format!("{} IS NOT NULL", expression), Vec::new()))),
-            FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", expression), vec![sql_param(criteria.clone())] ) )),
-            FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", expression), vec![sql_param(criteria.clone())] ) )),
-            FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", expression), vec![sql_param(criteria.clone())] ) )),
-            FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", expression), vec![sql_param(criteria.clone())] ) )),
-            FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", expression),vec![sql_param(lower.clone()), sql_param(upper.clone())]))),
-            FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", expression), vec![sql_param(criteria.clone())] ) )),
+            FieldFilter::Eq(criteria) => Ok(Some( (format!("{} = ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1}))),
+            FieldFilter::Eqn => Ok(Some( (format!("{} IS NULL", select.0),  select.1 ))),
+            FieldFilter::Ne(criteria) => Ok(Some( (format!("{} <> ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Nen => Ok(Some((format!("{} IS NOT NULL", select.0), select.1))),
+            FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0),{select.1.push(sql_param(lower.clone())); select.1}))),
+            FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
             FieldFilter::In(args) => Ok(Some((format!(
                 "{} IN ({})",
-                expression,
+                select.0,
                 std::iter::repeat("?")
                     .take(args.len())
                     .collect::<Vec<&str>>()
                     .join(",")
-            ),args.iter().map(|a| sql_param(a.to_string())).collect()))),
+            ), {let a :Vec<String>= args.iter().map(|a| sql_param(a.to_string())).collect();select.1.extend_from_slice(&a); select.1} ))),
             FieldFilter::Out(args) => Ok(Some((format!(
                 "{} NOT IN ({})",
-                expression,
+                select.0,
                 std::iter::repeat("?")
                     .take(args.len())
                     .collect::<Vec<&str>>()
                     .join(",")
-            ),args.iter().map(|a| sql_param(a.to_string())).collect()))),
+            ),{let a :Vec<String>= args.iter().map(|a| sql_param(a.to_string())).collect();select.1.extend_from_slice(&a); select.1} ))),
             //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
-            FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", expression),vec![sql_param(criteria.clone())] ) )),
+            FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
             FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(format!(
                 "no filter `{}` found.",
                 name
@@ -407,6 +416,20 @@ impl SqlMapper {
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
     /// how to generate SQL for your field.
     pub fn map_handler<'a, H>(
+        &'a mut self,
+        toql_field: &str,
+        expression: &str,
+        handler: H,
+    ) -> &'a mut Self
+    where
+        H: 'static + FieldHandler + Send + Sync,
+    {
+       self.map_handler_with_options(toql_field, expression, handler, MapperOptions::new())
+    }
+    // Maps a Toql field with options to a field handler.
+    /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
+    /// how to generate SQL for your field.
+    pub fn map_handler_with_options<'a, H>(
         &'a mut self,
         toql_field: &str,
         expression: &str,

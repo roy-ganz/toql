@@ -571,8 +571,12 @@ impl SqlBuilder {
                                 }
 
                                 if let Some(f) = &query_field.filter {
+                                    // Get actual expression
+                                    let expression = sql_target.handler.build_select(&sql_target.expression, &query.params)?
+                                    . unwrap_or(("null".to_string(), vec![]));
+
                                     if let Some(f) = sql_target.handler.build_filter(
-                                        &sql_target.expression,
+                                        expression, // todo change build_filter signature to take tuple
                                         &f,
                                         &query.params,
                                     )? {

@@ -121,11 +121,13 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 #field_ident : {
                                        #increment
                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                            *i = < #join_type > ::forward_row(*i); // Added, but unsure, needs testing
                                         None
                                        }
                                        else if row.take_opt::<bool,_>(*i).unwrap()? == false {
-                                        *i += 1;
-                                        *i = < #join_type > ::forward_row(*i);
+                                        //*i += 1; // Step over discriminator field,
+                                        *i = < #join_type > ::forward_row(*i); 
+                                        
                                         Some(None)
                                     } else {
                                         *i += 1;
@@ -138,7 +140,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 #field_ident : {
                                      #increment
                                      if row.take_opt::<bool,_>(*i).unwrap()? == false {
-                                        *i = < #join_type > ::forward_row({*i += 1; *i});
+                                       // *i = < #join_type > ::forward_row({*i += 1; *i});
+                                             *i = < #join_type > ::forward_row(*i);
                                         None
                                     } else {
                                         Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
@@ -150,6 +153,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     #field_ident : {
                                         #increment
                                         if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                            *i = < #join_type > ::forward_row(*i);
                                             None
                                         } else {
                                         Some(< #join_type > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
@@ -358,15 +362,18 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
-                pub fn load_dependencies_from_mysql(mut _entities: &mut Vec< #struct_ident >,
-                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache, _conn: &mut toql::mysql::mysql::Conn)
-                -> toql::error::Result<()> { Ok(())}
+                pub fn load_dependencies_from_mysql<C>(mut _entities: &mut Vec< #struct_ident >,
+                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache, _conn: &mut C)
+                -> toql::error::Result<()> 
+                where C: toql::mysql::mysql::prelude::GenericConnection
+                { Ok(())}
             )
         } else {
             quote!(
-                pub fn load_dependencies_from_mysql(mut entities: &mut Vec< #struct_ident >,
-                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache, conn: &mut toql::mysql::mysql::Conn)
+                pub fn load_dependencies_from_mysql<C>(mut entities: &mut Vec< #struct_ident >,
+                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache, conn: &mut C)
                 -> toql::error::Result<()>
+                where C: toql::mysql::mysql::prelude::GenericConnection
                 {
                     #(#path_loaders)*
                     Ok(())
@@ -402,8 +409,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
         quote!(
             impl #struct_ident {
 
-                pub fn load_path_from_mysql(path: &str, query: &toql::query::Query, cache: &toql::sql_mapper::SqlMapperCache,  conn: &mut toql::mysql::mysql::Conn)
+                pub fn load_path_from_mysql<C>(path: &str, query: &toql::query::Query, 
+                    cache: &toql::sql_mapper::SqlMapperCache,  
+                    conn: &mut C)
                 -> toql::error::Result<Option<std::vec::Vec< #struct_ident >>>
+                where C: toql::mysql::mysql::prelude::GenericConnection
                 {
                     let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query)?;
@@ -423,8 +433,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
             }
             impl toql::mysql::load::Load<#struct_ident> for #struct_ident
             {
-                fn load_one(query: &toql::query::Query, cache: &toql::sql_mapper::SqlMapperCache, conn: &mut toql::mysql::mysql::Conn )
+                fn load_one<C>(query: &toql::query::Query, 
+                    cache: &toql::sql_mapper::SqlMapperCache, 
+                    conn: &mut C )
                     -> toql::error::Result<# struct_ident>
+                    where C: toql::mysql::mysql::prelude::GenericConnection
                 {
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
 
@@ -453,9 +466,12 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 }
 
 
-                fn load_many(query: &toql::query::Query, cache: &toql::sql_mapper::SqlMapperCache,
-                conn: &mut toql::mysql::mysql::Conn, count:bool, first:u64, max:u16)
-                -> toql::error::Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>)> {
+                fn load_many<C>(query: &toql::query::Query, 
+                cache: &toql::sql_mapper::SqlMapperCache,
+                conn: &mut C, count:bool, first:u64, max:u16)
+                -> toql::error::Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>)> 
+                where C: toql::mysql::mysql::prelude::GenericConnection
+                {
 
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     // load base entities
