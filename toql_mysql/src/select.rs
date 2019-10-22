@@ -4,7 +4,7 @@ use toql_core::error::ToqlError;
 use toql_core::key::Key;
 
 /// Trait to select entities from MySQL database.
-pub trait Select<T :Key<T>> {
+pub trait Select<T :Key> {
    
     /// SQL fragment to select columns
     /// (internal use)
@@ -20,13 +20,13 @@ pub trait Select<T :Key<T>> {
     /// Select a struct with all dependencies for a given key.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    fn select_one<C:GenericConnection>(key: &<T as Key<T>>::Key, conn: &mut C) -> Result<T, ToqlError>;
+    fn select_one<C:GenericConnection>(key: &<T as Key>::Key, conn: &mut C) -> Result<T, ToqlError>;
 
     /// Select a vector of structs with all dependencies for a given key.
     ///
     /// Returns a tuple with the structs.
     fn select_many<C:GenericConnection>(
-        key: &<T as Key<T>>::Key,
+        key: &<T as Key>::Key,
         conn: &mut C,
         first: u64,
         max: u16

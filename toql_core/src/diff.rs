@@ -12,7 +12,7 @@ pub fn collections_delta<'a, I, T>(collections: I)
 -> crate::error::Result<( Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<&'a T>)>
     where
         I: IntoIterator<Item = (&'a Vec<T>, &'a Vec<T>)> + 'a + Clone,
-        T: crate::mutate::Mutate<'a, T> + crate::key::Key<T> + 'a
+        T: crate::mutate::Mutate<'a, T> + crate::key::Key + 'a
     {
         let mut diff: Vec<(&T, &T)> = Vec::new(); // Vector with entities to diff
         let mut insert: Vec<&T> = Vec::new(); // Vector with entities to insert
@@ -24,14 +24,14 @@ pub fn collections_delta<'a, I, T>(collections: I)
             let mut previous_index : HashMap<T::Key, &T> = HashMap::new();
             for previous in previous_coll {
                 // Build up index
-                let k = crate::key::Key::key(previous)?;
+                let k = crate::key::Key::get(previous)?;
                 previous_index.insert(k, &previous);
             }
 
             for current in current_coll {
                 
-                if previous_index.contains_key( &crate::key::Key::key(current)?) {
-                    diff.push((previous_index.remove( &crate::key::Key::key(current)?).unwrap(), &current));
+                if previous_index.contains_key( &crate::key::Key::get(current)?) {
+                    diff.push((previous_index.remove( &crate::key::Key::get(current)?).unwrap(), &current));
                 } else {
                     insert.push(&current);
                 }

@@ -8,9 +8,10 @@ pub trait QueryFields {
     fn fields_from_path(path: String) -> Self::FieldsType;
 }
 
-
-pub trait Query {
-    fn key_predicate<T>(key: &<T as crate::key::Key<T>>::Key) ->Result<crate::query::Query , crate::error::ToqlError>
-    where T : crate::key::Key<T>;
-
+/* 
+pub trait Query<T> {
+    fn key_predicate<K>(key: K::Key) ->Result<crate::query::Query , crate::error::ToqlError>
+    where K: crate::key::Key<Key = T>, T: std::hash::Hash + std::cmp::Eq
+    ;
 }
+ */

@@ -6,11 +6,12 @@ use proc_macro2::Span;
 use syn::Ident;
 
 use heck::SnakeCase;
+use heck::MixedCase;
 
 pub(crate) struct GeneratedMysqlSelect<'a> {
     struct_ident: &'a Ident,
     sql_table_ident: Ident,
-   
+    vis: &'a syn::Visibility,   
 
     select_columns: Vec<String>,
     select_columns_params: Vec<proc_macro2::TokenStream>,
@@ -23,8 +24,11 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
     select_key_types: Vec<proc_macro2::TokenStream>,
     select_key_fields: Vec<proc_macro2::TokenStream>,
     select_keys_params: Vec<proc_macro2::TokenStream>,
+    key_predicates: Vec<proc_macro2::TokenStream>,
 
-     merge_code: Vec<proc_macro2::TokenStream>
+    key_setters: Vec<proc_macro2::TokenStream>,
+
+    merge_code: Vec<proc_macro2::TokenStream>
 }
 
 
@@ -39,7 +43,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
         GeneratedMysqlSelect {
             struct_ident: &toql.ident,
             sql_table_ident: sql_table_ident,
-
+            vis : &toql.vis,
           
          
             select_columns: Vec::new(),
@@ -53,6 +57,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
             select_key_types: Vec::new(),
             select_key_fields: Vec::new(),
             select_keys_params: Vec::new(),
+            key_predicates: Vec::new(),
+            key_setters: Vec::new(),
+
 
             
 
@@ -70,6 +77,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
         let sql_table_alias = sql_table_name.to_snake_case();
         let field_type = field.first_non_generic_type().unwrap();
 
+          
         // Regular field
         if field.join.is_empty() && field.merge. is_empty() {
             if field.key == true {
@@ -78,13 +86,28 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 self.select_key_types.push(quote!( #key_type));
                
                if field.number_of_options() > 0 {
-                self.select_key_fields.push( quote!(self. #field_ident .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))? ));
+                   let value= quote!(self. #field_ident .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))? );
+                    self.select_key_fields.push( value);
+                
+                let index =  syn::Index::from(self.select_key_types.len()-1);
+                self.key_setters.push( quote!(self. #field_ident = Some( key . #index;  ) ))
                } else {
+
                 self.select_key_fields.push( quote!(self. #field_ident));
+
+                 let index =  syn::Index::from(self.select_key_types.len()-1);
+                 
+                 self.key_setters.push( quote!(self. #field_ident = key . #index;) )
                }
                
                 
                 self.select_keys.push(format!("{}.{} = ?",sql_table_alias, sql_column));
+
+              let toql_field = field_name.to_mixed_case();
+              self.key_predicates.push(  quote! {
+                 toql::query::Field::from(#toql_field)
+                });
+               
 
                 /*     // Normal key should may only one Option (Toql selectable)
                  self.select_keys_params.push( match field.number_of_options() {
@@ -123,30 +146,67 @@ impl<'a> GeneratedMysqlSelect<'a> {
             for j in &field.join {
 
                 if field.key == true {
+
+                  
                    
 
                     let key_field = Ident::new(&j.key_field.as_ref().unwrap_or(&String::from("id")), Span::call_site());
 
                     let key_type = Ident::new(&j.key_type.as_ref().unwrap_or(&String::from("u64")), Span::call_site());
-                    self.select_key_types.push(quote!( #key_type));
+                    let struct_key_type = Ident::new(&format!("{}Key", &field_type), Span::call_site());
+                    self.select_key_types.push(quote!( <#field_type as toql::key::Key>::Key));
                      let composite_key_field = format!("{}.{}", field_name, key_field);
 
+                       let toql_field = format!("{}_{}",field_name.to_mixed_case(), key_field.to_string().to_mixed_case());
+                        self.key_predicates.push(  quote! {
+                        toql::query::Field::from(#toql_field)
+                        });
+
                     if field.number_of_options() > 0 {
-                       
                         self.select_key_fields.push( quote!(
+                            < #field_type as toql::key::Key>::get( &self. #field_ident )?
+                        ));
+
+                        let index =  syn::Index::from(self.select_key_types.len()-1);
+                          self.key_setters.push( quote!(
+                            < #field_type as toql::key::Key>::set(&mut self. #field_ident 
+                                                    .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))? , (key . #index).0 );
+                        ));
+                       
+                       /*  self.select_key_fields.push( quote!(
                             Option::from(
                             self. #field_ident .as_ref() .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))?. #key_field .to_owned())
                             .ok_or(toql::error::ToqlError::ValueMissing( String::from(#composite_key_field)))?
-                            ));
+                            )); */
+
+                           /*   self.key_setters.push(quote!(
+                            Option::from(
+                            self. #field_ident .as_mut() .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))?. #key_field .as_mut())
+                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(#composite_key_field)))?
+                            )); */
+                           
                     } else {
-                        self.select_key_fields.push( quote!( Option::from(self. #field_ident . #key_field)
+                         self.select_key_fields.push( quote!(
+                            < #field_type as toql::key::Key>::get(  &self. #field_ident )?
+                        ));
+
+                        let index =  syn::Index::from(self.select_key_types.len()-1);
+                          self.key_setters.push( quote!(
+                            < #field_type as toql::key::Key>::set(&mut self. #field_ident, (key . #index).0);
+                        ));
+                      /*   self.select_key_fields.push( quote!( Option::from(&self. #field_ident . #key_field)
                                     .ok_or(toql::error::ToqlError::ValueMissing( String::from(#composite_key_field)))?
                         ));
+                        
+                        self.key_setters.push( quote!( Option::from(self. #field_ident . #key_field).as_mut()
+                                    .ok_or(toql::error::ToqlError::ValueMissing( String::from(#composite_key_field)))?
+                        )); */
+                        
                     }
                     
                     let auto_self_column = crate::util::rename(&format!("{}_id", field_name), &toql.columns);
                     let self_column = j.this_column.as_ref().unwrap_or(&auto_self_column);
-                    self.select_keys.push(format!("{}.{} = ?",sql_table_alias, self_column));
+                    //self.select_keys.push(format!("{}.{} = ?",sql_table_alias, self_column));
                              
              } 
 
@@ -232,7 +292,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         let key_types = &self.select_key_types;
       
 
-        let key_type_code = if key_types.len() == 1 { quote!( #(#key_types)* ) }  else { quote!( ( #(#key_types),* ))};
+        let key_type_code =  quote!(  #(pub #key_types),* );
 
          //  let key_params_code = &self.key_params_code;
 
@@ -252,7 +312,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
               
             let select_joins_params=  &self.select_joins_params;
             
-            let select_keys_params= &self.select_keys_params;
+           // let select_keys_params= &self.select_keys_params;
 
             let select_statement= format!("SELECT {{}} FROM {} {} {{}}{{}}",
                 sql_table_name,  sql_table_alias);
@@ -268,14 +328,12 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
             let merge_key_predicate = self.select_keys.join(" AND ");
           
 
-        let select_keys_params : Vec<proc_macro2::TokenStream> = if key_types.len() == 1 { 
-                            vec![quote!( params.push(key.to_string()); )]
-                            } else {  
-                                self.select_key_types.iter().enumerate().map(|x| { 
+        let select_keys_params : Vec<proc_macro2::TokenStream> = self.select_key_types.iter().enumerate().map(|x| { 
                                     let i = x.0;  
                                     let is = syn::Index::from(i);
-                                    quote!(params.push(key. #is .to_string()); )} ).collect()
-                            };
+                                    quote!(params.push(key. #is .to_string()); )} ).collect();
+
+                            
             let columns_sql_code = if select_columns_params.is_empty() {
                 quote!( String::from(#select_columns)) 
                 } else {
@@ -288,26 +346,77 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                 };
 
         let select_key_fields =  &self.select_key_fields;
+       // let key_setters_fragments =  &self.key_setters;
 
-           let key_getter = if  select_key_fields.len() == 1 {
-               quote!( #(#select_key_fields .to_owned())* )
+            let key_getter =  quote!( #(#select_key_fields ),* );
+            
+           
+/* 
+           let key_setters = if  key_setters_fragments.len() == 1 {
+               vec![quote!( #(#key_setters_fragments ;)* )];
            } else {
-                quote!( ( #(#select_key_fields .to_owned()),* ))
-           };
+               key_setters_fragments.iter().enumerate().map(|x| { 
+                                    let s = x.1;
+                                    let i = x.0;  
+                                    let is = syn::Index::from(i);
+                                    quote!(#s . #is; )} ).collect();
+                 
+           };  */
         
 
+            let key_predicates: Vec<proc_macro2::TokenStream> =
+                self.key_predicates.iter().enumerate().map(|x| { 
+                                    let s = x.1;
+                                    let i = x.0;  
+                                    let is = syn::Index::from(i);
+                                    quote!( .and(#s.eq( key . #is)))  }).collect();
+            
+            let key_setters = &self.key_setters;
+            /* Vec<proc_macro2::TokenStream> =
+                self.key_setters.iter().enumerate().map(|x| { 
+                                    let s = x.1;
+                                    let i = x.0;  
+                                    let is = syn::Index::from(i);
+                                    quote!( #s = key . #is;)  }).collect(); */
+             
+
+                let key_predicate_fn = Ident::new(&format!("{}_key_predicate", &struct_ident).to_snake_case(), Span::call_site());
+                let vis= self.vis;
+
+                let struct_key_ident = Ident::new(&format!("{}Key", &struct_ident ), Span::call_site());
 
             quote! {
 
-                impl toql::key::Key<#struct_ident> for #struct_ident {
-                    type Key = #key_type_code;
+            #[derive(Debug, Eq, PartialEq, Hash, ToString)]
+               #vis struct #struct_key_ident ( #key_type_code);
 
-                    fn key(&self) -> Result<Self::Key, toql::error::ToqlError> {
-                       Ok( #key_getter )
+                impl toql::key::Key for #struct_ident {
+                    type Key = #struct_key_ident;
+
+                    fn get(&self) -> toql::error::Result<Self::Key> {
+                       Ok(  #struct_key_ident (#key_getter) )
+                    }
+                    fn set(&mut self, key: Self::Key) -> toql::error::Result<()> {
+                      #( #key_setters)*
+                      Ok(())
                     }
                 }
                 
+                #vis fn #key_predicate_fn (key: #struct_key_ident) ->Result<toql::query::Query , toql::error::ToqlError>{
+                    Ok(toql::query::Query::new() #(#key_predicates)* ) 
+                }
 
+                /* impl toql::query_builder::Query< #key_type_code> for #struct_ident {
+    
+                    fn key_predicate<K>(key: K::Key) -> Result<toql::query::Query , toql::error::ToqlError>
+                    where K : toql::key::Key< Key = #key_type_code>
+                        {
+                      
+                      
+                        Ok(toql::query::Query::new() #(#key_predicates)* ) 
+                    }
+                }
+ */
                 impl<'a> toql::mysql::select::Select<#struct_ident> for #struct_ident {
 
                  
@@ -324,7 +433,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     }
 
 
-                     fn select_one<C>(key: &<#struct_ident as toql::key::Key<#struct_ident>>::Key, conn: &mut C) 
+                     fn select_one<C>(key: &<#struct_ident as toql::key::Key>::Key, conn: &mut C) 
                      -> Result<#struct_ident,  toql::error::ToqlError>
                      where C: toql::mysql::mysql::prelude::GenericConnection
                      {
@@ -351,7 +460,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                        
                         fn select_many<C>(
-                            key: &<#struct_ident as toql::key::Key<#struct_ident>>::Key,
+                            key: &<#struct_ident as toql::key::Key>::Key,
                             conn: &mut C,
                             first: u64,
                             max: u16

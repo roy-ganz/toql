@@ -212,9 +212,9 @@ C:GenericConnection
 
 /// Selects a single struct for a given key.
 /// This will select all base fields and join. Merged fields will be skipped
-pub fn select_one<T, C>(key: &<T as toql_core::key::Key<T>>::Key, conn: &mut C) -> Result<T, ToqlError>
+pub fn select_one<T, C>(key: &<T as toql_core::key::Key>::Key, conn: &mut C) -> Result<T, ToqlError>
 where 
-T : select::Select<T> + toql_core::key::Key<T>,
+T : select::Select<T> + toql_core::key::Key,
 C:GenericConnection
 {
     T::select_one(key, conn)

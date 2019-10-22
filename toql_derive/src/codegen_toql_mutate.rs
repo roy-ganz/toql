@@ -373,8 +373,8 @@ impl<'a> GeneratedToqlMutate<'a> {
                                     quote!(
                                         if entity. #field_ident .is_some() 
                                         &&  outdated. #field_ident .as_ref() 
-                                        .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  
-                                        != entity .  #field_ident .as_ref() .unwrap()
+                                        .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  . #other_field
+                                        != entity .  #field_ident . #other_field .as_ref() .unwrap() 
                                         {
                                             
                                             update_stmt.push_str( &format!(#set_statement, alias));
@@ -388,7 +388,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                                     },
                                 1 if field.preselect => { // #[toql(preselect)] Option<T>
                                     quote!(
-                                            if outdated. #field_ident .as_ref() != entity. #field_ident.as_ref() {
+                                            if outdated. #field_ident. #other_field  .as_ref() != entity. #field_ident  . #other_field .as_ref(){
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
                                                     .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
@@ -402,7 +402,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                                              &&  outdated. #field_ident .as_ref()
                                              .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  
                                              .  #other_field
-                                             != entity .  #field_ident .as_ref().unwrap() .  #other_field
+                                             != entity .  #field_ident .  #other_field .as_ref().unwrap() 
                                             {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
@@ -412,7 +412,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                                 },
                                 _ => { // T
                                     quote!(
-                                         if outdated. #field_ident .as_ref() != entity. #field_ident.as_ref() {
+                                         if outdated. #field_ident  . #other_field.as_ref()  != entity. #field_ident  .#other_field.as_ref() {
                                             update_stmt.push_str( &format!(#set_statement, alias));
                                             params.push(entity. #field_ident . #other_field .to_string());
                                          }

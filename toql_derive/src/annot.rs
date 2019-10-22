@@ -33,6 +33,8 @@ pub struct JoinArg {
     pub key_field: Option<String>,
       #[darling(default)]
     pub key_type: Option<String>,
+    #[darling(default)]
+    pub key_type_optional: bool,
 }
 
 // Attribute on struct field
