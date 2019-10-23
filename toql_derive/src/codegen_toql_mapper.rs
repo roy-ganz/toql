@@ -51,7 +51,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         };
 
         // Joined field
-        if !field.join.is_empty() {
+        if field.join.is_some() {
             // let renamed_join_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
 
             let joined_struct_ident = field.first_non_generic_type();
@@ -61,18 +61,26 @@ impl<'a> GeneratedToqlMapper<'a> {
             let join_table = &field.table.as_ref().unwrap_or(&renamed_join_table);
             let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias);
 
-            // Map field with none condition
-            // if this condition is true, the following joined entity is NONE
 
+            // default self columns
+            let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_ident), &toql.columns)];
+            let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
+                field.join.as_ref().unwrap().this_columns.as_ref() }
+                else {
+                    &default_self_columns
+                };
+           // let self_columns : &Vec<String>= field.join.as_ref().unwrap().this_columns.as_ref();
+        
+
+            // Map field with None condition
+            // If this condition is true, the following joined entity is NONE
             if field.number_of_options() > 0 {
-                let none_condition: String = field
-                    .join
+                let none_condition: String = self_columns
                     .iter()
-                    .map(|j| {
-                        let auto_self_key =
-                            crate::util::rename(&format!("{}_id", &field_ident), &toql.columns);
-                        let this_key = j.this_column.as_ref().unwrap_or(&auto_self_key);
-                        format!("({{alias}}{{sep}}{} IS NOT NULL)", this_key)
+                    .map(|self_column| {
+                      
+                        //let this_key = j.this_column.as_ref().unwrap_or(&auto_self_key);
+                        format!("({{alias}}{{sep}}{} IS NOT NULL)", self_column)
                     })
                     .collect::<Vec<String>>()
                     .join(" AND ");
@@ -89,30 +97,39 @@ impl<'a> GeneratedToqlMapper<'a> {
                     ));
             }
 
-            // Map join field
-            let join_condition: Vec<String> = field
-                .join
-                .iter()
-                .map(|j| {
-                    let auto_self_key =
+            // Map joined entity
+
+              let default_other_columns= vec![crate::util::rename("id", &toql.columns)];
+            let other_columns =  if !field.join.as_ref().unwrap().other_columns.is_empty() { 
+                field.join.as_ref().unwrap().other_columns.as_ref() }
+                else {
+                    &default_other_columns
+                };
+             
+             let mut join_condition: Vec<String> = self_columns
+                .iter().zip(other_columns)
+                .map(|(self_column, other_column)| {
+                   /*  let auto_self_key =
                         crate::util::rename(&format!("{}_id", &field_ident), &toql.columns);
-                    let this_key = j.this_column.as_ref().unwrap_or(&auto_self_key);
-                      let default_other_column = crate::util::rename("id", &toql.columns);
+                    let this_key = this_column.as_ref().unwrap_or(&auto_self_key); */
+                   
                 
-                 
-                    let other_key = &j.other_column.as_ref().unwrap_or(&default_other_column); //crate::util::rename(&j.other, &toql.columns);
-                    let on = if let Some(predicate) = &j.on_sql {
-                        format!(" AND ({})", predicate)
-                    } else {
-                        String::from("")
-                    };
+                   // let other_key = "TODO".to_string();
+                    //let other_key = &j.other_column.as_ref().unwrap_or(&default_other_column); //crate::util::rename(&j.other, &toql.columns);
+                    
                     format!(
-                        "{{alias}}.{} = {}.{}{}",
-                        this_key, join_alias, other_key, on
+                        "{{alias}}.{} = {}.{}",
+                        self_column, join_alias, other_column
                     )
                 })
                 .collect();
+                
+                // Add additional join predicate
+                if let Some(predicate) = &field.join.as_ref().unwrap().on_sql {
+                        join_condition.push(format!("({})", predicate.replace("..",&format!("{}.",join_alias))));
+                }
 
+ 
             let format_string = format!(
                 "{}JOIN {} {} ON ({})",
                 if field.number_of_options() == 2

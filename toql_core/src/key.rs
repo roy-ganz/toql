@@ -13,9 +13,12 @@ pub trait Key {
    type Key : Eq + std::hash::Hash;
 
    /// Return value of the key for a given entity.
-   fn get(&self) -> crate::error::Result<Self::Key>;
+   fn get_key(&self) -> crate::error::Result<Self::Key>;
 
    /// Sets the key on a given entity. 
-   fn set(&mut self, key: Self::Key) -> crate::error::Result<()>;
+   fn set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
+
+   // Return key columns for a given entity.
+   fn columns() -> Vec<String>;
  
 }

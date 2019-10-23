@@ -23,28 +23,25 @@ pub struct MergeArg {
 
 #[derive(Debug, FromMeta)]
 pub struct JoinArg {
-    #[darling(rename = "self_column", default)]
-    pub this_column: Option<String>,
-    #[darling(default)]
-    pub other_column: Option<String>,
+    #[darling(rename = "self_column", multiple)]
+    pub this_columns: Vec<String>,
+
+     #[darling(rename = "other_column", multiple)]
+    pub other_columns: Vec<String>,
+
     #[darling(default)]
     pub on_sql: Option<String>,
-      #[darling(default)]
-    pub key_field: Option<String>,
-      #[darling(default)]
-    pub key_type: Option<String>,
-    #[darling(default)]
-    pub key_type_optional: bool,
+
 }
 
 // Attribute on struct field
 #[derive(Debug, FromField)]
-#[darling(attributes(toql))]
+#[darling(attributes(toql) )]
 pub struct ToqlField {
     pub ident: Option<syn::Ident>,
     pub ty: syn::Type,
-    #[darling(default, multiple)]
-    pub join: Vec<JoinArg>,
+    #[darling(default)]
+    pub join: Option<JoinArg>,
     #[darling(default)]
     pub column: Option<String>,
     #[darling(default)]
@@ -76,6 +73,8 @@ pub struct ToqlField {
 }
 
 impl ToqlField {
+
+
     // IMPROVE: Function is used, but somehow considered unused
     #[allow(dead_code)]
     pub fn _first_type<'a>(&'a self) -> &'a Ident {
@@ -205,6 +204,9 @@ pub struct Toql {
     pub data: darling::ast::Data<(), ToqlField>,
 }
 
+
+ 
+
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         //println!("DARLING = {:?}", self);
@@ -237,13 +239,15 @@ impl quote::ToTokens for Toql {
         let query_enabled = !skip_query;
         let query_builder_enabled = !skip_query_builder;
 
-        let fields = data
+        let mut fields = data
             .as_ref()
             .take_struct()
             .expect("Should never be enum")
             .fields;
 
         for field in fields {
+
+
             // Generate query functionality
             if query_enabled {
                 if field.skip {

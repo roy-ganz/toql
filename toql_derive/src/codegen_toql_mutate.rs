@@ -65,8 +65,9 @@ impl<'a> GeneratedToqlMutate<'a> {
         let field_name = field.ident.as_ref().unwrap().to_string();
 
         // Regular field
-        if field.join.is_empty() {
+        if field.join.is_none() {
             let field_ident = field.ident.as_ref().unwrap();
+            
             let sql_column = crate::util::rename(&field_ident.to_string(), &toql.columns);
             self.insert_columns.push(sql_column);
            
@@ -106,16 +107,28 @@ impl<'a> GeneratedToqlMutate<'a> {
         // Because we don't know whether the struct field is Option<>
         // We convert in any case to Option and unwrap
 
-        else {
+        else if field.join.is_some(){
             let field_ident = field.ident.as_ref().unwrap();
-            for j in &field.join {
-                let auto_self_key = crate::util::rename(&format!("{}_id", field_name), &toql.columns);
+            let field_type = field.first_non_generic_type().unwrap();
+            let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_name), &toql.columns)];
+            let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
+                field.join.as_ref().unwrap().this_columns.as_ref() }
+                else {
+                    &default_self_columns
+                };
+
+            
+            for (i, self_column) in self_columns.iter().enumerate() {
+            /*     let auto_self_key = crate::util::rename(&format!("{}_id", field_name), &toql.columns);
                 let self_column = j.this_column.as_ref().unwrap_or(&auto_self_key);
                 self.insert_columns.push(self_column.to_owned());
                 let default_other_column = crate::util::rename("id", &toql.columns);
                 let other_field =
-                    Ident::new(&j.other_column.as_ref().unwrap_or(&default_other_column), Span::call_site());
+                    Ident::new(&j.other_column.as_ref().unwrap_or(&default_other_column), Span::call_site()); */
+                
+                self.insert_columns.push(self_column.to_owned());
 
+                let column_index= syn::Index::from(i);
                 self.insert_params_code.push(
                       match field.number_of_options()  {
                                 2 => { // Option<Option<T>>
@@ -123,28 +136,39 @@ impl<'a> GeneratedToqlMutate<'a> {
                                                 params.push(entity
                                                     . #field_ident .as_ref()
                                                     .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
-                                                    .as_ref()
-                                                    . map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                                   .as_ref()
+                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                        Ok(<#field_type as toql::key::Key>::get_key(e)?
+                                                            .#column_index
+                                                            .to_string())
+                                                    })?
+                                                );
                                         )
                                     },
                                 1 if field.preselect => { // #[toql(preselect)] Option<T>
                                 // TODO Option wrapping
                                     quote!(
                                             params.push(entity. #field_ident
-                                                .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                                .as_ref()
+                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                        Ok(<#field_type as toql::key::Key>::get_key(e)?
+                                                            .#column_index
+                                                            .to_string())
+                                                    })?
+                                            );
                                     )
                                 },
 
                                 1 if !field.preselect => { // Option<T>
                                 // TODO object tolerance on foreign field
-                                let composite_field_name = format!("{}.{}",&field_name , &other_field );
+                                //let composite_field_name = format!("{}.{}",&field_name , &other_field );
                                 quote!(
                                                 params.push(
-                                                   entity. #field_ident
-                                                    .as_ref()
+
+                                                     <#field_type as toql::key::Key>::get_key(entity. #field_ident.as_ref()
                                                     .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
-                                                    . #other_field
-                                                     .to_string());
+                                                    )?. #column_index  .to_string());
+                                                     
                                     )
                                     /* quote!(
                                                 params.push(
@@ -158,7 +182,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                                 },
                                 _ => { // T
                                     quote!(
-                                        params.push(entity. #field_ident . #other_field .to_string());
+                                        params.push(<#field_type as toql::key::Key>::get_key(&entity. #field_ident)?. #column_index  .to_string());
                                     )
                                 }
                             }
@@ -192,7 +216,7 @@ impl<'a> GeneratedToqlMutate<'a> {
 
         // Key field
         if field.key {
-            if field.join.is_empty() {
+            if field.join.is_none() {
             // Option<key> (Toql selectable)
             // Keys for insert and delete may never be null
             if field._first_type() == "Option" {
@@ -211,7 +235,48 @@ impl<'a> GeneratedToqlMutate<'a> {
             } 
             // Join used as field
             else {
-                // Quick and dirty solution
+
+
+            let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_name), &toql.columns)];
+            let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
+                field.join.as_ref().unwrap().this_columns.as_ref() }
+                else {
+                    &default_self_columns
+                };
+
+            
+            for (i, self_column) in self_columns.iter().enumerate() {
+                
+                    let key_index = syn::Index::from(i);
+                    // Keys for insert and delete may never be null
+                    // TODO match 
+                    if field.number_of_options() > 0 {
+                        self.key_params_code.push( 
+                            quote!(
+                               
+                                    params.push( toql::key::Key::get_key(
+                                        entity . #field_ident.as_ref() .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
+                                        
+                                        )?. #key_index );
+                            )
+                        );
+                                
+                        
+                    } else {
+                        self.key_params_code
+                            .push(
+                                    quote!(
+                                        params.push( toql::key::Key::get_key( &entity . #field_ident)?. #key_index .to_string().to_owned() );
+                                    )
+                                );
+                    }
+
+                    self.keys
+                        .push(self_column.to_string());
+                    } 
+
+                // TODO
+                /* // Quick and dirty solution
                  // Option<key> (Toql selectable)
 
                 for j in &field.join {
@@ -242,7 +307,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                     self.keys
                         .push(self_column.to_string());
                     } 
-                
+                 */
 
 
             }
@@ -251,7 +316,7 @@ impl<'a> GeneratedToqlMutate<'a> {
         // Field is not skipped for update
          if !field.skip_mut {
             // Regular field
-            if field.join.is_empty() && field.merge.is_empty() {
+            if field.join.is_none() && field.merge.is_empty() {
                    
                 let set_statement = format!("{{}}.{} = ?, ", &sql_column);
 
@@ -311,17 +376,28 @@ impl<'a> GeneratedToqlMutate<'a> {
                 }
             }
             // Join Field
-            else if field.merge.is_empty(){
+            else if field.join.is_some(){
 
-                for j in &field.join {
-                    let auto_self_key =
-                        crate::util::rename(&format!("{}_id", field_name), &toql.columns);
-                    let self_column = j.this_column.as_ref().unwrap_or(&auto_self_key);
-                    let default_other_column = crate::util::rename("id", &toql.columns);
-                
-                    let other_field =
-                        Ident::new(&j.other_column.as_ref().unwrap_or(&default_other_column).to_snake_case(), Span::call_site());
+                  let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_name), &toql.columns)];
+            let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
+                field.join.as_ref().unwrap().this_columns.as_ref() }
+                else {
+                    &default_self_columns
+                };
+              //  self.key_columns_code.push( quote!( columns.extend_from_slice(&<#field_type as toql::key::Key>::columns());));
+
+                let default_other_columns= vec![crate::util::rename("id", &toql.columns)];
+            let other_columns =  if !field.join.as_ref().unwrap().other_columns.is_empty() { 
+                field.join.as_ref().unwrap().other_columns.as_ref() }
+                else {
+                    &default_other_columns
+                };
+            self_columns.iter().zip(other_columns).enumerate().for_each( |(i,(self_column, other_column))| {
+
                     let set_statement = format!("{{}}.{} = ?, ", &self_column);
+                    //let other_field ="GET_KEY"; // Replace
+
+                    let join_key_index= syn::Index::from(i);
 
                     // update code
                     if !field.key {
@@ -331,11 +407,23 @@ impl<'a> GeneratedToqlMutate<'a> {
                                         quote!(
                                             if entity. #field_ident .is_some() {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
+                                                
                                                 params.push(entity. #field_ident
                                                         .as_ref()
                                                         .unwrap()
                                                         .as_ref()
-                                                        .map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                                          .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                        Ok(toql::key::Key::get_key(e)?
+                                                            .#join_key_index
+                                                            .to_string())
+                                                    })?
+                                                         /* .map_or(String::from("NULL"), |e| {
+                                                            toql::key::Key::get_key(e)
+                                                                .map(|e| e.  #join_key_index .to_string())
+                                                                .unwrap_or(String::from("NULL"))
+                                                        }) */
+                                                );
+                                                        //.map_or(String::from("NULL"), |e| toql::key::Key::get_key(e)? . #join_key_index .to_string()));
                                             }
                                         )
                                         },
@@ -343,7 +431,13 @@ impl<'a> GeneratedToqlMutate<'a> {
                                         quote!(
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
-                                                    .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                                    .as_ref().map_or::<Result<String,toql::error::ToqlError>,_>(
+                                                        Ok(String::from("NULL")),
+                                                        |e|{  Ok(toql::key::Key::get_key(e)? 
+                                                        .#join_key_index 
+                                                        .to_string())
+                                                        })?
+                                                    );
                                         )
                                     },
 
@@ -352,15 +446,15 @@ impl<'a> GeneratedToqlMutate<'a> {
                                                 if entity. #field_ident .is_some() {
                                                     update_stmt.push_str( &format!(#set_statement, alias));
                                                     params.push(
-                                                        entity. #field_ident
-                                                        .as_ref().unwrap(). #other_field .to_string());
+                                                        toql::key::Key::get_key( entity. #field_ident .as_ref().unwrap())? 
+                                                        .#join_key_index .to_string());
                                                 }
                                         )
                                     },
                                     _ => { // T
                                         quote!(
                                             update_stmt.push_str( &format!(#set_statement, alias));
-                                            params.push(entity. #field_ident . #other_field .to_string());
+                                            params.push( toql::key::Key::get_key(&entity. #field_ident)? . #join_key_index .to_string());
                                         )
                                     }
                                 }
@@ -372,9 +466,19 @@ impl<'a> GeneratedToqlMutate<'a> {
                                 2 => { // Option<Option<T>>
                                     quote!(
                                         if entity. #field_ident .is_some() 
-                                        &&  outdated. #field_ident .as_ref() 
-                                        .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  . #other_field
-                                        != entity .  #field_ident . #other_field .as_ref() .unwrap() 
+                                        && 
+                                         entity. #field_ident 
+                                                    .as_ref() .unwrap()
+                                                    .as_ref()
+                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                    })?
+                                        !=  outdated. #field_ident 
+                                        .as_ref() .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?   
+                                        .as_ref().map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                            Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                                
+                                         })?
                                         {
                                             
                                             update_stmt.push_str( &format!(#set_statement, alias));
@@ -382,16 +486,41 @@ impl<'a> GeneratedToqlMutate<'a> {
                                                     .as_ref()
                                                     .unwrap()
                                                     .as_ref()
-                                                    .map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                                     .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                        Ok(toql::key::Key::get_key(e)?
+                                                           . #join_key_index
+                                                            .to_string())
+                                                    })?
+                                                     /* .map_or(String::from("NULL"), |e| {
+                                                            toql::key::Key::get_key(e)
+                                                                .map(|e| e.  #join_key_index .to_string())
+                                                                .unwrap_or(String::from("NULL"))
+                                                        }) */
+                                            );
+                                                    //.map_or(String::from("NULL"), |e| toql::key::Key::get_key(e)? . #join_key_index .to_string()));
                                         }
                                     )
                                     },
                                 1 if field.preselect => { // #[toql(preselect)] Option<T>
                                     quote!(
-                                            if outdated. #field_ident. #other_field  .as_ref() != entity. #field_ident  . #other_field .as_ref(){
+                                            if    entity. #field_ident 
+                                                    .as_ref()
+                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                    })?
+                                                !=  outdated. #field_ident 
+                                                    .as_ref()
+                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
+                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                })?
+                                            {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
                                                 params.push(entity. #field_ident
-                                                    .as_ref(). map_or(String::from("NULL"), |e| e. #other_field .to_string()));
+                                                    .as_ref(). map_or::<Result<String,toql::error::ToqlError>,_>(
+                                                        Ok(String::from("NULL")), 
+                                                        |e|  { Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                        })?
+                                                );
                                             }
                                     )
                                 },
@@ -399,28 +528,30 @@ impl<'a> GeneratedToqlMutate<'a> {
                                 1 if !field.preselect => { // Option<T>
                                     quote!(
                                             if entity. #field_ident .is_some() 
-                                             &&  outdated. #field_ident .as_ref()
-                                             .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?  
-                                             .  #other_field
-                                             != entity .  #field_ident .  #other_field .as_ref().unwrap() 
+                                            && toql::key::Key::get_key(entity .  #field_ident.as_ref() .unwrap())?  
+                                             !=  toql::key::Key::get_key(outdated .  #field_ident.as_ref()
+                                             .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?   
+                                              )? 
+                                               
                                             {
                                                 update_stmt.push_str( &format!(#set_statement, alias));
-                                                params.push(entity. #field_ident
-                                                    .as_ref().unwrap(). #other_field .to_string());
+                                                params.push(toql::key::Key::get_key(entity. #field_ident
+                                                    .as_ref().unwrap())? . #join_key_index.to_string());
                                             }
                                     )
                                 },
                                 _ => { // T
+                               
                                     quote!(
-                                         if outdated. #field_ident  . #other_field.as_ref()  != entity. #field_ident  .#other_field.as_ref() {
+                                         if toql::key::Key::get_key(&outdated. #field_ident)? !=  toql::key::Key::get_key(&entity. #field_ident)? {
                                             update_stmt.push_str( &format!(#set_statement, alias));
-                                            params.push(entity. #field_ident . #other_field .to_string());
+                                            params.push( toql::key::Key::get_key(&entity. #field_ident)?. #join_key_index );
                                          }
                                     )
                                 }
                             }
                     );
-                }
+                 });
             } 
             // merge fields
             else {

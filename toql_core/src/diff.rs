@@ -24,14 +24,14 @@ pub fn collections_delta<'a, I, T>(collections: I)
             let mut previous_index : HashMap<T::Key, &T> = HashMap::new();
             for previous in previous_coll {
                 // Build up index
-                let k = crate::key::Key::get(previous)?;
+                let k = crate::key::Key::get_key(previous)?;
                 previous_index.insert(k, &previous);
             }
 
             for current in current_coll {
                 
-                if previous_index.contains_key( &crate::key::Key::get(current)?) {
-                    diff.push((previous_index.remove( &crate::key::Key::get(current)?).unwrap(), &current));
+                if previous_index.contains_key( &crate::key::Key::get_key(current)?) {
+                    diff.push((previous_index.remove( &crate::key::Key::get_key(current)?).unwrap(), &current));
                 } else {
                     insert.push(&current);
                 }
