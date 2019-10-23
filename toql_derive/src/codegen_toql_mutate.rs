@@ -275,39 +275,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                         .push(self_column.to_string());
                     } 
 
-                // TODO
-                /* // Quick and dirty solution
-                 // Option<key> (Toql selectable)
-
-                for j in &field.join {
-
-                    let auto_key_field= String::from("id");
-                    let key_field = Ident::new(j.key_field.as_ref().unwrap_or(&auto_key_field), Span::call_site()); // TODO compiler error
-
-                    // Keys for insert and delete may never be null
-                    if field._first_type() == "Option" {
-                        self.key_params_code.push( quote!(
-                            params.push(entity. #field_ident. as_ref()
-                            .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?. #key_field. to_string().to_owned() );
-                        ));
-                    } else {
-                        self.key_params_code
-                            .push(quote!(params.push(entity. #field_ident. #key_field. to_string().to_owned()); ));
-                    }
-
-                    // Add field to keys, struct may contain multiple keys (composite key) 
-
-                    // auto 
-                   let auto_self_column = crate::util::rename(&format!("{}_id", field_name), &toql.columns);
-                 let self_column = j.this_column.as_ref().unwrap_or(&auto_self_column);
-
-                    /* self.keys
-                        .push(j.this_column.as_ref().unwrap_or().to_string());
-                    } */ 
-                    self.keys
-                        .push(self_column.to_string());
-                    } 
-                 */
+               
 
 
             }
@@ -689,29 +657,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
                             Ok(Some((insert_stmt, params)))
                     }
 
-                   /*  fn update_one_sql(  entity: & #struct_ident)  -> toql::error::Result<(String, Vec<String>)>
-                    {
-                        let alias= "t";
-                        let mut params :Vec<String> = Vec::new();
-                        let mut update_stmt = format!( #update_one_statement, alias = alias);
-
-                        #(#update_set_code)*
-
-                        update_stmt.pop(); // Remove trailing ", "
-                        update_stmt.pop();
-
-                        update_stmt.push_str( &format!(#update_where_statement, alias = alias));
-
-                        // If no data to update then skip SQL update and return 1 row done
-                         if params.is_empty() {
-                            return Ok((String::from("-- Nothing to update"), params));
-                        }
-
-                        #(#key_params_code)*
-
-                        Ok((update_stmt, params))
-
-                    } */
+                  
                     fn update_many_sql<I>(entities:I) -> toql::error::Result<Option<(String, Vec<String>)>>
                     where I: IntoIterator<Item=&'a #struct_ident> + 'a + Clone
                     {

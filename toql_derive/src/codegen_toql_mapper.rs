@@ -174,7 +174,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         else if field.merge.is_empty() {
             let (base, _generic, _gegeneric) = field.get_types();
 
-            if base == "Vec"  {
+            if base == "Vec" || base =="HashSet"  {
                 let error = format!("Missing attribute `merge`. Add `#[toql( merge()]`");
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
@@ -186,13 +186,12 @@ impl<'a> GeneratedToqlMapper<'a> {
                 || base == "LinkedList"
                 || base == "HashMap"
                 || base == "BTreeMap"
-                || base == "HashSet"
                 || base == "BTreeSet"
             {
                 // TODO Get types as ident to highlight type and not variable name
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
-                    compile_error!("Invalid collection type. Only `std::vec::Vec` is supported.");
+                    compile_error!("Invalid collection type. Only `std::vec::Vec` and  `std::collections::HashSet` are supported.");
                 });
                 return Err(());
             }

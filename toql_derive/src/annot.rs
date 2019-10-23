@@ -21,6 +21,12 @@ pub struct MergeArg {
     pub on_sql: Option<String>
 }
 
+pub struct Pair {
+    #[darling(rename = "self")]
+    pub this : String,
+    pub other: String
+}
+
 #[derive(Debug, FromMeta)]
 pub struct JoinArg {
     #[darling(rename = "self_column", multiple)]
@@ -28,6 +34,8 @@ pub struct JoinArg {
 
      #[darling(rename = "other_column", multiple)]
     pub other_columns: Vec<String>,
+
+    pub columns: Vec<Pair
 
     #[darling(default)]
     pub on_sql: Option<String>,
