@@ -231,8 +231,33 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
           
             // TODO rename join entity
+           // let join_statement = format!("JOIN {} {} ON ({{}} AND ({}))",sql_join_table_name, field_name,  on_condition.join(" AND "));
+           /*  self.select_joins_code.push(quote!(
+                  
+                  let join_expression = <Language as toql::key::Key>::columns().iter().zip(&[ #(#self_columns),* ]).map(|(other_column, self_column)| {
+                    format!("{} = {}.{}",sql_alias , if sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
+                    }).collect::<Vec<String>>().join(" AND ");
 
-             self.select_joins.push(format!("JOIN {} {} ON ({}) {{}}",sql_join_table_name, field_name, on_condition.join(" AND ")  ));
+                format!(#join_statement, join_expression )
+
+            )); */
+
+             self.select_joins.push(format!("JOIN {} {} ON ({{}}{{}}) {{}}",sql_join_table_name, field_name));
+
+            
+            let select_join_params_format= format!("{}.{{}} = {}.{{}}",sql_table_alias, join_alias);
+            self.select_joins_params.push( quote!(
+                {
+                    <Language as toql::key::Key>::columns().iter().zip(&[ #(#self_columns),* ]).map(|(other_column, self_column)| {
+                    format!(#select_join_params_format,  self_column, other_column)
+                    }).collect::<Vec<String>>().join(" AND ")
+                }
+            ));
+            self.select_joins_params.push( if field.join.as_ref().unwrap().on_sql.is_some() {
+                    let on_sql= format!(" AND ({})", &field.join.as_ref().unwrap().on_sql.as_ref().unwrap().replace("..",&format!("{}.",join_alias)));
+                        quote!( #on_sql)
+                } else {
+                    quote!()});
              self.select_joins_params.push( quote!(#field_type :: joins_sql()));
         } 
         // Merge field
@@ -342,7 +367,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                 } else {
                     quote!(format!(#select_columns, #(#select_columns_params),*))
                 };
-            let joins_sql_code = if select_columns_params.is_empty() {
+            let joins_sql_code = if select_joins_params.is_empty() {
                 quote!( String::from(#select_joins)) 
                 } else {
                     quote!(format!(#select_joins, #(#select_joins_params),*))
@@ -409,6 +434,13 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                         #(#key_columns_code)*
                         columns
+                    }
+                }
+
+                // Impl to supprt HashSets
+                impl std::hash::Hash for #struct_ident {
+                    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                        <#struct_ident as toql::key::Key>::get_key(self).ok().hash(state);
                     }
                 }
                 

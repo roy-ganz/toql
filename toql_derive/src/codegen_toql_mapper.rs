@@ -106,6 +106,11 @@ impl<'a> GeneratedToqlMapper<'a> {
                     &default_other_columns
                 };
              
+            // TODO Add dynamic column resolution
+            /* let join = <Language as toql::key::Key>::columns().iter().zip(&["code"]).map(|(other_column, self_column)| {
+                    String::from("{alias}.language_code = language.code")
+                }); */
+
              let mut join_condition: Vec<String> = self_columns
                 .iter().zip(other_columns)
                 .map(|(self_column, other_column)| {
@@ -123,15 +128,26 @@ impl<'a> GeneratedToqlMapper<'a> {
                     )
                 })
                 .collect();
-                
-                // Add additional join predicate
-                if let Some(predicate) = &field.join.as_ref().unwrap().on_sql {
-                        join_condition.push(format!("({})", predicate.replace("..",&format!("{}.",join_alias))));
-                }
 
+              // Create dynamic join condition, that takes columns for Key trait
+              // TODO integrate 
+              let join_expression_builder = quote!(
+                  let join_expression = <Language as toql::key::Key>::columns().iter().zip(&[ #(#self_columns),* ]).map(|(other_column, self_column)| {
+                    format!("{}{}{} = {}.{}",sql_alias , if sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
+                    }).collect::<Vec<String>>().join(" AND ")
+                );
+
+                // Add additional join predicate
+                /* if let Some(predicate) = &field.join.as_ref().unwrap().on_sql {
+                        join_condition.push(format!("({})", predicate.replace("..",&format!("{}.",join_alias))));
+                } */
+            let on_sql = if field.join.as_ref().unwrap().on_sql.is_some() {
+                        format!("AND ({})", &field.join.as_ref().unwrap().on_sql.as_ref().unwrap().replace("..",&format!("{}.",join_alias)))
+                } else {
+                    String::from("")};
  
             let format_string = format!(
-                "{}JOIN {} {} ON ({})",
+                "{}JOIN {} {} ON ({{}}{})",
                 if field.number_of_options() == 2
                     || (field.number_of_options() == 1 && field.preselect == true)
                 {
@@ -141,13 +157,15 @@ impl<'a> GeneratedToqlMapper<'a> {
                 },
                 join_table,
                 join_alias,
-                join_condition.join(" AND ")
+                on_sql
             );
 
-            let join_clause = quote!(&format!( #format_string, alias = sql_alias));
+
+            let join_clause = quote!(&format!( #format_string, join_expression));
             let join_selected = field.number_of_options() == 0
                 || (field.number_of_options() == 1 && field.preselect == true);
             self.field_mappings.push(quote! {
+                #join_expression_builder;
                 mapper.map_join::<#joined_struct_ident>(  #toql_field, #join_alias);
                 mapper.join( #toql_field, #join_clause, #join_selected );
             });
@@ -156,7 +174,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         else if field.merge.is_empty() {
             let (base, _generic, _gegeneric) = field.get_types();
 
-            if base == "Vec" {
+            if base == "Vec"  {
                 let error = format!("Missing attribute `merge`. Add `#[toql( merge()]`");
                 self.field_mappings.push(quote_spanned! {
                     field_ident.span() =>
