@@ -22,25 +22,27 @@ pub struct Pair {
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-    #[darling(rename = "self_field", default)]
+    /*  #[darling(rename = "self_field", default)]
     pub this_field: Option<String>, 
     #[darling(default)]
-    pub other_field: Option<String>,
-    #[darling(default)]
-    pub on_sql: Option<String>,
+    pub other_field: Option<String>,  */
+    
 
     #[darling(default, multiple)]
-    pub fields: Vec<Pair>
+    pub fields: Vec<Pair>,
+
+    #[darling(default)]
+    pub on_sql: Option<String>
 }
 
 
 #[derive(Debug, FromMeta)]
 pub struct JoinArg {
-     #[darling(rename = "self_column", multiple)]
+    /*   #[darling(rename = "self_column", multiple)]
     pub this_columns: Vec<String>,
 
      #[darling(rename = "other_column", multiple)]
-    pub other_columns: Vec<String>, 
+    pub other_columns: Vec<String>,  */
 
     #[darling(default, multiple)]
     pub columns: Vec<Pair>,

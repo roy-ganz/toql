@@ -196,7 +196,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     
 
                     self.key_columns_code.push( quote!( columns.extend_from_slice(&<#field_type as toql::key::Key>::columns());));
-                    self.key_params_code.push( quote!( params.extend_from_slice(&<#field_type as toql::key::Key>::params(self. #field_ident));));
+                    self.key_params_code.push( quote!( params.extend_from_slice(&<#field_type as toql::key::Key>::params(self. #field_ident)?);));
 
                     //let join_key_index= syn::Index::from(i); 
                     let toql_format_template = format!("{}_{{}}",field_name.to_mixed_case());
@@ -241,19 +241,22 @@ impl<'a> GeneratedMysqlSelect<'a> {
                             ));
                             
                             let default_column_template = format!("{}_{{}}", join_alias);
-                            let column_translation :String = field.join.as_ref().unwrap().columns.iter()
-                                .map(|column| { format!("{} => {},", column.this, column.other)  })
-                                .collect::<Vec<String>>()
-                                .join("");
+                            let column_translation = field.join.as_ref().unwrap().columns.iter()
+                                .map(|column| { 
+                                    let tc = &column.this; let oc = &column.other;
+                                    quote!(oc => tc,)  })
+                                .collect::<Vec<_>>();
+                                
 
                             self.select_keys.push(
                                 quote!( {
                                         
                                     #field_type as toql::key::Key>::columns().as_ref()
                                     .map(|other_column|{
+                                        let default_self_column= format!(#default_column_template, self_column);
                                         let self_column = match other_column.as_str(){
-                                                #column_translation
-                                                _ => format!(#default_column_template, self_column)
+                                                #(#column_translation)*
+                                                _ => &default_elf_column
                                         };
                                         format!("{}.{} = ?", sql_table_alias,self_column );
                                     }).collect::<Vec<String>>().join(" AND ");
@@ -575,11 +578,11 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         #(#key_columns_code)*
                         columns
                     }
-                    fn params(&self) ->Vec<String> {
+                    fn params(&self) ->toql::error::Result<Vec<String>> {
                          let mut params: Vec<String>= Vec::new();
 
                         #(#key_params_code)* 
-                        params
+                        Ok(params)
                     }
                 }
 
