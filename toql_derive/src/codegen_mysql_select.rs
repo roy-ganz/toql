@@ -19,7 +19,7 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
     select_joins: Vec<String>,
     select_joins_params: Vec<proc_macro2::TokenStream>,
 
-    select_keys: Vec<String>,
+    select_keys: Vec<proc_macro2::TokenStream>,
     
     select_key_types: Vec<proc_macro2::TokenStream>,
     select_key_fields: Vec<proc_macro2::TokenStream>,
@@ -30,6 +30,8 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
 
     merge_code: Vec<proc_macro2::TokenStream>,
     key_columns_code: Vec<proc_macro2::TokenStream>,
+    key_params_code: Vec<proc_macro2::TokenStream>,
+    
 }
 
 
@@ -65,7 +67,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
             
 
             merge_code: Vec::new(),
-            key_columns_code: Vec::new()
+            key_columns_code: Vec::new(),
+            key_params_code: Vec::new()
+         
         }
     }
 
@@ -86,26 +90,37 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
                 
                  self.key_columns_code.push( quote!( columns.push( String::from(#sql_column)); ));
+                
+
                 let key_type = field.first_non_generic_type();
                 self.select_key_types.push(quote!( #key_type));
                
                if field.number_of_options() > 0 {
                    let value= quote!(self. #field_ident .as_ref() .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))? .to_owned());
-                    self.select_key_fields.push( value);
+                   self.select_key_fields.push( value);
+
+                   self.key_params_code.push( quote!(
+                       params.push(self. #field_ident .as_ref() 
+                        .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))? .to_owned().to_string()); 
+                        ));
+                    
                 
                 let index =  syn::Index::from(self.select_key_types.len()-1);
                 self.key_setters.push( quote!(self. #field_ident = Some( key . #index  ); ))
                } else {
 
                 self.select_key_fields.push( quote!(self. #field_ident .to_owned()));
+                 self.key_params_code.push( quote!(params.push(self. #field_ident .to_owned().to_string());
+                 ));
+
 
                  let index =  syn::Index::from(self.select_key_types.len()-1);
                  
                  self.key_setters.push( quote!(self. #field_ident = key . #index;) )
                }
                
-                
-                self.select_keys.push(format!("{}.{} = ?",sql_table_alias, sql_column));
+                let key_expr = format!("{}.{} = ?",sql_table_alias, sql_column);
+                self.select_keys.push(quote!(#key_expr));
 
               let toql_field = field_name.to_mixed_case();
               let key_index= syn::Index::from(self.select_key_fields.len() - 1);
@@ -149,14 +164,16 @@ impl<'a> GeneratedMysqlSelect<'a> {
             let sql_join_table_name = crate::util::rename(&field_type.to_string(), &toql.tables);
             let default_join_alias = sql_join_table_name.to_snake_case();
             
+
+            
           
             let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias);
 
-            let mut on_condition: Vec<String>= Vec::new();
+          //  let mut on_condition: Vec<String>= Vec::new();
 
 
-            let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_name), &toql.columns)];
-            let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
+           // let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_name), &toql.columns)];
+         /*    let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
                 field.join.as_ref().unwrap().this_columns.as_ref() }
                 else {
                     &default_self_columns
@@ -168,8 +185,110 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 field.join.as_ref().unwrap().other_columns.as_ref() }
                 else {
                     &default_other_columns
-                };
-            self_columns.iter().zip(other_columns).enumerate().for_each( |(i, (self_column, other_column))| {
+                }; */
+
+                // Toql key predicate
+                //let toql_field = format!("{}_{}",field_name.to_mixed_case(), other_column.to_string().to_mixed_case());
+
+                 if field.key == true {
+                    self.select_key_types.push(quote!( <#field_type as toql::key::Key>::Key));
+                    let key_index= syn::Index::from(self.select_key_types.len() -1); 
+                    
+
+                    self.key_columns_code.push( quote!( columns.extend_from_slice(&<#field_type as toql::key::Key>::columns());));
+                    self.key_params_code.push( quote!( params.extend_from_slice(&<#field_type as toql::key::Key>::params(self. #field_ident));));
+
+                    //let join_key_index= syn::Index::from(i); 
+                    let toql_format_template = format!("{}_{{}}",field_name.to_mixed_case());
+                    self.key_predicates.push(  
+                        quote!( 
+                            .and(
+                                {
+                                    let q = toql::query::Query::new();
+                                    for (other_column, param) in < #field_type as toql::key::Key>:: columns().iter().zip(< #field_type as toql::key::Key>:: params())
+                                    {
+                                        let toql_field =  format!(#toql_format_template, other_column.to_owned().to_mixed_case());
+                                        q.and(toql::query::Field::from(toql_field).eq ( param.to_owned()))
+                                    }
+                                    q        
+                                }
+                            )
+                        )   
+                    );
+                    // Select key predicate
+                    if field.number_of_options() > 0 {
+                            self.select_key_fields.push( quote!(
+                                < #field_type as toql::key::Key>::get_key( 
+                                    self. #field_ident .as_ref()
+                                        .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))?
+                                    )?
+                            ));
+
+                            
+                               
+                                self.key_setters.push( quote!(
+                                        < #field_type as toql::key::Key>::set_key(self. #field_ident .as_mut()
+                                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(# field_name)))? , key . #key_index );
+                            ));
+                        
+                        } else {
+                            self.select_key_fields.push( quote!(
+                                < #field_type as toql::key::Key>::get_key(  &self. #field_ident )?
+                            ));
+
+                            self.key_setters.push( quote!(
+                                    < #field_type as toql::key::Key>::set_key(&mut self. #field_ident,key . #key_index);
+                            ));
+                            
+                            let default_column_template = format!("{}_{{}}", join_alias);
+                            let column_translation :String = field.join.as_ref().unwrap().columns.iter()
+                                .map(|column| { format!("{} => {},", column.this, column.other)  })
+                                .collect::<Vec<String>>()
+                                .join("");
+
+                            self.select_keys.push(
+                                quote!( {
+                                        
+                                    #field_type as toql::key::Key>::columns().as_ref()
+                                    .map(|other_column|{
+                                        let self_column = match other_column.as_str(){
+                                                #column_translation
+                                                _ => format!(#default_column_template, self_column)
+                                        };
+                                        format!("{}.{} = ?", sql_table_alias,self_column );
+                                    }).collect::<Vec<String>>().join(" AND ");
+                                }
+                                ));
+                            self.select_keys_params.push(  quote! {
+                                <#field_type as toql::key::Key>::push_values(&params);
+                                });
+                        
+                        }
+            }
+
+                   /*  let default_column_format = format!("{}_{{}}", field_ident);
+                    let match_translation :String = field.join.as_ref().unwrap().columns.iter()
+                        .map(|column| { format!("{} => {},", column.this, column.other)  })
+                        .collect::<Vec<String>>()
+                        .join("");
+
+                   on_condition.push(
+                       quote!(
+                            #field_type as toql::key::Key>::columns().as_ref().iter()
+                            .map(|other_column| {
+                                let default_self_column = format!(#default_column_format, other_column);
+                                let self_column = match other_column {
+                                    #match_translation
+                                    _ => default_self_column 
+                                }
+                                format!("{}.{} = {}.{}",sql_table_alias, self_column, join_alias, other_column )
+                            }).collect::<Vec<String>>().join(" AND "))
+                       )
+                    ); */
+        
+
+                
+            /* self_columns.iter().zip(other_columns).enumerate().for_each( |(i, (self_column, other_column))| {
 
                 if field.key == true {
                  
@@ -179,12 +298,12 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     self.select_key_types.push(quote!( <#field_type as toql::key::Key>::Key));
                   
 
-                       let toql_field = format!("{}_{}",field_name.to_mixed_case(), other_column.to_string().to_mixed_case());
+                       /* let toql_field = format!("{}_{}",field_name.to_mixed_case(), other_column.to_string().to_mixed_case());
                        let key_index= syn::Index::from(self.select_key_types.len() -1); 
                        let join_key_index= syn::Index::from(i); 
                         self.key_predicates.push(  quote! {
                         .and(toql::query::Field::from(#toql_field).eq ((key . #key_index) .#join_key_index ))
-                        });
+                        }); */
 
                     if field.number_of_options() > 0 {
                         self.select_key_fields.push( quote!(
@@ -219,15 +338,15 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
                    
                              
-             } 
+             }  */
 
 
 
-                on_condition.push(format!("{}.{} = {}.{}",sql_table_alias, self_column, join_alias, other_column ));
+               // on_condition.push(format!("{}.{} = {}.{}",sql_table_alias, self_column, join_alias, other_column )); on_condition.push(format!("{}.{} = {}.{}",sql_table_alias, self_column, join_alias, other_column ));
 
                 // TODO custom on clause
-            }); 
-
+    //        }); 
+    
 
           
             // TODO rename join entity
@@ -246,10 +365,28 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
             
             let select_join_params_format= format!("{}.{{}} = {}.{{}}",sql_table_alias, join_alias);
+             let default_column_format = format!("{}_{{}}", field_ident);
+              let match_translation  = field.join.as_ref().unwrap().columns.iter()
+                        .map(|column| { 
+                            let tc = &column.this; let oc = &column.other;
+                            quote!(#oc => #tc, )
+                            })
+                        .collect::<Vec<_>>();
             self.select_joins_params.push( quote!(
                 {
-                    <Language as toql::key::Key>::columns().iter().zip(&[ #(#self_columns),* ]).map(|(other_column, self_column)| {
-                    format!(#select_join_params_format,  self_column, other_column)
+                    
+             
+                  <Language as toql::key::Key>::columns().iter()
+                  
+                    .map(|other_column| {
+                        let default_column= format!(#default_column_format, other_column);
+                        let self_column= match other_column.as_str() {
+                            #(#match_translation)*
+                            _ => &default_column
+                        };
+
+                    //format!("{}{}{} = {}.{}",sql_alias , if sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
+                    format!(#select_join_params_format, self_column, other_column)
                     }).collect::<Vec<String>>().join(" AND ")
                 }
             ));
@@ -345,17 +482,18 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
             let select_statement= format!("SELECT {{}} FROM {} {} {{}}{{}}",
                 sql_table_name,  sql_table_alias);
 
-            let select_stmt= format!("SELECT {{}} FROM {} {} {{}}WHERE {}",
-                sql_table_name,  sql_table_alias, self.select_keys.join(" AND "));
+            let select_stmt= format!("SELECT {{}} FROM {} {} {{}}WHERE {{}}",
+                sql_table_name,  sql_table_alias);
             let select_one_stmt = format!("{} LIMIT 0,2", select_stmt);
 
                let select_dependend_stmt= format!("SELECT {{}} FROM {} {} {{}}{{}}",
                 sql_table_name,  sql_table_alias);
 
             let merge_code = &self.merge_code;
-            let merge_key_predicate = self.select_keys.join(" AND ");
+            //let merge_key_predicate = self.select_keys.join(" AND ");
           
 
+        let select_keys = &self.select_keys;
         let select_keys_params = &self.select_keys_params; /* Vec<proc_macro2::TokenStream> = self.select_key_types.iter().enumerate().map(|x| { 
                                     let i = x.0;  
                                     let is = syn::Index::from(i);
@@ -378,6 +516,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
             let key_getter =  quote!( #(#select_key_fields  ),* );
             
+           
            
 /* 
            let key_setters = if  key_setters_fragments.len() == 1 {
@@ -412,7 +551,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                 let vis= self.vis;
 
                 let struct_key_ident = Ident::new(&format!("{}Key", &struct_ident ), Span::call_site());
-                let key_columns_code= &self.key_columns_code;
+                let key_columns_code = &self.key_columns_code;
+                let key_params_code = &self.key_params_code; 
 
             quote! {
 
@@ -434,6 +574,12 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                         #(#key_columns_code)*
                         columns
+                    }
+                    fn params(&self) ->Vec<String> {
+                         let mut params: Vec<String>= Vec::new();
+
+                        #(#key_params_code)* 
+                        params
                     }
                 }
 
@@ -479,7 +625,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                      -> Result<#struct_ident,  toql::error::ToqlError>
                      where C: toql::mysql::mysql::prelude::GenericConnection
                      {
-                        let select_stmt = format!( "{} WHERE {} LIMIT 0,2", Self::select_sql(None), #merge_key_predicate);
+                        let select_stmt = format!( "{} WHERE {} LIMIT 0,2", Self::select_sql(None), vec![ #(#select_keys),*].join( " AND "));
 
                         let mut params :Vec<String> = Vec::new();
                        
@@ -495,7 +641,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                             return Err( toql::error::ToqlError::NotFound);
                         }
 
-                        let key_predicate = #merge_key_predicate;
+                        let key_predicate = vec![ #(#select_keys),*].join( " AND ");
                         #(#merge_code)*
                         Ok(entities.pop().unwrap())
                      }
@@ -530,7 +676,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         let mut entities = toql::mysql::row::from_query_result::<#struct_ident>(entities_stmt)?;
                         
 
-                        let key_predicate = #merge_key_predicate;
+                        let key_predicate = vec![ #(#select_keys),*].join( " AND ");
                         #(#merge_code)*
                         
                         Ok(entities)

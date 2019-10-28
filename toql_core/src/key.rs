@@ -20,5 +20,8 @@ pub trait Key {
 
    // Return key columns for a given entity.
    fn columns() -> Vec<String>;
+
+   // Return key params for a given entity.
+   fn params(&self) -> Vec<String>;
  
 }

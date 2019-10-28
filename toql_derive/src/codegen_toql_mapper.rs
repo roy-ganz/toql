@@ -62,20 +62,20 @@ impl<'a> GeneratedToqlMapper<'a> {
             let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias);
 
 
-            // default self columns
+          /*   // default self columns
             let default_self_columns= vec![crate::util::rename(&format!("{}_id", field_ident), &toql.columns)];
             let self_columns =  if !field.join.as_ref().unwrap().this_columns.is_empty() { 
                 field.join.as_ref().unwrap().this_columns.as_ref() }
                 else {
                     &default_self_columns
-                };
+                }; */
            // let self_columns : &Vec<String>= field.join.as_ref().unwrap().this_columns.as_ref();
         
 
             // Map field with None condition
             // If this condition is true, the following joined entity is NONE
             if field.number_of_options() > 0 {
-                let none_condition: String = self_columns
+                /* let none_condition: String = self_columns
                     .iter()
                     .map(|self_column| {
                       
@@ -83,34 +83,46 @@ impl<'a> GeneratedToqlMapper<'a> {
                         format!("({{alias}}{{sep}}{} IS NOT NULL)", self_column)
                     })
                     .collect::<Vec<String>>()
-                    .join(" AND ");
+                    .join(" AND "); */
 
-                self.field_mappings.push(quote!(
-                mapper.map_field_with_options(
-                &format!("{}_", #toql_field),
-                    &format!(#none_condition,
-                        sep = if sql_alias.is_empty() { "" } else { "." },
-                        alias = sql_alias),
-                        toql::sql_mapper::MapperOptions::new().preselect(true)
-                    );
-
-                    ));
+             let default_column_format = format!("{}_{{}}", field_ident);
+             let match_translation  = field.join.as_ref().unwrap().columns.iter()
+                        .map(|column| { 
+                            let tc = &column.this; let oc = &column.other;
+                            quote!( #oc => #tc,)
+                        })
+                        .collect::<Vec<_>>();
+                        
+                self.field_mappings.push(
+                    quote!(
+                        let none_condition = <#joined_struct_ident as toql::key::Key>::columns().iter().map(|other_column|{
+                            let default_self_column = format!(#default_column_format, other_column);
+                                let self_column = match other_column.as_str() {
+                                    #(#match_translation)*
+                                    _ => &default_self_column
+                                    };
+                                format!("({}{}{} IS NOT NULL)",sql_alias, if sql_alias.is_empty() { "" } else { "." }, self_column)
+                        }).collect::<Vec<String>>().join(" AND ");   
+                        mapper.map_field_with_options(
+                        &format!("{}_", #toql_field), &none_condition,toql::sql_mapper::MapperOptions::new().preselect(true));
+                   )
+                );
             }
 
             // Map joined entity
 
-              let default_other_columns= vec![crate::util::rename("id", &toql.columns)];
+            /*   let default_other_columns= vec![crate::util::rename("id", &toql.columns)];
             let other_columns =  if !field.join.as_ref().unwrap().other_columns.is_empty() { 
                 field.join.as_ref().unwrap().other_columns.as_ref() }
                 else {
                     &default_other_columns
-                };
+                }; */
              
             // TODO Add dynamic column resolution
             /* let join = <Language as toql::key::Key>::columns().iter().zip(&["code"]).map(|(other_column, self_column)| {
                     String::from("{alias}.language_code = language.code")
                 }); */
-
+/* 
              let mut join_condition: Vec<String> = self_columns
                 .iter().zip(other_columns)
                 .map(|(self_column, other_column)| {
@@ -127,12 +139,27 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self_column, join_alias, other_column
                     )
                 })
-                .collect();
+                .collect(); */
 
               // Create dynamic join condition, that takes columns for Key trait
               // TODO integrate 
+              let default_column_format = format!("{}_{{}}", field_ident);
+               let match_translation  = field.join.as_ref().unwrap().columns.iter()
+                        .map(|column| { 
+                            let tc = &column.this; let oc = &column.other;
+                            quote!( #oc => #tc,)
+                        })
+                        .collect::<Vec<_>>();
               let join_expression_builder = quote!(
-                  let join_expression = <Language as toql::key::Key>::columns().iter().zip(&[ #(#self_columns),* ]).map(|(other_column, self_column)| {
+                  let join_expression = <#joined_struct_ident as toql::key::Key>::columns().iter()
+                    //.zip(&[ #(#self_columns),* ])
+                    .map(|other_column| {
+                        let default_self_column= format!(#default_column_format, other_column);
+                        let self_column= match other_column.as_str() {
+                            #(#match_translation)*
+                            _ => &default_self_column
+                        };
+
                     format!("{}{}{} = {}.{}",sql_alias , if sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
                     }).collect::<Vec<String>>().join(" AND ")
                 );
@@ -142,7 +169,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         join_condition.push(format!("({})", predicate.replace("..",&format!("{}.",join_alias))));
                 } */
             let on_sql = if field.join.as_ref().unwrap().on_sql.is_some() {
-                        format!("AND ({})", &field.join.as_ref().unwrap().on_sql.as_ref().unwrap().replace("..",&format!("{}.",join_alias)))
+                        format!(" AND ({})", &field.join.as_ref().unwrap().on_sql.as_ref().unwrap().replace("..",&format!("{}.",join_alias)))
                 } else {
                     String::from("")};
  
