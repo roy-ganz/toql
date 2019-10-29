@@ -49,7 +49,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
         let field_ident = &field.ident;
 
         // Regular fields
-        if field.join.is_none() && field.merge.is_empty() {
+        if field.join.is_none() && field.merge.is_none() {
             self.regular_fields += 1;
 
             let assignment = if self.mysql_deserialize_fields.is_empty() {

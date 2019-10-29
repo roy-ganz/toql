@@ -61,7 +61,7 @@ impl<'a> GeneratedToqlMutate<'a> {
 
 
     fn add_insert_field(&mut self, toql: &Toql, field: &'a ToqlField) {
-        if !field.merge.is_empty() || field.skip_mut || field.sql.is_some() {
+        if field.merge.is_some() || field.skip_mut || field.sql.is_some() {
             return;
         }
 
@@ -456,7 +456,7 @@ impl<'a> GeneratedToqlMutate<'a> {
         // Field is not skipped for update
          if !field.skip_mut {
             // Regular field
-            if field.join.is_none() && field.merge.is_empty() {
+            if field.join.is_none() && field.merge.is_none() {
                    
                 let set_statement = format!("{{}}.{} = ?, ", &sql_column);
 

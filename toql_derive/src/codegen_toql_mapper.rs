@@ -198,7 +198,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             });
         }
         // Regular field
-        else if field.merge.is_empty() {
+        else if field.merge.is_none() {
             let (base, _generic, _gegeneric) = field.get_types();
 
             if base == "Vec" || base =="HashSet"  {
@@ -327,6 +327,29 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let merge_functions = &self.merge_functions;
 
         let field_mappings = &self.field_mappings;
+
+        /*  // must be processed after first pass to make sure all keys are read
+        let merge_functions = self.merge_types.map(|(merge_type, merge_field)| {
+         let other_fnc =  self.key_fields.iter().zip(self.merge_args).map(|key_field, (merge_arg)|{
+             let default_other_field =  format!("{}_{}", entity, key_field);
+             match key_field {
+
+                 _ => default_other_field
+             }
+
+         }
+             quote!(
+            pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #joined_struct_ident > ) {
+                    toql :: merge :: merge ( t , o ,
+                    | t | #self_fnc ,
+                    | o | #other_fnc ,
+                    | t , o |  {let t : Option<&mut Vec<#joined_struct_ident>>= Option::from( &mut t. #field_ident ); if t.is_some() { t.unwrap().push(o);}}
+                    ) ;
+            })
+             
+         });
+      */
+         
 
         let builder = quote!(
 

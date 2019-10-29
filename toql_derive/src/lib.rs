@@ -56,6 +56,7 @@ mod codegen_mysql_load;
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_select;
 
+mod sane;
 mod util;
 
 /// Derive to add Toql functionality to your struct.

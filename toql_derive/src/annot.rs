@@ -22,10 +22,10 @@ pub struct Pair {
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-    /*  #[darling(rename = "self_field", default)]
+      #[darling(rename = "self_field", default)]
     pub this_field: Option<String>, 
     #[darling(default)]
-    pub other_field: Option<String>,  */
+    pub other_field: Option<String>,  
     
 
     #[darling(default, multiple)]
@@ -82,8 +82,8 @@ pub struct ToqlField {
     pub sql: Option<String>,
     #[darling(multiple)]
     pub role: Vec<String>,
-    #[darling(default, multiple)]
-    pub merge: Vec<MergeArg>,
+    #[darling(default)]
+    pub merge: Option<MergeArg>,
     #[darling(default)]
     pub alias: Option<String>,
     #[darling(default)]
@@ -263,8 +263,11 @@ impl quote::ToTokens for Toql {
             .expect("Should never be enum")
             .fields;
 
+        
+
         for field in fields {
 
+            let f = crate::sane::Field::create(&field);
 
             // Generate query functionality
             if query_enabled {
@@ -284,7 +287,7 @@ impl quote::ToTokens for Toql {
                     toql_query_builder.add_field_for_builder(&self, field);
                 }
 
-                if !field.merge.is_empty() {
+                if field.merge.is_some() {
                     toql_mapper.add_merge_function(&self, field);
 
                     #[cfg(feature = "mysqldb")]

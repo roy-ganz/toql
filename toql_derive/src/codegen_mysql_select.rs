@@ -85,7 +85,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
           
         // Regular field
-        if field.join.is_none() && field.merge. is_empty() {
+        if field.join.is_none() && field.merge. is_none() {
             if field.key == true {
 
                 
