@@ -8,9 +8,13 @@ use syn::Ident;
 use heck::SnakeCase;
 use heck::MixedCase;
 
+
+use crate::sane::{FieldKind, RegularField, MergeField, JoinField, SqlTarget};
+
 pub(crate) struct GeneratedMysqlSelect<'a> {
     struct_ident: &'a Ident,
-    sql_table_ident: Ident,
+    sql_table_name: String,
+    sql_table_alias: String,
     vis: &'a syn::Visibility,   
 
     select_columns: Vec<String>,
@@ -32,21 +36,20 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
     key_columns_code: Vec<proc_macro2::TokenStream>,
     key_params_code: Vec<proc_macro2::TokenStream>,
     
+
+    merge_fields: Vec<crate::sane::Field>
 }
 
 
 impl<'a> GeneratedMysqlSelect<'a> {
-    pub(crate) fn from_toql(toql: &Toql) -> GeneratedMysqlSelect {
-        let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
-        let sql_table_ident = Ident::new(
-            &toql.table.clone().unwrap_or(renamed_table),
-            Span::call_site(),
-        );
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlSelect {
+      
 
         GeneratedMysqlSelect {
-            struct_ident: &toql.ident,
-            sql_table_ident: sql_table_ident,
-            vis : &toql.vis,
+            struct_ident: &toql.rust_struct_ident,
+            sql_table_name: toql.sql_table_name.to_owned(),
+            sql_table_alias: toql.sql_table_alias.to_owned(),
+            vis : &toql.rust_struct_visibility,
           
          
             select_columns: Vec::new(),
@@ -68,24 +71,222 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
             merge_code: Vec::new(),
             key_columns_code: Vec::new(),
-            key_params_code: Vec::new()
+            key_params_code: Vec::new(),
+            merge_fields: Vec::new()
          
         }
     }
 
-    pub fn add_select_field(&mut self, toql: &Toql, field: &'a ToqlField)
-    -> Result<(), ()>
+    pub fn add_select_field(&mut self, field: & crate::sane::Field) -> Result<(), ()>
     {
-        let field_name = field.ident.as_ref().unwrap().to_string();
+      /*   let field_name = field.ident.as_ref().unwrap().to_string();
         let field_ident = field.ident.as_ref().unwrap();
         let sql_column = crate::util::rename(&field_ident.to_string(), &toql.columns);
         let sql_table_name = &self.sql_table_ident.to_string();
         let sql_table_alias = sql_table_name.to_snake_case();
-        let field_type = field.first_non_generic_type().unwrap();
+        let field_type = field.first_non_generic_type().unwrap(); */
+        
+        let rust_type_ident = &field.rust_type_ident;
+        let rust_type_name = &field.rust_type_name;
+        let rust_field_ident = &field.rust_field_ident;
+        let rust_field_name = &field.rust_field_name;
+        let toql_field_name = &field.toql_field_name;
 
+         match &field.kind {
+            FieldKind::Regular(ref regular_attrs) => {
+                if regular_attrs.key == true {
+                    if let SqlTarget::Column( ref column) = &regular_attrs.sql_target {
+                        self.key_columns_code.push( quote!( columns.push( String::from(#column)); ));
+                    } else {
+                        // error only 
+                    }
+                
+
+                
+                self.select_key_types.push(quote!( #rust_type_ident));
+               
+               if field.number_of_options > 0 {
+                   let value= quote!(self. #rust_field_ident .as_ref() .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_type_name)))? .to_owned());
+                   self.select_key_fields.push( value);
+
+                   self.key_params_code.push( quote!(
+                       params.push(self. #rust_field_ident .as_ref() 
+                        .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_field_name)))? .to_owned().to_string()); 
+                        ));
+                    
+                
+                let index =  syn::Index::from(self.select_key_types.len()-1);
+                self.key_setters.push( quote!(self. #rust_field_ident = Some( key . #index  ); ))
+               } else {
+
+                self.select_key_fields.push( quote!(self. #rust_field_ident .to_owned()));
+                 self.key_params_code.push( quote!(params.push(self. #rust_field_ident .to_owned().to_string());
+                 ));
+
+
+                 let index =  syn::Index::from(self.select_key_types.len()-1);
+                 
+                 self.key_setters.push( quote!(self. #rust_field_ident = key . #index;) )
+               }
+               
+                if let SqlTarget::Column( ref sql_column) = &regular_attrs.sql_target {
+                       let key_expr = format!("{}.{} = ?", self.sql_table_alias, sql_column);
+                self.select_keys.push(quote!(#key_expr));
+                    } else {
+                        // error only 
+                    }
+
+               
+
+              
+              let key_index= syn::Index::from(self.select_key_fields.len() - 1);
+              self.key_predicates.push(  quote! {
+                 .and(toql::query::Field::from(#toql_field_name).eq( key . #key_index))
+                });
+              self.select_keys_params.push(  quote! {
+                 params.push( key . #key_index .to_string());
+                });
+              
+                }
+               
+
+                     // Normal key should may only one Option (Toql selectable)
+                 /* self.select_keys_params.push( match field.number_of_options() {
+                    1 => quote!( params.push( key
+                                .ok_or(toql::error::ToqlError::ValueMissing(String::from(#field_name)))?
+                                .to_string()
+                                ); ),
+                    0 => quote!( params.push( key .to_string()); ),
+                    _ => unreachable!()
+                } 
+                );  */
+               
+               match &regular_attrs.sql_target {
+                   SqlTarget::Expression(ref expression) => {
+                        // TODO 
+                   },
+                   SqlTarget::Column(ref sql_column) => {
+                        self.select_columns.push(format!("{}.{}", &self.sql_table_alias, sql_column));
+                   }
+               };
           
+
+
+            },
+            FieldKind::Join(ref join_attrs) => {
+                    let columns_map_code = &join_attrs.columns_map_code;
+
+                  self.select_columns.push(String::from("true"));
+                 self.select_columns.push(String::from("{}"));
+                self.select_columns_params.push( quote!(#rust_type_ident :: columns_sql()));
+                                        
+
+                 if join_attrs.key == true {
+                    self.select_key_types.push(quote!( <#rust_type_ident as toql::key::Key>::Key));
+                    let key_index= syn::Index::from(self.select_key_types.len() -1); 
+                    
+                    let unwrap = match field.number_of_options {
+                        1 if !field.preselect => quote!(.as_ref().unwrap()),
+                        _ => quote!()
+
+                    };
+
+                    self.key_columns_code.push( quote!( columns.extend_from_slice(&<#rust_type_ident as toql::key::Key>::columns());));
+                    self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(self. #rust_field_ident #unwrap)?);));
+
+                    //let function_ident = Ident::new(&format!("{}_key_predicate",&field.rust_field_name), Span::call_site());
+                 
+                    self.key_predicates.push(  
+                        quote!( 
+                                .and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(&key. #key_index)?)
+                            )
+                    );
+                    // Select key predicate
+                    if field.number_of_options > 0 {
+                            self.select_key_fields.push( quote!(
+                                < #rust_type_ident as toql::key::Key>::get_key( 
+                                    self. #rust_field_ident .as_ref()
+                                        .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))?
+                                    )?
+                            ));
+
+                            
+                               
+                                self.key_setters.push( quote!(
+                                        < #rust_type_ident as toql::key::Key>::set_key(self. #rust_field_ident .as_mut()
+                                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))? , key . #key_index );
+                            ));
+                        
+                        } else {
+                            self.select_key_fields.push( quote!(
+                                < #rust_type_ident as toql::key::Key>::get_key(  &self. #rust_field_ident )?
+                            ));
+
+                            self.key_setters.push( quote!(
+                                    < #rust_type_ident as toql::key::Key>::set_key(&mut self. #rust_field_ident,key . #key_index);
+                            ));
+                            
+                        }
+                        let aliased_column_format= format!("{}.{{}} = ?",  &self.sql_table_alias);
+                        self.select_keys.push(
+                            quote!( {
+                                &<#rust_type_ident as toql::key::Key>::columns().iter()
+                                .map(|other_column|{
+                                    let self_column = #columns_map_code;
+                                    format!(#aliased_column_format, self_column )
+                                }).collect::<Vec<String>>().join(" AND ")
+                            }
+                            ));
+                        self.select_keys_params.push(  quote! {
+                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(key. #key_index)?);
+                        });
+                        
+                        
+            }
+
+                   
+
+             self.select_joins.push(format!("JOIN {} {} ON ({{}}{{}}) {{}}", join_attrs.sql_join_table_name, rust_field_name));
+
+            
+            let select_join_params_format= format!("{}.{{}} = {}.{{}}", &self.sql_table_alias, join_attrs.join_alias);
+             
+            self.select_joins_params.push( quote!(
+                {
+                    
+             
+                  <#rust_type_ident as toql::key::Key>::columns().iter()
+                  
+                    .map(|other_column| {
+                        
+                        let self_column= #columns_map_code;
+
+                    format!(#select_join_params_format, self_column, other_column)
+                    }).collect::<Vec<String>>().join(" AND ")
+                }
+            ));
+            self.select_joins_params.push( if let Some(ref sql) = &join_attrs.on_sql {
+                    let on_sql= format!(" AND ({})", sql.replace("..",&format!("{}.",join_attrs.join_alias)));
+                    quote!( #on_sql)
+                } else {
+                    quote!("")
+            });
+            
+            self.select_joins_params.push( quote!(#rust_type_ident :: joins_sql()));
+
+
+
+            },
+             FieldKind::Merge(_) => {
+                 self.merge_fields.push(field.clone());
+
+
+
+         }
+         }; 
+
         // Regular field
-        if field.join.is_none() && field.merge. is_none() {
+        /* if field.join.is_none() && field.merge. is_none() {
             if field.key == true {
 
                 
@@ -150,7 +351,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
             self.select_columns.push(format!("{}.{}",sql_table_alias, sql_column));
         } 
         // Join field
-        else if field.join.is_some() {
+       /*  else */ if field.join.is_some() {
 
              /* Joins can also be fields.
                 The key_type and key field on the joined struct must be provided
@@ -401,7 +602,15 @@ impl<'a> GeneratedMysqlSelect<'a> {
              self.select_joins_params.push( quote!(#field_type :: joins_sql()));
         } 
         // Merge field
-        else {
+        else */ 
+        Ok(())       
+    }
+
+    }
+
+
+/* fn build_merge(&self) {
+{
            
             let sql_join_table_name = crate::util::rename(&field_type.to_string(), &toql.tables);
              let default_join_alias = sql_join_table_name.to_snake_case();
@@ -442,18 +651,15 @@ impl<'a> GeneratedMysqlSelect<'a> {
             )); 
 
         }
-        Ok(())
-    }
-  
-}
 
+} */
 
 impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
 
-         let sql_table_name = &self.sql_table_ident.to_string();
-            let sql_table_alias = sql_table_name.to_snake_case(); // TODO rename
+         let sql_table_name = &self.sql_table_name;
+         let sql_table_alias = &self.sql_table_alias; 
 
       
 
@@ -593,21 +799,19 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     }
                 }
                 
-                #vis fn #key_predicate_fn (key: #struct_key_ident) ->Result<toql::query::Query , toql::error::ToqlError>{
+               /*  #vis fn #key_predicate_fn (key: #struct_key_ident) ->Result<toql::query::Query , toql::error::ToqlError>{
                     Ok(toql::query::Query::new() #(#key_predicates)* ) 
-                }
+                } */
 
-                /* impl toql::query_builder::Query< #key_type_code> for #struct_ident {
+                 impl toql::query_builder::KeyPredicate for #struct_key_ident {
     
-                    fn key_predicate<K>(key: K::Key) -> Result<toql::query::Query , toql::error::ToqlError>
-                    where K : toql::key::Key< Key = #key_type_code>
+                    fn key_predicate(&self) -> Result<toql::query::Query , toql::error::ToqlError>
                         {
-                      
-                      
+                            let key = self;
                         Ok(toql::query::Query::new() #(#key_predicates)* ) 
                     }
                 }
- */
+ 
                 impl<'a> toql::mysql::select::Select<#struct_ident> for #struct_ident {
 
                  

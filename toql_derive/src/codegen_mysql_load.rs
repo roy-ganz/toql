@@ -11,6 +11,9 @@ use proc_macro2::Span;
 
 use syn::Ident;
 
+use crate::sane::Struct;
+use crate::sane::{Field, RegularField, JoinField, MergeField, FieldKind};
+
 pub(crate) struct GeneratedMysqlLoad<'a> {
     struct_ident: &'a Ident,
 
@@ -20,13 +23,14 @@ pub(crate) struct GeneratedMysqlLoad<'a> {
     merge_one_predicates: Vec<proc_macro2::TokenStream>,
     merge_many_predicates: Vec<proc_macro2::TokenStream>,
     forward_joins: Vec<proc_macro2::TokenStream>,
-    regular_fields: usize, // Impl for mysql::row::ColumnIndex
+    regular_fields: usize, // Impl for mysql::row::ColumnIndex,
+    merge_fields: Vec<crate::sane::Field>
 }
 
 impl<'a> GeneratedMysqlLoad<'a> {
-    pub(crate) fn from_toql(toql: &Toql) -> GeneratedMysqlLoad {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlLoad {
         GeneratedMysqlLoad {
-            struct_ident: &toql.ident,
+            struct_ident: &toql.rust_struct_ident,
             mysql_deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
             ignored_paths: Vec::new(),
@@ -34,21 +38,157 @@ impl<'a> GeneratedMysqlLoad<'a> {
             merge_many_predicates: Vec::new(),
             forward_joins: Vec::new(),
             regular_fields: 0,
+            merge_fields: Vec::new()
         }
     }
 
-    pub(crate) fn add_mysql_deserialize_skip_field(&mut self, field: &'a ToqlField) {
-        let field_ident = &field.ident;
-        let field_type = &field.ty;
+    pub(crate) fn add_mysql_deserialize_skip_field(&mut self, field: & crate::sane::Field) {
+        let rust_field_ident = &field.rust_field_ident;
+        let rust_type_ident = &field.rust_type_ident;
+
         self.mysql_deserialize_fields.push(quote!(
-             #field_ident : #field_type :: default()
+             #rust_field_ident : #rust_type_ident :: default()
         ));
     }
 
-    pub(crate) fn add_mysql_deserialize(&mut self, _toql: &Toql, field: &'a ToqlField) {
-        let field_ident = &field.ident;
+    pub(crate) fn add_mysql_deserialize(&mut self,field: & crate::sane::Field) {
+       // let field_ident = &field.ident;
 
         // Regular fields
+        match &field.kind {
+            FieldKind::Regular(ref regular_attrs) => {
+                let rust_field_ident = &field.rust_field_ident;
+                self.regular_fields += 1;
+
+            let assignment = if self.mysql_deserialize_fields.is_empty() {
+                quote!(*i)
+            } else {
+                quote!({
+                    *i += 1;
+                    *i
+                })
+            };
+
+            let increment = if self.mysql_deserialize_fields.is_empty() {
+                quote!()
+            } else {
+                quote!(*i += 1;)
+            };
+
+            // Check selection for optional Toql fields: Option<Option<..> or Option<..>
+            if field.number_of_options > 0 && field.preselect == false {
+                self.mysql_deserialize_fields.push(quote!(
+                    #rust_field_ident : {
+                        #increment
+                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                            None
+                        } else {
+                            row.take_opt( *i).unwrap()?
+                        }
+                    }
+                ));
+            } else {
+                self.mysql_deserialize_fields.push(quote!(
+                    #rust_field_ident : row.take_opt( #assignment).unwrap()?
+                ));
+            }
+
+            },
+            FieldKind::Join(join_attrs) => {
+                let rust_field_ident = &field.rust_field_ident;
+                 let rust_type_ident = &field.rust_type_ident;
+            self.forward_joins
+                .push(quote!( i = < #rust_type_ident > ::forward_row(i);));
+            let assignment = if self.mysql_deserialize_fields.is_empty() {
+                quote!(i)
+            } else {
+                quote!({
+                    *i += 1;
+                    i
+                })
+            };
+
+            let increment = if self.mysql_deserialize_fields.is_empty() {
+                quote!(s)
+            } else {
+                quote!(*i += 1;)
+            };
+          
+
+            // If any Option is present discriminator field must be added to check
+            // - for unselected entity (discriminator column is NULL Type)
+            // - for null entity (discriminator column is false) - only left joins
+
+            self.mysql_deserialize_fields.push(
+                 match   field.number_of_options {
+                     2 =>   //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
+                     quote!(
+                                #rust_field_ident : {
+                                       #increment
+                                       if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                            *i = < #rust_type_ident > ::forward_row(*i); // Added, but unsure, needs testing
+                                        None
+                                       }
+                                       else if row.take_opt::<bool,_>(*i).unwrap()? == false {
+                                        //*i += 1; // Step over discriminator field,
+                                        *i = < #rust_type_ident > ::forward_row(*i); 
+                                        
+                                        Some(None)
+                                    } else {
+                                        *i += 1;
+                                        Some(Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?))
+                                    }
+                                }
+                        ),
+                     1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
+                            quote!(
+                                #rust_field_ident : {
+                                     #increment
+                                     if row.take_opt::<bool,_>(*i).unwrap()? == false {
+                                       // *i = < #join_type > ::forward_row({*i += 1; *i});
+                                             *i = < #rust_type_ident > ::forward_row(*i);
+                                        None
+                                    } else {
+                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                    }
+                                }
+                            ),
+                         1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
+                                    quote!(
+                                    #rust_field_ident : {
+                                        #increment
+                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                            *i = < #rust_type_ident > ::forward_row(*i);
+                                            None
+                                        } else {
+                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                        }
+                                    }
+                                ),
+                     _ =>   //    T                                 -> Selected Join -> InnerJoin
+                     quote!(
+                #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , #assignment )?
+            )
+                 }
+             );
+
+
+            },
+            FieldKind::Merge(merge_attrs) =>  {
+                  let rust_field_ident = &field.rust_field_ident;
+                self.mysql_deserialize_fields.push( if  field.number_of_options > 0 { 
+                    quote!( #rust_field_ident : None)
+                } else {
+                    quote!( #rust_field_ident : Vec::new())
+                }
+            );
+
+            }
+
+
+
+        }
+/* 
         if field.join.is_none() && field.merge.is_none() {
             self.regular_fields += 1;
 
@@ -174,7 +314,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     quote!( #field_ident : Vec::new())
                 }
             );
-        }
+        } */
     }
     pub(crate) fn add_merge_predicates(&mut self, toql: &Toql, field: &'a ToqlField) {
         let field_name = &field.ident.as_ref().unwrap().to_string();
@@ -249,20 +389,29 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
             self.merge_many_predicates.push( quote!(
                   let query =  query.and(toql::query::Field::from(#toql_merge_field).ins(entities.iter().map(|entity| entity. #merge_struct_key_ident).collect()));
-            )); */
+            )); 
         }
+        */
+        */
     }
-    pub(crate) fn add_ignored_path(&mut self, _toql: &Toql, field: &'a ToqlField) {
-        let field_name = &field.ident.as_ref().unwrap().to_string();
-        let toql_field = field_name.to_mixed_case();
+    pub(crate) fn add_merge_predicates(&mut self, field: &crate::sane::Field) {
+        self.merge_fields.push(field.clone());
+
+    }
+    pub(crate) fn add_ignored_path(&mut self, field: &crate::sane::Field) {
+        
+        let toql_field = &field.toql_field_name;
 
         self.ignored_paths.push(quote!(
                     .ignore_path( #toql_field)));
     }
-    pub(crate) fn add_path_loader(&mut self, toql: &Toql, field: &'a ToqlField) {
+    pub(crate) fn add_path_loader(&mut self, field: &crate::sane::Field) {
+        self.merge_fields.push(field.clone());
+    }
+    /* fn build_path_loader(&mut self, toql: &Toql, field: &crate::sane::Field) {
         let struct_ident = &self.struct_ident;
-        let field_ident = &field.ident;
-        let field_name = &field.ident.as_ref().unwrap().to_string();
+        let field_ident = &field.rust_field_ident;
+        let field_name = &field.rust_field_name;
         let toql_field = field_name.to_mixed_case();
         let merge_type = field.first_non_generic_type().unwrap();
 
@@ -351,7 +500,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     #struct_ident :: #merge_function (&mut entities, #field_ident .unwrap());
                 }
          ));
-    }
+    } */
     pub(crate) fn loader_functions(&self) -> proc_macro2::TokenStream {
         let struct_ident = &self.struct_ident;
         let struct_name = &self.struct_ident.to_string();

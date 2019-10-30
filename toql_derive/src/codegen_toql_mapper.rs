@@ -2,44 +2,46 @@ use crate::annot::Toql;
 use crate::annot::ToqlField;
 use quote::quote;
 
-use proc_macro2::Span;
+/* use proc_macro2::Span;
 
 use heck::MixedCase;
 use heck::SnakeCase;
 use syn::Ident;
+ */
+use heck::SnakeCase;
+use syn::Ident;
+use proc_macro2::TokenStream;
+use crate::sane::{Field, RegularField, JoinField, MergeField, SqlTarget, Struct, FieldKind};
+
 
 pub(crate) struct GeneratedToqlMapper<'a> {
-    struct_ident: &'a Ident,
+    rust_struct: &'a Struct,
+    /* struct_ident: &'a Ident,
 
     sql_table_name: String,
-    sql_table_alias: String,
+    sql_table_alias: String,   */
 
-    merge_functions: Vec<proc_macro2::TokenStream>,
-    field_mappings: Vec<proc_macro2::TokenStream>,
+    merge_functions: Vec<TokenStream>,
+    field_mappings: Vec<TokenStream>,
+    merge_fields: Vec<crate::sane::Field>
 }
 
 impl<'a> GeneratedToqlMapper<'a> {
-    pub(crate) fn from_toql(toql: &Toql) -> GeneratedToqlMapper {
-        let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
+    pub(crate) fn from_toql(rust_struct: &'a Struct) -> GeneratedToqlMapper {
+       // let renamed_table = crate::util::rename(&toql.ident.to_string(), &toql.tables);
         GeneratedToqlMapper {
-            struct_ident: &toql.ident,
+             rust_struct,
 
-            sql_table_name: toql.table.clone().unwrap_or(renamed_table), //toql.ident.to_string(),
-            sql_table_alias: toql
-                .alias
-                .clone()
-                .unwrap_or(toql.ident.to_string().to_snake_case()), //  toql.ident.to_string().to_snake_case(),
+            /* sql_table_name: rust_struct.sql_table_name,
+            sql_table_alias: rust_struct.sql_table_alias, */
             merge_functions: Vec::new(),
             field_mappings: Vec::new(),
+            merge_fields: Vec::new()
         }
     }
 
-    pub(crate) fn add_field_mapping(
-        &mut self,
-        toql: &Toql,
-        field: &'a ToqlField,
-    ) -> Result<(), ()> {
-        let field_ident = &field.ident.as_ref().unwrap();
+    pub(crate) fn add_field_mapping( &mut self, field: &crate::sane::Field) -> Result<(), ()> {
+      /*   let field_ident = &field.ident.as_ref().unwrap();
 
         let toql_field = format!("{}", field_ident).to_mixed_case();
 
@@ -48,10 +50,128 @@ impl<'a> GeneratedToqlMapper<'a> {
         let sql_field: &str = match &field.column {
             Some(string) => string,
             None => &renamed_sql_column,
-        };
+        }; */
 
         // Joined field
-        if field.join.is_some() {
+        match &field.kind {
+            FieldKind::Join(join_attrs) => {
+                        let columns_map_code = &join_attrs.columns_map_code;
+                        let rust_type_ident = &field.rust_type_ident;
+                        let toql_field_name = &field.toql_field_name;
+                        let join_alias = &join_attrs.join_alias;
+                        let sql_join_table_name = &join_attrs.sql_join_table_name;
+
+                        if field.number_of_options > 0 {
+                            
+                                self.field_mappings.push(
+                                    quote!(
+                                        let none_condition = <#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
+                                                let self_column = #columns_map_code;
+                                                format!("({}{}{} IS NOT NULL)",sql_alias, if sql_alias.is_empty() { "" } else { "." }, self_column)
+                                        }).collect::<Vec<String>>().join(" AND ");   
+                                        mapper.map_field_with_options(
+                                        &format!("{}_", #toql_field_name), &none_condition,toql::sql_mapper::MapperOptions::new().preselect(true));
+                                )
+                                );
+
+                        }
+                       
+              let join_expression_builder = quote!(
+                  let join_expression = <#rust_type_ident as toql::key::Key>::columns().iter()
+                    .map(|other_column| {
+                        let self_column= #columns_map_code;
+                        format!("{}{}{} = {}.{}",sql_alias , if sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
+                    }).collect::<Vec<String>>().join(" AND ")
+                );
+
+            let on_sql = if let Some(ref sql) = &join_attrs.on_sql {
+                        format!(" AND ({})",  sql.replace("..",&format!("{}.",join_alias)))
+                } else {
+                    String::from("")};
+ 
+            let format_string = format!(
+                "{}JOIN {} {} ON ({{}}{})",
+                if field.number_of_options == 2
+                    || (field.number_of_options == 1 && field.preselect == true)
+                {
+                    "LEFT "
+                } else {
+                    ""
+                },
+                sql_join_table_name,
+                join_alias,
+                on_sql
+            );
+
+
+            let join_clause = quote!(&format!( #format_string, join_expression));
+            let join_selected = field.number_of_options == 0
+                || (field.number_of_options == 1 && field.preselect == true);
+            self.field_mappings.push(quote! {
+                #join_expression_builder;
+                mapper.map_join::<#rust_type_ident>(  #toql_field_name, #join_alias);
+                mapper.join( #toql_field_name, #join_clause, #join_selected );
+            });
+
+
+
+            },
+            FieldKind::Regular(regular_attrs) => {
+                   let toql_field_name = &field.toql_field_name;
+            let countfilter_ident = if regular_attrs.count_filter {
+                    quote!( .count_filter(true))
+                } else {
+                    quote!()
+                };
+                let countselect_ident = if regular_attrs.count_select {
+                    quote!( .count_select(true))
+                } else {
+                    quote!()
+                };
+                let select_ident = if field.preselect || (field.number_of_options == 0) {
+                    quote!( .preselect(true))
+                } else {
+                    quote!()
+                };
+                let ignore_wc_ident = if field.ignore_wildcard {
+                    quote!( .ignore_wildcard(true))
+                } else {
+                    quote!()
+                };
+
+                let roles = &field.roles;
+                let roles_ident = if roles.is_empty() {
+                    quote!()
+                } else {
+                    quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
+                };
+
+              
+                let sql_mapping = match &regular_attrs.sql_target {
+                        SqlTarget::Expression(ref expression) => {
+                            quote! {&format!("({})", #expression .replace("..",&format!("{}.",sql_alias )))}
+                        },
+                        SqlTarget::Column(ref column) => {
+                                 quote! {&format!("{}{}{}",sql_alias, if sql_alias.is_empty() {"" }else {"."}, #column)}
+                        }
+                    
+                    };
+
+                self.field_mappings.push(quote! {
+                                            mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
+                                            #sql_mapping,toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                        }
+                            );
+
+
+                },
+                FieldKind::Merge(ref merge_attrs) => {}
+
+
+
+        };
+       
+        /* if field.join.is_some() {
             // let renamed_join_column = crate::util::rename_sql_column(&field_ident.to_string(),&toql.columns);
 
             let joined_struct_ident = field.first_non_generic_type();
@@ -263,11 +383,16 @@ impl<'a> GeneratedToqlMapper<'a> {
                                         #sql_mapping,toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                     }
                         );
-        }
+        }*/
         Ok(())
-    }
+    } 
 
-    pub(crate) fn add_merge_function(&mut self, _toql: &Toql, field: &'a ToqlField) {
+    pub(crate) fn add_merge_function(&mut self, field: &crate::sane::Field) {
+        self.merge_fields.push(field.to_owned());
+
+ }
+
+     /* fn build_merge_function(&mut self, _toql: &Toql, field: &'a ToqlField) {
         let struct_ident = self.struct_ident;
         let joined_struct_ident = field.first_non_generic_type().unwrap();
         let field_ident = &field.ident.as_ref().unwrap();
@@ -314,15 +439,15 @@ impl<'a> GeneratedToqlMapper<'a> {
                     ) ;
             }
          ));
-    }
+    } */
 }
 
 impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let struct_ident = self.struct_ident;
+        let struct_ident = &self.rust_struct.rust_struct_ident;
         //let struct_name= format!("{}", struct_ident);
-        let sql_table_name = &self.sql_table_name;
-        let sql_table_alias = &self.sql_table_alias;
+        let sql_table_name = &self.rust_struct.sql_table_name;
+        let sql_table_alias = &self.rust_struct.sql_table_alias;
 
         let merge_functions = &self.merge_functions;
 
@@ -376,7 +501,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
 
         log::debug!(
             "Source code for `{}`:\n{}",
-            &self.struct_ident,
+            &self.rust_struct.rust_struct_ident,
             builder.to_string()
         );
 

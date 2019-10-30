@@ -12,6 +12,7 @@ use syn::GenericArgument::Type;
 use syn::Ident;
 
 
+
 #[derive(Debug, FromMeta)]
 pub struct Pair {
     #[darling(rename = "self")]
@@ -221,23 +222,22 @@ pub struct Toql {
     pub skip_query_builder: bool,
     pub data: darling::ast::Data<(), ToqlField>,
 }
-
-
  
 
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         //println!("DARLING = {:?}", self);
 
-        let mut toql_mapper = GeneratedToqlMapper::from_toql(&self);
-        let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&self);
-        let mut toql_mutate = GeneratedToqlMutate::from_toql(&self);
+        let rust_struct = crate::sane::Struct::create(&self);
+        let mut toql_mapper = GeneratedToqlMapper::from_toql(&rust_struct);
+        let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&rust_struct);
+        let mut toql_mutate = GeneratedToqlMutate::from_toql(&rust_struct);
 
         #[cfg(feature = "mysqldb")]
-        let mut mysql_load = GeneratedMysqlLoad::from_toql(&self);
+        let mut mysql_load = GeneratedMysqlLoad::from_toql(&rust_struct);
 
         #[cfg(feature = "mysqldb")]
-        let mut mysql_select = GeneratedMysqlSelect::from_toql(&self);
+        let mut mysql_select = GeneratedMysqlSelect::from_toql(&rust_struct);
 
         let Toql {
             vis: _,
@@ -267,16 +267,16 @@ impl quote::ToTokens for Toql {
 
         for field in fields {
 
-            let f = crate::sane::Field::create(&field);
+            let f = crate::sane::Field::create(&field, &self);
 
             // Generate query functionality
             if query_enabled {
                 if field.skip {
                     #[cfg(feature = "mysqldb")]
-                    mysql_load.add_mysql_deserialize_skip_field(field);
+                    mysql_load.add_mysql_deserialize_skip_field(&f);
                     continue;
                 }
-                let result = toql_mapper.add_field_mapping(&self, field);
+                let result = toql_mapper.add_field_mapping(&f);
 
                 // Don't build further code for invalid field, process next field
                 if result.is_err() {
@@ -284,29 +284,29 @@ impl quote::ToTokens for Toql {
                 }
 
                 if query_builder_enabled {
-                    toql_query_builder.add_field_for_builder(&self, field);
+                    toql_query_builder.add_field_for_builder( &f);
                 }
 
                 if field.merge.is_some() {
-                    toql_mapper.add_merge_function(&self, field);
+                    toql_mapper.add_merge_function(&f);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_load.add_ignored_path(&self, field);
+                    mysql_load.add_ignored_path(&f);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_load.add_path_loader(&self, field);
+                    mysql_load.add_path_loader(&f);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_load.add_merge_predicates(&self, field);
+                    mysql_load.add_merge_predicates(&f);
 
                     
                 }
 
                 #[cfg(feature = "mysqldb")]
-                mysql_load.add_mysql_deserialize(&self, field);
+                mysql_load.add_mysql_deserialize(&f);
 
                  #[cfg(feature = "mysqldb")]
-                let result = mysql_select.add_select_field(&self, field);
+                let result = mysql_select.add_select_field(&f);
                 if result.is_err() {
                    // tokens.extend(result.err());
                     continue;
@@ -315,7 +315,7 @@ impl quote::ToTokens for Toql {
 
             // Generate insert/delete/update functionality
             if mut_enabled {
-                toql_mutate.add_mutate_field(&self, field);
+                toql_mutate.add_mutate_field(&f);
             }
         }
 
@@ -338,4 +338,7 @@ impl quote::ToTokens for Toql {
             tokens.extend(quote!(#toql_mutate));
         }
     }
+        
 }
+
+
