@@ -5,7 +5,15 @@ use heck::SnakeCase;
 
 use crate::annot::RenameCase;
 
-pub(crate) fn rename(string: &str, renaming: &Option<RenameCase>) -> String {
+pub(crate) fn rename(string: &str, renaming: &RenameCase) -> String {
+    match renaming {
+        RenameCase::CamelCase => string.to_camel_case(),
+        RenameCase::SnakeCase => string.to_snake_case(),
+        RenameCase::ShoutySnakeCase => string.to_shouty_snake_case(),
+        RenameCase::MixedCase => string.to_mixed_case(),
+    }
+}
+pub(crate) fn rename_or_default(string: &str, renaming: &Option<RenameCase>) -> String {
     match renaming {
         Some(RenameCase::CamelCase) => string.to_camel_case(),
         Some(RenameCase::SnakeCase) => string.to_snake_case(),

@@ -30,7 +30,7 @@ pub trait FilterArg<T> {
 impl FilterArg<&str> for &str {
     fn to_sql(self) -> String {
         let mut s = String::from("'");
-        // TODO escape for swl
+        // TODO escape for sql
         s.push_str(self);
         s.push('\'');
         s
@@ -40,7 +40,16 @@ impl FilterArg<&str> for &str {
 impl FilterArg<String> for String {
     fn to_sql(self) -> String {
         let mut s = String::from("'");
-        // TODO escape for swl
+        // TODO escape for sql
+        s.push_str(&self);
+        s.push('\'');
+        s
+    }
+}
+impl FilterArg<&String> for &String {
+    fn to_sql(self) -> String {
+        let mut s = String::from("'");
+        // TODO escape for sql
         s.push_str(&self);
         s.push('\'');
         s
@@ -112,6 +121,73 @@ impl FilterArg<f64> for f64 {
         self.to_string()
     }
 }
+
+impl FilterArg<&u8> for &u8 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&u16> for &u16 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&u32> for &u32 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&u64> for &u64 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&u128> for &u128 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&i8> for &i8 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&i16> for &i16 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&i32> for &i32 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&i64> for &i64 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&i128> for &i128 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&bool> for &bool {
+    fn to_sql(self) -> String {
+        String::from(if *self == true { "1" } else { "0" })
+    }
+}
+impl FilterArg<&f32> for &f32 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg<&f64> for &f64 {
+    fn to_sql(self) -> String {
+        self.to_string()
+    }
+}
+
 
 #[derive(Clone, Debug)]
 pub(crate) enum Concatenation {

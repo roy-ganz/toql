@@ -13,7 +13,7 @@ use syn::Ident;
 
 
 
-#[derive(Debug, FromMeta)]
+#[derive(Debug, FromMeta, Clone)]
 pub struct Pair {
     #[darling(rename = "self")]
     pub this : String,
@@ -23,11 +23,11 @@ pub struct Pair {
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-      #[darling(rename = "self_field", default)]
+   /*    #[darling(rename = "self_field", default)]
     pub this_field: Option<String>, 
     #[darling(default)]
     pub other_field: Option<String>,  
-    
+     */
 
     #[darling(default, multiple)]
     pub fields: Vec<Pair>,
@@ -188,7 +188,7 @@ impl ToqlField {
     }
 }
 
-#[derive(FromMeta, PartialEq, Eq, Debug)]
+#[derive(FromMeta, PartialEq, Eq,Clone, Debug)]
 pub enum RenameCase {
     #[darling(rename = "CamelCase")]
     CamelCase,
@@ -295,10 +295,6 @@ impl quote::ToTokens for Toql {
 
                     #[cfg(feature = "mysqldb")]
                     mysql_load.add_path_loader(&f);
-
-                    #[cfg(feature = "mysqldb")]
-                    mysql_load.add_merge_predicates(&f);
-
                     
                 }
 
@@ -318,6 +314,11 @@ impl quote::ToTokens for Toql {
                 toql_mutate.add_mutate_field(&f);
             }
         }
+
+        // Build merge functionality
+        mysql_select.build_merge();
+        mysql_load.build_merge();
+        toql_mapper.build_merge();
 
         // Produce compiler tokens
         if query_builder_enabled {

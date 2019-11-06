@@ -21,7 +21,7 @@ pub trait Key {
    // Return key columns for a given entity.
    fn columns() -> Vec<String>;
 
-   // Return key params for a given entity.
-   fn params(&self) ->  crate::error::Result<Vec<String>>;
+   // Return key as params for a given entity.
+   fn params(key: &Self::Key) -> Vec<String>;
  
 }

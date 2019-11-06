@@ -37,7 +37,8 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
     key_params_code: Vec<proc_macro2::TokenStream>,
     
 
-    merge_fields: Vec<crate::sane::Field>
+    merge_fields: Vec<crate::sane::Field>,
+    key_field_names: Vec<String>
 }
 
 
@@ -72,7 +73,8 @@ impl<'a> GeneratedMysqlSelect<'a> {
             merge_code: Vec::new(),
             key_columns_code: Vec::new(),
             key_params_code: Vec::new(),
-            merge_fields: Vec::new()
+            merge_fields: Vec::new(),
+            key_field_names: Vec::new()
          
         }
     }
@@ -109,19 +111,21 @@ impl<'a> GeneratedMysqlSelect<'a> {
                    let value= quote!(self. #rust_field_ident .as_ref() .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_type_name)))? .to_owned());
                    self.select_key_fields.push( value);
 
-                   self.key_params_code.push( quote!(
+                  /*  self.key_params_code.push( quote!(
                        params.push(self. #rust_field_ident .as_ref() 
                         .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_field_name)))? .to_owned().to_string()); 
-                        ));
+                        )); */
                     
                 
                 let index =  syn::Index::from(self.select_key_types.len()-1);
                 self.key_setters.push( quote!(self. #rust_field_ident = Some( key . #index  ); ))
                } else {
 
+                   
                 self.select_key_fields.push( quote!(self. #rust_field_ident .to_owned()));
-                 self.key_params_code.push( quote!(params.push(self. #rust_field_ident .to_owned().to_string());
-                 ));
+                
+                
+                
 
 
                  let index =  syn::Index::from(self.select_key_types.len()-1);
@@ -141,12 +145,16 @@ impl<'a> GeneratedMysqlSelect<'a> {
               
               let key_index= syn::Index::from(self.select_key_fields.len() - 1);
               self.key_predicates.push(  quote! {
-                 .and(toql::query::Field::from(#toql_field_name).eq( key . #key_index))
+                 .and(toql::query::Field::from(#toql_field_name).eq(&key . #key_index))
                 });
+            
+                self.key_params_code.push( quote!(params.push(key . #key_index .to_owned().to_string()); ));
+
               self.select_keys_params.push(  quote! {
                  params.push( key . #key_index .to_string());
                 });
               
+                self.key_field_names.push(rust_field_name.to_string());
                 }
                
 
@@ -175,6 +183,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
             },
             FieldKind::Join(ref join_attrs) => {
                     let columns_map_code = &join_attrs.columns_map_code;
+                    let default_self_column_code = &join_attrs.default_self_column_code;
 
                   self.select_columns.push(String::from("true"));
                  self.select_columns.push(String::from("{}"));
@@ -185,14 +194,14 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     self.select_key_types.push(quote!( <#rust_type_ident as toql::key::Key>::Key));
                     let key_index= syn::Index::from(self.select_key_types.len() -1); 
                     
-                    let unwrap = match field.number_of_options {
+                   /*  let unwrap = match field.number_of_options {
                         1 if !field.preselect => quote!(.as_ref().unwrap()),
                         _ => quote!()
 
-                    };
+                    }; */
 
                     self.key_columns_code.push( quote!( columns.extend_from_slice(&<#rust_type_ident as toql::key::Key>::columns());));
-                    self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(self. #rust_field_ident #unwrap)?);));
+                    self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(& key. #key_index));));
 
                     //let function_ident = Ident::new(&format!("{}_key_predicate",&field.rust_field_name), Span::call_site());
                  
@@ -214,7 +223,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                                
                                 self.key_setters.push( quote!(
                                         < #rust_type_ident as toql::key::Key>::set_key(self. #rust_field_ident .as_mut()
-                                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))? , key . #key_index );
+                                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))? , key . #key_index )?;
                             ));
                         
                         } else {
@@ -223,7 +232,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                             ));
 
                             self.key_setters.push( quote!(
-                                    < #rust_type_ident as toql::key::Key>::set_key(&mut self. #rust_field_ident,key . #key_index);
+                                    < #rust_type_ident as toql::key::Key>::set_key(&mut self. #rust_field_ident,key . #key_index)?;
                             ));
                             
                         }
@@ -232,15 +241,17 @@ impl<'a> GeneratedMysqlSelect<'a> {
                             quote!( {
                                 &<#rust_type_ident as toql::key::Key>::columns().iter()
                                 .map(|other_column|{
+                                    #default_self_column_code;
                                     let self_column = #columns_map_code;
                                     format!(#aliased_column_format, self_column )
                                 }).collect::<Vec<String>>().join(" AND ")
                             }
                             ));
                         self.select_keys_params.push(  quote! {
-                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(key. #key_index)?);
+                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params( &key. #key_index));
                         });
                         
+                        self.key_field_names.push(rust_field_name.to_string());
                         
             }
 
@@ -258,7 +269,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                   <#rust_type_ident as toql::key::Key>::columns().iter()
                   
                     .map(|other_column| {
-                        
+                        #default_self_column_code;
                         let self_column= #columns_map_code;
 
                     format!(#select_join_params_format, self_column, other_column)
@@ -605,8 +616,59 @@ impl<'a> GeneratedMysqlSelect<'a> {
         else */ 
         Ok(())       
     }
+    pub fn build_merge(&mut self) {
+           // Build all merge fields
+           // This must be done after the first pass, becuase all key names must be known at this point
+           for field in &self.merge_fields {
+              
+               match &field.kind {
+                   FieldKind::Merge(merge_attrs) => {
+                        let mut on_condition :Vec<String>= Vec::new();
+                        if let Some(sql) = &merge_attrs.on_sql {
+                            // resolve ..
+                            on_condition.push(sql.replace("..",&format!("{}.",merge_attrs.join_alias).to_owned()));
+                        }
+
+                        // Build join for all keys of that struct
+                        for this_field in &self.key_field_names {
+                            let default_other_field= format!("{}_{}",field.rust_type_name.to_mixed_case() , &this_field);
+                            let other_field = merge_attrs.other_field(&this_field, default_other_field);
+                            
+                            let self_column = merge_attrs.column(&this_field);
+                            let other_column =   merge_attrs.column(&other_field);
+
+                            on_condition.push(format!("{}.{} = {}.{}",merge_attrs.join_alias, self_column, merge_attrs.join_alias,other_column));
+                        }
+                        
+                        let merge_join = format!("JOIN {} {} ON ({} AND {{}})", 
+                        merge_attrs.sql_join_table_name, merge_attrs.join_alias, on_condition.join(" AND "));
+
+                        let struct_ident = self.struct_ident;
+                        let merge_function = Ident::new( &format!("merge_{}", &field.rust_field_name),  Span::call_site());
+
+                        let merge_field_init = if field.number_of_options > 0 {
+                            quote!( Some(Vec::new())) 
+                        } else {
+                            quote!(Vec::new()) 
+                        };
+                        let rust_field_ident = &field.rust_field_ident;
+                        let rust_type_ident = &field.rust_type_ident;
+                    
+                        self.merge_code.push(quote!(
+                                let #rust_field_ident = #rust_type_ident :: select_dependencies( &format!(#merge_join, key_predicate), &params, conn)?;
+                                for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
+                                #struct_ident :: #merge_function(&mut entities, #rust_field_ident); 
+                        )); 
+
+                   },
+                   _ => { panic!("Should be never called!");}
+               }
+                
+
+           }
 
     }
+}
 
 
 /* fn build_merge(&self) {
@@ -654,6 +716,47 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
 } */
 
+ 
+
+            /* let sql_join_table_name = crate::util::rename(&field_type.to_string(), &toql.tables);
+             let default_join_alias = sql_join_table_name.to_snake_case();
+            
+          
+            let join_alias = &field.alias.as_ref().unwrap_or(&default_join_alias);
+
+             let mut on_condition: Vec<String>= Vec::new();
+            for j in &field.merge {
+                //let auto_self_key : String = crate::util::rename(&field_ident.to_string(), &toql.columns);
+                let auto_other_field= format!("{}_id", self.struct_ident.to_string().to_snake_case());
+                let auto_self_field= "id".to_string();
+
+                let self_column :String = crate::util::rename(&j.this_field.as_ref().unwrap_or(&auto_self_field).to_string(), &toql.columns);
+
+                let other_column = crate::util::rename(&j.other_field.as_ref().unwrap_or(&auto_other_field).to_string(), &toql.columns);
+                on_condition.push(format!("{}.{} = {}.{}",sql_table_alias, self_column, join_alias,other_column, ));
+            }
+
+
+            let merge_field_init = if field.number_of_options() > 0 {
+                 quote!( Some(Vec::new())) 
+            } else {
+                quote!(Vec::new()) 
+            };
+            
+           
+            let dep_join = format!("JOIN {} {} ON ({} AND {{}})", sql_table_name, sql_table_alias, on_condition.join(" AND "));
+
+            let struct_ident = self.struct_ident;
+            let merge_function = Ident::new( &format!("merge_{}", &field.ident.as_ref().unwrap()),  Span::call_site());
+
+         
+            self.merge_code.push(quote!(
+                    let #field_ident = #field_type :: select_dependencies( &format!(#dep_join, key_predicate), &params, conn)?;
+                     for e in entities.iter_mut() { e . #field_ident = #merge_field_init; }
+                    #struct_ident :: #merge_function(&mut entities, #field_ident); 
+            ));  */
+
+      // }
 impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
@@ -669,6 +772,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         let key_type_code =  quote!(  #(pub #key_types),* );
 
          //  let key_params_code = &self.key_params_code;
+
+        
 
         let mods = if self.select_keys.is_empty() {
             quote!( /* Skipped code generation, because #[toql(key)] is missing */ )
@@ -698,7 +803,11 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                let select_dependend_stmt= format!("SELECT {{}} FROM {} {} {{}}{{}}",
                 sql_table_name,  sql_table_alias);
 
+
+           
+           
             let merge_code = &self.merge_code;
+
             //let merge_key_predicate = self.select_keys.join(" AND ");
           
 
@@ -784,11 +893,19 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         #(#key_columns_code)*
                         columns
                     }
-                    fn params(&self) ->toql::error::Result<Vec<String>> {
+                    fn params(key: &Self::Key) ->Vec<String> {
                          let mut params: Vec<String>= Vec::new();
 
                         #(#key_params_code)* 
-                        Ok(params)
+                        params
+                    }
+                }
+
+                impl std::convert::TryFrom<#struct_ident> for #struct_key_ident
+                {
+                    type Error = toql::error::ToqlError;
+                    fn try_from(entity: #struct_ident) -> toql::error::Result<Self> {
+                        <#struct_ident as toql::key::Key>::get_key(&entity)
                     }
                 }
 

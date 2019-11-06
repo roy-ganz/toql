@@ -9,7 +9,8 @@ use crate::sane::{Struct, Field, FieldKind};
 
 
 pub(crate) struct GeneratedToqlQueryBuilder<'a> {
-    struct_ident: &'a Ident,
+    //struct_ident: &'a Ident,
+    rust_struct: &'a Struct,
     rust_struct_visibility: &'a syn::Visibility,
     builder_fields_struct: Ident,
     build_wildcard: bool,
@@ -19,7 +20,8 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
 impl<'a> GeneratedToqlQueryBuilder<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlQueryBuilder {
         GeneratedToqlQueryBuilder {
-            struct_ident: &toql.rust_struct_ident,
+            //struct_ident: &toql.rust_struct_ident,
+            rust_struct: &toql,
             rust_struct_visibility: &toql.rust_struct_visibility,
 
             builder_fields_struct: syn::Ident::new(
@@ -53,7 +55,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                     ));
             },
             _ => {
-                 let toql_path = format!("{}_", field.rust_field_name);
+                 let toql_path = format!("{}_", field.toql_field_name);
 
             
 
@@ -106,7 +108,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
         let rust_struct_visibility = self.rust_struct_visibility;
         let builder_fields_struct = &self.builder_fields_struct;
         let builder_fields = &self.builder_fields;
-        let struct_ident = &self.struct_ident;
+        let struct_ident = &self.rust_struct.rust_struct_ident;
 
         let wildcard = if self.build_wildcard {
             quote!(
@@ -140,7 +142,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
         log::debug!(
             "Source code for `{}`:\n{}",
-            &self.struct_ident,
+            &self.rust_struct.rust_struct_name,
             builder.to_string()
         );
 

@@ -9,7 +9,9 @@ use heck::SnakeCase;
 use syn::Ident;
  */
 use heck::SnakeCase;
-use syn::Ident;
+use heck::MixedCase;
+use syn::{Ident};
+use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use crate::sane::{Field, RegularField, JoinField, MergeField, SqlTarget, Struct, FieldKind};
 
@@ -23,7 +25,8 @@ pub(crate) struct GeneratedToqlMapper<'a> {
 
     merge_functions: Vec<TokenStream>,
     field_mappings: Vec<TokenStream>,
-    merge_fields: Vec<crate::sane::Field>
+    merge_fields: Vec<crate::sane::Field>,
+    key_field_names: Vec<String>
 }
 
 impl<'a> GeneratedToqlMapper<'a> {
@@ -36,7 +39,8 @@ impl<'a> GeneratedToqlMapper<'a> {
             sql_table_alias: rust_struct.sql_table_alias, */
             merge_functions: Vec::new(),
             field_mappings: Vec::new(),
-            merge_fields: Vec::new()
+            merge_fields: Vec::new(),
+            key_field_names: Vec::new()
         }
     }
 
@@ -51,11 +55,13 @@ impl<'a> GeneratedToqlMapper<'a> {
             Some(string) => string,
             None => &renamed_sql_column,
         }; */
+        let rust_field_name = &field.rust_field_name;
 
         // Joined field
         match &field.kind {
             FieldKind::Join(join_attrs) => {
                         let columns_map_code = &join_attrs.columns_map_code;
+                        let default_self_column_code = &join_attrs.default_self_column_code;
                         let rust_type_ident = &field.rust_type_ident;
                         let toql_field_name = &field.toql_field_name;
                         let join_alias = &join_attrs.join_alias;
@@ -66,6 +72,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                 self.field_mappings.push(
                                     quote!(
                                         let none_condition = <#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
+                                                #default_self_column_code;
                                                 let self_column = #columns_map_code;
                                                 format!("({}{}{} IS NOT NULL)",sql_alias, if sql_alias.is_empty() { "" } else { "." }, self_column)
                                         }).collect::<Vec<String>>().join(" AND ");   
@@ -79,6 +86,7 @@ impl<'a> GeneratedToqlMapper<'a> {
               let join_expression_builder = quote!(
                   let join_expression = <#rust_type_ident as toql::key::Key>::columns().iter()
                     .map(|other_column| {
+                        #default_self_column_code;
                         let self_column= #columns_map_code;
                         format!("{}{}{} = {}.{}",sql_alias , if sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
                     }).collect::<Vec<String>>().join(" AND ")
@@ -113,6 +121,9 @@ impl<'a> GeneratedToqlMapper<'a> {
                 mapper.join( #toql_field_name, #join_clause, #join_selected );
             });
 
+            if join_attrs.key {
+               self.key_field_names.push(rust_field_name.to_string());
+            }
 
 
             },
@@ -162,6 +173,10 @@ impl<'a> GeneratedToqlMapper<'a> {
                                             #sql_mapping,toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
+
+                            if regular_attrs.key {
+                        self.key_field_names.push(rust_field_name.to_string());
+                        }
 
 
                 },
@@ -440,7 +455,74 @@ impl<'a> GeneratedToqlMapper<'a> {
             }
          ));
     } */
+
+
+pub fn build_merge(&mut self) {
+           // Build all merge fields
+           // This must be done after the first pass, becuase all key names must be known at this point
+           let struct_ident = &self.rust_struct.rust_struct_ident;
+           let struct_name = &self.rust_struct.rust_struct_name;
+           for field in &self.merge_fields {
+             
+               let rust_type_ident = &field.rust_type_ident; 
+               let rust_field_ident = &field.rust_field_ident;
+               let toql_field_name = &field.toql_field_name;
+              
+               match &field.kind {
+                   FieldKind::Merge(merge_attrs) => {
+
+
+                        
+                                
+                                
+                            let function_ident = syn::Ident::new(&format!("merge_{}", rust_field_ident), Span::call_site());
+
+                                let mut this_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
+                                let mut other_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
+                               for this_field in &self.key_field_names {
+
+
+                                 let default_other_field= format!("{}_{}",struct_name.to_snake_case() , &this_field);
+                                 let other_field = merge_attrs.other_field(&this_field, default_other_field);
+
+                                
+                                      let this_key_field = Ident::new(&this_field, Span::call_site());
+                                        this_tuple.push( quote!(t. #this_key_field));
+                                      let other_key_field = Ident::new(&other_field, Span::call_site());
+                                        other_tuple.push( quote!(o. #other_key_field));
+
+                               }
+
+                                let this_tuple_ref = &this_tuple;
+                                let other_tuple_ref = &other_tuple;
+
+                                let self_fnc: proc_macro2::TokenStream = if self.key_field_names.len() == 1 {
+                                    quote!( Option::from( #(#this_tuple_ref)*) )
+                                } else {
+                                    quote!( if #( (Option::from (#this_tuple_ref)).or)* (None).is_some() { Option::from((#(#this_tuple_ref),* ))} else {None} )
+                                };
+                                let other_fnc: proc_macro2::TokenStream = if self.key_field_names.len() == 1 {
+                                    quote!( Option::from( #(#other_tuple_ref)*) )
+                                } else {
+                                    quote!( if #( (Option::from (#other_tuple_ref)).or)* (None).is_some() { Option::from((#(#other_tuple_ref),* ))} else {None} )
+                                };
+
+                                self.merge_functions.push(quote!(
+                                    pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #rust_type_ident > ) {
+                                            toql :: merge :: merge ( t , o ,
+                                            | t | #self_fnc ,
+                                            | o | #other_fnc ,
+                                            | t , o |  {let t : Option<&mut Vec<#rust_type_ident>>= Option::from( &mut t. #rust_field_ident ); if t.is_some() { t.unwrap().push(o);}}
+                                            ) ;
+                                    }
+                                ));
+                   },
+                      _ => { panic!("Should be never called!");}
+               }
+           }
+    }
 }
+
 
 impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
