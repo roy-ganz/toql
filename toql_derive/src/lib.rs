@@ -59,6 +59,7 @@ mod codegen_mysql_select;
 mod sane;
 mod util;
 
+
 /// Derive to add Toql functionality to your struct.
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {

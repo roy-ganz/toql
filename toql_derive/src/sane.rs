@@ -9,6 +9,8 @@ use crate::heck::SnakeCase;
 use syn::{Ident, Visibility};
 use proc_macro2::{Span, TokenStream};
 
+//use crate::error::Result;
+use darling::Result;
 
 pub struct Struct {
   pub rust_struct_ident: Ident,
@@ -116,7 +118,7 @@ pub enum FieldKind {
 }
 
 impl Field {
- pub fn create( field: &ToqlField, toql: &Toql) -> Self {
+ pub fn create( field: &ToqlField, toql: &Toql) -> Result<Self> {
 
     
           
@@ -126,7 +128,6 @@ impl Field {
       let rust_type_name =  field.first_non_generic_type().unwrap().to_string();
       let toql_field_name = rust_field_name.to_mixed_case();
       let number_of_options = field.number_of_options();
-
     
 
      let kind = if field.join.is_some()  {
@@ -160,6 +161,11 @@ impl Field {
         key: field.key
        })
     } else  if field.merge.is_some() {
+
+      if field.key {
+        return Err( darling::Error::custom("`key` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string()).with_span(&field.ident));
+      }
+
        let renamed_table = crate::util::rename_or_default(field.first_non_generic_type().unwrap().to_string().as_str(), &toql.tables);
        let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
 
@@ -187,7 +193,7 @@ impl Field {
       })
     };
 
-     Field {
+     Ok(Field {
           rust_field_ident,
           rust_field_name,
           rust_type_ident,
@@ -199,7 +205,7 @@ impl Field {
           roles: field.role.clone(),
           preselect: field.preselect,
           kind,
-    } 
+    }) 
 
  }
 

@@ -11,7 +11,9 @@ use crate::codegen_mysql_select::GeneratedMysqlSelect;
 use syn::GenericArgument::Type;
 use syn::Ident;
 
+use proc_macro2::Span;
 
+//use darling::{Result, Error};
 
 #[derive(Debug, FromMeta, Clone)]
 pub struct Pair {
@@ -262,82 +264,102 @@ impl quote::ToTokens for Toql {
             .take_struct()
             .expect("Should never be enum")
             .fields;
+       
+       let build_fields   =  ||  -> darling::error::Result<()> {
 
-        
+          
+            for field in fields {
+       
+                let f = crate::sane::Field::create(&field, &self)?;
 
-        for field in fields {
+                // Generate query functionality
+                if query_enabled {
+                    if field.skip {
+                        #[cfg(feature = "mysqldb")]
+                        mysql_load.add_mysql_deserialize_skip_field(&f);
+                        continue;
+                    }
+                    let result = toql_mapper.add_field_mapping(&f);
 
-            let f = crate::sane::Field::create(&field, &self);
+                    // Don't build further code for invalid field, process next field
+                    if result.is_err() {
+                        continue;
+                    }
 
-            // Generate query functionality
+                    if query_builder_enabled {
+                        toql_query_builder.add_field_for_builder( &f);
+                    }
+
+                    if field.merge.is_some() {
+                        toql_mapper.add_merge_function(&f);
+
+                        #[cfg(feature = "mysqldb")]
+                        mysql_load.add_ignored_path(&f);
+
+                        #[cfg(feature = "mysqldb")]
+                        mysql_load.add_path_loader(&f);
+                        
+                    }
+
+                    #[cfg(feature = "mysqldb")]
+                    mysql_load.add_mysql_deserialize(&f);
+
+                    #[cfg(feature = "mysqldb")]
+                    let result = mysql_select.add_select_field(&f);
+                    if result.is_err() {
+                    // tokens.extend(result.err());
+                        continue;
+                    }
+                }
+
+                // Generate insert/delete/update functionality
+                if mut_enabled {
+                    toql_mutate.add_mutate_field(&f);
+                }
+            }
+
+            // Fail if no keys are found
+            if !mysql_select.has_keys() {
+                return Err(darling::Error::custom("No field(s) marked as key. Add `key` to #[toql(...)] "));
+            }
+
+            // Build merge functionality
+            mysql_select.build_merge();
+            mysql_load.build_merge();
+            toql_mapper.build_merge();
+            Ok(())
+       };
+
+       match build_fields() {
+           Result::Err(err) => {
+                 tokens.extend( err.write_errors());
+           }
+           _ => {
+               // Produce compiler tokens
+            if query_builder_enabled {
+                tokens.extend(quote!(#toql_query_builder));
+            }
+
             if query_enabled {
-                if field.skip {
-                    #[cfg(feature = "mysqldb")]
-                    mysql_load.add_mysql_deserialize_skip_field(&f);
-                    continue;
-                }
-                let result = toql_mapper.add_field_mapping(&f);
-
-                // Don't build further code for invalid field, process next field
-                if result.is_err() {
-                    continue;
-                }
-
-                if query_builder_enabled {
-                    toql_query_builder.add_field_for_builder( &f);
-                }
-
-                if field.merge.is_some() {
-                    toql_mapper.add_merge_function(&f);
-
-                    #[cfg(feature = "mysqldb")]
-                    mysql_load.add_ignored_path(&f);
-
-                    #[cfg(feature = "mysqldb")]
-                    mysql_load.add_path_loader(&f);
-                    
-                }
+                tokens.extend(quote!(#toql_mapper));
 
                 #[cfg(feature = "mysqldb")]
-                mysql_load.add_mysql_deserialize(&f);
+                tokens.extend(quote!(#mysql_load));
 
-                 #[cfg(feature = "mysqldb")]
-                let result = mysql_select.add_select_field(&f);
-                if result.is_err() {
-                   // tokens.extend(result.err());
-                    continue;
-                }
+                #[cfg(feature = "mysqldb")]
+                tokens.extend(quote!(#mysql_select));
             }
 
-            // Generate insert/delete/update functionality
             if mut_enabled {
-                toql_mutate.add_mutate_field(&f);
+                tokens.extend(quote!(#toql_mutate));
             }
-        }
 
-        // Build merge functionality
-        mysql_select.build_merge();
-        mysql_load.build_merge();
-        toql_mapper.build_merge();
+           }
+       }
 
-        // Produce compiler tokens
-        if query_builder_enabled {
-            tokens.extend(quote!(#toql_query_builder));
-        }
+      
 
-        if query_enabled {
-            tokens.extend(quote!(#toql_mapper));
-
-            #[cfg(feature = "mysqldb")]
-            tokens.extend(quote!(#mysql_load));
-
-            #[cfg(feature = "mysqldb")]
-            tokens.extend(quote!(#mysql_select));
-        }
-
-        if mut_enabled {
-            tokens.extend(quote!(#toql_mutate));
-        }
+        
     }
         
 }

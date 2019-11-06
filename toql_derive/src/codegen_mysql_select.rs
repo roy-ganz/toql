@@ -45,7 +45,6 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
 impl<'a> GeneratedMysqlSelect<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlSelect {
       
-
         GeneratedMysqlSelect {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
@@ -616,7 +615,11 @@ impl<'a> GeneratedMysqlSelect<'a> {
         else */ 
         Ok(())       
     }
+    pub fn has_keys(&self) -> bool {
+        !self.key_field_names.is_empty()
+    }
     pub fn build_merge(&mut self) {
+
            // Build all merge fields
            // This must be done after the first pass, becuase all key names must be known at this point
            for field in &self.merge_fields {
