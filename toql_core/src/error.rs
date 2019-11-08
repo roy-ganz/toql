@@ -13,7 +13,11 @@ use mysql::error::Error;
 
 #[macro_export]
 macro_rules! ok_or_fail {
-        ( $var:expr ) => { $var.as_ref().ok_or( toql::error::ToqlError::ValueMissing(stringify!($var).to_string())) }
+    ( $var:expr ) => {
+        $var.as_ref().ok_or(toql::error::ToqlError::ValueMissing(
+            stringify!($var).to_string(),
+        ))
+    };
 }
 
 /// Represents all errors
@@ -36,7 +40,6 @@ pub enum ToqlError {
     #[cfg(feature = "mysqldb")]
     /// MySQL failed to run the SQL query. For feature `mysql`
     MySqlError(Error),
-   
 }
 
 /// A result with a [`ToqlError`](enum.ToqlError.html)

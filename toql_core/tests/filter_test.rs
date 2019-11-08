@@ -102,15 +102,17 @@ fn filter_fnc() {
             match filter {
                 FieldFilter::Fn(name, args) => match (*name).as_ref() {
                     "MA" => {
-                            if args.len() != 1  {
-                                return Err(SqlBuilderError::FilterInvalid(format!(
+                        if args.len() != 1 {
+                            return Err(SqlBuilderError::FilterInvalid(format!(
                                 "filter `{}` expected exactly 1 argument",
                                 name
-                                )));
-                            }
-                            Ok(Some((format!("MATCH ({}) AGAINST (?)", sql_expression),args.clone() )))
-
-                    },
+                            )));
+                        }
+                        Ok(Some((
+                            format!("MATCH ({}) AGAINST (?)", sql_expression),
+                            args.clone(),
+                        )))
+                    }
                     _ => Ok(None),
                 },
                 _ => Ok(None),

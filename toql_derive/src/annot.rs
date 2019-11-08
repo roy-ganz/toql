@@ -1,5 +1,5 @@
-use crate::codegen_toql_mutate::GeneratedToqlMutate;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
+use crate::codegen_toql_mutate::GeneratedToqlMutate;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
 #[cfg(feature = "mysqldb")]
@@ -18,26 +18,23 @@ use proc_macro2::Span;
 #[derive(Debug, FromMeta, Clone)]
 pub struct Pair {
     #[darling(rename = "self")]
-    pub this : String,
-    pub other: String
+    pub this: String,
+    pub other: String,
 }
-
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-   /*    #[darling(rename = "self_field", default)]
-    pub this_field: Option<String>, 
+    /*    #[darling(rename = "self_field", default)]
+    pub this_field: Option<String>,
     #[darling(default)]
-    pub other_field: Option<String>,  
+    pub other_field: Option<String>,
      */
-
     #[darling(default, multiple)]
     pub fields: Vec<Pair>,
 
     #[darling(default)]
-    pub on_sql: Option<String>
+    pub on_sql: Option<String>,
 }
-
 
 #[derive(Debug, FromMeta)]
 pub struct JoinArg {
@@ -46,18 +43,16 @@ pub struct JoinArg {
 
      #[darling(rename = "other_column", multiple)]
     pub other_columns: Vec<String>,  */
-
     #[darling(default, multiple)]
     pub columns: Vec<Pair>,
 
     #[darling(default)]
     pub on_sql: Option<String>,
-
 }
 
 // Attribute on struct field
 #[derive(Debug, FromField)]
-#[darling(attributes(toql) )]
+#[darling(attributes(toql))]
 pub struct ToqlField {
     pub ident: Option<syn::Ident>,
     pub ty: syn::Type,
@@ -94,8 +89,6 @@ pub struct ToqlField {
 }
 
 impl ToqlField {
-
-
     // IMPROVE: Function is used, but somehow considered unused
     #[allow(dead_code)]
     pub fn _first_type<'a>(&'a self) -> &'a Ident {
@@ -190,7 +183,7 @@ impl ToqlField {
     }
 }
 
-#[derive(FromMeta, PartialEq, Eq,Clone, Debug)]
+#[derive(FromMeta, PartialEq, Eq, Clone, Debug)]
 pub enum RenameCase {
     #[darling(rename = "CamelCase")]
     CamelCase,
@@ -224,7 +217,18 @@ pub struct Toql {
     pub skip_query_builder: bool,
     pub data: darling::ast::Data<(), ToqlField>,
 }
- 
+
+
+fn is_key(field: &crate::sane::Field) -> bool {
+
+    use crate::sane::FieldKind;
+
+    match &field.kind {
+       FieldKind::Regular(ref regular_attrs) => regular_attrs.key,
+        FieldKind::Join(ref join_attrs) => join_attrs.key,
+        _ => false
+    }
+}
 
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
@@ -264,13 +268,16 @@ impl quote::ToTokens for Toql {
             .take_struct()
             .expect("Should never be enum")
             .fields;
-       
-       let build_fields   =  ||  -> darling::error::Result<()> {
 
-          
+        let build_fields = || -> darling::error::Result<()> {
+            let mut keys = false;
             for field in fields {
-       
                 let f = crate::sane::Field::create(&field, &self)?;
+
+                if !keys {
+                    keys |= is_key(&f);
+
+                }
 
                 // Generate query functionality
                 if query_enabled {
@@ -287,7 +294,7 @@ impl quote::ToTokens for Toql {
                     }
 
                     if query_builder_enabled {
-                        toql_query_builder.add_field_for_builder( &f);
+                        toql_query_builder.add_field_for_builder(&f);
                     }
 
                     if field.merge.is_some() {
@@ -298,7 +305,6 @@ impl quote::ToTokens for Toql {
 
                         #[cfg(feature = "mysqldb")]
                         mysql_load.add_path_loader(&f);
-                        
                     }
 
                     #[cfg(feature = "mysqldb")]
@@ -307,7 +313,7 @@ impl quote::ToTokens for Toql {
                     #[cfg(feature = "mysqldb")]
                     let result = mysql_select.add_select_field(&f);
                     if result.is_err() {
-                    // tokens.extend(result.err());
+                        // tokens.extend(result.err());
                         continue;
                     }
                 }
@@ -319,49 +325,48 @@ impl quote::ToTokens for Toql {
             }
 
             // Fail if no keys are found
-            if !mysql_select.has_keys() {
-                return Err(darling::Error::custom("No field(s) marked as key. Add `key` to #[toql(...)] "));
+            if !keys {
+                return Err(darling::Error::custom(
+                    "No field(s) marked as key. Add `key` to #[toql(...)] ",
+                ));
             }
 
-            // Build merge functionality
-            mysql_select.build_merge();
-            mysql_load.build_merge();
             toql_mapper.build_merge();
+            
+            // Build merge functionality
+             #[cfg(feature = "mysqldb")]
+            mysql_select.build_merge();
+             #[cfg(feature = "mysqldb")]
+            mysql_load.build_merge();
+
+            
             Ok(())
-       };
+        };
 
-       match build_fields() {
-           Result::Err(err) => {
-                 tokens.extend( err.write_errors());
-           }
-           _ => {
-               // Produce compiler tokens
-            if query_builder_enabled {
-                tokens.extend(quote!(#toql_query_builder));
+        match build_fields() {
+            Result::Err(err) => {
+                tokens.extend(err.write_errors());
             }
+            _ => {
+                // Produce compiler tokens
+                if query_builder_enabled {
+                    tokens.extend(quote!(#toql_query_builder));
+                }
 
-            if query_enabled {
-                tokens.extend(quote!(#toql_mapper));
+                if query_enabled {
+                    tokens.extend(quote!(#toql_mapper));
 
-                #[cfg(feature = "mysqldb")]
-                tokens.extend(quote!(#mysql_load));
+                    #[cfg(feature = "mysqldb")]
+                    tokens.extend(quote!(#mysql_load));
 
-                #[cfg(feature = "mysqldb")]
-                tokens.extend(quote!(#mysql_select));
+                    #[cfg(feature = "mysqldb")]
+                    tokens.extend(quote!(#mysql_select));
+                }
+
+                if mut_enabled {
+                    tokens.extend(quote!(#toql_mutate));
+                }
             }
-
-            if mut_enabled {
-                tokens.extend(quote!(#toql_mutate));
-            }
-
-           }
-       }
-
-      
-
-        
+        }
     }
-        
 }
-
-

@@ -46,8 +46,8 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 
 mod annot;
-mod codegen_toql_mutate;
 mod codegen_toql_mapper;
+mod codegen_toql_mutate;
 mod codegen_toql_query_builder;
 
 #[cfg(feature = "mysqldb")]
@@ -58,7 +58,6 @@ mod codegen_mysql_select;
 
 mod sane;
 mod util;
-
 
 /// Derive to add Toql functionality to your struct.
 #[proc_macro_derive(Toql, attributes(toql))]

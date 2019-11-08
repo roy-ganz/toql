@@ -1,5 +1,5 @@
 use toql::derive::Toql;
-use toql::indelup::Indelup;
+use toql::mutate::Mutate;
 
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
@@ -8,7 +8,7 @@ struct DeleteBook {
     id: u8,
     title: Option<String>,
 
-    #[toql(sql_join(self = "author_id", other = "id"), alias = "a")]
+    #[toql(join(columns(self = "author_id", other = "id")), alias = "a")]
     author: Option<DeleteUser>,
 }
 

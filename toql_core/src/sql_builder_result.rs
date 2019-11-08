@@ -78,7 +78,6 @@ impl SqlBuilderResult {
     }
     /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
     pub fn params(&self) -> &Vec<String> {
-
         &self.combined_params
 
         /* if self.where_params.is_empty() {

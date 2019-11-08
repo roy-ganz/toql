@@ -33,7 +33,6 @@ use crate::error::Result;
 
 /// Trait for insert delete and update functions.
 pub trait Mutate<'a, T: 'a> {
-
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
     fn insert_one_sql(entity: &'a T) -> Result<Option<(String, Vec<String>)>> {
         Self::insert_many_sql(std::iter::once(entity))
@@ -62,8 +61,9 @@ pub trait Mutate<'a, T: 'a> {
     /// Update difference of two structs, given as tuple (old, new), returns tuples with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup`
-   fn diff_many_sql<I> (entities: I) -> Result<Option<Vec<(String,Vec<String>)>>>
-    where I: IntoIterator<Item = (&'a T, &'a T)>  +'a +  Clone;
+    fn diff_many_sql<I>(entities: I) -> Result<Option<Vec<(String, Vec<String>)>>>
+    where
+        I: IntoIterator<Item = (&'a T, &'a T)> + 'a + Clone;
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs

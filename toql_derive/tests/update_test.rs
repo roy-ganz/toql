@@ -1,5 +1,5 @@
 use toql::derive::Toql;
-use toql::indelup::Indelup;
+use toql::mutate::Mutate;
 
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
@@ -13,7 +13,7 @@ struct UpdateBook {
 
     isbn: Option<Option<String>>, // Selectable nullable column, update if some value
 
-    #[toql(sql_join(self = "author_id", other = "id"))]
+    #[toql(join( columns(self = "author_id", other = "id")))]
     author: Option<UpdateUser>,
 }
 
@@ -80,6 +80,3 @@ fn update_optional() {
     assert_eq!("UPDATE UpdateBook t0 SET t0.pages = ? WHERE t0.id = ?", sql);
     assert_eq!(["6", "5"], *params);
 }
-
-
-

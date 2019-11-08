@@ -46,8 +46,6 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt;
 
-
-
 struct SqlTargetData {
     selected: bool, // Target is selected
     used: bool,     // Target is either selected or filtered
@@ -101,8 +99,12 @@ impl fmt::Display for SqlBuilderError {
             SqlBuilderError::FieldMissing(ref s) => write!(f, "field `{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
-            SqlBuilderError::QueryParamMissing(ref s) => write!(f, "query parameter `{}` is missing ", s),
-               SqlBuilderError::QueryParamInvalid(ref s, ref d) => write!(f, "query parameter `{}` is invalid: {} ", s, d),
+            SqlBuilderError::QueryParamMissing(ref s) => {
+                write!(f, "query parameter `{}` is missing ", s)
+            }
+            SqlBuilderError::QueryParamInvalid(ref s, ref d) => {
+                write!(f, "query parameter `{}` is invalid: {} ", s, d)
+            }
         }
     }
 }
@@ -188,9 +190,7 @@ impl SqlBuilder {
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &BTreeSet<u8>,
         ordering: &HashMap<u8, Vec<(FieldOrder, String)>>,
-    ) 
-    -> Result<(), SqlBuilderError>
-    {
+    ) -> Result<(), SqlBuilderError> {
         // Build ordering clause
         for n in ordinals {
             if let Some(fields) = ordering.get(n) {
@@ -224,9 +224,7 @@ impl SqlBuilder {
         query_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
-    ) 
-    -> Result<(), SqlBuilderError>
-    {
+    ) -> Result<(), SqlBuilderError> {
         let mut any_selected = false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
@@ -262,9 +260,7 @@ impl SqlBuilder {
         field_order: &Vec<String>,
         used_paths: &BTreeSet<String>,
         joins: &HashMap<String, Join>,
-    ) -> Result<(), SqlBuilderError> 
-    
-    {
+    ) -> Result<(), SqlBuilderError> {
         // Build select clause
         let mut any_selected = false;
         for toql_field in field_order {
@@ -298,11 +294,11 @@ impl SqlBuilder {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
 
-                        
                         // Replace query params with actual values
                         for p in &sql_target.sql_query_params {
-                            let qp= query_params.get(p)
-                            .ok_or(SqlBuilderError::QueryParamMissing( p.to_string()))?;
+                            let qp = query_params
+                                .get(p)
+                                .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
                             result.select_params.push(qp.to_string());
                         }
 
@@ -382,7 +378,7 @@ impl SqlBuilder {
             where_clause: String::from(""),
             order_clause: String::from(""),
             having_clause: String::from(""),
-            select_params: vec![],  // query parameters in select clause, due to sql expr with <param>
+            select_params: vec![], // query parameters in select clause, due to sql expr with <param>
             where_params: vec![],
             having_params: vec![],
             order_params: vec![],
@@ -560,8 +556,10 @@ impl SqlBuilder {
 
                                 // Resolve query params in sql expression
                                 for p in &sql_target.sql_query_params {
-                                    let qp = query.params.get(p)
-                                            .ok_or(SqlBuilderError::QueryParamMissing( p.to_string()))?;
+                                    let qp = query
+                                        .params
+                                        .get(p)
+                                        .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
 
                                     if query_field.aggregation == true {
                                         result.having_params.push(qp.to_string());
@@ -572,8 +570,10 @@ impl SqlBuilder {
 
                                 if let Some(f) = &query_field.filter {
                                     // Get actual expression
-                                    let expression = sql_target.handler.build_select(&sql_target.expression, &query.params)?
-                                    . unwrap_or(("null".to_string(), vec![]));
+                                    let expression = sql_target
+                                        .handler
+                                        .build_select(&sql_target.expression, &query.params)?
+                                        .unwrap_or(("null".to_string(), vec![]));
 
                                     if let Some(f) = sql_target.handler.build_filter(
                                         expression, // todo change build_filter signature to take tuple
@@ -634,12 +634,11 @@ impl SqlBuilder {
                                                 &mut result.where_clause,
                                                 &f.0,
                                             );
-                                             if query_field.aggregation == true {
+                                            if query_field.aggregation == true {
                                                 result.having_params.extend_from_slice(&f.1);
                                             } else {
                                                 result.where_params.extend_from_slice(&f.1);
                                             }
-
 
                                             pending_where_parens = 0;
                                             need_where_concatenation = true;
@@ -648,12 +647,12 @@ impl SqlBuilder {
 
                                     // Add filter param to result
                                     /* let mut p = sql_target.handler.build_param(&f, &query.params);
-                                    if query_field.aggregation == true {
-                                        result.having_params.append(&mut p);
-                                    } else {
-                                        result.where_params.append(&mut p);
-                                    }
- */
+                                                                       if query_field.aggregation == true {
+                                                                           result.having_params.append(&mut p);
+                                                                       } else {
+                                                                           result.where_params.append(&mut p);
+                                                                       }
+                                    */
                                     if let Some(j) = sql_target.handler.build_join(&query.params)? {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
@@ -684,8 +683,6 @@ impl SqlBuilder {
                 }
             }
         }
-
-               
 
         // Select all fields for count queries that are marked with count_select
         if self.count_query {
@@ -783,19 +780,31 @@ impl SqlBuilder {
         if query.where_predicates.len() > 0 {
             let concatenate = !result.where_clause.is_empty();
             if concatenate {
-                result.where_clause.push_str( " AND (");
+                result.where_clause.push_str(" AND (");
             }
-            result.where_clause.push_str(&query.where_predicates.join(" AND "));
+            result
+                .where_clause
+                .push_str(&query.where_predicates.join(" AND "));
             if concatenate {
                 result.where_clause.push(')');
             }
-            result.where_params.extend_from_slice(&query.where_predicate_params);
+            result
+                .where_params
+                .extend_from_slice(&query.where_predicate_params);
         }
 
-        result.combined_params.extend_from_slice(&result.select_params);
-        result.combined_params.extend_from_slice(&result.where_params);
-        result.combined_params.extend_from_slice(&result.having_params);
-        result.combined_params.extend_from_slice(&result.order_params);
+        result
+            .combined_params
+            .extend_from_slice(&result.select_params);
+        result
+            .combined_params
+            .extend_from_slice(&result.where_params);
+        result
+            .combined_params
+            .extend_from_slice(&result.having_params);
+        result
+            .combined_params
+            .extend_from_slice(&result.order_params);
 
         // Create combined params if needed
         /* if !result.having_params.is_empty() && !result.where_params.is_empty() {
@@ -810,32 +819,33 @@ impl SqlBuilder {
         Ok(result)
     }
 
-    pub fn resolve_query_params(expression: &str, query_params: &HashMap<String, String>) 
-    -> Result<(String, Vec<String>), SqlBuilderError> {
-
+    pub fn resolve_query_params(
+        expression: &str,
+        query_params: &HashMap<String, String>,
+    ) -> Result<(String, Vec<String>), SqlBuilderError> {
         let (sql, params) = Self::extract_query_params(expression);
 
-        let mut resolved : Vec<String> = Vec::new();
+        let mut resolved: Vec<String> = Vec::new();
         for p in params {
-            let v =   query_params.get(&p)
-                            .ok_or(SqlBuilderError::QueryParamMissing( p.to_string()))?;
+            let v = query_params
+                .get(&p)
+                .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
             resolved.push(v.to_string());
         }
 
         Ok((sql, resolved))
     }
-       
-    pub fn extract_query_params(expression: &str) -> (String, Vec<String>){
 
+    pub fn extract_query_params(expression: &str) -> (String, Vec<String>) {
         lazy_static! {
-            static ref REGEX : regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
-        }     
+            static ref REGEX: regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        }
 
-        let mut query_params= Vec::new();
-        let sql = REGEX.replace(expression, |e : &regex::Captures| {
-            let name= &e[1];
+        let mut query_params = Vec::new();
+        let sql = REGEX.replace(expression, |e: &regex::Captures| {
+            let name = &e[1];
             query_params.push(name.to_string());
-            "?"    
+            "?"
         });
         (sql.to_string(), query_params)
     }

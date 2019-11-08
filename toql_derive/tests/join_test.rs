@@ -1,4 +1,4 @@
-use toql::indelup::Indelup;
+use toql::mutate::Mutate;
 use toql_derive::Toql;
 
 #[derive(Debug, PartialEq, Toql)]
@@ -7,16 +7,16 @@ struct Book {
     #[toql(key)]
     id: u8,
 
-    #[toql(sql_join(self = "author1_id", other = "id"))] // Non nullable column
+    #[toql(join(columns(self = "author1_id", other = "id")))] // Non nullable column
     author1: User,
 
-    #[toql(preselect, sql_join(self = "author2_id", other = "id"))] // Nullable column
+    #[toql(preselect, join( columns(self = "author2_id", other = "id")))] // Nullable column
     author2: Option<User>,
 
-    #[toql(sql_join(self = "author3_id", other = "id"))]
+    #[toql(join( columns(self = "author3_id", other = "id")))]
     author3: Option<User>, // Selectable non nullable column
 
-    #[toql(sql_join(self = "author4_id", other = "id"))]
+    #[toql(join( columns(self = "author4_id", other = "id")))]
     author4: Option<Option<User>>, // Selectable nullable column */
 }
 

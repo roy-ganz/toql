@@ -46,13 +46,13 @@
 //! Have a look at the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs) that serves users with Rocket and MySQL.
 //!
 
+pub use toql_core::diff;
 pub use toql_core::error;
 pub use toql_core::error::Result;
-pub use toql_core::mutate;
-pub use toql_core::merge;
-pub use toql_core::diff;
-pub use toql_core::query;
 pub use toql_core::key;
+pub use toql_core::merge;
+pub use toql_core::mutate;
+pub use toql_core::query;
 
 pub use toql_core::log_sql; // Export macro (lives at top level)
 
@@ -70,4 +70,3 @@ pub use toql_core::log; // Reexport for derive
 
 #[cfg(feature = "mysql")]
 pub use toql_mysql as mysql;
-

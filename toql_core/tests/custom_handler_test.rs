@@ -15,7 +15,11 @@ fn custom_handler() {
     }
 
     impl<T: FieldHandler> FieldHandler for CustomHandler<T> {
-        fn build_select(&self, sql: &str, params: &HashMap<String, String>) -> Result<Option<(String, Vec<String>)>,SqlBuilderError > {
+        fn build_select(
+            &self,
+            sql: &str,
+            params: &HashMap<String, String>,
+        ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
             self.base.build_select(sql, params)
         }
 
@@ -34,14 +38,14 @@ fn custom_handler() {
                                 name
                             )));
                         }
-                        Ok(Some((format!("LENGTH({}) = ?", sql),args.clone() )))
-                    },
+                        Ok(Some((format!("LENGTH({}) = ?", sql), args.clone())))
+                    }
                     _ => self.base.build_filter(sql, filter, params),
                 },
                 _ => self.base.build_filter(sql, filter, params),
             }
         }
-       /*  fn build_param(
+        /*  fn build_param(
             &self,
             filter: &FieldFilter,
             params: &HashMap<String, String>,
@@ -54,7 +58,10 @@ fn custom_handler() {
                 _ => self.base.build_param(filter, params),
             }
         } */
-        fn build_join(&self, params: &HashMap<String, String>) -> Result<Option<String>, SqlBuilderError> {
+        fn build_join(
+            &self,
+            params: &HashMap<String, String>,
+        ) -> Result<Option<String>, SqlBuilderError> {
             self.base.build_join(params)
         }
     }

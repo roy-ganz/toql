@@ -40,7 +40,6 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-
 use enquote::unquote;
 
 #[derive(Debug)]
@@ -58,7 +57,7 @@ pub(crate) struct SqlTarget {
     pub(crate) handler: Arc<FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool, // Target name has subfields separated by underscore
     pub(crate) expression: String, // Column name or SQL expression
-    pub(crate) sql_query_params: Vec<String> // Query_params for SQL expressions
+    pub(crate) sql_query_params: Vec<String>, // Query_params for SQL expressions
 }
 
 /// Handles the standart filters as documented in the guide.
@@ -66,9 +65,7 @@ pub(crate) struct SqlTarget {
 #[derive(Debug, Clone)]
 pub struct BasicFieldHandler {}
 
-
 impl BasicFieldHandler {
-
     pub fn new() -> Self {
         Self {}
     }
@@ -163,7 +160,11 @@ trait MapperFilter {
 ///
 pub trait FieldHandler {
     /// Return sql and params if you want to select it.
-    fn build_select(&self, sql: &str, _query_params: &HashMap<String, String>) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
+    fn build_select(
+        &self,
+        sql: &str,
+        _query_params: &HashMap<String, String>,
+    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         Ok(Some((format!("{}", sql), Vec::new())))
     }
 
@@ -183,7 +184,10 @@ pub trait FieldHandler {
         _query_params: &HashMap<String, String>,
     ) -> Vec<String>; */
     /// Return addition SQL join clause for this field or None
-    fn build_join(&self, _query_params: &HashMap<String, String>) -> Result<Option<String>, crate::sql_builder::SqlBuilderError> {
+    fn build_join(
+        &self,
+        _query_params: &HashMap<String, String>,
+    ) -> Result<Option<String>, crate::sql_builder::SqlBuilderError> {
         Ok(None)
     }
 }
@@ -235,34 +239,75 @@ impl FieldHandler for BasicFieldHandler {
         _query_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         match filter {
-            FieldFilter::Eq(criteria) => Ok(Some( (format!("{} = ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1}))),
-            FieldFilter::Eqn => Ok(Some( (format!("{} IS NULL", select.0),  select.1 ))),
-            FieldFilter::Ne(criteria) => Ok(Some( (format!("{} <> ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
+            FieldFilter::Eqn => Ok(Some((format!("{} IS NULL", select.0), select.1))),
+            FieldFilter::Ne(criteria) => Ok(Some((format!("{} <> ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
             FieldFilter::Nen => Ok(Some((format!("{} IS NOT NULL", select.0), select.1))),
-            FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
-            FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
-            FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
-            FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
-            FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0),{select.1.push(sql_param(lower.clone())); select.1}))),
-            FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
-            FieldFilter::In(args) => Ok(Some((format!(
-                "{} IN ({})",
-                select.0,
-                std::iter::repeat("?")
-                    .take(args.len())
-                    .collect::<Vec<&str>>()
-                    .join(",")
-            ), {let a :Vec<String>= args.iter().map(|a| sql_param(a.to_string())).collect();select.1.extend_from_slice(&a); select.1} ))),
-            FieldFilter::Out(args) => Ok(Some((format!(
-                "{} NOT IN ({})",
-                select.0,
-                std::iter::repeat("?")
-                    .take(args.len())
-                    .collect::<Vec<&str>>()
-                    .join(",")
-            ),{let a :Vec<String>= args.iter().map(|a| sql_param(a.to_string())).collect();select.1.extend_from_slice(&a); select.1} ))),
+            FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
+            FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
+            FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
+            FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
+            FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0), {
+                select.1.push(sql_param(lower.clone()));
+                select.1
+            }))),
+            FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
+            FieldFilter::In(args) => Ok(Some((
+                format!(
+                    "{} IN ({})",
+                    select.0,
+                    std::iter::repeat("?")
+                        .take(args.len())
+                        .collect::<Vec<&str>>()
+                        .join(",")
+                ),
+                {
+                    let a: Vec<String> = args.iter().map(|a| sql_param(a.to_string())).collect();
+                    select.1.extend_from_slice(&a);
+                    select.1
+                },
+            ))),
+            FieldFilter::Out(args) => Ok(Some((
+                format!(
+                    "{} NOT IN ({})",
+                    select.0,
+                    std::iter::repeat("?")
+                        .take(args.len())
+                        .collect::<Vec<&str>>()
+                        .join(",")
+                ),
+                {
+                    let a: Vec<String> = args.iter().map(|a| sql_param(a.to_string())).collect();
+                    select.1.extend_from_slice(&a);
+                    select.1
+                },
+            ))),
             //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
-            FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", select.0), {select.1.push(sql_param(criteria.clone())); select.1} ) )),
+            FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", select.0), {
+                select.1.push(sql_param(criteria.clone()));
+                select.1
+            }))),
             FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(format!(
                 "no filter `{}` found.",
                 name
@@ -308,7 +353,6 @@ pub struct SqlMapper {
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
     pub(crate) joins: HashMap<String, Join>,
-    
 }
 
 #[derive(Debug)]
@@ -424,7 +468,7 @@ impl SqlMapper {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-       self.map_handler_with_options(toql_field, expression, handler, MapperOptions::new())
+        self.map_handler_with_options(toql_field, expression, handler, MapperOptions::new())
     }
     // Maps a Toql field with options to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
@@ -445,7 +489,7 @@ impl SqlMapper {
             subfields: toql_field.find('_').is_some(),
             handler: Arc::new(handler),
             expression: expression.to_string(),
-            sql_query_params: Vec::new()
+            sql_query_params: Vec::new(),
         };
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);
@@ -512,17 +556,15 @@ impl SqlMapper {
         sql_expression: &str,
         options: MapperOptions,
     ) -> &'a mut Self {
-
         // If sql_expression contains query params replace them with ?
-        let query_param_regex= regex::Regex::new(r"<([\w_]+)>").unwrap();
-        let sql_expression =  sql_expression.to_string();
-        let mut sql_query_params= Vec::new();
-        let sql_expression = query_param_regex.replace(&sql_expression, |e : &regex::Captures| {
-            let name= &e[1];
+        let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        let sql_expression = sql_expression.to_string();
+        let mut sql_query_params = Vec::new();
+        let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
+            let name = &e[1];
             sql_query_params.push(name.to_string());
-            "?"    
+            "?"
         });
-
 
         let t = SqlTarget {
             expression: sql_expression.to_string(),
@@ -530,7 +572,7 @@ impl SqlMapper {
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
             handler: Arc::clone(&self.handler),
-            sql_query_params:sql_query_params
+            sql_query_params: sql_query_params,
         };
 
         self.field_order.push(toql_field.to_string());

@@ -188,7 +188,6 @@ impl FilterArg<&f64> for &f64 {
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub(crate) enum Concatenation {
     And,
@@ -603,7 +602,7 @@ pub struct Query {
     pub params: HashMap<String, String>, // generic params
 
     pub where_predicates: Vec<String>, // Additional where clause
-    pub where_predicate_params: Vec<String> // Query params for additional sql restriction
+    pub where_predicate_params: Vec<String>, // Query params for additional sql restriction
 }
 
 impl Query {
@@ -615,7 +614,7 @@ impl Query {
             roles: BTreeSet::new(),
             params: HashMap::new(),
             where_predicates: Vec::new(),
-            where_predicate_params: Vec::new()
+            where_predicate_params: Vec::new(),
         }
     }
     /// Create a new query that select all top fields.
@@ -626,7 +625,7 @@ impl Query {
             roles: BTreeSet::new(),
             params: HashMap::new(),
             where_predicates: Vec::new(),
-            where_predicate_params: Vec::new()
+            where_predicate_params: Vec::new(),
         }
     }
     /// Create a new query that select all top fields and all dependend fields. This is the best :)
@@ -637,7 +636,7 @@ impl Query {
             roles: BTreeSet::new(),
             params: HashMap::new(),
             where_predicates: Vec::new(),
-            where_predicate_params: Vec::new()
+            where_predicate_params: Vec::new(),
         }
     }
     /// Wrap query with parentheses.

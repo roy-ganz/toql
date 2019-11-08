@@ -1,4 +1,4 @@
-use toql::indelup::Indelup;
+use toql::mutate::Mutate;
 use toql_derive::Toql;
 
 #[derive(Debug, PartialEq, Toql)]
@@ -13,7 +13,7 @@ struct NewBook {
 
     isbn: Option<Option<String>>, // Selectable nullable column
 
-    #[toql(preselect, sql_join(self = "author_id", other = "id"))]
+    #[toql(preselect, join(columns(self = "author_id", other = "id")))]
     author: Option<NewUser>, // Nullable column
 }
 

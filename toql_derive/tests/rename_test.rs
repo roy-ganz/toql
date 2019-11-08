@@ -4,20 +4,20 @@ use toql_derive::Toql;
 #[derive(Debug, Clone, Toql)]
 #[toql(tables = "SHOUTY_SNAKE_CASE", columns = "mixedCase", skip_mut)]
 struct MyBook {
-    #[toql(column = "book_id")]
+    #[toql(column = "book_id", key)]
     id: u8,
 
     long_title: Option<String>,
 
     #[toql(
-        sql_join(self = "author_id", other = "id"),
+        join( columns(self = "author_id", other = "id")),
         alias = "a",
         table = "UserTable"
     )]
     author: Option<MyUser>,
 
     #[toql(
-        sql_join(other = "ID", on = "r.reader = true"),
+        join(columns(self= "co_author_id", other = "ID"),  on_sql = "r.reader = true"),
         alias = "r",
         table = "UserTable"
     )] // self is taken from field `co_author`
@@ -27,7 +27,7 @@ struct MyBook {
 #[derive(Debug, Clone, Toql)]
 #[toql(table = "UserTable", skip_mut)]
 struct MyUser {
-    #[toql(column = "ID")]
+    #[toql(column = "ID", key)]
     id: u8,
     username: Option<String>,
 }

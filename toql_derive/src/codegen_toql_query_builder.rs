@@ -5,8 +5,7 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::Ident;
 
-use crate::sane::{Struct, Field, FieldKind};
-
+use crate::sane::{Field, FieldKind, Struct};
 
 pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     //struct_ident: &'a Ident,
@@ -45,22 +44,20 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
         }
 
         match &field.kind {
-            FieldKind::Regular(ref regular_attrs)=> {
-                    let toql_field = &field.toql_field_name;
-                     self.builder_fields.push(quote!(
+            FieldKind::Regular(ref regular_attrs) => {
+                let toql_field = &field.toql_field_name;
+                self.builder_fields.push(quote!(
                         #rust_struct_visibility fn #rust_field_ident (mut self) -> toql :: query :: Field {
                             self . 0 . push_str ( #toql_field ) ;
                             toql :: query :: Field :: from ( self . 0 )
                         }
                     ));
-            },
+            }
             _ => {
-                 let toql_path = format!("{}_", field.toql_field_name);
+                let toql_path = format!("{}_", field.toql_field_name);
 
-            
-
-            
-                let path_fields_struct =   quote!( < #rust_type_ident as toql::query_builder::QueryFields>::FieldsType);
+                let path_fields_struct =
+                    quote!( < #rust_type_ident as toql::query_builder::QueryFields>::FieldsType);
 
                 self.builder_fields.push(quote!(
                             #rust_struct_visibility fn #rust_field_ident (mut self) -> #path_fields_struct {
@@ -68,11 +65,9 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                                 #path_fields_struct ::from_path(self.0)
                             }
                 ));
-
             }
-
         };
-        /* 
+        /*
         if field.join.is_none() && field.merge.is_none() {
             let toql_field = format!("{}", field_ident.as_ref().unwrap()).to_mixed_case();
             self.builder_fields.push(quote!(
