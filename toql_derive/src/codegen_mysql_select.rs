@@ -7,6 +7,8 @@ use syn::Ident;
 use heck::MixedCase;
 use heck::SnakeCase;
 
+use darling::{Result, Error};
+
 use crate::sane::{FieldKind, JoinField, MergeField, RegularField, SqlTarget};
 
 pub(crate) struct GeneratedMysqlSelect<'a> {
@@ -35,7 +37,7 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
     key_params_code: Vec<proc_macro2::TokenStream>,
 
     merge_fields: Vec<crate::sane::Field>,
-    key_field_names: Vec<String>,
+    merge_self_fields: Vec<String>,
 }
 
 impl<'a> GeneratedMysqlSelect<'a> {
@@ -64,11 +66,11 @@ impl<'a> GeneratedMysqlSelect<'a> {
             key_columns_code: Vec::new(),
             key_params_code: Vec::new(),
             merge_fields: Vec::new(),
-            key_field_names: Vec::new(),
+            merge_self_fields: Vec::new(),
         }
     }
 
-    pub fn add_select_field(&mut self, field: &crate::sane::Field) -> Result<(), ()> {
+    pub fn add_select_field(&mut self, field: &crate::sane::Field) ->Result<()> {
         /*   let field_name = field.ident.as_ref().unwrap().to_string();
         let field_ident = field.ident.as_ref().unwrap();
         let sql_column = crate::util::rename(&field_ident.to_string(), &toql.columns);
@@ -84,8 +86,8 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
-                if regular_attrs.key == true {
-                    if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
+                if regular_attrs.key {
+                   /*  if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
                         self.key_columns_code
                             .push(quote!( columns.push( String::from(#column)); ));
                     } else {
@@ -133,9 +135,21 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
                     self.select_keys_params.push(quote! {
                      params.push( key . #key_index .to_string());
+                    }); */
+
+                     let key_index = syn::Index::from(self.select_keys.len());
+                    if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
+                        let key_expr = format!("{}.{} = ?", self.sql_table_alias, sql_column);
+                        self.select_keys.push(quote!(#key_expr));
+                    } else {
+                        return Err(Error::custom("SQL expression not allowed for key. Remove `sql` from #[toql(..)]"));
+                    }
+                     
+                    self.select_keys_params.push(quote! {
+                        params.push( key . #key_index .to_string());
                     });
 
-                    self.key_field_names.push(rust_field_name.to_string());
+                    self.merge_self_fields.push(rust_field_name.to_string());
                 }
 
                 // Normal key should may only one Option (Toql selectable)
@@ -151,7 +165,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
                 match &regular_attrs.sql_target {
                     SqlTarget::Expression(ref expression) => {
-                        // TODO
+                        // TODO 
                     }
                     SqlTarget::Column(ref sql_column) => {
                         self.select_columns
@@ -168,8 +182,8 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 self.select_columns_params
                     .push(quote!(#rust_type_ident :: columns_sql()));
 
-                if join_attrs.key == true {
-                    self.select_key_types
+                if join_attrs.key {
+                  /*   self.select_key_types
                         .push(quote!( <#rust_type_ident as toql::key::Key>::Key));
                     let key_index = syn::Index::from(self.select_key_types.len() - 1);
 
@@ -224,8 +238,22 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     self.select_keys_params.push(  quote! {
                             params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params( &key. #key_index));
                         });
-
-                    self.key_field_names.push(rust_field_name.to_string());
+ */
+                    let key_index = syn::Index::from(self.select_keys.len());
+                    let aliased_column_format = format!("{}.{{}} = ?", &self.sql_table_alias);
+                    self.select_keys.push(quote!( {
+                        &<#rust_type_ident as toql::key::Key>::columns().iter()
+                        .map(|other_column|{
+                            #default_self_column_code;
+                            let self_column = #columns_map_code;
+                            format!(#aliased_column_format, self_column )
+                        }).collect::<Vec<String>>().join(" AND ")
+                    }
+                    ));
+                    self.select_keys_params.push(  quote! {
+                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params( &key. #key_index));
+                        });
+                    self.merge_self_fields.push(rust_field_name.to_string());
                 }
 
                 self.select_joins.push(format!(
@@ -607,12 +635,12 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     }
 
                     // Build join for all keys of that struct
-                    for this_field in &self.key_field_names {
+                    for self_field in &self.merge_self_fields {
                         let default_other_field =
-                            format!("{}_{}", field.rust_type_name.to_mixed_case(), &this_field);
-                        let other_field = merge_attrs.other_field(&this_field, default_other_field);
+                            format!("{}_{}", field.rust_type_name.to_mixed_case(), &self_field);
+                        let other_field = merge_attrs.other_field(&self_field, default_other_field);
 
-                        let self_column = merge_attrs.column(&this_field);
+                        let self_column = merge_attrs.column(&self_field);
                         let other_column = merge_attrs.column(&other_field);
 
                         on_condition.push(format!(
@@ -756,13 +784,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
         //  let key_params_code = &self.key_params_code;
 
-        let mods = if self.select_keys.is_empty() {
-            quote!( /* Skipped code generation, because #[toql(key)] is missing */ )
-        /*  quote_spanned! {
-            struct_ident.span() =>
-            compile_error!( "cannot find key(s) to delete and update: add `#[toql(key)]` to at the field(s) in your struct that are the primary key in your table");
-        } */
-        } else {
+        
             let select_columns = self.select_columns.join(",");
 
             let select_columns_params = &self.select_columns_params;
@@ -851,12 +873,12 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
             let key_columns_code = &self.key_columns_code;
             let key_params_code = &self.key_params_code;
 
-            quote! {
+            let select = quote! {
 
-            #[derive(Debug, Eq, PartialEq, Hash)]
-               #vis struct #struct_key_ident ( #key_type_code);
+            //#[derive(Debug, Eq, PartialEq, Hash)]
+              // #vis struct #struct_key_ident ( #key_type_code);
 
-                impl toql::key::Key for #struct_ident {
+                /* impl toql::key::Key for #struct_ident {
                     type Key = #struct_key_ident;
 
                     fn get_key(&self) -> toql::error::Result<Self::Key> {
@@ -893,20 +915,20 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
                         <#struct_ident as toql::key::Key>::get_key(self).ok().hash(state);
                     }
-                }
+                } */
 
                /*  #vis fn #key_predicate_fn (key: #struct_key_ident) ->Result<toql::query::Query , toql::error::ToqlError>{
                     Ok(toql::query::Query::new() #(#key_predicates)* )
                 } */
 
-                 impl toql::query_builder::KeyPredicate for #struct_key_ident {
+                /* impl toql::query_builder::KeyPredicate for #struct_key_ident {
 
                     fn key_predicate(&self) -> Result<toql::query::Query , toql::error::ToqlError>
                         {
                             let key = self;
                         Ok(toql::query::Query::new() #(#key_predicates)* )
                     }
-                }
+                } */
 
                 impl<'a> toql::mysql::select::Select<#struct_ident> for #struct_ident {
 
@@ -989,14 +1011,14 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                 }
 
-            }
+            
         };
 
         log::debug!(
             "Source code for `{}`:\n{}",
             self.struct_ident,
-            mods.to_string()
+            select.to_string()
         );
-        tokens.extend(mods);
+        tokens.extend(select);
     }
 }

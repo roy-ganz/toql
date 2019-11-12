@@ -14,7 +14,7 @@ struct UpdateBook {
     isbn: Option<Option<String>>, // Selectable nullable column, update if some value
 
     #[toql(join( columns(self = "author_id", other = "id")))]
-    author: Option<UpdateUser>,
+    author: Option<UpdateUser>, // Selectable inner join, update foreign key if some value
 }
 
 #[derive(Debug, PartialEq, Toql)]
@@ -38,7 +38,7 @@ fn update_one() {
         }),
     };
 
-    let (sql, params) = UpdateBook::update_one_sql(&b).unwrap();
+    let (sql, params) = UpdateBook::update_one_sql(&b).unwrap().unwrap();
 
     assert_eq!(
         "UPDATE UpdateBook t0 SET t0.title = ?, t0.pages = ?, t0.isbn = ?, t0.author_id = ? WHERE t0.id = ?",
@@ -59,7 +59,7 @@ fn update_many() {
     };
     let users = vec![u1, u2];
 
-    let (sql, params) = UpdateUser::update_many_sql(&users).unwrap();
+    let (sql, params) = UpdateUser::update_many_sql(&users).unwrap().unwrap();
 
     assert_eq!("UPDATE UpdateUser t0 INNER JOIN UpdateUser t1 SET t0.username = ?, t1.username = ? WHERE t0.id = ? AND t1.id = ?", sql);
     assert_eq!(["Foo", "Bar", "11", "22"], *params);
@@ -75,7 +75,7 @@ fn update_optional() {
         author: None,
     };
 
-    let (sql, params) = UpdateBook::update_one_sql(&b).unwrap();
+    let (sql, params) = UpdateBook::update_one_sql(&b).unwrap().unwrap();
 
     assert_eq!("UPDATE UpdateBook t0 SET t0.pages = ? WHERE t0.id = ?", sql);
     assert_eq!(["6", "5"], *params);

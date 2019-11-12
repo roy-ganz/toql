@@ -121,8 +121,10 @@ impl<'a> GeneratedToqlMutate<'a> {
                                                     . #rust_field_ident .as_ref()
                                                     .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
                                                    .as_ref()
-                                                   .map_or_else::<Result<String,toql::error::ToqlError>,_>(| none |{ Ok(<#rust_type_ident as toql::key::Key>::columns()iter().map(|c| String::from("NULL").collect::<Vec<_>()))},
-                                                   | some| {<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some))})?
+                                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                                            .map(|c| String::from("NULL"))
+                                                            .collect::<Vec<_>>())},
+                                                   | some| {Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))})?
 
                                                 );
 
@@ -134,8 +136,9 @@ impl<'a> GeneratedToqlMutate<'a> {
                                          params.extend_from_slice(
                                                    &entity
                                                     . #rust_field_ident .as_ref()
-                                                   .map_or_else::<Result<String,toql::error::ToqlError>,_>(| none |{ Ok(<#rust_type_ident as toql::key::Key>::columns()iter().map(|c| String::from("NULL").collect::<Vec<_>()))},
-                                                   | some| {<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some))})?
+                                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                                    .map(|c| String::from("NULL")).collect::<Vec<_>>())},
+                                                   | some| { Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))})?
                                                 );
                                            )
                                 },
@@ -153,7 +156,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                                 },
                                 _ => { // T
                                     quote!(
-                                        params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(entity. #rust_field_ident)?));
+                                        params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
                                    )
                                 }
                             }
@@ -421,8 +424,9 @@ impl<'a> GeneratedToqlMutate<'a> {
                                         .as_ref()
                                         .unwrap()
                                         .as_ref()
-                                   .map_or_else::<Result<String,toql::error::ToqlError>,_>(| none |{ Ok(<#rust_type_ident as toql::key::Key>::columns()iter().map(|c| String::from("NULL").collect::<Vec<_>()))},
-                                        | some| {<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some))})?
+                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                    .map(|c| String::from("NULL")).collect::<Vec<_>>())},
+                                        | some| { Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?)) })?
 
                                     );
                         )
@@ -433,9 +437,10 @@ impl<'a> GeneratedToqlMutate<'a> {
                             params.extend_from_slice(
                                    &entity
                                     . #rust_field_ident .as_ref()
-                                   .map_or_else::<Result<String,toql::error::ToqlError>,_>(| none |{ Ok(<#rust_type_ident as toql::key::Key>::columns()iter().map(|c| String::from("NULL").collect::<Vec<_>()))},
+                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                    .map(|c| String::from("NULL")).collect::<Vec<_>>())},
                                    | some| {
-                                       <#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some))
+                                       Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))
                                        })?);
                         )
                     }
@@ -452,7 +457,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                                            //update_stmt.push_str( &format!(#set_statement, alias));
                                              #add_columns_to_update_stmt
                                            params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(
-                                               &<#rust_type_ident as toql::key::Key>::get_key(entity. #rust_field_ident.as_ref())?));
+                                               &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
 
 
                         )
@@ -524,12 +529,12 @@ impl<'a> GeneratedToqlMutate<'a> {
                                             if    entity. #rust_field_ident
                                                     .as_ref()
                                                     .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
-                                                                Ok(toql::key::Key::get_key(e)? . #rust_type_ident .to_string())
+                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
                                                     })?
                                                 !=  outdated. #rust_field_ident
                                                     .as_ref()
                                                     .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
-                                                                Ok(toql::key::Key::get_key(e)? . #rust_type_ident .to_string())
+                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
                                                 })?
                                             {
                                             #add_columns_to_update_stmt

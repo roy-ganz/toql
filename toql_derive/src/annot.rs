@@ -1,6 +1,7 @@
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_mutate::GeneratedToqlMutate;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
+use crate::codegen_toql_key::GeneratedToqlKey;
 
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_load::GeneratedMysqlLoad;
@@ -219,16 +220,6 @@ pub struct Toql {
 }
 
 
-fn is_key(field: &crate::sane::Field) -> bool {
-
-    use crate::sane::FieldKind;
-
-    match &field.kind {
-       FieldKind::Regular(ref regular_attrs) => regular_attrs.key,
-        FieldKind::Join(ref join_attrs) => join_attrs.key,
-        _ => false
-    }
-}
 
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
@@ -238,6 +229,7 @@ impl quote::ToTokens for Toql {
         let mut toql_mapper = GeneratedToqlMapper::from_toql(&rust_struct);
         let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&rust_struct);
         let mut toql_mutate = GeneratedToqlMutate::from_toql(&rust_struct);
+        let mut toql_key = GeneratedToqlKey::from_toql(&rust_struct);
 
         #[cfg(feature = "mysqldb")]
         let mut mysql_load = GeneratedMysqlLoad::from_toql(&rust_struct);
@@ -270,14 +262,12 @@ impl quote::ToTokens for Toql {
             .fields;
 
         let build_fields = || -> darling::error::Result<()> {
-            let mut keys = false;
+           
             for field in fields {
                 let f = crate::sane::Field::create(&field, &self)?;
 
-                if !keys {
-                    keys |= is_key(&f);
-
-                }
+                toql_key.add_key_field(&f)?;
+                
 
                 // Generate query functionality
                 if query_enabled {
@@ -325,14 +315,14 @@ impl quote::ToTokens for Toql {
             }
 
             // Fail if no keys are found
-            if !keys {
+            if toql_key.key_missing() {
                 return Err(darling::Error::custom(
                     "No field(s) marked as key. Add `key` to #[toql(...)] ",
                 ));
             }
 
             toql_mapper.build_merge();
-            
+
             // Build merge functionality
              #[cfg(feature = "mysqldb")]
             mysql_select.build_merge();
@@ -348,7 +338,10 @@ impl quote::ToTokens for Toql {
                 tokens.extend(err.write_errors());
             }
             _ => {
-                // Produce compiler tokens
+                 // Produce compiler tokens
+                tokens.extend(quote!(#toql_key));
+
+               
                 if query_builder_enabled {
                     tokens.extend(quote!(#toql_query_builder));
                 }

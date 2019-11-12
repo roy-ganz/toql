@@ -30,7 +30,7 @@ fn delete_one() {
         author: None,
     };
 
-    let (sql, params) = DeleteBook::delete_one_sql(&b).unwrap();
+    let (sql, params) = DeleteBook::delete_one_sql(&b).unwrap().unwrap();
 
     assert_eq!("DELETE t FROM DeleteBook t WHERE (t.id = ?)", sql);
     assert_eq!(["5"], *params);
@@ -50,7 +50,7 @@ fn delete_many() {
     };
     let books = vec![b1, b2];
 
-    let (sql, params) = DeleteBook::delete_many_sql(&books).unwrap();
+    let (sql, params) = DeleteBook::delete_many_sql(&books).unwrap().unwrap();
 
     assert_eq!(
         "DELETE t FROM DeleteBook t WHERE (t.id = ?) OR (t.id = ?)",
