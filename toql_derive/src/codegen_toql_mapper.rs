@@ -160,11 +160,27 @@ impl<'a> GeneratedToqlMapper<'a> {
                     }
                 };
 
-                self.field_mappings.push(quote! {
+                match &regular_attrs.handler {
+                    Some(handler) => {
+                        let handler = Ident::new(handler, Span::call_site());
+                        self.field_mappings.push(quote! {
+                                            mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
+                                            #sql_mapping, #handler, toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                        }
+                            );
+
+                    },
+                    None =>   {  self.field_mappings.push(quote! {
                                             mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                             #sql_mapping,toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
+
+                    }
+
+                };
+
+              
 
                 if regular_attrs.key {
                     self.key_field_names.push(rust_field_name.to_string());

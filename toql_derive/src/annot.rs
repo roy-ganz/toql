@@ -87,6 +87,8 @@ pub struct ToqlField {
     pub alias: Option<String>,
     #[darling(default)]
     pub table: Option<String>, // Alternative sql table name
+     #[darling(default)]
+    pub handler: Option<String>
 }
 
 impl ToqlField {
