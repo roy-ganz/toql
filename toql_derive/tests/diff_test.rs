@@ -52,8 +52,12 @@ fn diff_one() {
 
     // Updated details and foreign key, but not join details
 
-    let (sql, params) = DiffBook::diff_one_sql(&b).unwrap();
+    let mut statements = DiffBook::diff_one_sql(&outdated, &updated).unwrap();
 
-    assert_eq!("UPDATE UpdateBook t0 SET t0.pages = ? WHERE t0.id = ?", sql);
-    assert_eq!(["6", "5"], *params);
+    assert_eq!(1, statements.len());
+
+    let (sql, params) = statements.pop().unwrap();
+
+    assert_eq!("UPDATE DiffBook t0 SET t0.title = ?, t0.pages = ?, t0.isbn = ?, t0.author_id = ? WHERE t0.id = ?", sql);
+    assert_eq!(["Updated", "10", "1234-5678", "6", "5"], *params);
 }

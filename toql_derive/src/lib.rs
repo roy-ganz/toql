@@ -16,7 +16,7 @@
 //! #[derive(Toql)]
 //! struct User {
 
-//!   #[toql(delup_key)] // Use this field as key for delete and update
+//!   #[toql(key)] // Use this field as key for delete and update
 //!   id : u64,
 //!
 //!   username : Option<String>

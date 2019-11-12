@@ -91,7 +91,7 @@ fn update_required_fields() {
         author4: None, // Selectable, don't update if None
     };
 
-    let (sql, params) = Book::update_one_sql(&b).unwrap();
+    let (sql, params) = Book::update_one_sql(&b).unwrap().unwrap();
 
     assert_eq!(
         "UPDATE Book t0 SET t0.author1_id = ?, t0.author2_id = ? WHERE t0.id = ?",

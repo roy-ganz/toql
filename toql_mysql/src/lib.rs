@@ -48,15 +48,8 @@ where
     C: GenericConnection,
 {
     let sql = T::insert_one_sql(&entity)?;
-    Ok(if let Some(sql) = sql {
-        execute_insert_sql(sql, conn)?
-        /* log_sql!(insert_stmt, params);
-        let mut stmt = conn.prepare(insert_stmt)?;
-        let res = stmt.execute(params)?;
-        res.last_insert_id() */
-    } else {
-        0
-    })
+    execute_insert_sql(sql, conn)
+    
 }
 
 /// Insert a collection of structs.
@@ -88,18 +81,9 @@ where
     C: GenericConnection,
 {
     let sql = T::delete_one_sql(&entity)?;
-
-    Ok(if let Some(sql) = sql {
-         execute_update_delete_sql(sql, conn)?
-       /*  log_sql!(delete_stmt, params);
-
-        let mut stmt = conn.prepare(delete_stmt)?;
-        let res = stmt.execute(params)?;
-        res.affected_rows() */
-    } else {
-        0
-    })
+     execute_update_delete_sql(sql, conn)
 }
+
 /// Delete a collection of structs.
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.

@@ -30,7 +30,7 @@ fn delete_one() {
         author: None,
     };
 
-    let (sql, params) = DeleteBook::delete_one_sql(&b).unwrap().unwrap();
+    let (sql, params) = DeleteBook::delete_one_sql(&b).unwrap();
 
     assert_eq!("DELETE t FROM DeleteBook t WHERE (t.id = ?)", sql);
     assert_eq!(["5"], *params);

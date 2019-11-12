@@ -405,6 +405,8 @@ impl<'a> GeneratedToqlMutate<'a> {
                 }
             }
             FieldKind::Join(join_attrs) => {
+
+               
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
 
@@ -412,7 +414,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                      for other_column in <#rust_type_ident as toql::key::Key>::columns() {
                         #default_self_column_code;
                         let self_column = #columns_map_code;
-                        update_stmt.push_str(self_column);
+                        update_stmt.push_str(&format!("{}.{} = ?, ",alias, self_column));
                     }
                 );
 
@@ -455,7 +457,6 @@ impl<'a> GeneratedToqlMutate<'a> {
                         // T
                         quote!(
                                            //update_stmt.push_str( &format!(#set_statement, alias));
-                                             #add_columns_to_update_stmt
                                            params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(
                                                &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
 
@@ -1136,7 +1137,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
 
 
                             #(#insert_columns_code)*
-                            let placeholder = columns.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
+                            let placeholder = format!(" ({})",columns.iter().map(|_| "?").collect::<Vec<&str>>().join(","));
                             let mut insert_stmt = format!( #insert_statement, columns.join(","));
 
                             for entity in entities {

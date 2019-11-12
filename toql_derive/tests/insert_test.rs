@@ -58,7 +58,7 @@ fn insert_many() {
     };
     let users = vec![u1, u2];
 
-    let (sql, params) = NewUser::insert_many_sql(&users).unwrap();
+    let (sql, params) = NewUser::insert_many_sql(&users).unwrap().unwrap(); // Result<Option<_>>
 
     assert_eq!("INSERT INTO NewUser (username) VALUES (?) (?)", sql);
     assert_eq!(["Foo", "Bar"], *params);
@@ -80,7 +80,7 @@ fn null_column() {
         "INSERT INTO NewBook (id,title,pages,isbn,author_id) VALUES (?,?,?,?,?)",
         sql
     );
-    assert_eq!(["5", "Foo", "null", "null", "null"], *params);
+    assert_eq!(["5", "Foo", "NULL", "NULL", "NULL"], *params);
 }
 
 #[test]
