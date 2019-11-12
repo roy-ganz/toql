@@ -6,24 +6,30 @@
 /// Returns three tuples for insert / update / delete, each containing the SQL statement and parameters.
 use std::collections::HashMap;
 
-
-pub fn collection_delta_sql<'a, T>( outdated: &'a Vec<T>, updated: &'a Vec<T>) -> crate::error::Result<(Option<(String, Vec<String>)>, Option<(String, Vec<String>)>, Option<(String, Vec<String>)>)>
-where T: crate::mutate::Mutate<'a, T> + 'a +  crate::key::Key, 
-      
+pub fn collection_delta_sql<'a, T>(
+    outdated: &'a Vec<T>,
+    updated: &'a Vec<T>,
+) -> crate::error::Result<(
+    Option<(String, Vec<String>)>,
+    Option<(String, Vec<String>)>,
+    Option<(String, Vec<String>)>,
+)>
+where
+    T: crate::mutate::Mutate<'a, T> + 'a + crate::key::Key,
 {
-        let mut insert: Vec<&T> = Vec::new();
-        let mut diff: Vec<(&T, &T)> = Vec::new();
-        let mut delete: Vec<&T> = Vec::new();
-        let ( mut ins,  mut di,  mut de) = crate::diff::collections_delta( std::iter::once((outdated, updated)))?;
-        insert.append(&mut ins);
-        diff.append(&mut di);
-        delete.append(&mut de);
-            
-       
-        let insert_sql = <T as crate::mutate::Mutate<T>>::insert_many_sql(insert)?;
-        let diff_sql = <T as crate::mutate::Mutate<T>>::shallow_diff_many_sql(diff)?;
-        let delete_sql = <T as crate::mutate::Mutate<T>>::delete_many_sql(delete)?;
-        Ok((insert_sql, diff_sql, delete_sql))
+    let mut insert: Vec<&T> = Vec::new();
+    let mut diff: Vec<(&T, &T)> = Vec::new();
+    let mut delete: Vec<&T> = Vec::new();
+    let (mut ins, mut di, mut de) =
+        crate::diff::collections_delta(std::iter::once((outdated, updated)))?;
+    insert.append(&mut ins);
+    diff.append(&mut di);
+    delete.append(&mut de);
+
+    let insert_sql = <T as crate::mutate::Mutate<T>>::insert_many_sql(insert)?;
+    let diff_sql = <T as crate::mutate::Mutate<T>>::shallow_diff_many_sql(diff)?;
+    let delete_sql = <T as crate::mutate::Mutate<T>>::delete_many_sql(delete)?;
+    Ok((insert_sql, diff_sql, delete_sql))
 }
 
 pub fn collections_delta<'a, I, T>(

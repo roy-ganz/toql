@@ -10,14 +10,17 @@ struct MyBook {
     long_title: Option<String>,
 
     #[toql(
-        join( columns(self = "author_id", other = "id")),
+        join(columns(self = "author_id", other = "id")),
         alias = "a",
         table = "UserTable"
     )]
     author: Option<MyUser>,
 
     #[toql(
-        join(columns(self= "co_author_id", other = "ID"),  on_sql = "r.reader = true"),
+        join(
+            columns(self = "co_author_id", other = "ID"),
+            on_sql = "r.reader = true"
+        ),
         alias = "r",
         table = "UserTable"
     )] // self is taken from field `co_author`

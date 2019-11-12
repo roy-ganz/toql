@@ -46,10 +46,10 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 
 mod annot;
+mod codegen_toql_key;
 mod codegen_toql_mapper;
 mod codegen_toql_mutate;
 mod codegen_toql_query_builder;
-mod codegen_toql_key;
 
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_load;

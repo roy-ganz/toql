@@ -1,7 +1,7 @@
+use crate::codegen_toql_key::GeneratedToqlKey;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_mutate::GeneratedToqlMutate;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
-use crate::codegen_toql_key::GeneratedToqlKey;
 
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_load::GeneratedMysqlLoad;
@@ -10,7 +10,7 @@ use crate::codegen_mysql_load::GeneratedMysqlLoad;
 use crate::codegen_mysql_select::GeneratedMysqlSelect;
 
 use syn::GenericArgument::Type;
-use syn::{Path, Ident};
+use syn::{Ident, Path};
 
 use proc_macro2::Span;
 
@@ -87,8 +87,8 @@ pub struct ToqlField {
     pub alias: Option<String>,
     #[darling(default)]
     pub table: Option<String>, // Alternative sql table name
-     #[darling(default)]
-    pub handler: Option<Path>
+    #[darling(default)]
+    pub handler: Option<Path>,
 }
 
 impl ToqlField {
@@ -221,8 +221,6 @@ pub struct Toql {
     pub data: darling::ast::Data<(), ToqlField>,
 }
 
-
-
 impl quote::ToTokens for Toql {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         //println!("DARLING = {:?}", self);
@@ -264,12 +262,10 @@ impl quote::ToTokens for Toql {
             .fields;
 
         let build_fields = || -> darling::error::Result<()> {
-           
             for field in fields {
                 let f = crate::sane::Field::create(&field, &self)?;
 
                 toql_key.add_key_field(&f)?;
-                
 
                 // Generate query functionality
                 if query_enabled {
@@ -326,12 +322,11 @@ impl quote::ToTokens for Toql {
             toql_mapper.build_merge();
 
             // Build merge functionality
-             #[cfg(feature = "mysqldb")]
+            #[cfg(feature = "mysqldb")]
             mysql_select.build_merge();
-             #[cfg(feature = "mysqldb")]
+            #[cfg(feature = "mysqldb")]
             mysql_load.build_merge();
 
-            
             Ok(())
         };
 
@@ -340,10 +335,9 @@ impl quote::ToTokens for Toql {
                 tokens.extend(err.write_errors());
             }
             _ => {
-                 // Produce compiler tokens
+                // Produce compiler tokens
                 tokens.extend(quote!(#toql_key));
 
-               
                 if query_builder_enabled {
                     tokens.extend(quote!(#toql_query_builder));
                 }

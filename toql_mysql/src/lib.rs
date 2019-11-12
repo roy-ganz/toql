@@ -17,25 +17,29 @@ pub mod row;
 pub mod select;
 pub use mysql; // Reexport for derive produced code
 
-
-fn execute_update_delete_sql <C>(statement: (String, Vec<String>),conn: &mut C ) -> Result<u64, ToqlError> 
-where   C: GenericConnection
+fn execute_update_delete_sql<C>(
+    statement: (String, Vec<String>),
+    conn: &mut C,
+) -> Result<u64, ToqlError>
+where
+    C: GenericConnection,
 {
-            let (update_stmt, params) = statement;
-            log::info!("SQL `{}` with params {:?}", update_stmt, params);
-            let mut stmt = conn.prepare(&update_stmt)?;
-            let res = stmt.execute(params)?;
-            Ok(res.affected_rows())
+    let (update_stmt, params) = statement;
+    log::info!("SQL `{}` with params {:?}", update_stmt, params);
+    let mut stmt = conn.prepare(&update_stmt)?;
+    let res = stmt.execute(params)?;
+    Ok(res.affected_rows())
 }
 
-fn execute_insert_sql <C>(statement: (String, Vec<String>),conn: &mut C ) -> Result<u64, ToqlError> 
-where   C: GenericConnection
+fn execute_insert_sql<C>(statement: (String, Vec<String>), conn: &mut C) -> Result<u64, ToqlError>
+where
+    C: GenericConnection,
 {
-             let (insert_stmt, params) = statement;
-            log::info!("SQL `{}` with params {:?}", insert_stmt, params);
-            let mut stmt = conn.prepare(&insert_stmt)?;
-            let res = stmt.execute(params)?;
-            Ok(res.last_insert_id())
+    let (insert_stmt, params) = statement;
+    log::info!("SQL `{}` with params {:?}", insert_stmt, params);
+    let mut stmt = conn.prepare(&insert_stmt)?;
+    let res = stmt.execute(params)?;
+    Ok(res.last_insert_id())
 }
 
 /// Insert one struct.
@@ -49,7 +53,6 @@ where
 {
     let sql = T::insert_one_sql(&entity)?;
     execute_insert_sql(sql, conn)
-    
 }
 
 /// Insert a collection of structs.
@@ -81,7 +84,7 @@ where
     C: GenericConnection,
 {
     let sql = T::delete_one_sql(&entity)?;
-     execute_update_delete_sql(sql, conn)
+    execute_update_delete_sql(sql, conn)
 }
 
 /// Delete a collection of structs.
@@ -97,11 +100,11 @@ where
     let sql = T::delete_many_sql(entities)?;
 
     Ok(if let Some(sql) = sql {
-         execute_update_delete_sql(sql, conn)?
-       /*  log_sql!(delete_stmt, params);
-        let mut stmt = conn.prepare(delete_stmt)?;
-        let res = stmt.execute(params)?;
-        res.affected_rows() */
+        execute_update_delete_sql(sql, conn)?
+    /*  log_sql!(delete_stmt, params);
+    let mut stmt = conn.prepare(delete_stmt)?;
+    let res = stmt.execute(params)?;
+    res.affected_rows() */
     } else {
         0
     })
@@ -121,12 +124,12 @@ where
     let sql = T::update_many_sql(entities)?;
 
     Ok(if let Some(sql) = sql {
-         execute_update_delete_sql(sql, conn)?
-        /* log_sql!(update_stmt, params);
-        let mut stmt = conn.prepare(&update_stmt)?;
-        let res = stmt.execute(params)?;
+        execute_update_delete_sql(sql, conn)?
+    /* log_sql!(update_stmt, params);
+    let mut stmt = conn.prepare(&update_stmt)?;
+    let res = stmt.execute(params)?;
 
-        res.affected_rows() */
+    res.affected_rows() */
     } else {
         0
     })
@@ -153,7 +156,7 @@ where
     let sql = T::update_one_sql(&entity)?;
 
     Ok(if let Some(sql) = sql {
-           execute_update_delete_sql(sql, conn)?
+        execute_update_delete_sql(sql, conn)?
     } else {
         0
     })
@@ -198,33 +201,34 @@ where
     diff_many(std::iter::once((outdated, current)), conn)
 }
 
-
-
 /// Updates difference of two collections.
 /// This will insert / update / delete database rows.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_one_collection<'a, T, C>(outdated: &'a Vec<T>, updated: &'a Vec<T>, conn: &mut C) -> Result<(u64, u64, u64), ToqlError>
+pub fn diff_one_collection<'a, T, C>(
+    outdated: &'a Vec<T>,
+    updated: &'a Vec<T>,
+    conn: &mut C,
+) -> Result<(u64, u64, u64), ToqlError>
 where
-    T: toql_core::mutate::Mutate<'a, T> + 'a +  toql_core::key::Key,
+    T: toql_core::mutate::Mutate<'a, T> + 'a + toql_core::key::Key,
     C: GenericConnection,
 {
-      let (insert_sql, diff_sql, delete_sql) = toql_core::diff::collection_delta_sql::<'a, T>(outdated, updated)?;
-      let mut affected = (0,0,0);
+    let (insert_sql, diff_sql, delete_sql) =
+        toql_core::diff::collection_delta_sql::<'a, T>(outdated, updated)?;
+    let mut affected = (0, 0, 0);
 
-    if let Some(insert_sql) = insert_sql{
+    if let Some(insert_sql) = insert_sql {
         affected.0 += execute_update_delete_sql(insert_sql, conn)?;
     }
     if let Some(diff_sql) = diff_sql {
         affected.1 += execute_update_delete_sql(diff_sql, conn)?;
     }
-    if let Some(delete_sql)= delete_sql{
+    if let Some(delete_sql) = delete_sql {
         affected.2 += execute_update_delete_sql(delete_sql, conn)?;
     }
 
     Ok(affected)
-  
 }
-
 
 /// Selects a single struct for a given key.
 /// This will select all base fields and join. Merged fields will be skipped

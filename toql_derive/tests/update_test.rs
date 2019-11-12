@@ -13,7 +13,7 @@ struct UpdateBook {
 
     isbn: Option<Option<String>>, // Selectable nullable column, update if some value
 
-    #[toql(join( columns(self = "author_id", other = "id")))]
+    #[toql(join(columns(self = "author_id", other = "id")))]
     author: Option<UpdateUser>, // Selectable inner join, update foreign key if some value
 }
 

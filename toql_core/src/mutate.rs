@@ -59,15 +59,13 @@ pub trait Mutate<'a, T: 'a> {
     where
         I: IntoIterator<Item = &'a T> + 'a + Clone;
 
-
     /// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     /// Because merged structs are also considered, the returned SQL statements, can be insert, update and delete statements.
     fn diff_one_sql(outdated: &'a T, updated: &'a T) -> Result<Vec<(String, Vec<String>)>> {
-         Ok(Self::diff_many_sql(std::iter::once((outdated, updated)))?.unwrap())
+        Ok(Self::diff_many_sql(std::iter::once((outdated, updated)))?.unwrap())
     }
-       
 
     /// Update difference of two structs, given as tuple (old, new), returns tuples with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
@@ -76,13 +74,14 @@ pub trait Mutate<'a, T: 'a> {
     where
         I: IntoIterator<Item = (&'a T, &'a T)> + 'a + Clone;
 
-
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup`  or set selectable fields to None in updated entity.
-    fn shallow_diff_one_sql(outdated: &'a T, updated: &'a T) -> Result<Option<(String, Vec<String>)>>
-    {
-            Self::shallow_diff_many_sql(std::iter::once((outdated, updated)))
+    fn shallow_diff_one_sql(
+        outdated: &'a T,
+        updated: &'a T,
+    ) -> Result<Option<(String, Vec<String>)>> {
+        Self::shallow_diff_many_sql(std::iter::once((outdated, updated)))
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.

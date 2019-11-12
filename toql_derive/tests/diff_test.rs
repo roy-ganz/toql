@@ -13,7 +13,7 @@ struct DiffBook {
 
     isbn: Option<Option<String>>, // Selectable nullable column, update if some value
 
-    #[toql(join( columns(self = "author_id", other = "id")))]
+    #[toql(join(columns(self = "author_id", other = "id")))]
     author: Option<DiffAuthor>,
 }
 

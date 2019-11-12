@@ -6,7 +6,7 @@ use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
 use proc_macro2::{Span, TokenStream};
-use syn::{Ident, Visibility, Path};
+use syn::{Ident, Path, Visibility};
 
 //use crate::error::Result;
 use darling::Result;
@@ -47,7 +47,7 @@ pub struct RegularField {
     pub key: bool,
     pub count_select: bool,
     pub count_filter: bool,
-    pub handler: Option<Path>
+    pub handler: Option<Path>,
 }
 #[derive(Clone)]
 pub struct JoinField {
@@ -119,10 +119,10 @@ impl Field {
         let number_of_options = field.number_of_options();
 
         let kind = if field.join.is_some() {
-
             if field.handler.is_some() {
                 return Err(darling::Error::custom(
-                    "`handler` not allowed for joined fields. Remove from `#[toql(..)]`.".to_string(),
+                    "`handler` not allowed for joined fields. Remove from `#[toql(..)]`."
+                        .to_string(),
                 )
                 .with_span(&field.ident));
             }
@@ -132,7 +132,6 @@ impl Field {
                 )
                 .with_span(&field.ident));
             }
-
 
             let renamed_table = crate::util::rename_or_default(
                 field.first_non_generic_type().unwrap().to_string().as_str(),
@@ -182,13 +181,14 @@ impl Field {
                 )
                 .with_span(&field.ident));
             }
-             if field.handler.is_some() {
+            if field.handler.is_some() {
                 return Err(darling::Error::custom(
-                    "`handler` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string(),
+                    "`handler` not allowed for merged fields. Remove from `#[toql(..)]`."
+                        .to_string(),
                 )
                 .with_span(&field.ident));
             }
-             if field.sql.is_some() {
+            if field.sql.is_some() {
                 return Err(darling::Error::custom(
                     "`sql` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string(),
                 )
@@ -230,7 +230,7 @@ impl Field {
                 key: field.key,
                 count_select: field.count_select,
                 count_filter: field.count_filter,
-                handler: field.handler.to_owned()
+                handler: field.handler.to_owned(),
             })
         };
 

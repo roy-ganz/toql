@@ -1,11 +1,8 @@
-use crate::annot::Toql;
-use crate::annot::ToqlField;
-use heck::MixedCase;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::Ident;
 
-use crate::sane::{Field, FieldKind, Struct};
+use crate::sane::{FieldKind, Struct};
 
 pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     //struct_ident: &'a Ident,
@@ -14,13 +11,12 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     builder_fields_struct: Ident,
     build_wildcard: bool,
     builder_fields: Vec<TokenStream>,
-    key_predicates:Vec<TokenStream>,
+    key_predicates: Vec<TokenStream>,
 }
 
 impl<'a> GeneratedToqlQueryBuilder<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlQueryBuilder {
         GeneratedToqlQueryBuilder {
-            //struct_ident: &toql.rust_struct_ident,
             rust_struct: &toql,
             rust_struct_visibility: &toql.rust_struct_visibility,
 
@@ -44,32 +40,31 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
         if rust_field_name == "wildcard" {
             self.build_wildcard = false;
         }
-       let key_index = syn::Index::from(self.key_predicates.len() );
+        let key_index = syn::Index::from(self.key_predicates.len());
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 let toql_field = &field.toql_field_name;
-              
+
                 self.builder_fields.push(quote!(
                         #rust_struct_visibility fn #rust_field_ident (mut self) -> toql :: query :: Field {
                             self . 0 . push_str ( #toql_field ) ;
                             toql :: query :: Field :: from ( self . 0 )
                         }
                     ));
-                    if regular_attrs.key {
-                        self.key_predicates.push(  quote! {
-                            .and(toql::query::Field::from(#toql_field).eq( &key . #key_index))
-                            });
-                    }
-            },
+                if regular_attrs.key {
+                    self.key_predicates.push(quote! {
+                    .and(toql::query::Field::from(#toql_field).eq( &key . #key_index))
+                    });
+                }
+            }
             x @ _ => {
-
                 if let FieldKind::Join(join_attrs) = x {
                     if join_attrs.key {
                         self.key_predicates.push(
                             quote!(
                                     .and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(&key. #key_index)?)
                                 )
-                        ); 
+                        );
                     }
                 }
 
@@ -86,34 +81,6 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                 ));
             }
         };
-        /*
-        if field.join.is_none() && field.merge.is_none() {
-            let toql_field = format!("{}", field_ident.as_ref().unwrap()).to_mixed_case();
-            self.builder_fields.push(quote!(
-                #vis fn #field_ident (mut self) -> toql :: query :: Field {
-                    self . 0 . push_str ( #toql_field ) ;
-                    toql :: query :: Field :: from ( self . 0 )
-                }
-            ));
-        } else {
-            let toql_field = format!(
-                "{}_",
-                format!("{}", field_ident.as_ref().unwrap()).to_mixed_case()
-            );
-
-            let field_type = field.first_non_generic_type().unwrap();
-
-            let type_ident: &Ident = field_type;
-            let path_fields_struct =
-                quote!( < #type_ident as toql::query_builder::QueryFields>::FieldsType);
-
-            self.builder_fields.push(quote!(
-                        #rust_struct_visibility fn #field_ident (mut self) -> #path_fields_struct {
-                            self.0.push_str(#toql_field);
-                            #path_fields_struct ::from_path(self.0)
-                        }
-            )); */
-        //}
     }
 }
 
