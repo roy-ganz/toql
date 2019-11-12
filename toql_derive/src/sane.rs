@@ -6,7 +6,7 @@ use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
 use proc_macro2::{Span, TokenStream};
-use syn::{Ident, Visibility};
+use syn::{Ident, Visibility, Path};
 
 //use crate::error::Result;
 use darling::Result;
@@ -47,7 +47,7 @@ pub struct RegularField {
     pub key: bool,
     pub count_select: bool,
     pub count_filter: bool,
-    pub handler: Option<String>
+    pub handler: Option<Path>
 }
 #[derive(Clone)]
 pub struct JoinField {

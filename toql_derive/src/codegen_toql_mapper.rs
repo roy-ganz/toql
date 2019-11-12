@@ -162,10 +162,9 @@ impl<'a> GeneratedToqlMapper<'a> {
 
                 match &regular_attrs.handler {
                     Some(handler) => {
-                        let handler = Ident::new(handler, Span::call_site());
                         self.field_mappings.push(quote! {
                                             mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            #sql_mapping, #handler, toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            #sql_mapping, #handler (), toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
 

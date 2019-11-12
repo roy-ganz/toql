@@ -10,7 +10,7 @@ use crate::codegen_mysql_load::GeneratedMysqlLoad;
 use crate::codegen_mysql_select::GeneratedMysqlSelect;
 
 use syn::GenericArgument::Type;
-use syn::Ident;
+use syn::{Path, Ident};
 
 use proc_macro2::Span;
 
@@ -88,7 +88,7 @@ pub struct ToqlField {
     #[darling(default)]
     pub table: Option<String>, // Alternative sql table name
      #[darling(default)]
-    pub handler: Option<String>
+    pub handler: Option<Path>
 }
 
 impl ToqlField {
