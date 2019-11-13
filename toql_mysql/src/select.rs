@@ -19,7 +19,7 @@ pub trait Select<T: Key> {
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
     fn select_one<C: GenericConnection>(
-        key: &<T as Key>::Key,
+        key: <T as Key>::Key,
         conn: &mut C,
     ) -> Result<T, ToqlError>;
 

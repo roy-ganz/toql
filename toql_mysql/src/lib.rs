@@ -7,6 +7,7 @@
 use mysql::prelude::GenericConnection;
 use toql_core::error::ToqlError;
 use toql_core::mutate::Mutate;
+use toql_core::mutate::Delete;
 use toql_core::query::Query;
 use toql_core::sql_mapper::SqlMapperCache;
 
@@ -25,7 +26,7 @@ where
     C: GenericConnection,
 {
     let (update_stmt, params) = statement;
-    log::info!("SQL `{}` with params {:?}", update_stmt, params);
+    log_sql!(update_stmt, params);
     let mut stmt = conn.prepare(&update_stmt)?;
     let res = stmt.execute(params)?;
     Ok(res.affected_rows())
@@ -36,7 +37,7 @@ where
     C: GenericConnection,
 {
     let (insert_stmt, params) = statement;
-    log::info!("SQL `{}` with params {:?}", insert_stmt, params);
+    log_sql!(insert_stmt, params);
     let mut stmt = conn.prepare(&insert_stmt)?;
     let res = stmt.execute(params)?;
     Ok(res.last_insert_id())
@@ -78,12 +79,12 @@ where
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of deleted rows.
-pub fn delete_one<'a, T, C>(entity: &'a T, conn: &mut C) -> Result<u64, ToqlError>
+pub fn delete_one<'a, T, C>( key: <T as toql_core::key::Key>::Key, conn: &mut C) -> Result<u64, ToqlError>
 where
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Delete<'a, T>  + toql_core::key::Key,
     C: GenericConnection,
 {
-    let sql = T::delete_one_sql(&entity)?;
+    let sql = T::delete_one_sql(key)?;
     execute_update_delete_sql(sql, conn)
 }
 
@@ -91,21 +92,17 @@ where
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of deleted rows.
-pub fn delete_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn delete_many<'a, I, T, C>(keys: I, conn: &mut C) -> Result<u64, ToqlError>
 where
-    I: Iterator<Item = &'a T> + 'a,
-    T: 'a + Mutate<'a, T>,
+    I: Iterator<Item = <T as toql_core::key::Key>::Key> + 'a,
+    T: 'a + Delete<'a, T> + toql_core::key::Key,
     C: GenericConnection,
 {
-    let sql = T::delete_many_sql(entities)?;
+    let sql = T::delete_many_sql(keys)?;
 
     Ok(if let Some(sql) = sql {
         execute_update_delete_sql(sql, conn)?
-    /*  log_sql!(delete_stmt, params);
-    let mut stmt = conn.prepare(delete_stmt)?;
-    let res = stmt.execute(params)?;
-    res.affected_rows() */
-    } else {
+       } else {
         0
     })
 }
@@ -210,7 +207,7 @@ pub fn diff_one_collection<'a, T, C>(
     conn: &mut C,
 ) -> Result<(u64, u64, u64), ToqlError>
 where
-    T: toql_core::mutate::Mutate<'a, T> + 'a + toql_core::key::Key,
+    T: toql_core::mutate::Mutate<'a, T> + 'a + toql_core::key::Key +  toql_core::mutate::Delete<'a, T>,
     C: GenericConnection,
 {
     let (insert_sql, diff_sql, delete_sql) =
@@ -232,7 +229,7 @@ where
 
 /// Selects a single struct for a given key.
 /// This will select all base fields and join. Merged fields will be skipped
-pub fn select_one<T, C>(key: &<T as toql_core::key::Key>::Key, conn: &mut C) -> Result<T, ToqlError>
+pub fn select_one<T, C>(key: <T as toql_core::key::Key>::Key, conn: &mut C) -> Result<T, ToqlError>
 where
     T: select::Select<T> + toql_core::key::Key,
     C: GenericConnection,

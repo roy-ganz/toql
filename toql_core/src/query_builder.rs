@@ -8,8 +8,9 @@ pub trait QueryFields {
     fn fields_from_path(path: String) -> Self::FieldsType;
 }
 
+/// Trait to build a Toql query from a Key
 pub trait KeyPredicate {
-    fn key_predicate(&self) -> Result<crate::query::Query, crate::error::ToqlError>;
+    fn key_predicate(&self) -> crate::query::Query;
 }
 
 /*

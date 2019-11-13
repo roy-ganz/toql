@@ -1,5 +1,4 @@
 use mysql::prelude::GenericConnection;
-use mysql::Conn;
 use toql_core::error::ToqlError;
 use toql_core::query::Query;
 use toql_core::sql_mapper::SqlMapperCache;

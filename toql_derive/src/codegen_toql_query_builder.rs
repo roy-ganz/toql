@@ -62,7 +62,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                     if join_attrs.key {
                         self.key_predicates.push(
                             quote!(
-                                    .and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(&key. #key_index)?)
+                                    .and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(&key. #key_index))
                                 )
                         );
                     }
@@ -108,10 +108,10 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
             impl toql::query_builder::KeyPredicate for #struct_key_ident {
 
-                    fn key_predicate(&self) -> Result<toql::query::Query , toql::error::ToqlError>
-                        {
-                            let key = self;
-                        Ok(toql::query::Query::new() #(#key_predicates)* )
+                    fn key_predicate(&self) -> toql::query::Query
+                    {
+                        let key = self;
+                        toql::query::Query::new() #(#key_predicates)*
                     }
                 }
 

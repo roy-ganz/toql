@@ -9,6 +9,7 @@ pub(crate) struct GeneratedToqlKey<'a> {
     key_types: Vec<TokenStream>,
     key_fields: Vec<TokenStream>,
     key_setters: Vec<TokenStream>,
+    serde_key: bool
 }
 
 impl<'a> GeneratedToqlKey<'a> {
@@ -20,6 +21,7 @@ impl<'a> GeneratedToqlKey<'a> {
             key_types: Vec::new(),
             key_fields: Vec::new(),
             key_setters: Vec::new(),
+            serde_key: toql.serde_key
         }
     }
 
@@ -129,9 +131,30 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         let key_getter = quote!( #(#key_fields  ),* );
         let key_setters = &self.key_setters;
 
+        // Single type or tuple
+        let key_type_arg =  if  self.key_types.len() == 1 {
+            quote!( #(#key_types),* )
+        } else {
+            quote!( ( #( #key_types),*) )
+        };
+         let key_index_code =  if  self.key_types.len() == 1 {
+            quote!( key )
+        } else {
+            let key_codes = key_types.iter().enumerate()
+                .map(|(i, _)| {let index = syn::Index::from(i); quote!( key. #index) })
+                .collect::<Vec<_>>(); 
+            quote!(  #( #key_codes),* )
+        };
+
+        let serde = if self.serde_key {
+            quote!( ,Deserialize, Serialize)
+        } else { 
+            quote!()
+        };
+
         let key = quote! {
 
-        #[derive(Debug, Eq, PartialEq, Hash)]
+        #[derive(Debug, Eq, PartialEq, Hash #serde)]
            #vis struct #struct_key_ident ( #key_type_code);
 
             impl toql::key::Key for #rust_stuct_ident {
@@ -165,6 +188,15 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                     <#rust_stuct_ident as toql::key::Key>::get_key(&entity)
                 }
             }
+
+            impl std::convert::From<#key_type_arg> for #struct_key_ident
+            {
+                
+                fn from(key: #key_type_arg) ->Self {
+                    Self( #key_index_code )
+                }
+            }
+
 
             // Impl to supprt HashSets
             impl std::hash::Hash for #rust_stuct_ident {

@@ -1,5 +1,5 @@
 use toql::derive::Toql;
-use toql::mutate::Mutate;
+use toql::mutate::Delete;
 
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]
@@ -24,13 +24,8 @@ struct DeleteUser {
 
 #[test]
 fn delete_one() {
-    let b = DeleteBook {
-        id: 5,
-        title: Some(String::from("Foo")),
-        author: None,
-    };
-
-    let (sql, params) = DeleteBook::delete_one_sql(&b).unwrap();
+   
+    let (sql, params) = DeleteBook::delete_one_sql( DeleteBookKey(5)).unwrap();
 
     assert_eq!("DELETE t FROM DeleteBook t WHERE (t.id = ?)", sql);
     assert_eq!(["5"], *params);
@@ -38,19 +33,10 @@ fn delete_one() {
 
 #[test]
 fn delete_many() {
-    let b1 = DeleteBook {
-        id: 5,
-        title: Some(String::from("Foo")),
-        author: None,
-    };
-    let b2 = DeleteBook {
-        id: 24,
-        title: Some(String::from("Foo")),
-        author: None,
-    };
-    let books = vec![b1, b2];
+    
+    let books = vec![DeleteBookKey(5), DeleteBookKey(24)];
 
-    let (sql, params) = DeleteBook::delete_many_sql(&books).unwrap().unwrap();
+    let (sql, params) = DeleteBook::delete_many_sql(books).unwrap().unwrap();
 
     assert_eq!(
         "DELETE t FROM DeleteBook t WHERE (t.id = ?) OR (t.id = ?)",

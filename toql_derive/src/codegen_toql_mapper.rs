@@ -172,7 +172,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         for field in &self.merge_fields {
             let rust_type_ident = &field.rust_type_ident;
             let rust_field_ident = &field.rust_field_ident;
-            let toql_field_name = &field.toql_field_name;
+            
 
             match &field.kind {
                 FieldKind::Merge(merge_attrs) => {

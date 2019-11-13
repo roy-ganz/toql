@@ -3,8 +3,7 @@
 *
 */
 
-use crate::annot::Toql;
-use crate::annot::ToqlField;
+
 use heck::MixedCase;
 use proc_macro2::Span;
 

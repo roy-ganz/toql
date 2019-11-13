@@ -22,13 +22,25 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt;
 
+
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
-pub trait FilterArg<T> {
-    fn to_sql(self) -> String;
+pub trait FilterArg {
+    fn to_sql(&self) -> String;
 }
 
-impl FilterArg<&str> for &str {
-    fn to_sql(self) -> String {
+
+ impl FilterArg for &str {
+    fn to_sql(&self) -> String {
+        let mut s = String::from("'");
+        // TODO escape for sql
+        s.push_str(*self);
+        s.push('\'');
+        s
+    }
+} 
+// TODO combine with above
+impl FilterArg for String {
+    fn to_sql(&self) -> String {
         let mut s = String::from("'");
         // TODO escape for sql
         s.push_str(self);
@@ -36,157 +48,169 @@ impl FilterArg<&str> for &str {
         s
     }
 }
-// TODO combine with above
-impl FilterArg<String> for String {
-    fn to_sql(self) -> String {
+ impl FilterArg for &String {
+    fn to_sql(&self) -> String {
         let mut s = String::from("'");
         // TODO escape for sql
-        s.push_str(&self);
+        s.push_str(self.as_str());
         s.push('\'');
         s
     }
-}
-impl FilterArg<&String> for &String {
-    fn to_sql(self) -> String {
-        let mut s = String::from("'");
-        // TODO escape for sql
-        s.push_str(&self);
-        s.push('\'');
-        s
+} 
+
+macro_rules! impl_num_filter_arg {
+    ($($mty:ty),+) => {
+        $(
+            impl FilterArg for $mty {
+                 fn to_sql(&self) -> String {
+                    self.to_string()
+                 }
+            }
+            impl<'a> FilterArg for &'a $mty {
+                 fn to_sql(&self) -> String {
+                    self.to_string()
+                 }
+            } 
+        )+
     }
 }
 
-impl FilterArg<u8> for u8 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<u16> for u16 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<u32> for u32 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<u64> for u64 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<u128> for u128 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<i8> for i8 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<i16> for i16 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<i32> for i32 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<i64> for i64 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<i128> for i128 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<bool> for bool {
-    fn to_sql(self) -> String {
-        String::from(if self == true { "1" } else { "0" })
-    }
-}
-impl FilterArg<f32> for f32 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg<f64> for f64 {
-    fn to_sql(self) -> String {
-        self.to_string()
-    }
-}
+impl_num_filter_arg!(usize,u8, u16, u32, u64, u128,i8, i16, i32, i64, i128, f32, f64);
 
-impl FilterArg<&u8> for &u8 {
-    fn to_sql(self) -> String {
+
+
+/* 
+impl FilterArg for u8 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&u16> for &u16 {
-    fn to_sql(self) -> String {
+impl FilterArg for u16 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&u32> for &u32 {
-    fn to_sql(self) -> String {
+impl FilterArg for u32 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&u64> for &u64 {
-    fn to_sql(self) -> String {
+impl FilterArg for u64 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&u128> for &u128 {
-    fn to_sql(self) -> String {
+impl FilterArg for u128 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&i8> for &i8 {
-    fn to_sql(self) -> String {
+impl FilterArg for i8 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&i16> for &i16 {
-    fn to_sql(self) -> String {
+impl FilterArg for i16 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&i32> for &i32 {
-    fn to_sql(self) -> String {
+impl FilterArg for i32 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&i64> for &i64 {
-    fn to_sql(self) -> String {
+impl FilterArg for i64 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&i128> for &i128 {
-    fn to_sql(self) -> String {
+impl FilterArg for i128 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
-}
-impl FilterArg<&bool> for &bool {
-    fn to_sql(self) -> String {
+} */
+impl FilterArg for bool {
+    fn to_sql(&self) -> String {
         String::from(if *self == true { "1" } else { "0" })
     }
 }
-impl FilterArg<&f32> for &f32 {
-    fn to_sql(self) -> String {
+/* impl FilterArg for f32 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
-impl FilterArg<&f64> for &f64 {
-    fn to_sql(self) -> String {
+impl FilterArg for f64 {
+    fn to_sql(&self) -> String {
         self.to_string()
     }
 }
+
+ impl FilterArg for &u8 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &u16 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &u32 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &u64 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &u128 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &i8 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &i16 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &i32 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &i64 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &i128 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+} */
+impl FilterArg for &bool {
+    fn to_sql(&self) -> String {
+        String::from(if **self == true { "1" } else { "0" })
+    }
+}
+/* impl FilterArg for &f32 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}
+impl FilterArg for &f64 {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
+}  */
 
 #[derive(Clone, Debug)]
 pub(crate) enum Concatenation {
@@ -316,7 +340,7 @@ impl Field {
         self
     }
     /// Filter records with _equal_ predicate.
-    pub fn eq<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn eq(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Eq(criteria.to_sql()));
         self
     }
@@ -326,7 +350,7 @@ impl Field {
         self
     }
     /// Filter records with _not equal_ predicate.
-    pub fn ne<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn ne(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Ne(criteria.to_sql()));
         self
     }
@@ -336,37 +360,37 @@ impl Field {
         self
     }
     /// Filter records with greater that_ predicate.
-    pub fn gt<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn gt(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Gt(criteria.to_sql()));
         self
     }
     /// Filter records with greater or equal_ predicate.
-    pub fn ge<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn ge(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Ge(criteria.to_sql()));
         self
     }
     /// Filter records with lesser than_ predicate.
-    pub fn lt<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn lt(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Lt(criteria.to_sql()));
         self
     }
     /// Filter records with lesser or equal_ predicate.
-    pub fn le<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn le(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Le(criteria.to_sql()));
         self
     }
     /// Filter records with _between_ predicate. This is inclusive, so `x bw 3 6` is the same as `x ge 3, x le 6`
-    pub fn bw<T>(mut self, lower: impl FilterArg<T>, upper: impl FilterArg<T>) -> Self {
+    pub fn bw(mut self, lower: impl FilterArg, upper: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Bw(lower.to_sql(), upper.to_sql()));
         self
     }
     /// Filter records with _like_ predicate.
-    pub fn lk<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn lk(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Lk(criteria.to_sql()));
         self
     }
     /// Filter records with _regex_ predicate.
-    pub fn re<T>(mut self, criteria: impl FilterArg<T>) -> Self {
+    pub fn re(mut self, criteria: impl FilterArg) -> Self {
         self.filter = Some(FieldFilter::Re(criteria.to_sql()));
         self
     }
@@ -375,14 +399,14 @@ impl Field {
         self
     } */
     /// Filter records with _inside_ predicate.
-    pub fn ins<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
+    pub fn ins(mut self, criteria: Vec<impl FilterArg>) -> Self {
         self.filter = Some(FieldFilter::In(
             criteria.into_iter().map(|c| c.to_sql()).collect(),
         ));
         self
     }
     /// Filter records with _outside_ predicate.
-    pub fn out<T>(mut self, criteria: Vec<impl FilterArg<T>>) -> Self {
+    pub fn out(mut self, criteria: Vec<impl FilterArg>) -> Self {
         self.filter = Some(FieldFilter::Out(
             criteria.into_iter().map(|c| c.to_sql()).collect(),
         ));
@@ -391,7 +415,7 @@ impl Field {
     /// Filter records with custom function.
     /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
     /// See _custom handler test_ for an example.
-    pub fn fnc<U, T>(mut self, name: U, args: Vec<impl FilterArg<T>>) -> Self
+    pub fn fnc<U>(mut self, name: U, args: Vec<impl FilterArg>) -> Self
     where
         U: Into<String>,
     {

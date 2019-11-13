@@ -15,11 +15,12 @@ pub fn collection_delta_sql<'a, T>(
     Option<(String, Vec<String>)>,
 )>
 where
-    T: crate::mutate::Mutate<'a, T> + 'a + crate::key::Key,
+    T: crate::mutate::Mutate<'a, T> + 'a + crate::key::Key + crate::mutate::Delete<'a, T>
+    
 {
     let mut insert: Vec<&T> = Vec::new();
     let mut diff: Vec<(&T, &T)> = Vec::new();
-    let mut delete: Vec<&T> = Vec::new();
+    let mut delete: Vec<T::Key> = Vec::new();
     let (mut ins, mut di, mut de) =
         crate::diff::collections_delta(std::iter::once((outdated, updated)))?;
     insert.append(&mut ins);
@@ -28,20 +29,20 @@ where
 
     let insert_sql = <T as crate::mutate::Mutate<T>>::insert_many_sql(insert)?;
     let diff_sql = <T as crate::mutate::Mutate<T>>::shallow_diff_many_sql(diff)?;
-    let delete_sql = <T as crate::mutate::Mutate<T>>::delete_many_sql(delete)?;
+    let delete_sql = <T as crate::mutate::Delete<T>>::delete_many_sql(delete)?;
     Ok((insert_sql, diff_sql, delete_sql))
 }
 
 pub fn collections_delta<'a, I, T>(
     collections: I,
-) -> crate::error::Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<&'a T>)>
+) -> crate::error::Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<T::Key>)>
 where
     I: IntoIterator<Item = (&'a Vec<T>, &'a Vec<T>)> + 'a + Clone,
-    T: crate::mutate::Mutate<'a, T> + crate::key::Key + 'a,
+    T: crate::mutate::Mutate<'a, T> + crate::key::Key + 'a + crate::mutate::Delete<'a, T>,
 {
     let mut diff: Vec<(&T, &T)> = Vec::new(); // Vector with entities to diff
     let mut insert: Vec<&T> = Vec::new(); // Vector with entities to insert
-    let mut delete: Vec<&T> = Vec::new(); // Vector with entities to delete
+    let mut delete: Vec<T::Key> = Vec::new(); // Vector with keys to delete
 
     for (previous_coll, current_coll) in collections {
         let mut previous_index: HashMap<T::Key, &T> = HashMap::new();
@@ -65,7 +66,7 @@ where
         }
 
         for (_k, v) in previous_index {
-            delete.push(v);
+            delete.push(crate::key::Key::get_key(v)?);
         }
     }
 

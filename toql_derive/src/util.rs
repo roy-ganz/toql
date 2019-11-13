@@ -23,21 +23,6 @@ pub(crate) fn rename_or_default(string: &str, renaming: &Option<RenameCase>) -> 
     }
 }
 
-pub(crate) struct JoinInfo {
-    pub(crate) joined_table: String,
-    pub(crate) on_expr: String,
-    pub(crate) key_names: Vec<String>,
-    pub(crate) key_types: Vec<String>,
-}
-
-pub(crate) fn join_info() -> JoinInfo {
-    JoinInfo {
-        joined_table: String::from(""),
-        on_expr: String::from(""),
-        key_names: Vec::new(),
-        key_types: Vec::new(),
-    }
-}
 
 pub fn extract_query_params(expression: &str) -> (String, Vec<String>) {
     let regex: regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();

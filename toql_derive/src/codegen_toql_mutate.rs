@@ -204,7 +204,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                     self.key_params_code
                                 .push(
                                         quote!(
-                                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(  &<#rust_type_ident as toql::key::Key>::get_key(entity . #rust_field_ident #unwrap )?));
+                                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(  &<#rust_type_ident as toql::key::Key>::get_key( &entity . #rust_field_ident #unwrap )?));
                                         )
                                     );
                 }
@@ -373,7 +373,7 @@ impl<'a> GeneratedToqlMutate<'a> {
                     }
                 });
                 // diff code
-                let join_key_index = syn::Index::from(self.key_params_code.len() - 1);
+                //let join_key_index = syn::Index::from(self.key_params_code.len() - 1);
                 self.diff_set_code.push(
                             match field.number_of_options  {
                                 2 => { // Option<Option<T>>
@@ -383,13 +383,13 @@ impl<'a> GeneratedToqlMutate<'a> {
                                          entity. #rust_field_ident
                                                     .as_ref() .unwrap()
                                                     .as_ref()
-                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
-                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                    .map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
+                                                                Ok(Some(toql::key::Key::get_key(e)?))
                                                     })?
                                         !=  outdated. #rust_field_ident
                                         .as_ref() .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
-                                        .as_ref().map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
-                                                            Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                        .as_ref().map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
+                                                            Ok(Some(toql::key::Key::get_key(e)? ))
                                          })?
                                         {
                                             #add_columns_to_update_stmt
@@ -401,13 +401,13 @@ impl<'a> GeneratedToqlMutate<'a> {
                                     quote!(
                                             if    entity. #rust_field_ident
                                                     .as_ref()
-                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
-                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                    .map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
+                                                                Ok(Some(toql::key::Key::get_key(e)?))
                                                     })?
                                                 !=  outdated. #rust_field_ident
                                                     .as_ref()
-                                                    .map_or::<Result<String,toql::error::ToqlError>,_>(Ok(String::from("NULL")), |e| {
-                                                                Ok(toql::key::Key::get_key(e)? . #join_key_index .to_string())
+                                                    .map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
+                                                                Ok(Some(toql::key::Key::get_key(e)? ))
                                                 })?
                                             {
                                             #add_columns_to_update_stmt
@@ -516,6 +516,46 @@ impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
 
             quote! {
 
+                impl<'a> toql::mutate::Delete<'a, #struct_ident> for #struct_ident {
+                    fn delete_many_sql<I>(keys: I) -> toql::error::Result<Option<(String, Vec<String>)>>
+                        where I:  IntoIterator<Item=<#struct_ident as toql::key::Key>::Key> +'a
+                        {
+                            let alias= "t";
+                            let mut delete_stmt =format!(#delete_many_statement, alias = alias);
+
+                            let mut params :Vec<String>= Vec::new();
+                            
+                            let mut first = true;
+
+                           
+
+                              let key_comparison = <#struct_ident as toql::key::Key>::columns().iter()
+                                .map(|key| format!("{}.{} = ?", alias, key))
+                                .collect::<Vec<String>>()
+                                .join(" AND ");
+
+                            for key in keys {
+                                    if first {
+                                        first = false;
+                                    }else {
+                                       delete_stmt.push_str(" OR ");
+                                    }
+                                   delete_stmt.push('(');
+
+                                delete_stmt.push_str(&key_comparison);
+
+                                   delete_stmt.push(')');
+                                   params.extend_from_slice(&<#struct_ident as toql::key::Key>::params(&key));
+                            }
+                            if params.is_empty() {
+                                return Ok(None);
+                            }
+
+                            Ok(Some((delete_stmt, params)))
+                     }
+
+
+                }
                 impl<'a> toql::mutate::Mutate<'a, #struct_ident> for #struct_ident {
 
                      fn insert_many_sql<I>(entities: I)-> toql::error::Result<Option<(String, Vec<String>)>>
@@ -684,43 +724,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMutate<'a> {
 
 
 
-                        fn delete_many_sql<I>(entities: I) -> toql::error::Result<Option<(String, Vec<String>)>>
-                        where I:  IntoIterator<Item=&'a #struct_ident> +'a
-                        {
-                            let alias= "t";
-                            let mut delete_stmt =format!(#delete_many_statement, alias = alias);
-
-                            let mut params :Vec<String>= Vec::new();
-                            let mut keys :Vec<String>= Vec::new();
-                            let mut first = true;
-
-                             #(#key_columns_code)*
-
-                              let key_comparison = keys.iter()
-                                .map(|key| format!("{}.{} = ?", alias, key))
-                                .collect::<Vec<String>>()
-                                .join(" AND ");
-
-                            for entity in entities {
-                                    if first {
-                                        first = false;
-                                    }else {
-                                       delete_stmt.push_str(" OR ");
-                                    }
-                                   delete_stmt.push('(');
-
-                                delete_stmt.push_str(&key_comparison);
-
-                                   delete_stmt.push(')');
-
-                                  #(#key_params_code)*
-                            }
-                            if params.is_empty() {
-                                return Ok(None);
-                            }
-
-                            Ok(Some((delete_stmt, params)))
-                     }
+                        
 
                 }
 

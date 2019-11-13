@@ -17,6 +17,7 @@ pub struct Struct {
     pub sql_table_name: String,
     pub sql_table_alias: String,
     pub rust_struct_visibility: Visibility,
+    pub serde_key:bool
 }
 
 impl Struct {
@@ -31,6 +32,7 @@ impl Struct {
                 .clone()
                 .unwrap_or(toql.ident.to_string().to_snake_case()),
             rust_struct_visibility: toql.vis.clone(),
+            serde_key: toql.serde_key
         }
     }
 }
@@ -150,9 +152,46 @@ impl Field {
                     quote!(#oc => #tc, )
                 })
                 .collect::<Vec<_>>();
+            
+            let other_columns: Vec<String> = field
+                .join
+                .as_ref()
+                .unwrap()
+                .columns
+                .iter()
+                .map(|column| {
+                    String::from(column.other.as_str())
+                })
+                .collect::<Vec<_>>();
+
             let default_self_column_format = format!("{}_{{}}", field.ident.as_ref().unwrap());
             let default_self_column_code = quote!( let default_self_column= format!(#default_self_column_format, other_column););
+
+            let safety_check_for_column_mapping = if other_columns.is_empty() { quote!()}  else {
+                quote!(
+                    if cfg!(debug_assertions) {
+                        let valid_columns = <#rust_type_ident as toql::key::Key>::columns();
+                        let invalid_columns: Vec<String> = [ #(#other_columns),* ]
+                            .iter()
+                            .filter(|col| !valid_columns.iter().any ( |s| &s == col ) )
+                            .map(|c| c.to_string())
+                            .collect::<Vec<_>>();
+
+                        if !invalid_columns.is_empty() {
+                            /* let valid_columns: Vec<String> = valid_columns
+                                .iter()
+                                .map(|c| c.to_string())
+                                .collect::<Vec<_>>(); */
+                        toql::log::warn!("On `{}` invalid columns found: `{}`. Valid columns are: `{}`", #rust_field_name, invalid_columns.join(","),valid_columns.join(","));
+                        }
+                    }
+                )
+
+            };
+
             let columns_map_code = quote!( {
+
+                #safety_check_for_column_mapping
 
                 let self_column = match other_column.as_str(){
                         #(#columns_translation)*

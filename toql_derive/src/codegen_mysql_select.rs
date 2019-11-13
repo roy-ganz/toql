@@ -20,7 +20,7 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
 
     select_keys: Vec<TokenStream>,
 
-    select_key_types: Vec<TokenStream>,
+    
     select_keys_params: Vec<TokenStream>,
 
     merge_code: Vec<TokenStream>,
@@ -44,7 +44,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
             select_keys: Vec::new(),
 
-            select_key_types: Vec::new(),
+           
             select_keys_params: Vec::new(),
 
             merge_code: Vec::new(),
@@ -278,7 +278,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     }
 
 
-                     fn select_one<C>(key: &<#struct_ident as toql::key::Key>::Key, conn: &mut C)
+                     fn select_one<C>(key: <#struct_ident as toql::key::Key>::Key, conn: &mut C)
                      -> Result<#struct_ident,  toql::error::ToqlError>
                      where C: toql::mysql::mysql::prelude::GenericConnection
                      {

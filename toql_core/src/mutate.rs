@@ -31,7 +31,21 @@
 
 use crate::error::Result;
 
-/// Trait for insert delete and update functions.
+/// Trait for delete functions (They work with entity keys).
+pub trait Delete<'a, T: crate::key::Key + 'a> {
+     /// Delete one structs, returns tuple with SQL statement and SQL params or error.
+    fn delete_one_sql(key: T::Key) -> Result<(String, Vec<String>)> 
+    where T: crate::key::Key + 'a
+    {
+        Ok(Self::delete_many_sql(std::iter::once(key))?.unwrap())
+    }
+    /// Delete many structs, returns tuple with SQL statement and SQL params or error.
+    fn delete_many_sql<I>(keys: I) -> Result<Option<(String, Vec<String>)>>
+    where
+        I: IntoIterator<Item = T::Key> + 'a;
+}
+
+/// Trait for insert and update functions. They work with entities
 pub trait Mutate<'a, T: 'a> {
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
     fn insert_one_sql(entity: &'a T) -> Result<(String, Vec<String>)> {
@@ -41,16 +55,18 @@ pub trait Mutate<'a, T: 'a> {
     fn insert_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
     where
         I: IntoIterator<Item = &'a T> + 'a;
-    /// Delete one structs, returns tuple with SQL statement and SQL params or error.
+
+  /*   /// Delete one structs, returns tuple with SQL statement and SQL params or error.
     fn delete_one_sql(entity: &'a T) -> Result<(String, Vec<String>)> {
         Ok(Self::delete_many_sql(std::iter::once(entity))?.unwrap())
     }
     /// Delete many structs, returns tuple with SQL statement and SQL params or error.
     fn delete_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
     where
-        I: IntoIterator<Item = &'a T> + 'a;
+        I: IntoIterator<Item = &'a T> + 'a; */
     /// Update one struct, returns tuple with SQL statement and SQL params or error.
     /// Returns None, if no updates are required.
+    
     fn update_one_sql(entity: &'a T) -> Result<Option<(String, Vec<String>)>> {
         Self::update_many_sql(std::iter::once(entity))
     }

@@ -12,7 +12,7 @@ use crate::codegen_mysql_select::GeneratedMysqlSelect;
 use syn::GenericArgument::Type;
 use syn::{Ident, Path};
 
-use proc_macro2::Span;
+
 
 //use darling::{Result, Error};
 
@@ -218,7 +218,10 @@ pub struct Toql {
     pub skip_query: bool,
     #[darling(default)]
     pub skip_query_builder: bool,
+    #[darling(default)]
+    pub serde_key: bool,
     pub data: darling::ast::Data<(), ToqlField>,
+    
 }
 
 impl quote::ToTokens for Toql {
@@ -248,6 +251,7 @@ impl quote::ToTokens for Toql {
             skip_mut,
             skip_query,
             skip_query_builder,
+            serde_key:_,
             ref data,
         } = *self;
 
@@ -255,7 +259,7 @@ impl quote::ToTokens for Toql {
         let query_enabled = !skip_query;
         let query_builder_enabled = !skip_query_builder;
 
-        let mut fields = data
+        let fields = data
             .as_ref()
             .take_struct()
             .expect("Should never be enum")

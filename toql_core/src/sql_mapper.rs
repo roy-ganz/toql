@@ -267,6 +267,7 @@ impl FieldHandler for BasicFieldHandler {
             }))),
             FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0), {
                 select.1.push(sql_param(lower.clone()));
+                select.1.push(sql_param(upper.clone()));
                 select.1
             }))),
             FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {

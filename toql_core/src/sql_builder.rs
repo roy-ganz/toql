@@ -89,8 +89,9 @@ pub enum SqlBuilderError {
     FilterInvalid(String),
     /// A query expression requires a query parameter, that is not provided. Contains the parameter.
     QueryParamMissing(String),
-    /// The query parameter that isrequired by the query expression is wrong. Contains the parameter and the details.
+    /// The query parameter that is required by the query expression is wrong. Contains the parameter and the details.
     QueryParamInvalid(String, String),
+
 }
 
 impl fmt::Display for SqlBuilderError {
@@ -104,7 +105,7 @@ impl fmt::Display for SqlBuilderError {
             }
             SqlBuilderError::QueryParamInvalid(ref s, ref d) => {
                 write!(f, "query parameter `{}` is invalid: {} ", s, d)
-            }
+            },
         }
     }
 }
@@ -731,7 +732,7 @@ impl SqlBuilder {
                 &query.params,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
-            );
+            )?;
         } else {
             Self::build_ordering(
                 &mut result,
@@ -740,7 +741,7 @@ impl SqlBuilder {
                 &sql_mapper.fields,
                 &ordinals,
                 &ordering,
-            );
+            )?;
             Self::build_select_clause(
                 &mut result,
                 &query.params,
