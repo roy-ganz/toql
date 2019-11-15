@@ -23,6 +23,11 @@ use std::collections::HashMap;
 use std::fmt;
 
 
+pub trait QueryWith {
+
+    fn with(&self, query: Query) -> Query;
+}
+
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
 pub trait FilterArg {
     fn to_sql(&self) -> String;
@@ -79,138 +84,18 @@ impl_num_filter_arg!(usize,u8, u16, u32, u64, u128,i8, i16, i32, i64, i128, f32,
 
 
 
-/* 
-impl FilterArg for u8 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for u16 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for u32 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for u64 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for u128 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for i8 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for i16 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for i32 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for i64 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for i128 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-} */
 impl FilterArg for bool {
     fn to_sql(&self) -> String {
         String::from(if *self == true { "1" } else { "0" })
     }
 }
-/* impl FilterArg for f32 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for f64 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
 
- impl FilterArg for &u8 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &u16 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &u32 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &u64 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &u128 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &i8 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &i16 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &i32 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &i64 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &i128 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-} */
 impl FilterArg for &bool {
     fn to_sql(&self) -> String {
         String::from(if **self == true { "1" } else { "0" })
     }
 }
-/* impl FilterArg for &f32 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}
-impl FilterArg for &f64 {
-    fn to_sql(&self) -> String {
-        self.to_string()
-    }
-}  */
+
 
 #[derive(Clone, Debug)]
 pub(crate) enum Concatenation {
@@ -701,6 +586,10 @@ impl Query {
 
         self.tokens.append(&mut query.tokens);
         self
+    }
+    pub fn with(self, query_with: impl QueryWith) -> Self {
+        query_with.with(self)
+       
     }
     // Not sure if needed
     /* pub fn prepend<T>(mut self, query: T) -> Self
