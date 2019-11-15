@@ -60,6 +60,37 @@ mod codegen_mysql_select;
 mod sane;
 mod util;
 
+
+#[proc_macro_derive(ToqlFilterArg)]
+pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
+    let _ = env_logger::try_init(); // Avoid multiple init
+    let ast = parse_macro_input!(input as DeriveInput);
+    //let gen = impl_filter_arg_derive(&ast);
+    let name = &ast.ident;
+    let gen = quote! {
+				impl toql::query::FilterArg for  &#name {
+					fn to_sql(&self) -> String {
+						 self.to_string().to_sql()
+					}
+				}
+    };
+     log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
+    TokenStream::from( gen)
+}
+
+
+/* fn impl_filter_arg_derive(ast: &syn::DeriveInput) ->TokenStream {
+    let name = &ast.ident;
+
+    quote! {
+				impl toql::query::FilterArg for  &#name {
+					fn to_sql(&self) () -> String {
+						 self.to_string().to_sql()
+					}
+				}
+    }
+} */
+
 /// Derive to add Toql functionality to your struct.
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
