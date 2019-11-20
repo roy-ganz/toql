@@ -100,7 +100,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     let key_index = syn::Index::from(self.select_keys.len());
                     let aliased_column_format = format!("{}.{{}} = ?", &self.sql_table_alias);
                     self.select_keys.push(quote!( {
-                        &<#rust_type_ident as toql::key::Key>::columns().iter()
+                        <#rust_type_ident as toql::key::Key>::columns().iter()
                         .map(|other_column|{
                             #default_self_column_code;
                             let self_column = #columns_map_code;
@@ -282,7 +282,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                      -> Result<#struct_ident,  toql::error::ToqlError>
                      where C: toql::mysql::mysql::prelude::GenericConnection
                      {
-                        let select_stmt = format!( "{} WHERE {} LIMIT 0,2", Self::select_sql(None), vec![ #(#select_keys),*].join( " AND "));
+                        let select_stmt = format!( "{} WHERE {} LIMIT 0,2", Self::select_sql(None), [ #(#select_keys),*].join( " AND "));
 
                         let mut params :Vec<String> = Vec::new();
 
@@ -298,7 +298,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                             return Err( toql::error::ToqlError::NotFound);
                         }
 
-                        let key_predicate = vec![ #(#select_keys),*].join( " AND ");
+                        let key_predicate = [ #(#select_keys),*].join( " AND ");
                         #(#merge_code)*
                         Ok(entities.pop().unwrap())
                      }
@@ -329,7 +329,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         let mut entities = toql::mysql::row::from_query_result::<#struct_ident>(entities_stmt)?;
 
 
-                        let key_predicate = vec![ #(#select_keys),*].join( " AND ");
+                        let key_predicate = [ #(#select_keys),*].join( " AND ");
                         #(#merge_code)*
 
                         Ok(entities)

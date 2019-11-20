@@ -6,14 +6,22 @@
 
 use mysql::prelude::GenericConnection;
 use toql_core::error::ToqlError;
-use toql_core::mutate::Mutate;
+use crate::insert::Insert;
+use crate::insert::InsertDuplicate;
+use crate::insert::DuplicateStrategy;
+use crate::diff::collection_delta_sql;
+
+use toql_core::mutate::Update;
 use toql_core::mutate::Delete;
 use toql_core::query::Query;
 use toql_core::sql_mapper::SqlMapperCache;
+use toql_core::key::Key;
 
 use toql_core::log_sql;
 
 pub mod load;
+pub mod diff;
+pub mod insert;
 pub mod row;
 pub mod select;
 pub use mysql; // Reexport for derive produced code
@@ -49,10 +57,10 @@ where
 /// Returns the last generated id.
 pub fn insert_one<'a, T, C>(entity: &'a T, conn: &mut C) -> Result<u64, ToqlError>
 where
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Insert<'a, T>,
     C: GenericConnection,
 {
-    let sql = T::insert_one_sql(&entity)?;
+    let sql = T::insert_one_sql(&entity, DuplicateStrategy::Fail)?;
     execute_insert_sql(sql, conn)
 }
 
@@ -63,10 +71,41 @@ where
 pub fn insert_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = &'a T> + 'a,
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Insert<'a, T>,
     C: GenericConnection,
 {
-    let sql = T::insert_many_sql(entities)?;
+    let sql = T::insert_many_sql(entities, DuplicateStrategy::Fail)?;
+
+    Ok(if let Some(sql) = sql {
+        execute_insert_sql(sql, conn)?
+    } else {
+        0
+    })
+}
+/// Insert one struct.
+///
+/// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
+/// Returns the last generated id.
+pub fn insert_dup_one<'a, T, C>(entity: &'a T, strategy: DuplicateStrategy, conn: &mut C) -> Result<u64, ToqlError>
+where
+    T: 'a + Insert<'a, T> + InsertDuplicate,
+    C: GenericConnection,
+{
+    let sql = T::insert_one_sql(&entity, strategy)?;
+    execute_insert_sql(sql, conn)
+}
+
+/// Insert a collection of structs.
+///
+/// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
+/// Returns the last generated id
+pub fn insert_dup_many<'a, I, T, C>(entities: I,strategy: DuplicateStrategy, conn: &mut C) -> Result<u64, ToqlError>
+where
+    I: Iterator<Item = &'a T> + 'a,
+    T: 'a + Insert<'a, T> + InsertDuplicate,
+    C: GenericConnection,
+{
+    let sql = T::insert_many_sql(entities, strategy)?;
 
     Ok(if let Some(sql) = sql {
         execute_insert_sql(sql, conn)?
@@ -115,7 +154,7 @@ where
 pub fn update_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = &'a T> + Clone + 'a,
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Update<'a, T>,
     C: GenericConnection,
 {
     let sql = T::update_many_sql(entities)?;
@@ -147,7 +186,7 @@ where
 
 pub fn update_one<'a, T, C>(entity: &'a T, conn: &mut C) -> Result<u64, ToqlError>
 where
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Update<'a, T>,
     C: GenericConnection,
 {
     let sql = T::update_one_sql(&entity)?;
@@ -166,7 +205,7 @@ where
 pub fn diff_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
 where
     I: Iterator<Item = (&'a T, &'a T)> + Clone + 'a,
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Update<'a, T>,
     C: GenericConnection,
 {
     let sql_stmts = T::diff_many_sql(entities)?;
@@ -192,7 +231,7 @@ where
 /// Nested fields themself will not automatically be updated.
 pub fn diff_one<'a, T, C>(outdated: &'a T, current: &'a T, conn: &mut C) -> Result<u64, ToqlError>
 where
-    T: 'a + Mutate<'a, T>,
+    T: 'a + Update<'a, T>,
     C: GenericConnection,
 {
     diff_many(std::iter::once((outdated, current)), conn)
@@ -207,11 +246,11 @@ pub fn diff_one_collection<'a, T, C>(
     conn: &mut C,
 ) -> Result<(u64, u64, u64), ToqlError>
 where
-    T: toql_core::mutate::Mutate<'a, T> + 'a + toql_core::key::Key +  toql_core::mutate::Delete<'a, T>,
+    T: Update<'a, T> + 'a + Key +  Delete<'a, T> +  Insert<'a, T>,
     C: GenericConnection,
 {
     let (insert_sql, diff_sql, delete_sql) =
-        toql_core::diff::collection_delta_sql::<'a, T>(outdated, updated)?;
+        collection_delta_sql::<'a, T>(outdated, updated)?;
     let mut affected = (0, 0, 0);
 
     if let Some(insert_sql) = insert_sql {
@@ -229,9 +268,9 @@ where
 
 /// Selects a single struct for a given key.
 /// This will select all base fields and join. Merged fields will be skipped
-pub fn select_one<T, C>(key: <T as toql_core::key::Key>::Key, conn: &mut C) -> Result<T, ToqlError>
+pub fn select_one<T, C>(key: <T as Key>::Key, conn: &mut C) -> Result<T, ToqlError>
 where
-    T: select::Select<T> + toql_core::key::Key,
+    T: select::Select<T> + Key,
     C: GenericConnection,
 {
     T::select_one(key, conn)

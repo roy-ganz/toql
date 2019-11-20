@@ -1,6 +1,6 @@
 use crate::codegen_toql_key::GeneratedToqlKey;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
-use crate::codegen_toql_mutate::GeneratedToqlMutate;
+use crate::codegen_toql_delup::GeneratedToqlDelup;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
 #[cfg(feature = "mysqldb")]
@@ -8,6 +8,9 @@ use crate::codegen_mysql_load::GeneratedMysqlLoad;
 
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_select::GeneratedMysqlSelect;
+
+#[cfg(feature = "mysqldb")]
+use crate::codegen_mysql_insert::GeneratedMysqlInsert;
 
 use syn::GenericArgument::Type;
 use syn::{Ident, Path};
@@ -231,7 +234,7 @@ impl quote::ToTokens for Toql {
         let rust_struct = crate::sane::Struct::create(&self);
         let mut toql_mapper = GeneratedToqlMapper::from_toql(&rust_struct);
         let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&rust_struct);
-        let mut toql_mutate = GeneratedToqlMutate::from_toql(&rust_struct);
+        let mut toql_delup = GeneratedToqlDelup::from_toql(&rust_struct);
         let mut toql_key = GeneratedToqlKey::from_toql(&rust_struct);
 
         #[cfg(feature = "mysqldb")]
@@ -239,6 +242,9 @@ impl quote::ToTokens for Toql {
 
         #[cfg(feature = "mysqldb")]
         let mut mysql_select = GeneratedMysqlSelect::from_toql(&rust_struct);
+
+        #[cfg(feature = "mysqldb")]
+        let mut mysql_insert = GeneratedMysqlInsert::from_toql(&rust_struct);
 
         let Toql {
             vis: _,
@@ -312,7 +318,12 @@ impl quote::ToTokens for Toql {
 
                 // Generate insert/delete/update functionality
                 if mut_enabled {
-                    toql_mutate.add_mutate_field(&f);
+                    toql_delup.add_delup_field(&f);
+
+                     #[cfg(feature = "mysqldb")]
+                    mysql_insert.add_insert_field(&f);
+
+
                 }
             }
 
@@ -357,7 +368,10 @@ impl quote::ToTokens for Toql {
                 }
 
                 if mut_enabled {
-                    tokens.extend(quote!(#toql_mutate));
+                    tokens.extend(quote!(#toql_delup));
+
+                    #[cfg(feature = "mysqldb")]
+                    tokens.extend(quote!(#mysql_insert));
                 }
             }
         }

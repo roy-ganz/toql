@@ -31,6 +31,7 @@
 
 use crate::error::Result;
 
+
 /// Trait for delete functions (They work with entity keys).
 pub trait Delete<'a, T: crate::key::Key + 'a> {
      /// Delete one structs, returns tuple with SQL statement and SQL params or error.
@@ -45,16 +46,16 @@ pub trait Delete<'a, T: crate::key::Key + 'a> {
         I: IntoIterator<Item = T::Key> + 'a;
 }
 
-/// Trait for insert and update functions. They work with entities
-pub trait Mutate<'a, T: 'a> {
-    /// Insert one struct, returns tuple with SQL statement and SQL params or error.
+/// Trait for update. They work with entities
+pub trait Update<'a, T: 'a> {
+    /* /// Insert one struct, returns tuple with SQL statement and SQL params or error.
     fn insert_one_sql(entity: &'a T) -> Result<(String, Vec<String>)> {
         Ok(Self::insert_many_sql(std::iter::once(entity))?.unwrap())
     }
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
     fn insert_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
     where
-        I: IntoIterator<Item = &'a T> + 'a;
+        I: IntoIterator<Item = &'a T> + 'a; */
 
   /*   /// Delete one structs, returns tuple with SQL statement and SQL params or error.
     fn delete_one_sql(entity: &'a T) -> Result<(String, Vec<String>)> {

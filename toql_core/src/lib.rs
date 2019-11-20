@@ -13,7 +13,6 @@ pub mod log_helper;
 #[macro_use]
 extern crate lazy_static;
 
-pub mod diff;
 pub mod merge;
 pub mod query;
 pub mod query_builder;

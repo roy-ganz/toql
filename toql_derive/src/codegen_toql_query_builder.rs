@@ -11,7 +11,9 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     builder_fields_struct: Ident,
     build_wildcard: bool,
     builder_fields: Vec<TokenStream>,
-    key_predicates: Vec<TokenStream>,
+    //key_predicates: Vec<TokenStream>,
+    key_simple_predicate: Option<TokenStream>,
+    key_composite_predicates: Vec<TokenStream>,
 }
 
 impl<'a> GeneratedToqlQueryBuilder<'a> {
@@ -26,7 +28,8 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
             ),
             build_wildcard: true,
             builder_fields: Vec::new(),
-            key_predicates: Vec::new(),
+            key_simple_predicate: None,
+            key_composite_predicates: Vec::new(),
         }
     }
 
@@ -40,7 +43,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
         if rust_field_name == "wildcard" {
             self.build_wildcard = false;
         }
-        let key_index = syn::Index::from(self.key_predicates.len());
+        let key_index = syn::Index::from(self.key_composite_predicates.len());
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 let toql_field = &field.toql_field_name;
@@ -52,33 +55,51 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                         }
                     ));
                 if regular_attrs.key {
-                    self.key_predicates.push(quote! {
-                    .and(toql::query::Field::from(#toql_field).eq( &key . #key_index))
+                    self.key_composite_predicates.push(quote! {
+                        .and(toql::query::Field::from(#toql_field).eq( &key . #key_index))
                     });
-                }
-            }
+                    
+                    self.key_simple_predicate = Some( quote!(
+                            .and(toql::query::Field::from(#toql_field).ins( self.0.into_iter().map(|k| k. #key_index).collect()))
+                        ));
+                    } 
+                },
+            
             x @ _ => {
                 if let FieldKind::Join(join_attrs) = x {
                     if join_attrs.key {
-                        self.key_predicates.push(
+                        self.key_composite_predicates.push(
                             quote!(
-                                    .and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(&key. #key_index))
+                                    .and(key. #key_index)
+                                    //.and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(key. #key_index))
                                 )
                         );
+                        self.key_simple_predicate = Some( quote!(
+                             .and( {
+                                let q = toql::query::Query::new();
+                                for key in self.0 {
+                                    q = q.and( key. #key_index);
+                                    //q = q.and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(key. #key_index));
+                                }
+                                q
+                            })
+                        ));
+                     
+                    
                     }
-                }
 
-                let toql_path = format!("{}_", field.toql_field_name);
+                    let toql_path = format!("{}_", field.toql_field_name);
 
-                let path_fields_struct =
-                    quote!( < #rust_type_ident as toql::query_builder::QueryFields>::FieldsType);
+                    let path_fields_struct =
+                        quote!( < #rust_type_ident as toql::query_builder::QueryFields>::FieldsType);
 
-                self.builder_fields.push(quote!(
-                            #rust_struct_visibility fn #rust_field_ident (mut self) -> #path_fields_struct {
-                                self.0.push_str(#toql_path);
-                                #path_fields_struct ::from_path(self.0)
-                            }
-                ));
+                    self.builder_fields.push(quote!(
+                                #rust_struct_visibility fn #rust_field_ident (mut self) -> #path_fields_struct {
+                                    self.0.push_str(#toql_path);
+                                    #path_fields_struct ::from_path(self.0)
+                                }
+                    ));
+            }
             }
         };
     }
@@ -91,7 +112,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
         let builder_fields = &self.builder_fields;
         let struct_ident = &self.rust_struct.rust_struct_ident;
 
-        let key_predicates = &self.key_predicates;
+       // let key_predicates = &self.key_predicates;
         let struct_key_ident = Ident::new(&format!("{}Key", &struct_ident), Span::call_site());
 
         let wildcard = if self.build_wildcard {
@@ -104,16 +125,50 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
             quote!()
         };
 
+        let key_composite_predicates = &self.key_composite_predicates;
+       
+
+        let key_predicate_code = if key_composite_predicates.len() == 1 {
+             let key_simple_predicate = self.key_simple_predicate.as_ref().unwrap();
+               quote!(
+                  toql::query::Query::new() #key_simple_predicate
+               ) 
+        } else {
+            quote!(
+                let query = toql::query::Query::new();
+                for key in self.0 {
+                    let q = toql::query::Query::new() #(#key_composite_predicates)*;
+                    query.or(q);
+                }
+                query
+            )
+        };
+        let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &struct_ident), Span::call_site());
+
         let builder = quote!(
 
-            impl toql::query_builder::KeyPredicate for #struct_key_ident {
 
-                    fn key_predicate(&self) -> toql::query::Query
-                    {
-                        let key = self;
-                        toql::query::Query::new() #(#key_predicates)*
+
+                impl Into<toql::query::Query> for #struct_key_ident {
+                    fn into(self) -> toql::query::Query {
+                            #struct_key_wrapper_ident(std::iter::once(self)).into()
                     }
                 }
+
+                pub struct #struct_key_wrapper_ident<T:IntoIterator<Item=#struct_key_ident>>(pub T);
+                impl<T:IntoIterator<Item=#struct_key_ident>> Into<toql::query::Query> for #struct_key_wrapper_ident<T> {
+                    fn into(self) -> toql::query::Query {
+                        #key_predicate_code
+                    }
+                } 
+           /*  impl toql::query_builder::KeyPredicate<#struct_ident> for #struct_key_ident {
+
+                 fn key_iter_predicate<I>(keys: I) -> toql::query::Query
+                    where
+                        I: IntoIterator<Item = #struct_key_ident> {
+                        #key_predicate_code
+                }
+            } */
 
             impl toql::query_builder::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;

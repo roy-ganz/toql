@@ -48,7 +48,7 @@ use proc_macro::TokenStream;
 mod annot;
 mod codegen_toql_key;
 mod codegen_toql_mapper;
-mod codegen_toql_mutate;
+mod codegen_toql_delup;
 mod codegen_toql_query_builder;
 
 #[cfg(feature = "mysqldb")]
@@ -56,6 +56,9 @@ mod codegen_mysql_load;
 
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_select;
+
+#[cfg(feature = "mysqldb")]
+mod codegen_mysql_insert;
 
 mod sane;
 mod util;

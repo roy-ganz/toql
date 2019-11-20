@@ -46,7 +46,7 @@
 //! Have a look at the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs) that serves users with Rocket and MySQL.
 //!
 
-pub use toql_core::diff;
+
 pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::key;
