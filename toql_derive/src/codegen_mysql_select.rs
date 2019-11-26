@@ -105,7 +105,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                             #default_self_column_code;
                             let self_column = #columns_map_code;
                             format!(#aliased_column_format, self_column )
-                        }).collect::<Vec<String>>().join(" AND ")
+                        }).collect::<Vec<String>>().join(" AND ").as_ref()
                     }
                     ));
                     self.select_keys_params.push(  quote! {

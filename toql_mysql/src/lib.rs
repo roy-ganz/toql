@@ -68,9 +68,9 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn insert_many<'a, T, I, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
 where
-    I: Iterator<Item = &'a T> + 'a,
+    I: IntoIterator<Item = &'a T> + 'a,
     T: 'a + Insert<'a, T>,
     C: GenericConnection,
 {
@@ -99,9 +99,9 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_dup_many<'a, I, T, C>(entities: I,strategy: DuplicateStrategy, conn: &mut C) -> Result<u64, ToqlError>
+pub fn insert_dup_many<'a, T,I, C>(entities: I,strategy: DuplicateStrategy, conn: &mut C) -> Result<u64, ToqlError>
 where
-    I: Iterator<Item = &'a T> + 'a,
+    I: IntoIterator<Item = &'a T> + 'a,
     T: 'a + Insert<'a, T> + InsertDuplicate,
     C: GenericConnection,
 {
@@ -131,9 +131,9 @@ where
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of deleted rows.
-pub fn delete_many<'a, I, T, C>(keys: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn delete_many<'a, T, I,C>(keys: I, conn: &mut C) -> Result<u64, ToqlError>
 where
-    I: Iterator<Item = <T as toql_core::key::Key>::Key> + 'a,
+    I: IntoIterator<Item = <T as toql_core::key::Key>::Key> + 'a,
     T: 'a + Delete<'a, T> + toql_core::key::Key,
     C: GenericConnection,
 {
@@ -151,9 +151,9 @@ where
 /// Optional fields with value `None` are not updated. See guide for details.
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of updated rows.
-pub fn update_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn update_many<'a, T,I, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
 where
-    I: Iterator<Item = &'a T> + Clone + 'a,
+    I: IntoIterator<Item = &'a T> + Clone + 'a,
     T: 'a + Update<'a, T>,
     C: GenericConnection,
 {
@@ -202,9 +202,9 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_many<'a, I, T, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn diff_many<'a, T, I, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
 where
-    I: Iterator<Item = (&'a T, &'a T)> + Clone + 'a,
+    I: IntoIterator<Item = (&'a T, &'a T)> + Clone + 'a,
     T: 'a + Update<'a, T>,
     C: GenericConnection,
 {

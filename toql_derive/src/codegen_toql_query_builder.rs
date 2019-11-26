@@ -14,6 +14,7 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     //key_predicates: Vec<TokenStream>,
     key_simple_predicate: Option<TokenStream>,
     key_composite_predicates: Vec<TokenStream>,
+     serde_key: bool
 }
 
 impl<'a> GeneratedToqlQueryBuilder<'a> {
@@ -30,6 +31,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
             builder_fields: Vec::new(),
             key_simple_predicate: None,
             key_composite_predicates: Vec::new(),
+            serde_key: toql.serde_key
         }
     }
 
@@ -60,7 +62,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                     });
                     
                     self.key_simple_predicate = Some( quote!(
-                            .and(toql::query::Field::from(#toql_field).ins( self.0.into_iter().map(|k| k. #key_index).collect()))
+                            .and(toql::query::Field::from(#toql_field).ins( it.map(|k| k. #key_index).collect()))
                         ));
                     } 
                 },
@@ -77,7 +79,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                         self.key_simple_predicate = Some( quote!(
                              .and( {
                                 let q = toql::query::Query::new();
-                                for key in self.0 {
+                                for key in it {
                                     q = q.and( key. #key_index);
                                     //q = q.and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(key. #key_index));
                                 }
@@ -135,15 +137,21 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                ) 
         } else {
             quote!(
-                let query = toql::query::Query::new();
-                for key in self.0 {
+                let mut query = toql::query::Query::new();
+                for key in it{
                     let q = toql::query::Query::new() #(#key_composite_predicates)*;
-                    query.or(q);
+                    query = query.or(q);
                 }
                 query
             )
         };
         let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &struct_ident), Span::call_site());
+
+    let serde = if self.serde_key {
+            quote!( ,Deserialize, Serialize)
+        } else { 
+            quote!()
+        };
 
         let builder = quote!(
 
@@ -151,24 +159,50 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
                 impl Into<toql::query::Query> for #struct_key_ident {
                     fn into(self) -> toql::query::Query {
-                            #struct_key_wrapper_ident(std::iter::once(self)).into()
+                            #struct_key_wrapper_ident( vec![self]).into()
+                    }
+                }
+                impl Into<toql::query::Query> for &#struct_key_ident {
+                    fn into(self) -> toql::query::Query {
+                             self.to_owned().into()
+                    }
+                }
+                 
+                #[derive(Debug, Eq, PartialEq, Hash, Clone #serde)]
+                pub struct #struct_key_wrapper_ident(pub Vec<#struct_key_ident>);
+
+                /* impl<T: IntoIterator<Item = #struct_key_ident>> std::ops::Deref for #struct_key_wrapper_ident<T> {
+                    type Target = T;
+
+                    fn deref(&self) -> &Self::Target {
+                        &self.0
+                    }
+                }
+ */
+                impl IntoIterator for #struct_key_wrapper_ident {
+                    type Item = #struct_key_ident;
+                    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+
+                    fn into_iter(self) -> Self::IntoIter {
+                        self.0.into_iter()
                     }
                 }
 
-                pub struct #struct_key_wrapper_ident<T:IntoIterator<Item=#struct_key_ident>>(pub T);
-                impl<T:IntoIterator<Item=#struct_key_ident>> Into<toql::query::Query> for #struct_key_wrapper_ident<T> {
+                impl Into<toql::query::Query> for #struct_key_wrapper_ident {
                     fn into(self) -> toql::query::Query {
+                         let it = self.0.into_iter();
                         #key_predicate_code
                     }
                 } 
-           /*  impl toql::query_builder::KeyPredicate<#struct_ident> for #struct_key_ident {
-
-                 fn key_iter_predicate<I>(keys: I) -> toql::query::Query
-                    where
-                        I: IntoIterator<Item = #struct_key_ident> {
+                 impl Into<toql::query::Query> for &#struct_key_wrapper_ident {
+                    fn into(self) -> toql::query::Query {
+                       
+                       let it  =  self.0.clone().into_iter(); // Sorry, RUST just burned too much time on this.
                         #key_predicate_code
-                }
-            } */
+                    }
+                } 
+                
+         
 
             impl toql::query_builder::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;

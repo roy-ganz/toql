@@ -76,6 +76,11 @@ pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
 						 self.to_string().to_sql()
 					}
 				}
+                impl toql::query::FilterArg for  #name {
+					fn to_sql(&self) -> String {
+						 self.to_string().to_sql()
+					}
+				}
     };
      log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
     TokenStream::from( gen)

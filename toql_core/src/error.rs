@@ -40,6 +40,7 @@ pub enum ToqlError {
     #[cfg(feature = "mysqldb")]
     /// MySQL failed to run the SQL query. For feature `mysql`
     MySqlError(Error),
+
 }
 
 /// A result with a [`ToqlError`](enum.ToqlError.html)

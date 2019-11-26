@@ -154,7 +154,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
         let key = quote! {
 
-        #[derive(Debug, Eq, PartialEq, Hash #serde)]
+        #[derive(Debug, Eq, PartialEq, Hash #serde, Clone)]
            #vis struct #struct_key_ident ( #key_type_code);
 
             impl toql::key::Key for #rust_stuct_ident {

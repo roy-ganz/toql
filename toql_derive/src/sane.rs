@@ -117,7 +117,7 @@ impl Field {
         let rust_field_name = rust_field_ident.to_string();
         let rust_type_ident = field.first_non_generic_type().unwrap().to_owned();
         let rust_type_name = field.first_non_generic_type().unwrap().to_string();
-        let toql_field_name = rust_field_name.to_mixed_case();
+        let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
         let number_of_options = field.number_of_options();
 
         let kind = if field.join.is_some() {
@@ -205,7 +205,7 @@ impl Field {
                 join_alias: field
                     .alias
                     .as_ref()
-                    .unwrap_or(&sql_join_table_name.to_snake_case())
+                    .unwrap_or(&rust_field_name.to_snake_case())
                     .to_owned(),
                 sql_join_table_name,
                 default_self_column_code,
