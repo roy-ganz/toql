@@ -6,7 +6,7 @@ use toql_core::key::Key;
 pub trait Select<T: Key> {
     /// SQL fragment to select columns
     /// (internal use)
-    fn columns_sql() -> String;
+    fn columns_sql(alias: &str) -> String;
 
     /// SQL fragment to select columns
     /// (internal use)

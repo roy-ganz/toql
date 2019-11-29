@@ -83,18 +83,18 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     }
                     SqlTarget::Column(ref sql_column) => {
                         self.select_columns
-                            .push(format!("{}.{}", &self.sql_table_alias, sql_column));
+                            .push(format!("{{alias}}.{}", sql_column));
                     }
                 };
             }
             FieldKind::Join(ref join_attrs) => {
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
-
+                let alias = &join_attrs.join_alias;
                 self.select_columns.push(String::from("true"));
                 self.select_columns.push(String::from("{}"));
                 self.select_columns_params
-                    .push(quote!(#rust_type_ident :: columns_sql()));
+                    .push(quote!(#rust_type_ident :: columns_sql(#alias)));
 
                 if join_attrs.key {
                     let key_index = syn::Index::from(self.select_keys.len());
@@ -114,16 +114,24 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     self.merge_self_fields.push(rust_field_name.to_string());
                 }
 
+                let join_type = if field.number_of_options == 0 || (field.number_of_options == 1 && field.preselect == false) {
+                    ""
+                } else {
+                    "LEFT "
+                };
+
                 self.select_joins.push(format!(
-                    "JOIN {} {} ON ({{}}{{}}) {{}}",
-                    join_attrs.sql_join_table_name, rust_field_name
+                    "{}JOIN {} {} {{}}ON ({{}}{{}})",
+                    join_type, join_attrs.sql_join_table_name, rust_field_name
                 ));
+
+                self.select_joins_params
+                    .push(quote!(#rust_type_ident :: joins_sql()));
 
                 let select_join_params_format = format!(
                     "{}.{{}} = {}.{{}}",
                     &self.sql_table_alias, join_attrs.join_alias
                 );
-
                 self.select_joins_params.push(quote!(
                     {
 
@@ -149,8 +157,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                         quote!("")
                     });
 
-                self.select_joins_params
-                    .push(quote!(#rust_type_ident :: joins_sql()));
+               
             }
             FieldKind::Merge(_) => {
                 self.merge_fields.push(field.clone());
@@ -233,7 +240,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         let sql_table_name = &self.sql_table_name;
         let sql_table_alias = &self.sql_table_alias;
 
-        let select_columns = self.select_columns.join(",");
+        let select_columns = self.select_columns.join(", ");
 
         let select_columns_params = &self.select_columns_params;
         let select_joins = self.select_joins.join(" ");
@@ -251,21 +258,21 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         let select_keys_params = &self.select_keys_params;
 
         let columns_sql_code = if select_columns_params.is_empty() {
-            quote!( String::from(#select_columns))
+            quote!( format!(#select_columns, alias=alias))
         } else {
-            quote!(format!(#select_columns, #(#select_columns_params),*))
+            quote!( format!(#select_columns, #(#select_columns_params),*, alias = alias))
         };
         let joins_sql_code = if select_joins_params.is_empty() {
             quote!( String::from(#select_joins))
         } else {
-            quote!(format!(#select_joins, #(#select_joins_params),*))
+            quote!( format!(#select_joins, #(#select_joins_params),*))
         };
 
         let select = quote! {
                 impl<'a> toql::mysql::select::Select<#struct_ident> for #struct_ident {
 
 
-                    fn columns_sql() -> String {
+                    fn columns_sql(alias: &str) -> String {
                            #columns_sql_code
 
                     }
@@ -274,7 +281,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     }
                     fn select_sql(join: Option<&str>) -> String {
                             format!( #select_statement,
-                            Self::columns_sql(), Self::joins_sql(),join.unwrap_or(""))
+                            Self::columns_sql(#sql_table_alias), 
+                            Self::joins_sql(),
+                            join.unwrap_or(""))
                     }
 
 

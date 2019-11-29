@@ -145,7 +145,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                 query
             )
         };
-        let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &struct_ident), Span::call_site());
+    let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &struct_ident), Span::call_site());
 
     let serde = if self.serde_key {
             quote!( ,Deserialize, Serialize)
@@ -157,7 +157,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
 
 
-                impl Into<toql::query::Query> for #struct_key_ident {
+                /* impl Into<toql::query::Query> for #struct_key_ident {
                     fn into(self) -> toql::query::Query {
                             #struct_key_wrapper_ident( vec![self]).into()
                     }
@@ -186,7 +186,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                     fn into_iter(self) -> Self::IntoIter {
                         self.0.into_iter()
                     }
-                }
+                } */
 
                 impl Into<toql::query::Query> for #struct_key_wrapper_ident {
                     fn into(self) -> toql::query::Query {
@@ -197,8 +197,8 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                  impl Into<toql::query::Query> for &#struct_key_wrapper_ident {
                     fn into(self) -> toql::query::Query {
                        
-                       let it  =  self.0.clone().into_iter(); // Sorry, RUST just burned too much time on this.
-                        #key_predicate_code
+                       let it  =  self.0.clone().into_iter(); // Sorry for the clone, RUST just burned too much time on this.
+                       #key_predicate_code
                     }
                 } 
                 

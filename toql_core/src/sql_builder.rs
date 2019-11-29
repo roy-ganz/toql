@@ -40,6 +40,7 @@ use crate::query::Query;
 use crate::query::QueryToken;
 use crate::sql_builder_result::SqlBuilderResult;
 use crate::sql_mapper::Join;
+use crate::sql_mapper::JoinType;
 use crate::sql_mapper::SqlMapper;
 use crate::sql_mapper::SqlTarget;
 use std::collections::BTreeSet;
@@ -60,14 +61,6 @@ impl Default for SqlTargetData {
     }
 }
 
-struct SqlJoinData {
-    joined: bool, // Join has been added to join clause
-}
-impl Default for SqlJoinData {
-    fn default() -> SqlJoinData {
-        SqlJoinData { joined: false }
-    }
-}
 /// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder {
     count_query: bool,          // Build count query
@@ -75,7 +68,6 @@ pub struct SqlBuilder {
     joins: BTreeSet<String>,    // Use this joins
     ignored_paths: Vec<String>, // Ignore paths, no errors are raised for them
     selected_paths: BTreeSet<String>, // Selected paths
-                                // alias: String,           // Alias all fields with this
 }
 
 #[derive(Debug)]
@@ -260,6 +252,7 @@ impl SqlBuilder {
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
         used_paths: &BTreeSet<String>,
+        sql_join_selects: &BTreeSet<&str>,
         joins: &HashMap<String, Join>,
     ) -> Result<(), SqlBuilderError> {
         // Build select clause
@@ -270,7 +263,7 @@ impl SqlBuilder {
 
                 let join_selected = if sql_target.options.preselect {
                     if let Some(sql_join) = joins.get(path.as_str()) {
-                        sql_join.selected
+                        sql_join.join_type == JoinType::Inner || sql_join_selects.contains(path.as_str())
                     } else {
                         false
                     }
@@ -319,12 +312,73 @@ impl SqlBuilder {
         Ok(())
     }
     fn build_join_clause(
-        sql_join_data: &mut HashMap<&str, SqlJoinData>,
+        join_root: &Vec<String>,
+        join_tree: &HashMap<String, Vec<String>>,
+        sql_join_selects: &mut BTreeSet<&str>,
         sql_joins: &HashMap<String, Join>,
         result: &mut SqlBuilderResult,
     ) {
+
+        fn build_join_start(join: &Join) -> String {
+            let mut result = String::from(match join.join_type {
+                             JoinType::Inner => "JOIN ",
+                             JoinType::Left => "LEFT JOIN ",
+                         });
+                        result.push_str(&join.aliased_table);
+            result
+        }
+         fn build_join_end (join: &Join) -> String {
+            let mut result = String::from("ON (");
+                        result.push_str(&join.on_predicate);
+                        result.push_str(") ");
+                        result
+
+         }
+        fn build_joins(joins:&Vec<String>,sql_join_selects: &mut BTreeSet<&str>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>){
+            
+            for join in joins {
+
+                // Construct join if
+                // - join is left join and selected
+                // - join is inner join (must always be selected)
+                let join_data = sql_joins.get(join.as_str());
+                if let Some(join_data) = join_data {
+                    // If join is used in query
+                    let construct = match join_data.join_type {
+                        JoinType::Inner  => true,
+                        JoinType::Left  => sql_join_selects.contains(join.as_str())
+                    };
+                    if construct  {
+                        if let Some(t) = sql_joins.get(join) {
+                            result.join_clause.push_str(build_join_start(&t).as_str());
+                            result.join_clause.push(' ');
+                            // Ressolve nested joins
+                            resolve_nested(&join, sql_join_selects, sql_joins, result,  join_tree);
+                            result.join_clause.push_str(build_join_end(&t).as_str());
+                        }
+                    }
+                }
+            }
+
+        }
+        fn resolve_nested(path:&str, sql_join_selects: &mut BTreeSet<&str>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>) {
+
+             if join_tree.contains_key(path) {
+                 let joins = join_tree.get(path).unwrap();
+                build_joins(&joins,sql_join_selects, sql_joins, result, join_tree);
+            } 
+        }
+
+        println!("Selected joins {:?}", sql_join_selects);
+        // Process top level joins
+        build_joins(join_root, sql_join_selects, sql_joins, result,  join_tree);
+
+
+        
+
+
         // Process all fields with subpaths from the query
-        for (k, v) in sql_join_data {
+        /*for (k, v) in sql_join_data  {
             // If not yet joined, check if subpath should be optionally joined
             if !v.joined {
                 // For every subpath, check if there is JOIN data available
@@ -337,7 +391,9 @@ impl SqlBuilder {
                 }
                 v.joined = true; // Mark join as processed
             }
-        }
+        } */
+
+        // Remove last whitespace
         if result
             .join_clause
             .chars()
@@ -366,7 +422,7 @@ impl SqlBuilder {
         let mut pending_having_parens: u8 = 0;
 
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
-        let mut sql_join_data: HashMap<&str, SqlJoinData> = HashMap::new();
+        let mut sql_join_selects: BTreeSet<&str> = BTreeSet::new();
 
         let mut used_paths: BTreeSet<String> = BTreeSet::new();
 
@@ -385,6 +441,7 @@ impl SqlBuilder {
             order_params: vec![],
             combined_params: vec![],
         };
+
 
         for t in &query.tokens {
             {
@@ -434,9 +491,8 @@ impl SqlBuilder {
                                                // Add JOIN information for subfields
                             if sql_target.subfields {
                                 for subfield in field_name.split('_').rev().skip(1) {
-                                    if !sql_join_data.contains_key(subfield) {
-                                        sql_join_data.insert(subfield, SqlJoinData::default());
-                                    }
+                                    let exists= sql_join_selects.insert(subfield);
+                                    if exists { break;}
                                 }
                             }
                         }
@@ -481,9 +537,8 @@ impl SqlBuilder {
                                 // Add JOIN information
                                 if sql_target.subfields {
                                     for subfield in field_name.split('_').rev().skip(1) {
-                                        if !sql_join_data.contains_key(subfield) {
-                                            sql_join_data.insert(subfield, SqlJoinData::default());
-                                        }
+                                         let exists= sql_join_selects.insert(subfield);
+                                    if exists { break;}
                                     }
                                 }
                             }
@@ -535,9 +590,8 @@ impl SqlBuilder {
                                 // Add Join data for all sub fields
                                 if sql_target.subfields {
                                     for subfield in fieldname.split('_').rev().skip(1) {
-                                        if !sql_join_data.contains_key(subfield) {
-                                            sql_join_data.insert(subfield, SqlJoinData::default());
-                                        }
+                                        let exists= sql_join_selects.insert(subfield);
+                                        if exists { break;}
                                     }
                                 }
 
@@ -707,7 +761,7 @@ impl SqlBuilder {
                     false
                 } else {
                     if let Some(sql_join) = sql_mapper.joins.get(path.as_str()) {
-                        sql_join.selected
+                        sql_join.join_type == JoinType::Inner || sql_join_selects.contains(path.as_str())
                     } else {
                         false
                     }
@@ -718,9 +772,8 @@ impl SqlBuilder {
                     && sql_target.subfields
                 {
                     for subfield in toql_field.split('_').rev().skip(1) {
-                        if !sql_join_data.contains_key(subfield) {
-                            sql_join_data.insert(subfield, SqlJoinData::default());
-                        }
+                        let exists= sql_join_selects.insert(subfield);
+                                    if exists { break;}
                     }
                 }
             }
@@ -749,11 +802,12 @@ impl SqlBuilder {
                 &sql_target_data,
                 &sql_mapper.field_order,
                 &used_paths,
+                &sql_join_selects,
                 &sql_mapper.joins,
             )?;
         }
 
-        Self::build_join_clause(&mut sql_join_data, &sql_mapper.joins, &mut result);
+        Self::build_join_clause(&sql_mapper.joins_root, &sql_mapper.joins_tree, &mut sql_join_selects, &sql_mapper.joins, &mut result);
 
         // Remove trailing whitespace on JOIN and ORDER clause
         if result

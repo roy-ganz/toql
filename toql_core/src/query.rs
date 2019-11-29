@@ -526,6 +526,15 @@ impl Query {
             where_predicate_params: Vec::new(),
         }
     }
+
+    /// Create a new query from another query.
+    pub fn from<T>(query: T) -> Self 
+    where
+        T: Into<Query>
+    {
+       query.into()
+    }
+
     /// Create a new query that select all top fields.
     pub fn wildcard() -> Self {
         Query {

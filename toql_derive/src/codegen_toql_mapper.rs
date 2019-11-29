@@ -48,7 +48,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                                 format!("({}{}{} IS NOT NULL)",sql_alias, if sql_alias.is_empty() { "" } else { "." }, self_column)
                                         }).collect::<Vec<String>>().join(" AND ");   
                                         mapper.map_field_with_options(
-                                        &format!("{}_", #toql_field_name), &none_condition,toql::sql_mapper::MapperOptions::new().preselect(true));
+                                        &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::MapperOptions::new().preselect(true));
                                 )
                                 );
                 }
@@ -68,7 +68,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     String::from("")
                 };
 
-                let format_string = format!(
+               /*  let format_string = format!(
                     "{}JOIN {} {} ON ({{}}{})",
                     if field.number_of_options == 2
                         || (field.number_of_options == 1 && field.preselect == true)
@@ -80,15 +80,22 @@ impl<'a> GeneratedToqlMapper<'a> {
                     sql_join_table_name,
                     join_alias,
                     on_sql
-                );
+                ); */
+               
+                let join_aliased_table = format!("{} {}",  sql_join_table_name, join_alias);
+                let join_predicate_format = format!("{{}}{}",on_sql); 
+                let join_predicate = quote!(&format!( #join_predicate_format, join_expression));
 
-                let join_clause = quote!(&format!( #format_string, join_expression));
-                let join_selected = field.number_of_options == 0
-                    || (field.number_of_options == 1 && field.preselect == true);
+                let join_type = if field.number_of_options == 0 || (field.number_of_options == 1 && field.preselect == false) {
+                    quote!(toql::sql_mapper::JoinType::Inner)   
+                } else {
+                    quote!(toql::sql_mapper::JoinType::Left)   
+                };
+
                 self.field_mappings.push(quote! {
                     #join_expression_builder;
-                    mapper.map_join::<#rust_type_ident>(  #toql_field_name, #join_alias);
-                    mapper.join( #toql_field_name, #join_clause, #join_selected );
+                    mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), #join_alias);
+                    mapper.join( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), #join_type,  #join_aliased_table, #join_predicate );
                 });
 
                 if join_attrs.key {

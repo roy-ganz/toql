@@ -1,5 +1,5 @@
 use toql::derive::Toql;
-use toql::mutate::Mutate;
+use toql::mutate::Update;
 
 #[derive(Debug, PartialEq, Toql)]
 #[toql(skip_query, skip_query_builder)]

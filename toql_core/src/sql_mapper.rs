@@ -54,7 +54,7 @@ pub(crate) enum FilterType {
 pub(crate) struct SqlTarget {
     pub(crate) options: MapperOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
-    pub(crate) handler: Arc<FieldHandler + Send + Sync>, // Handler to create clauses
+    pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool, // Target name has subfields separated by underscore
     pub(crate) expression: String, // Column name or SQL expression
     pub(crate) sql_query_params: Vec<String>, // Query_params for SQL expressions
@@ -349,17 +349,26 @@ impl SqlMapperCache {
 /// Translates Toql fields into columns or SQL expressions.
 #[derive(Debug)]
 pub struct SqlMapper {
-    pub(crate) handler: Arc<FieldHandler + Send + Sync>,
+    pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>,
     pub(crate) table: String,
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
     pub(crate) joins: HashMap<String, Join>,
+    pub(crate) joins_root: Vec<String>,                  // Top joins
+    pub(crate) joins_tree: HashMap<String,  Vec<String>> // Subjoins
+}
+
+#[derive(Debug, PartialEq)]
+pub enum JoinType {
+    Left,
+    Inner
 }
 
 #[derive(Debug)]
 pub(crate) struct Join {
-    pub(crate) join_clause: String, // LEFT JOIN ... ON ..
-    pub(crate) selected: bool, // This join will always appear in query and fields should be selected
+    pub(crate) join_type : JoinType, // LEFT JOIN ... 
+    pub(crate) aliased_table: String, // Table t0
+    pub(crate) on_predicate: String, // ON ..
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 ///
@@ -395,6 +404,8 @@ impl SqlMapper {
             joins: HashMap::new(),
             fields: HashMap::new(),
             field_order: Vec::new(),
+            joins_root: Vec::new(),
+            joins_tree: HashMap::new()
         }
     }
     pub fn from_mapped<M: Mapped>() -> SqlMapper // Create new SQL Mapper and map entity fields
@@ -517,7 +528,7 @@ impl SqlMapper {
     pub fn alter_handler_with_options(
         &mut self,
         toql_field: &str,
-        handler: Arc<FieldHandler + Sync + Send>,
+        handler: Arc<dyn FieldHandler + Sync + Send>,
         options: MapperOptions,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
@@ -585,16 +596,35 @@ impl SqlMapper {
     pub fn join<'a>(
         &'a mut self,
         toql_path: &str,
-        join_clause: &str,
-        selected: bool,
+        join_type: JoinType,
+        aliased_table: &str,
+        on_predicate: &str,
+       
     ) -> &'a mut Self {
         self.joins.insert(
             toql_path.to_string(),
             Join {
-                join_clause: join_clause.to_string(),
-                selected: selected,
+                join_type: join_type,
+                aliased_table: aliased_table.to_string(),
+                on_predicate: on_predicate.to_string(),
             },
         );
+
+        // Precalculate tree information for quicker join construction
+        // Build root joins and store child joins to parent joins
+        // Eg. [user] = [user_country, user_address, user_info]
+
+        let c = toql_path.matches('_').count();
+        if c == 0 {
+            self.joins_root.push(toql_path.to_string());
+        } else {
+            // Add path to base path 
+           let head :&str = toql_path.trim_end_matches(|c| c != '_').trim_end_matches('_');
+
+            let j = self.joins_tree.entry(head.to_string()).or_insert(Vec::new());
+            j.push(toql_path.to_string());
+        }
+        
 
         // Find targets that use join and set join field
 
@@ -603,9 +633,11 @@ impl SqlMapper {
     /// Changes an already added join.
     /// This will panic if the join does not exist
     /// Use it to make changes, it prevents typing errors of path names.
-    pub fn alter_join<'a>(&'a mut self, toql_path: &str, join_clause: &str) -> &'a mut Self {
+    pub fn alter_join<'a>(&'a mut self, toql_path: &str, join_type:JoinType, aliased_table: &str, on_predicate:&str) -> &'a mut Self {
         let j = self.joins.get_mut(toql_path).expect("Join is missing.");
-        j.join_clause = join_clause.to_string();
+        j.join_type = join_type;
+        j.aliased_table = aliased_table.to_string();
+        j.on_predicate = on_predicate.to_string();
         self
     }
 }
