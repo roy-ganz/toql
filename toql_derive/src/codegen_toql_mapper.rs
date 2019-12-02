@@ -39,7 +39,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                 let join_alias = &join_attrs.join_alias;
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
 
-                if field.number_of_options > 0 {
+                // Add discriminator field for LEFT joins
+                if field.number_of_options > 1 || (field.number_of_options == 1 && field.preselect == true) {
                     self.field_mappings.push(
                                     quote!(
                                         let none_condition = <#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
@@ -68,19 +69,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     String::from("")
                 };
 
-               /*  let format_string = format!(
-                    "{}JOIN {} {} ON ({{}}{})",
-                    if field.number_of_options == 2
-                        || (field.number_of_options == 1 && field.preselect == true)
-                    {
-                        "LEFT "
-                    } else {
-                        ""
-                    },
-                    sql_join_table_name,
-                    join_alias,
-                    on_sql
-                ); */
+             
                
                 let join_aliased_table = format!("{} {}",  sql_join_table_name, join_alias);
                 let join_predicate_format = format!("{{}}{}",on_sql); 

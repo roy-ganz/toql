@@ -80,13 +80,15 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                             None
                         } else {
-                            row.take_opt( *i).unwrap()?
+                            row.take_opt( *i).unwrap()
+                                .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
                         }
                     }
                 ));
                 } else {
                     self.mysql_deserialize_fields.push(quote!(
-                        #rust_field_ident : row.take_opt( #assignment).unwrap()?
+                        #rust_field_ident : row.take_opt( #assignment).unwrap()
+                            .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
                     ));
                 }
 
@@ -115,7 +117,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     quote!(*i += 1;)
                 };
 
-                // If any Option is present discriminator field must be added to check
+                // For optional joined fields (left Joins) a discriminator field must be added to check
                 // - for unselected entity (discriminator column is NULL Type)
                 // - for null entity (discriminator column is false) - only left joins
 
@@ -129,7 +131,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                             *i = < #rust_type_ident > ::forward_row(*i); // Added, but unsure, needs testing
                                         None
                                        }
-                                       else if row.take_opt::<bool,_>(*i).unwrap()? == false {
+                                       else if row.take_opt::<bool,_>(*i).unwrap()
+                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
+                                        == false {
                                         //*i += 1; // Step over discriminator field,
                                         *i = < #rust_type_ident > ::forward_row(*i);
 
@@ -144,7 +148,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             quote!(
                                 #rust_field_ident : {
                                      #increment
-                                     if row.take_opt::<bool,_>(*i).unwrap()? == false {
+                                     if row.take_opt::<bool,_>(*i).unwrap()
+                                      .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
+                                      == false {
                                        // *i = < #join_type > ::forward_row({*i += 1; *i});
                                              *i = < #rust_type_ident > ::forward_row(*i);
                                         None
@@ -161,7 +167,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                             *i = < #rust_type_ident > ::forward_row(*i);
                                             None
                                         } else {
-                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
                                         }
                                     }
                                 ),
@@ -470,7 +476,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
                 i
             }
 
-            fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize) -> std::result::Result < #struct_ident , toql::mysql::mysql :: error :: Error > {
+            fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize) 
+                -> std::result::Result < #struct_ident , toql:: error :: ToqlError > {
 
                 Ok ( #struct_ident {
                     #(#mysql_deserialize_fields),*

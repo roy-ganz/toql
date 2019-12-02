@@ -41,6 +41,9 @@ pub enum ToqlError {
     /// MySQL failed to run the SQL query. For feature `mysql`
     MySqlError(Error),
 
+    /// Toql failed to convert row value into struct field
+    DeserializeError(String, String),
+
 }
 
 /// A result with a [`ToqlError`](enum.ToqlError.html)
@@ -77,6 +80,7 @@ impl fmt::Display for ToqlError {
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),
+            ToqlError::DeserializeError(ref n, ref e) => write!(f, "unable to deserialize field `{}` because: {}", n, e),
         }
     }
 }

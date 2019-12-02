@@ -261,20 +261,20 @@ impl SqlBuilder {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 let path: String = toql_field.split('_').rev().skip(1).collect();
 
-                let join_selected = if sql_target.options.preselect {
+              /*   let join_selected = if sql_target.options.preselect {
                     if let Some(sql_join) = joins.get(path.as_str()) {
-                        sql_join.join_type == JoinType::Inner || sql_join_selects.contains(path.as_str())
+                        sql_join_selects.contains(path.as_str())
                     } else {
                         false
                     }
                 } else {
                     false
-                };
+                }; */
 
                 // For selected fields there exists target data
                 // For always selected fields, check if path is used by query
-                let selected = (join_selected
-                    || sql_target.options.preselect
+                let selected = (/*join_selected
+                    ||*/ sql_target.options.preselect
                         && (path.is_empty() || used_paths.contains(&path)))
                     || sql_target_data
                         .get(toql_field.as_str())
@@ -588,18 +588,32 @@ impl SqlBuilder {
                                 let data = sql_target_data.entry(fieldname).or_default();
 
                                 // Add Join data for all sub fields
+                                
                                 if sql_target.subfields {
-                                    for subfield in fieldname.split('_').rev().skip(1) {
+                                    
+                                    
+                                    let mut path = fieldname.trim_end_matches(|c| c!='_').trim_end_matches('_');
+                                    while !path.is_empty() {
+
+                                        let exists= !sql_join_selects.insert(&path);
+                                        if exists { break;}
+                                        path =path.trim_end_matches(|c| c!='_').trim_end_matches('_');
+                                    }
+
+                                   /*  for subfield in fieldname.split('_').rev().skip(1) {
                                         let exists= sql_join_selects.insert(subfield);
                                         if exists { break;}
-                                    }
+                                    } */
                                 }
+                                println!("{:?}", sql_join_selects);
 
                                 // Add path to used path list
                                 let path: String = fieldname.split('_').rev().skip(1).collect();
                                 if !used_paths.contains(&path) {
                                     used_paths.insert(path);
                                 }
+                                 println!("{:?}", used_paths);
+                                
 
                                 data.selected = if self.count_query {
                                     sql_target.options.count_select
@@ -749,26 +763,28 @@ impl SqlBuilder {
             }
         }
 
-        // Build select
-        // Ensure implicitly selected subfields are joined
+        /* // Build select
+        // Ensure selected subfields are joined
         for toql_field in &sql_mapper.field_order {
             if let Some(sql_target) = sql_mapper.fields.get(toql_field.as_str()) {
                 let path: String = toql_field.split('_').rev().skip(1).collect();
 
-                // Fields that are marked `always selected` are selected, if either
-                // their path is in use or their path belongs to a join that is always selected
-                let join_selected = if path.is_empty() {
+                // Fields that are marked `preselect` are selected, if either
+                // their path is in use or
+                // their path belongs to a join that is always selected (Inner Join)
+                 let join_selected = if path.is_empty() {
                     false
                 } else {
                     if let Some(sql_join) = sql_mapper.joins.get(path.as_str()) {
-                        sql_join.join_type == JoinType::Inner || sql_join_selects.contains(path.as_str())
+                        sql_join.join_type == JoinType::Inner && sql_join_selects.contains(path.as_str())
                     } else {
                         false
                     }
-                };
+                }; 
 
                 if sql_target.options.preselect
                     && (join_selected || used_paths.contains(&path))
+                    //&& used_paths.contains(&path)
                     && sql_target.subfields
                 {
                     for subfield in toql_field.split('_').rev().skip(1) {
@@ -777,7 +793,7 @@ impl SqlBuilder {
                     }
                 }
             }
-        }
+        } */
 
         if self.count_query {
             Self::build_count_select_clause(
