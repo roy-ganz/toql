@@ -151,7 +151,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                      if row.take_opt::<bool,_>(*i).unwrap()
                                       .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
                                       == false {
-                                       // *i = < #join_type > ::forward_row({*i += 1; *i});
                                              *i = < #rust_type_ident > ::forward_row(*i);
                                         None
                                     } else {
@@ -164,7 +163,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     #rust_field_ident : {
                                         #increment
                                         if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                            *i = < #rust_type_ident > ::forward_row(*i);
+                                            *i = < #rust_type_ident > ::forward_row(*i) - 1; // No discriminator field
                                             None
                                         } else {
                                         Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)

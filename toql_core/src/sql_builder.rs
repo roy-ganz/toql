@@ -251,19 +251,24 @@ impl SqlBuilder {
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
-        used_paths: &BTreeSet<String>,
-        sql_join_selects: &BTreeSet<&str>,
-        joins: &HashMap<String, Join>,
+      //  used_paths: &BTreeSet<String>,
+        selected_paths: &BTreeSet<String>,
+       // joins: &HashMap<String, Join>,
     ) -> Result<(), SqlBuilderError> {
         // Build select clause
         let mut any_selected = false;
+
+       
+
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
-                let path: String = toql_field.split('_').rev().skip(1).collect();
+                let path: &str = toql_field.trim_end_matches(|c | c != '_').trim_end_matches('_');
+
+                
 
               /*   let join_selected = if sql_target.options.preselect {
                     if let Some(sql_join) = joins.get(path.as_str()) {
-                        sql_join_selects.contains(path.as_str())
+                        selected_paths.contains(path.as_str())
                     } else {
                         false
                     }
@@ -271,11 +276,12 @@ impl SqlBuilder {
                     false
                 }; */
 
-                // For selected fields there exists target data
+                 // For selected fields there exists target data
                 // For always selected fields, check if path is used by query
                 let selected = (/*join_selected
                     ||*/ sql_target.options.preselect
-                        && (path.is_empty() || used_paths.contains(&path)))
+                        //&& (path.is_empty() || used_paths.contains(&path)))
+                        && (path.is_empty() || selected_paths.contains(path)))
                     || sql_target_data
                         .get(toql_field.as_str())
                         .map_or(false, |d| d.selected);
@@ -314,7 +320,7 @@ impl SqlBuilder {
     fn build_join_clause(
         join_root: &Vec<String>,
         join_tree: &HashMap<String, Vec<String>>,
-        sql_join_selects: &mut BTreeSet<&str>,
+        selected_paths: &mut BTreeSet<String>,
         sql_joins: &HashMap<String, Join>,
         result: &mut SqlBuilderResult,
     ) {
@@ -334,7 +340,7 @@ impl SqlBuilder {
                         result
 
          }
-        fn build_joins(joins:&Vec<String>,sql_join_selects: &mut BTreeSet<&str>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>){
+        fn build_joins(joins:&Vec<String>,selected_paths: &mut BTreeSet<String>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>){
             
             for join in joins {
 
@@ -344,16 +350,25 @@ impl SqlBuilder {
                 let join_data = sql_joins.get(join.as_str());
                 if let Some(join_data) = join_data {
                     // If join is used in query
-                    let construct = match join_data.join_type {
-                        JoinType::Inner  => true,
-                        JoinType::Left  => sql_join_selects.contains(join.as_str())
+                    
+                    // Add path for preselected join
+                    if join_data.preselect  {
+                        selected_paths.insert(join.to_owned());
+                    }
+                    // Construction rules for joins:
+                    // - Preselected and Inner Joins always
+                    // - Left Joins only on demand
+                    let construct = join_data.preselect || match join_data.join_type {
+                        JoinType::Inner  => {
+                            true},
+                        JoinType::Left  => selected_paths.contains(join.as_str())
                     };
                     if construct  {
                         if let Some(t) = sql_joins.get(join) {
                             result.join_clause.push_str(build_join_start(&t).as_str());
                             result.join_clause.push(' ');
                             // Ressolve nested joins
-                            resolve_nested(&join, sql_join_selects, sql_joins, result,  join_tree);
+                            resolve_nested(&join, selected_paths, sql_joins, result,  join_tree);
                             result.join_clause.push_str(build_join_end(&t).as_str());
                         }
                     }
@@ -361,17 +376,17 @@ impl SqlBuilder {
             }
 
         }
-        fn resolve_nested(path:&str, sql_join_selects: &mut BTreeSet<&str>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>) {
+        fn resolve_nested(path:&str, selected_paths: &mut BTreeSet<String>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>) {
 
              if join_tree.contains_key(path) {
                  let joins = join_tree.get(path).unwrap();
-                build_joins(&joins,sql_join_selects, sql_joins, result, join_tree);
+                build_joins(&joins,selected_paths, sql_joins, result, join_tree);
             } 
         }
 
-        println!("Selected joins {:?}", sql_join_selects);
+        println!("Selected joins {:?}", selected_paths);
         // Process top level joins
-        build_joins(join_root, sql_join_selects, sql_joins, result,  join_tree);
+        build_joins(join_root, selected_paths, sql_joins, result,  join_tree);
 
 
         
@@ -405,6 +420,9 @@ impl SqlBuilder {
             result.join_clause = result.join_clause.trim_end().to_string();
         }
     }
+
+   
+
     /// Build normal query.
     pub fn build(
         &mut self,
@@ -422,9 +440,9 @@ impl SqlBuilder {
         let mut pending_having_parens: u8 = 0;
 
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
-        let mut sql_join_selects: BTreeSet<&str> = BTreeSet::new();
+        let mut selected_paths: BTreeSet<String> = BTreeSet::new();
 
-        let mut used_paths: BTreeSet<String> = BTreeSet::new();
+       // let mut used_paths: BTreeSet<String> = BTreeSet::new();
 
         let mut result = SqlBuilderResult {
             table: sql_mapper.table.clone(),
@@ -490,8 +508,8 @@ impl SqlBuilder {
                             f.selected = true; // Select field
                                                // Add JOIN information for subfields
                             if sql_target.subfields {
-                                for subfield in field_name.split('_').rev().skip(1) {
-                                    let exists= sql_join_selects.insert(subfield);
+                                for path in field_name.split('_').rev().skip(1) {
+                                    let exists= selected_paths.insert(path.to_owned());
                                     if exists { break;}
                                 }
                             }
@@ -522,24 +540,38 @@ impl SqlBuilder {
                                 continue;
                             }
 
-                            // Select all top fields, that are top fields or are in the right path level
-                            if (wildcard.path.is_empty() && !sql_target.subfields)
-                                || (field_name.starts_with(&wildcard.path)
+                            let field_path = field_name.trim_end_matches(|c| c != '_').trim_end_matches('_');
+
+                            // Select all fields on wildcard path
+                            // including joins with preselected fields only
+                            let wildcard_path = wildcard.path.trim_end_matches('_');
+                            let select = (field_path == wildcard_path) || field_path.starts_with(wildcard_path) && sql_target.options.preselect;
+                            println!( "field {}: field_path={}, wildcard_path ={}, select={}",&field_name, field_path, &wildcard.path, select);
+
+                            /* if (wildcard.path.is_empty())  && ! sql_target.subfields
+                                || (field_name.starts_with(&wildcard.path) 
                                     && field_name.rfind("_").unwrap_or(field_name.len())
-                                        < wildcard.path.len())
+                                        < wildcard.path.len()) */
+                            if select
                             {
                                 let f = sql_target_data.entry(field_name.as_str()).or_default();
+
                                 f.selected = true; // Select field
 
-                                //println!("PATH= {}", path);
-                                //println!("FIELDNAME= {}", field_name);
-                                //println!("MATCH = {}",field_name.starts_with(path) && field_name.rfind("_").unwrap_or(field_name.len()) < field_name.len() );
-                                // Add JOIN information
+                              
+                                // Ensure all parent paths are selected
                                 if sql_target.subfields {
-                                    for subfield in field_name.split('_').rev().skip(1) {
-                                         let exists= sql_join_selects.insert(subfield);
-                                    if exists { break;}
+                                    let mut path = field_name.trim_end_matches(|c| c!='_').trim_end_matches('_');
+                                    while !path.is_empty() {
+                                        let exists = !selected_paths.insert(path.to_owned());
+                                        if exists { break;}
+                                        path = path.trim_end_matches(|c| c!='_').trim_end_matches('_');
                                     }
+
+                                    /* for subfield in field_name.split('_').rev().skip(1) {
+                                         let exists= selected_paths.insert(subfield);
+                                    if exists { break;}
+                                    } */
                                 }
                             }
                         }
@@ -559,7 +591,7 @@ impl SqlBuilder {
                             continue;
                         }
 
-                        let fieldname = if self.subpath.is_empty() {
+                        let field_name = if self.subpath.is_empty() {
                             &query_field.name
                         } else {
                             query_field
@@ -568,7 +600,7 @@ impl SqlBuilder {
                                 .trim_start_matches('_')
                         };
 
-                        match sql_mapper.fields.get(fieldname) {
+                        match sql_mapper.fields.get(field_name) {
                             Some(sql_target) => {
                                 // Verify user role and skip field role mismatches
                                 let role_valid =
@@ -576,7 +608,7 @@ impl SqlBuilder {
                                 if role_valid == false {
                                     return Err(SqlBuilderError::RoleRequired(format!(
                                         "Field requires a user role: '{}'. ",
-                                        fieldname
+                                        field_name
                                     )));
                                 }
                                 // Skip filtering and ordering in count queries for unfiltered fields
@@ -585,35 +617,23 @@ impl SqlBuilder {
                                 }
 
                                 // Select sql target if field is not hidden
-                                let data = sql_target_data.entry(fieldname).or_default();
+                                let data = sql_target_data.entry(field_name).or_default();
 
-                                // Add Join data for all sub fields
-                                
+                                // Add parent Joins  
                                 if sql_target.subfields {
                                     
                                     
-                                    let mut path = fieldname.trim_end_matches(|c| c!='_').trim_end_matches('_');
+                                    let mut path = field_name.trim_end_matches(|c| c!='_').trim_end_matches('_');
                                     while !path.is_empty() {
 
-                                        let exists= !sql_join_selects.insert(&path);
+                                        let exists = !selected_paths.insert(path.to_owned());
                                         if exists { break;}
-                                        path =path.trim_end_matches(|c| c!='_').trim_end_matches('_');
+                                        path = path.trim_end_matches(|c| c!='_').trim_end_matches('_');
                                     }
-
-                                   /*  for subfield in fieldname.split('_').rev().skip(1) {
-                                        let exists= sql_join_selects.insert(subfield);
-                                        if exists { break;}
-                                    } */
                                 }
-                                println!("{:?}", sql_join_selects);
+                                //println!("{:?}", selected_paths);
 
-                                // Add path to used path list
-                                let path: String = fieldname.split('_').rev().skip(1).collect();
-                                if !used_paths.contains(&path) {
-                                    used_paths.insert(path);
-                                }
-                                 println!("{:?}", used_paths);
-                                
+                              
 
                                 data.selected = if self.count_query {
                                     sql_target.options.count_select
@@ -776,7 +796,7 @@ impl SqlBuilder {
                     false
                 } else {
                     if let Some(sql_join) = sql_mapper.joins.get(path.as_str()) {
-                        sql_join.join_type == JoinType::Inner && sql_join_selects.contains(path.as_str())
+                        sql_join.join_type == JoinType::Inner && selected_paths.contains(path.as_str())
                     } else {
                         false
                     }
@@ -788,13 +808,18 @@ impl SqlBuilder {
                     && sql_target.subfields
                 {
                     for subfield in toql_field.split('_').rev().skip(1) {
-                        let exists= sql_join_selects.insert(subfield);
+                        let exists= selected_paths.insert(subfield);
                                     if exists { break;}
                     }
                 }
             }
         } */
 
+       // println!("Selected joins from query {:?}", selected_paths);
+         Self::build_join_clause(&sql_mapper.joins_root, &sql_mapper.joins_tree, &mut selected_paths, &sql_mapper.joins, &mut result);
+    
+        //println!("Selected joins including inner joins {:?}", selected_paths);
+        
         if self.count_query {
             Self::build_count_select_clause(
                 &mut result,
@@ -817,13 +842,13 @@ impl SqlBuilder {
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
-                &used_paths,
-                &sql_join_selects,
-                &sql_mapper.joins,
+               // &used_paths,
+                &selected_paths,
+              //  &sql_mapper.joins,
             )?;
         }
 
-        Self::build_join_clause(&sql_mapper.joins_root, &sql_mapper.joins_tree, &mut sql_join_selects, &sql_mapper.joins, &mut result);
+       
 
         // Remove trailing whitespace on JOIN and ORDER clause
         if result
@@ -921,9 +946,9 @@ impl SqlBuilder {
         (sql.to_string(), query_params)
     }
 
-    fn path_ignored(&self, fieldname: &str) -> bool {
+    fn path_ignored(&self, field_name: &str) -> bool {
         for path in &self.ignored_paths {
-            if fieldname.starts_with(path) {
+            if field_name.starts_with(path) {
                 return true;
             }
         }

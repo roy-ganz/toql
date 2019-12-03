@@ -369,6 +369,7 @@ pub(crate) struct Join {
     pub(crate) join_type : JoinType, // LEFT JOIN ... 
     pub(crate) aliased_table: String, // Table t0
     pub(crate) on_predicate: String, // ON ..
+    pub (crate) preselect: bool
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 ///
@@ -599,14 +600,16 @@ impl SqlMapper {
         join_type: JoinType,
         aliased_table: &str,
         on_predicate: &str,
+        preselect: bool
        
     ) -> &'a mut Self {
         self.joins.insert(
             toql_path.to_string(),
             Join {
-                join_type: join_type,
+                join_type,
                 aliased_table: aliased_table.to_string(),
                 on_predicate: on_predicate.to_string(),
+                preselect,
             },
         );
 

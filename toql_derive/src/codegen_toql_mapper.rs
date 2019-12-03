@@ -81,10 +81,19 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!(toql::sql_mapper::JoinType::Left)   
                 };
 
+                let preselect = if field.number_of_options == 0 || (field.number_of_options == 1 && field.preselect == true) {
+                    quote!(true)   
+                } else {
+                    quote!(false)   
+                };
                 self.field_mappings.push(quote! {
                     #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), #join_alias);
-                    mapper.join( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), #join_type,  #join_aliased_table, #join_predicate );
+                    mapper.join( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
+                     #join_type,  
+                     #join_aliased_table, 
+                     #join_predicate,
+                     #preselect);
                 });
 
                 if join_attrs.key {
