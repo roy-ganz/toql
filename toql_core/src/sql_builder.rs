@@ -525,7 +525,8 @@ impl SqlBuilder {
                         if !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
                             continue;
                         }
-
+                        
+                        let wildcard_path = wildcard.path.trim_start_matches(&self.subpath).trim_end_matches('_');
                         for (field_name, sql_target) in &sql_mapper.fields {
                             if sql_target.options.ignore_wildcard {
                                 continue;
@@ -544,9 +545,9 @@ impl SqlBuilder {
 
                             // Select all fields on wildcard path
                             // including joins with preselected fields only
-                            let wildcard_path = wildcard.path.trim_end_matches('_');
+                            
                             let select = (field_path == wildcard_path) || field_path.starts_with(wildcard_path) && sql_target.options.preselect;
-                            println!( "field {}: field_path={}, wildcard_path ={}, select={}",&field_name, field_path, &wildcard.path, select);
+                            //println!( "field {}: field_path={}, wildcard_path ={}, select={}",&field_name, field_path, &wildcard.path, select);
 
                             /* if (wildcard.path.is_empty())  && ! sql_target.subfields
                                 || (field_name.starts_with(&wildcard.path) 
