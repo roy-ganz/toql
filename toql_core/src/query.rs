@@ -600,6 +600,19 @@ impl Query {
         query_with.with(self)
        
     }
+    pub fn contains_path(&self, path: &str) ->bool{
+        
+        let p = format!("{}_", path.trim_end_matches('_')); // ensure path ends with _
+        self.tokens.iter().any(|t| {
+            let pth= p.as_str();
+            match t {
+                QueryToken::Field(field) => field.name.starts_with(pth),
+                QueryToken::Wildcard(wildcard) => wildcard.path.starts_with(pth),
+                QueryToken::DoubleWildcard(_) => true,
+                _ => false
+            }   
+        })
+    }
     // Not sure if needed
     /* pub fn prepend<T>(mut self, query: T) -> Self
     where

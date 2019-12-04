@@ -644,6 +644,7 @@ impl SqlBuilder {
 
                                 data.used = !query_field.hidden;
 
+                                // TODO fix bug
                                 // Resolve query params in sql expression
                                 for p in &sql_target.sql_query_params {
                                     let qp = query

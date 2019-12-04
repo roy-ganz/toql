@@ -435,14 +435,21 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         quote!(Vec::new())
                     };
 
-                    self.path_loaders.push( quote!(
+                    let path_test = if field.number_of_options > 0 && !merge_attrs.preselect { 
+                            quote!( if query.contains_path(#toql_field_name))
+                            } else {
+                            quote!()
+                        };
 
+                    self.path_loaders.push( quote!(
+                            #path_test {
                                 let mut dep_query = query.clone();
                                 #(#merge_many_predicates)*
                                 let #rust_field_ident = #rust_type_ident ::load_path_from_mysql(#toql_field_name, &dep_query, cache, conn)?;
                                 if #rust_field_ident .is_some() {                                    for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
                                     #struct_ident :: #merge_function (&mut entities, #rust_field_ident .unwrap());
                                 }
+                            }
                         ));
                 }
                 _ => {

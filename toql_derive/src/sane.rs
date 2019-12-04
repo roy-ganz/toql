@@ -70,6 +70,7 @@ pub struct MergeField {
 
     pub fields: Vec<Pair>,
     pub on_sql: Option<String>,
+    pub preselect: bool
 }
 
 impl MergeField {
@@ -255,6 +256,7 @@ impl Field {
                     .unwrap_or(&RenameCase::SnakeCase)
                     .to_owned(),
                 fields: field.merge.as_ref().unwrap().fields.clone(),
+                preselect: field.preselect
             })
         } else {
             FieldKind::Regular(RegularField {
