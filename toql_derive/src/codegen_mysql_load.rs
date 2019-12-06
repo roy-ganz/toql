@@ -435,7 +435,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         quote!(Vec::new())
                     };
 
-                    let path_test = if field.number_of_options > 0 && !merge_attrs.preselect { 
+                    let path_test = if field.number_of_options > 0 && !field.preselect { 
                             quote!( if query.contains_path(#toql_field_name))
                             } else {
                             quote!()

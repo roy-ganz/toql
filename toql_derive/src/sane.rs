@@ -70,7 +70,6 @@ pub struct MergeField {
 
     pub fields: Vec<Pair>,
     pub on_sql: Option<String>,
-    pub preselect: bool
 }
 
 impl MergeField {
@@ -121,6 +120,14 @@ impl Field {
         let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
         let number_of_options = field.number_of_options();
 
+        if field.preselect == true && field.ignore_wildcard == true {
+                return Err(darling::Error::custom(
+                    "`preselect` not allowed together with `ignore_wildcard`. Remove one of them from `#[toql(..)]`.".to_string(),
+                )
+                .with_span(&field.ident));
+        }
+
+
         let kind = if field.join.is_some() {
             if field.handler.is_some() {
                 return Err(darling::Error::custom(
@@ -135,6 +142,8 @@ impl Field {
                 )
                 .with_span(&field.ident));
             }
+
+            
 
             let renamed_table = crate::util::rename_or_default(
                 field.first_non_generic_type().unwrap().to_string().as_str(),
@@ -256,7 +265,6 @@ impl Field {
                     .unwrap_or(&RenameCase::SnakeCase)
                     .to_owned(),
                 fields: field.merge.as_ref().unwrap().fields.clone(),
-                preselect: field.preselect
             })
         } else {
             FieldKind::Regular(RegularField {

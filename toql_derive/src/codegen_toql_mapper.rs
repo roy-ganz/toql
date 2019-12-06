@@ -86,6 +86,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                 } else {
                     quote!(false)   
                 };
+                let ignore_wildcard = if field.ignore_wildcard {quote!(true)} else {quote!(false)};
+                
                 self.field_mappings.push(quote! {
                     #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), #join_alias);
@@ -93,7 +95,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                      #join_type,  
                      #join_aliased_table, 
                      #join_predicate,
-                     #preselect);
+                     #preselect,
+                     #ignore_wildcard);
                 });
 
                 if join_attrs.key {

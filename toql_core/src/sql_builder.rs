@@ -193,10 +193,12 @@ impl SqlBuilder {
                         FieldOrder::Desc(_) => " DESC",
                     };
                     if let Some(_sql_target_data) = sql_target_data.get(toql_field.as_str()) {
+                       
                         if let Some(sql_target) = sql_targets.get(toql_field) {
+                            let params = sql_target.sql_query_param_values(query_parameters)?;
                             if let Some(s) = sql_target
                                 .handler
-                                .build_select(&sql_target.expression, query_parameters)?
+                                .build_select((sql_target.expression.to_owned(), params), query_parameters)?
                             {
                                 result.order_clause.push_str(&s.0);
                                 result.order_params.extend_from_slice(&s.1);
@@ -223,9 +225,10 @@ impl SqlBuilder {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
                 if sql_target.options.count_select {
+                    let params = sql_target.sql_query_param_values(query_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select(&sql_target.expression, query_params)?
+                        .build_select((sql_target.expression.to_owned(), params), query_params)?
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
@@ -287,20 +290,22 @@ impl SqlBuilder {
                         .map_or(false, |d| d.selected);
 
                 if selected {
+
+                    let params = sql_target.sql_query_param_values(query_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select(&sql_target.expression, query_params)?
+                        .build_select((sql_target.expression.to_owned(), params), query_params)?
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
 
-                        // Replace query params with actual values
+                       /*  // Replace query params with actual values
                         for p in &sql_target.sql_query_params {
                             let qp = query_params
                                 .get(p)
                                 .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
                             result.select_params.push(qp.to_string());
-                        }
+                        } */
 
                         any_selected = true;
                     } else {
@@ -517,6 +522,7 @@ impl SqlBuilder {
                     }
 
                     QueryToken::Wildcard(wildcard) => {
+
                         // Skip wildcard for count queries
                         if self.count_query {
                             continue;
@@ -526,14 +532,36 @@ impl SqlBuilder {
                             continue;
                         }
                         
+
                         let wildcard_path = wildcard.path.trim_start_matches(&self.subpath).trim_end_matches('_');
+
+                        // TODO validate roles for wildcard path and raise error
+                       
+                        println!("Ignored joins for wildcard: {:?}", sql_mapper.joins_ignoring_wildcard);
+                        println!("Wildcard path {:?}, skipping :{:?}", wildcard_path, sql_mapper.joins_ignoring_wildcard.iter().any(|p| p.starts_with(wildcard_path)));
+
+                        let mut last_validated_path = ("", true); // Path result
                         for (field_name, sql_target) in &sql_mapper.fields {
-                            if sql_target.options.ignore_wildcard {
+                            
+                           let field_path = field_name.trim_end_matches(|c| c != '_').trim_end_matches('_');
+
+                            // Skip field if it doesn't belong to wildcard path
+                            if !field_path.starts_with(wildcard_path) {
                                 continue;
                             }
+
+                           // Skip ignored paths, they belong typically to merged fields and are handled by another build() call
                             if self.ignored_paths.iter().any(|p| field_name.starts_with(p)) {
                                 continue;
                             }
+                         
+
+                            if sql_target.options.ignore_wildcard {
+                                continue;
+                            }
+                          
+                           
+
                             // Skip fields with missing role
                             let role_valid =
                                 Self::validate_roles(&query.roles, &sql_target.options.roles);
@@ -541,20 +569,70 @@ impl SqlBuilder {
                                 continue;
                             }
 
-                            let field_path = field_name.trim_end_matches(|c| c != '_').trim_end_matches('_');
+                           
+
+                            // Skip field paths, that are marked with ignore wildcard or have missing roles
+                            if !field_path.is_empty() {
+                               
+                                
+                                if field_path != last_validated_path.0  {
+
+                                    let mut path = field_path;
+                                    // Remember successful validation to speed up next validation of the same path
+                                    last_validated_path.0 = field_path;
+                                    while !path.is_empty() {
+
+                                        // Validate path only up to wildcard path 
+                                        if path == wildcard_path {
+                                            last_validated_path = (path, true);
+                                            break;
+                                        }
+                                                                               
+                                        //if ignore wildcard, roles missing validated_path = (path, false)
+                                        if let Some (join) = sql_mapper.joins.get(path) {
+                                            if join.ignore_wildcard {
+                                                  last_validated_path = (path, false);
+                                                  break;
+                                            }
+                                            /* if  !Self::validate_roles(&query.roles, &join.options.roles) {
+                                                 last_validated_path = (path, false);
+                                                  break;
+                                            } */
+                                        }
+                                        
+                                        
+                                        //println!("PATH={}", path);
+                                        // Next path
+                                        path = path.trim_end_matches(|c|c!='_').trim_end_matches('_');
+                                    }
+                                }
+                                
+                                 // Skip any field on path with failed validation
+                                if last_validated_path.1 != true {
+                                    println!("Path {} is invalid!", last_validated_path.0);
+                                    continue;
+                                } else {
+                                    println!("Path {} is valid!", last_validated_path.0);
+                                }
+                                
+                             }
+                             
+                            
 
                             // Select all fields on wildcard path
                             // including joins with preselected fields only
                             
-                            let select = (field_path == wildcard_path) || field_path.starts_with(wildcard_path) && sql_target.options.preselect;
+                            //let select = (field_path == wildcard_path) || field_path.starts_with(wildcard_path) && sql_target.options.preselect;
+                            
+                           // let select = field_path.starts_with(wildcard_path);
                             //println!( "field {}: field_path={}, wildcard_path ={}, select={}",&field_name, field_path, &wildcard.path, select);
 
                             /* if (wildcard.path.is_empty())  && ! sql_target.subfields
                                 || (field_name.starts_with(&wildcard.path) 
                                     && field_name.rfind("_").unwrap_or(field_name.len())
                                         < wildcard.path.len()) */
-                            if select
-                            {
+                          /*   if select
+                            { */
                                 let f = sql_target_data.entry(field_name.as_str()).or_default();
 
                                 f.selected = true; // Select field
@@ -574,7 +652,7 @@ impl SqlBuilder {
                                     if exists { break;}
                                     } */
                                 }
-                            }
+                           // }
                         }
                     }
                     QueryToken::Field(query_field) => {
@@ -646,7 +724,7 @@ impl SqlBuilder {
 
                                 // TODO fix bug
                                 // Resolve query params in sql expression
-                                for p in &sql_target.sql_query_params {
+                                /* for p in &sql_target.sql_query_params {
                                     let qp = query
                                         .params
                                         .get(p)
@@ -657,13 +735,26 @@ impl SqlBuilder {
                                     } else {
                                         result.where_params.push(qp.to_string());
                                     }
-                                }
+                                } */
 
                                 if let Some(f) = &query_field.filter {
                                     // Get actual expression
+                                   /*  let params : Vec<String> = Vec::new();
+                                    for p in &sql_target.sql_query_params {
+                                    let qp = query
+                                        .params
+                                        .get(p)
+                                        .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
+                                     params.push(qp.to_owned());
+                                    } */
+
+                                   
+                                    let params = sql_target.sql_query_param_values(&query.params)?;
+                                 
+
                                     let expression = sql_target
                                         .handler
-                                        .build_select(&sql_target.expression, &query.params)?
+                                        .build_select((sql_target.expression.to_owned(), params), &query.params)?
                                         .unwrap_or(("null".to_string(), vec![]));
 
                                     if let Some(f) = sql_target.handler.build_filter(

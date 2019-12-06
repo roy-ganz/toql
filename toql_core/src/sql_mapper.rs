@@ -60,6 +60,25 @@ pub(crate) struct SqlTarget {
     pub(crate) sql_query_params: Vec<String>, // Query_params for SQL expressions
 }
 
+
+impl SqlTarget {
+    pub fn sql_query_param_values(&self, query_params: &HashMap<String, String>) -> Result<Vec<String>, SqlBuilderError> {
+                let mut params : Vec<String> = Vec::with_capacity(self.sql_query_params.len());
+                    for p in &self.sql_query_params {
+                    let qp = 
+                        query_params
+                        .get(p)
+                        .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
+                        params.push(qp.to_owned());
+                    }
+                    Ok(params)
+
+    }
+
+
+}
+
+
 /// Handles the standart filters as documented in the guide.
 /// Returns [FilterInvalid](../sql_builder/enum.SqlBuilderError.html) for any attempt to use FN filters.
 #[derive(Debug, Clone)]
@@ -162,10 +181,10 @@ pub trait FieldHandler {
     /// Return sql and params if you want to select it.
     fn build_select(
         &self,
-        sql: &str,
+        select: (String,Vec<String>),
         _query_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        Ok(Some((format!("{}", sql), Vec::new())))
+        Ok(Some(select))
     }
 
     /// Match filter and return SQL expression.
@@ -355,7 +374,8 @@ pub struct SqlMapper {
     pub(crate) fields: HashMap<String, SqlTarget>,
     pub(crate) joins: HashMap<String, Join>,
     pub(crate) joins_root: Vec<String>,                  // Top joins
-    pub(crate) joins_tree: HashMap<String,  Vec<String>> // Subjoins
+    pub(crate) joins_tree: HashMap<String,  Vec<String>>, // Subjoins
+    pub(crate) joins_ignoring_wildcard: BTreeSet<String> 
 }
 
 #[derive(Debug, PartialEq)]
@@ -369,7 +389,8 @@ pub(crate) struct Join {
     pub(crate) join_type : JoinType, // LEFT JOIN ... 
     pub(crate) aliased_table: String, // Table t0
     pub(crate) on_predicate: String, // ON ..
-    pub (crate) preselect: bool
+    pub (crate) preselect: bool,
+    pub (crate) ignore_wildcard: bool
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 ///
@@ -406,7 +427,8 @@ impl SqlMapper {
             fields: HashMap::new(),
             field_order: Vec::new(),
             joins_root: Vec::new(),
-            joins_tree: HashMap::new()
+            joins_tree: HashMap::new(),
+            joins_ignoring_wildcard: BTreeSet::new()
         }
     }
     pub fn from_mapped<M: Mapped>() -> SqlMapper // Create new SQL Mapper and map entity fields
@@ -600,9 +622,15 @@ impl SqlMapper {
         join_type: JoinType,
         aliased_table: &str,
         on_predicate: &str,
-        preselect: bool
+        preselect: bool,
+        ignore_wildcard: bool
        
     ) -> &'a mut Self {
+        if ignore_wildcard {
+            self.joins_ignoring_wildcard.insert(toql_path.to_owned());
+        } else {
+            self.joins_ignoring_wildcard.remove(toql_path);
+        }
         self.joins.insert(
             toql_path.to_string(),
             Join {
@@ -610,6 +638,7 @@ impl SqlMapper {
                 aliased_table: aliased_table.to_string(),
                 on_predicate: on_predicate.to_string(),
                 preselect,
+                ignore_wildcard
             },
         );
 
