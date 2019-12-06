@@ -491,38 +491,7 @@ impl SqlBuilder {
                             need_having_concatenation = true;
                         }
                     }
-                    QueryToken::DoubleWildcard(..) => {
-                        // Skip wildcard for count queries
-                        if self.count_query {
-                            continue;
-                        }
-                        for (field_name, sql_target) in &sql_mapper.fields {
-                            // Skip fields, that ignore wildcard
-                            if sql_target.options.ignore_wildcard {
-                                continue;
-                            }
-                            if self.ignored_paths.iter().any(|p| field_name.starts_with(p)) {
-                                continue;
-                            }
-
-                            // Skip fields with missing role
-                            let role_valid =
-                                Self::validate_roles(&query.roles, &sql_target.options.roles);
-                            if role_valid.is_err() {
-                                continue;
-                            }
-                            let f = sql_target_data.entry(field_name.as_str()).or_default();
-                            f.selected = true; // Select field
-                                               // Add JOIN information for subfields
-                            if sql_target.subfields {
-                                for path in field_name.split('_').rev().skip(1) {
-                                    let exists= selected_paths.insert(path.to_owned());
-                                    if exists { break;}
-                                }
-                            }
-                        }
-                    }
-
+                  
                     QueryToken::Wildcard(wildcard) => {
 
                         // Skip wildcard for count queries
@@ -891,7 +860,7 @@ impl SqlBuilder {
                 let path: String = toql_field.split('_').rev().skip(1).collect();
 
                 // Fields that are marked `preselect` are selected, if either
-                // their path is in use or
+                // their path is in use Double
                 // their path belongs to a join that is always selected (Inner Join)
                  let join_selected = if path.is_empty() {
                     false

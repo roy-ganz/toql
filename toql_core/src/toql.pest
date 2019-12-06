@@ -24,7 +24,7 @@ field_path = @{ name ~ ("_" ~ name)* }
 hidden = @{"."}
 wildcard_path= {field_path ~ "_"}
 wildcard = { wildcard_path? ~ "*" }
-double_wildcard = @{"**"}
+
 aggregation = @{"!"}
 field = { sort? ~ hidden? ~ field_path }
 field_clause = { field ~ aggregation? ~ field_filter?}
@@ -35,7 +35,7 @@ lpar = @{"("}
 rpar = @{")"}
 
 
-expr = { (double_wildcard | wildcard | clause ) ~ (concat ~ (double_wildcard | wildcard | clause))*}
+expr = { (wildcard | clause ) ~ (concat ~ (wildcard | clause))*}
 query = { SOI ~ expr? ~ EOI }
 
 WHITESPACE = _{ " " }

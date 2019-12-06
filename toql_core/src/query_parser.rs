@@ -146,9 +146,7 @@ impl QueryParser {
                         }
                     }
                 }
-                Rule::double_wildcard => {
-                    query.tokens.push(QueryToken::DoubleWildcard(con.clone()));
-                }
+               
                 Rule::wildcard => {
                     query.tokens.push(QueryToken::Wildcard(Wildcard {
                         concatenation: con.clone(),

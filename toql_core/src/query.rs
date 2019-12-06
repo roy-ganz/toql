@@ -450,15 +450,12 @@ pub(crate) enum QueryToken {
     LeftBracket(Concatenation),
     RightBracket,
     Wildcard(Wildcard),
-    DoubleWildcard(Concatenation),
     Field(Field),
 }
 
 impl From<&str> for QueryToken {
     fn from(s: &str) -> QueryToken {
-        if s == "**" {
-            QueryToken::DoubleWildcard(Concatenation::And)
-        } else if s.ends_with("*") {
+       if s.ends_with("*") {
             QueryToken::Wildcard(Wildcard::from(s))
         } else {
             QueryToken::Field(Field::from(s))
@@ -478,7 +475,6 @@ impl ToString for QueryToken {
                 field, /*Field {concatenation, name, hidden, order, filter, aggregation}*/
             ) => field.to_string(),
             QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
-            QueryToken::DoubleWildcard(_) => String::from("**"),
         };
         s
     }
@@ -546,17 +542,7 @@ impl Query {
             where_predicate_params: Vec::new(),
         }
     }
-    /// Create a new query that select all top fields and all dependend fields. This is the best :)
-    pub fn double_wildcard() -> Self {
-        Query {
-            tokens: vec![QueryToken::DoubleWildcard(Concatenation::And)],
-            distinct: false,
-            roles: BTreeSet::new(),
-            params: HashMap::new(),
-            where_predicates: Vec::new(),
-            where_predicate_params: Vec::new(),
-        }
-    }
+    
     /// Wrap query with parentheses.
     pub fn parenthesize(mut self) -> Self {
         if self.tokens.is_empty() {
@@ -589,9 +575,7 @@ impl Query {
             field.concatenation = Concatenation::Or;
         } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
             wildcard.concatenation = Concatenation::Or;
-        } else if let QueryToken::DoubleWildcard(w) = query.tokens.get_mut(0).unwrap() {
-            *w = Concatenation::Or;
-        }
+        } 
 
         self.tokens.append(&mut query.tokens);
         self
@@ -608,7 +592,6 @@ impl Query {
             match t {
                 QueryToken::Field(field) => field.name.starts_with(pth),
                 QueryToken::Wildcard(wildcard) => wildcard.path.starts_with(pth),
-                QueryToken::DoubleWildcard(_) => true,
                 _ => false
             }   
         })
@@ -643,8 +626,7 @@ impl fmt::Display for Query {
         for token in &self.tokens {
             if concatenation_needed {
                 match &token {
-                    QueryToken::LeftBracket(concatenation)
-                    | QueryToken::DoubleWildcard(concatenation) => {
+                    QueryToken::LeftBracket(concatenation) => {
                         s.push(get_concatenation(concatenation))
                     }
                     QueryToken::Wildcard(wildcard) => {
@@ -659,7 +641,6 @@ impl fmt::Display for Query {
                 QueryToken::LeftBracket(..) => concatenation_needed = false,
                 QueryToken::Field(..) => concatenation_needed = true,
                 QueryToken::Wildcard(..) => concatenation_needed = true,
-                QueryToken::DoubleWildcard(..) => concatenation_needed = true,
                 _ => {}
             }
         }
@@ -693,14 +674,12 @@ impl From<Wildcard> for Query {
 impl From<&str> for Query {
     fn from(string: &str) -> Query {
         let mut q = Query::new();
-
-        q.tokens.push(if string == "**" {
-            QueryToken::DoubleWildcard(Concatenation::And)
-        } else if string.ends_with("*") {
-            QueryToken::Wildcard(Wildcard::from(string))
-        } else {
-            QueryToken::Field(Field::from(string))
-        });
+        q.tokens.push(
+        if string.ends_with("*") {
+                QueryToken::Wildcard(Wildcard::from(string))
+            } else {
+                QueryToken::Field(Field::from(string))
+            });
         q
     }
 }
