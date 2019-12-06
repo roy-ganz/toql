@@ -160,20 +160,22 @@ impl SqlBuilder {
         self.build(sql_mapper, query)
     }
 
-    fn validate_roles(proposed: &BTreeSet<String>, required: &BTreeSet<String>) -> bool {
+    fn validate_roles(proposed: &BTreeSet<String>, required: &BTreeSet<String>) -> Result<(),String> {
+
+        // Is valid, if no roles are required
         if required.is_empty() {
-            return true;
-        } // Is valid, if no roles are required
-        if proposed.is_empty() {
-            return false;
-        } // Is invalid, if roles are required, but no roles proposed
+            return Ok(());
+        } 
+        /* if proposed.is_empty() {
+            return Err();
+        } // Is invalid, if roles are required, but no roles proposed */
 
         for r in required {
             if !proposed.contains(r) {
-                return false;
+                return Err(r.to_owned());
             }
         }
-        true
+        Ok(())
     }
 
     fn build_ordering(
@@ -357,13 +359,13 @@ impl SqlBuilder {
                     // If join is used in query
                     
                     // Add path for preselected join
-                    if join_data.preselect  {
+                    if join_data.options.preselect  {
                         selected_paths.insert(join.to_owned());
                     }
                     // Construction rules for joins:
                     // - Preselected and Inner Joins always
                     // - Left Joins only on demand
-                    let construct = join_data.preselect || match join_data.join_type {
+                    let construct = join_data.options.preselect || match join_data.join_type {
                         JoinType::Inner  => {
                             true},
                         JoinType::Left  => selected_paths.contains(join.as_str())
@@ -506,7 +508,7 @@ impl SqlBuilder {
                             // Skip fields with missing role
                             let role_valid =
                                 Self::validate_roles(&query.roles, &sql_target.options.roles);
-                            if role_valid == false {
+                            if role_valid.is_err() {
                                 continue;
                             }
                             let f = sql_target_data.entry(field_name.as_str()).or_default();
@@ -534,11 +536,22 @@ impl SqlBuilder {
                         
 
                         let wildcard_path = wildcard.path.trim_start_matches(&self.subpath).trim_end_matches('_');
+                        
+                        let mut path = wildcard_path;
+                        while !path.is_empty() {
+                            if let Some (join) = sql_mapper.joins.get(path) {
+                                
+                                if let Err(role) = Self::validate_roles(&query.roles, &join.options.roles) {
+                                    return Err(SqlBuilderError::RoleRequired(role));
+                                }
+                            }
+                            path = path.trim_end_matches(|c|c!= '_').trim_end_matches('_');
 
-                        // TODO validate roles for wildcard path and raise error
+                        }
+
                        
-                        println!("Ignored joins for wildcard: {:?}", sql_mapper.joins_ignoring_wildcard);
-                        println!("Wildcard path {:?}, skipping :{:?}", wildcard_path, sql_mapper.joins_ignoring_wildcard.iter().any(|p| p.starts_with(wildcard_path)));
+                       // println!("Ignored joins for wildcard: {:?}", sql_mapper.joins_ignoring_wildcard);
+                       // println!("Wildcard path {:?}, skipping :{:?}", wildcard_path, sql_mapper.joins_ignoring_wildcard.iter().any(|p| p.starts_with(wildcard_path)));
 
                         let mut last_validated_path = ("", true); // Path result
                         for (field_name, sql_target) in &sql_mapper.fields {
@@ -563,9 +576,8 @@ impl SqlBuilder {
                            
 
                             // Skip fields with missing role
-                            let role_valid =
-                                Self::validate_roles(&query.roles, &sql_target.options.roles);
-                            if role_valid == false {
+                            
+                            if Self::validate_roles(&query.roles, &sql_target.options.roles).is_err() {
                                 continue;
                             }
 
@@ -590,7 +602,7 @@ impl SqlBuilder {
                                                                                
                                         //if ignore wildcard, roles missing validated_path = (path, false)
                                         if let Some (join) = sql_mapper.joins.get(path) {
-                                            if join.ignore_wildcard {
+                                            if join.options.ignore_wildcard {
                                                   last_validated_path = (path, false);
                                                   break;
                                             }
@@ -682,13 +694,9 @@ impl SqlBuilder {
                         match sql_mapper.fields.get(field_name) {
                             Some(sql_target) => {
                                 // Verify user role and skip field role mismatches
-                                let role_valid =
-                                    Self::validate_roles(&query.roles, &sql_target.options.roles);
-                                if role_valid == false {
-                                    return Err(SqlBuilderError::RoleRequired(format!(
-                                        "Field requires a user role: '{}'. ",
-                                        field_name
-                                    )));
+                               
+                                if let Err(role) = Self::validate_roles(&query.roles, &sql_target.options.roles) {
+                                    return Err(SqlBuilderError::RoleRequired(role));
                                 }
                                 // Skip filtering and ordering in count queries for unfiltered fields
                                 if self.count_query == true && !sql_target.options.count_filter {

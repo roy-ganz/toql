@@ -52,7 +52,7 @@ pub(crate) enum FilterType {
 
 #[derive(Debug)]
 pub(crate) struct SqlTarget {
-    pub(crate) options: MapperOptions,                   // Options
+    pub(crate) options: FieldOptions,                   // Options
     pub(crate) filter_type: FilterType,                  // Filter on where or having clause
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool, // Target name has subfields separated by underscore
@@ -92,7 +92,7 @@ impl BasicFieldHandler {
 
 #[derive(Debug)]
 /// Options for a mapped field.
-pub struct MapperOptions {
+pub struct FieldOptions {
     pub(crate) preselect: bool, // Always select this field, regardless of query fields
     pub(crate) count_filter: bool, // Filter field on count query
     pub(crate) count_select: bool, // Select field on count query
@@ -100,10 +100,10 @@ pub struct MapperOptions {
     pub(crate) roles: BTreeSet<String>, // Only for use by these roles
 }
 
-impl MapperOptions {
+impl FieldOptions {
     /// Create new mapper options
     pub fn new() -> Self {
-        MapperOptions {
+        FieldOptions {
             preselect: false,
             count_filter: false,
             count_select: false,
@@ -132,6 +132,45 @@ impl MapperOptions {
         self.count_select = count_select;
         self
     }
+    /// Field is ignored by the wildcard.
+    pub fn ignore_wildcard(mut self, ignore_wildcard: bool) -> Self {
+        self.ignore_wildcard = ignore_wildcard;
+        self
+    }
+    /// The field can only be selected and filtered by queries that have
+    /// these roles.
+    /// Example: The email address is only visible to users with
+    /// the _admin_ role.
+    pub fn restrict_roles(mut self, roles: BTreeSet<String>) -> Self {
+        self.roles = roles;
+        self
+    }
+}
+
+/// Options for a mapped field.
+#[derive(Debug)]
+pub struct JoinOptions {
+    pub(crate) preselect: bool, // Always select this join, regardless of query fields
+    pub(crate) ignore_wildcard: bool, // Ignore field on this join for wildcard selection
+    pub(crate) roles: BTreeSet<String>, // Only for use by these roles
+}
+
+impl JoinOptions {
+    /// Create new mapper options
+    pub fn new() -> Self {
+        JoinOptions {
+            preselect: false,
+            ignore_wildcard: false,
+            roles: BTreeSet::new(),
+        }
+    }
+
+    /// Field is selected, regardless of the query.
+    pub fn preselect(mut self, preselect: bool) -> Self {
+        self.preselect = preselect;
+        self
+    }
+ 
     /// Field is ignored by the wildcard.
     pub fn ignore_wildcard(mut self, ignore_wildcard: bool) -> Self {
         self.ignore_wildcard = ignore_wildcard;
@@ -375,7 +414,7 @@ pub struct SqlMapper {
     pub(crate) joins: HashMap<String, Join>,
     pub(crate) joins_root: Vec<String>,                  // Top joins
     pub(crate) joins_tree: HashMap<String,  Vec<String>>, // Subjoins
-    pub(crate) joins_ignoring_wildcard: BTreeSet<String> 
+    
 }
 
 #[derive(Debug, PartialEq)]
@@ -389,8 +428,7 @@ pub(crate) struct Join {
     pub(crate) join_type : JoinType, // LEFT JOIN ... 
     pub(crate) aliased_table: String, // Table t0
     pub(crate) on_predicate: String, // ON ..
-    pub (crate) preselect: bool,
-    pub (crate) ignore_wildcard: bool
+    pub (crate) options: JoinOptions,
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 ///
@@ -427,8 +465,7 @@ impl SqlMapper {
             fields: HashMap::new(),
             field_order: Vec::new(),
             joins_root: Vec::new(),
-            joins_tree: HashMap::new(),
-            joins_ignoring_wildcard: BTreeSet::new()
+            joins_tree: HashMap::new()
         }
     }
     pub fn from_mapped<M: Mapped>() -> SqlMapper // Create new SQL Mapper and map entity fields
@@ -503,7 +540,7 @@ impl SqlMapper {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        self.map_handler_with_options(toql_field, expression, handler, MapperOptions::new())
+        self.map_handler_with_options(toql_field, expression, handler, FieldOptions::new())
     }
     // Maps a Toql field with options to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
@@ -513,7 +550,7 @@ impl SqlMapper {
         toql_field: &str,
         expression: &str,
         handler: H,
-        options: MapperOptions,
+        options: FieldOptions,
     ) -> &'a mut Self
     where
         H: 'static + FieldHandler + Send + Sync,
@@ -552,7 +589,7 @@ impl SqlMapper {
         &mut self,
         toql_field: &str,
         handler: Arc<dyn FieldHandler + Sync + Send>,
-        options: MapperOptions,
+        options: FieldOptions,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
             "Cannot alter \"{}\": Field is not mapped.",
@@ -569,7 +606,7 @@ impl SqlMapper {
         &mut self,
         toql_field: &str,
         sql_expression: &str,
-        options: MapperOptions,
+        options: FieldOptions,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
             "Cannot alter \"{}\": Field is not mapped.",
@@ -581,7 +618,7 @@ impl SqlMapper {
     }
     /// Adds a new field -or updates an existing field- to the mapper.
     pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_field: &str) -> &'a mut Self {
-        self.map_field_with_options(toql_field, sql_field, MapperOptions::new())
+        self.map_field_with_options(toql_field, sql_field, FieldOptions::new())
     }
 
     /// Adds a new field -or updates an existing field- to the mapper.
@@ -589,7 +626,7 @@ impl SqlMapper {
         &'a mut self,
         toql_field: &str,
         sql_expression: &str,
-        options: MapperOptions,
+        options: FieldOptions,
     ) -> &'a mut Self {
         // If sql_expression contains query params replace them with ?
         let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
@@ -622,23 +659,28 @@ impl SqlMapper {
         join_type: JoinType,
         aliased_table: &str,
         on_predicate: &str,
-        preselect: bool,
-        ignore_wildcard: bool
+       
        
     ) -> &'a mut Self {
-        if ignore_wildcard {
-            self.joins_ignoring_wildcard.insert(toql_path.to_owned());
-        } else {
-            self.joins_ignoring_wildcard.remove(toql_path);
-        }
+        self.join_with_options(toql_path, join_type, aliased_table, on_predicate, JoinOptions::new())
+
+    }
+    pub fn join_with_options<'a>(
+        &'a mut self,
+        toql_path: &str,
+        join_type: JoinType,
+        aliased_table: &str,
+        on_predicate: &str,
+        options: JoinOptions
+       
+    ) -> &'a mut Self {
         self.joins.insert(
             toql_path.to_string(),
             Join {
                 join_type,
                 aliased_table: aliased_table.to_string(),
                 on_predicate: on_predicate.to_string(),
-                preselect,
-                ignore_wildcard
+                options,
             },
         );
 

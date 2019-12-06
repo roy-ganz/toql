@@ -49,7 +49,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                                 format!("({}{}{} IS NOT NULL)",sql_alias, if sql_alias.is_empty() { "" } else { "." }, self_column)
                                         }).collect::<Vec<String>>().join(" AND ");   
                                         mapper.map_field_with_options(
-                                        &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::MapperOptions::new().preselect(true));
+                                        &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::FieldOptions::new().preselect(true));
                                 )
                                 );
                 }
@@ -81,22 +81,32 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!(toql::sql_mapper::JoinType::Left)   
                 };
 
-                let preselect = if field.number_of_options == 0 || (field.number_of_options == 1 && field.preselect == true) {
-                    quote!(true)   
+                  let select_ident = if field.preselect || (field.number_of_options == 0) {
+                    quote!( .preselect(true))
                 } else {
-                    quote!(false)   
+                    quote!()
                 };
-                let ignore_wildcard = if field.ignore_wildcard {quote!(true)} else {quote!(false)};
+                let ignore_wc_ident = if field.ignore_wildcard {
+                    quote!( .ignore_wildcard(true))
+                } else {
+                    quote!()
+                };
+
+                let roles = &field.roles;
+                let roles_ident = if roles.is_empty() {
+                    quote!()
+                } else {
+                    quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
+                };
                 
                 self.field_mappings.push(quote! {
                     #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), #join_alias);
-                    mapper.join( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
+                    mapper.join_with_options( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                      #join_type,  
                      #join_aliased_table, 
                      #join_predicate,
-                     #preselect,
-                     #ignore_wildcard);
+                     toql::sql_mapper::JoinOptions::new() #select_ident #ignore_wc_ident #roles_ident );
                 });
 
                 if join_attrs.key {
@@ -146,14 +156,14 @@ impl<'a> GeneratedToqlMapper<'a> {
                     Some(handler) => {
                         self.field_mappings.push(quote! {
                                             mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            #sql_mapping, #handler (), toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            #sql_mapping, #handler (), toql::sql_mapper::FieldOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
                     }
                     None => {
                         self.field_mappings.push(quote! {
                                             mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            #sql_mapping,toql::sql_mapper::MapperOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            #sql_mapping,toql::sql_mapper::FieldOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
                     }

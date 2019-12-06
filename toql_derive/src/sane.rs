@@ -120,9 +120,15 @@ impl Field {
         let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
         let number_of_options = field.number_of_options();
 
-        if field.preselect == true && field.ignore_wildcard == true {
+        if field.ignore_wildcard == true && field.preselect == true {
                 return Err(darling::Error::custom(
-                    "`preselect` not allowed together with `ignore_wildcard`. Remove one of them from `#[toql(..)]`.".to_string(),
+                    "`ignore_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`.".to_string(),
+                )
+                .with_span(&field.ident));
+        }
+        if field.ignore_wildcard == true && number_of_options == 0 {
+                return Err(darling::Error::custom(
+                    "`ignore_wildcard` is only allowed on selectable fields. Add `Option<..>` to field type.".to_string(),
                 )
                 .with_span(&field.ident));
         }
