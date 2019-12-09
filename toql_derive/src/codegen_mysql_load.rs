@@ -337,7 +337,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         let r = conn.query("SELECT FOUND_ROWS();")?;
                         let total_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
 
-                        let result = toql::sql_builder::SqlBuilder::new().build_count(mapper, &query)?;
+                        let result = toql::sql_builder::SqlBuilder::new()
+                        #(#ignored_paths)*
+                        .build_count(mapper, &query)?;
                         toql::log_sql!(result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params());
                         conn.prep_exec(result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
 
@@ -441,8 +443,19 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             quote!()
                         };
 
+                    let role_test = if field.roles.is_empty() {
+                        quote!()
+                    } else {
+                        let roles = &field.roles;
+                        quote! (query
+                                .assert_roles( &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                                .map_err(|e| SqlBuilderError::RoleRequired(e))?;  
+                        )
+                    };
+                    
                     self.path_loaders.push( quote!(
                             #path_test {
+                                #role_test
                                 let mut dep_query = query.clone();
                                 #(#merge_many_predicates)*
                                 let #rust_field_ident = #rust_type_ident ::load_path_from_mysql(#toql_field_name, &dep_query, cache, conn)?;

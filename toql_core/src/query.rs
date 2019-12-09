@@ -608,6 +608,19 @@ impl Query {
 
         self
     } */
+
+    /// Asserts that a query contains all required roles.
+    /// The first missing role is returned as error.
+    pub fn assert_roles( &self, required_roles: &BTreeSet<String>) ->Result<(),  String>{
+              
+                for r in required_roles {
+                    if !self.roles.contains(r) {
+                        return Err(r.to_owned());
+                    }
+                }
+           
+        Ok(())
+    }
 }
 
 // Doc: Display  implements automatically .to_string()

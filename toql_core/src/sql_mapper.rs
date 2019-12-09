@@ -714,4 +714,5 @@ impl SqlMapper {
         j.on_predicate = on_predicate.to_string();
         self
     }
+
 }
