@@ -6,25 +6,26 @@
 
 use mysql::prelude::GenericConnection;
 use toql_core::error::ToqlError;
-use crate::insert::Insert;
-use crate::insert::InsertDuplicate;
-use crate::insert::DuplicateStrategy;
-use crate::diff::collection_delta_sql;
+use toql_core::mutate::collection_delta_sql;
 
-use toql_core::mutate::Update;
-use toql_core::mutate::Delete;
+use toql_core::mutate::{Insert, Update, Delete, InsertDuplicate, DuplicateStrategy};
+use toql_core::load::Load;
+use toql_core::select::Select;
 use toql_core::query::Query;
 use toql_core::sql_mapper::SqlMapperCache;
 use toql_core::key::Key;
 
 use toql_core::log_sql;
 
-pub mod load;
-pub mod diff;
-pub mod insert;
+
+//pub mod diff;
+//pub mod insert;
 pub mod row;
-pub mod select;
+//pub mod select;
 pub use mysql; // Reexport for derive produced code
+
+
+
 
 fn execute_update_delete_sql<C>(
     statement: (String, Vec<String>),
@@ -51,16 +52,23 @@ where
     Ok(res.last_insert_id())
 }
 
+
+
+pub struct MySqlConn<C:GenericConnection>(pub C);
+
+
+impl<C:GenericConnection> MySqlConn<C>{
 /// Insert one struct.
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id.
-pub fn insert_one<'a, T, C>(entity: &'a T, conn: &mut C) -> Result<u64, ToqlError>
+pub fn insert_one<'a, T>(&mut self, entity: &'a T) -> Result<u64, ToqlError>
 where
-    T: 'a + Insert<'a, T>,
-    C: GenericConnection,
+    T: 'a ,
+    Self:  Insert<'a,T>,
 {
-    let sql = T::insert_one_sql(&entity, DuplicateStrategy::Fail)?;
+    let conn = &mut self.0;
+    let sql = <Self as Insert<'a, T>>::insert_one_sql(&entity, DuplicateStrategy::Fail)?;
     execute_insert_sql(sql, conn)
 }
 
@@ -68,14 +76,14 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_many<'a, T, I, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn insert_many<'a, T, I >(&mut self, entities:I) -> Result<u64, ToqlError>
 where
-    I: IntoIterator<Item = &'a T> + 'a,
-    T: 'a + Insert<'a, T>,
-    C: GenericConnection,
+    T: 'a ,
+    I:  IntoIterator<Item = &'a T> + 'a,
+    Self:  Insert<'a,T>,
 {
-    let sql = T::insert_many_sql(entities, DuplicateStrategy::Fail)?;
-
+    let sql = <Self as Insert<'a, T>>::insert_many_sql(entities, DuplicateStrategy::Fail)?;
+    let conn = &mut self.0;
     Ok(if let Some(sql) = sql {
         execute_insert_sql(sql, conn)?
     } else {
@@ -86,12 +94,13 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id.
-pub fn insert_dup_one<'a, T, C>(entity: &'a T, strategy: DuplicateStrategy, conn: &mut C) -> Result<u64, ToqlError>
+pub fn insert_dup_one<'a, T>(&mut self, entity: &'a T, strategy: DuplicateStrategy) -> Result<u64, ToqlError>
 where
-    T: 'a + Insert<'a, T> + InsertDuplicate,
-    C: GenericConnection,
+   Self:  Insert<'a,T> + InsertDuplicate,
+    
 {
-    let sql = T::insert_one_sql(&entity, strategy)?;
+    let sql =  <Self as Insert<'a, T>>::insert_one_sql(&entity, strategy)?;
+     let conn = &mut self.0;
     execute_insert_sql(sql, conn)
 }
 
@@ -99,15 +108,15 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_dup_many<'a, T,I, C>(entities: I,strategy: DuplicateStrategy, conn: &mut C) -> Result<u64, ToqlError>
+pub fn insert_dup_many<'a, T: 'a>(&mut self,entities: impl IntoIterator<Item = &'a T> + 'a, strategy: DuplicateStrategy) -> Result<u64, ToqlError>
 where
-    I: IntoIterator<Item = &'a T> + 'a,
-    T: 'a + Insert<'a, T> + InsertDuplicate,
-    C: GenericConnection,
+   Self:  Insert<'a,T> + InsertDuplicate,
+    
 {
-    let sql = T::insert_many_sql(entities, strategy)?;
-
+    let sql = <Self as Insert<'a, T>>::insert_many_sql(entities, strategy)?;
+     
     Ok(if let Some(sql) = sql {
+        let conn = &mut self.0;
         execute_insert_sql(sql, conn)?
     } else {
         0
@@ -118,12 +127,13 @@ where
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of deleted rows.
-pub fn delete_one<'a, T, C>( key: <T as toql_core::key::Key>::Key, conn: &mut C) -> Result<u64, ToqlError>
+pub fn delete_one<'a, T>(&mut self, key: <T as Key>::Key) -> Result<u64, ToqlError>
 where
-    T: 'a + Delete<'a, T>  + toql_core::key::Key,
-    C: GenericConnection,
+   Self: Delete<'a,T>, T: Key + 'a
+  
 {
-    let sql = T::delete_one_sql(key)?;
+    let sql = <Self as Delete<'a, T>>::delete_one_sql(key)?;
+     let conn = &mut self.0;
     execute_update_delete_sql(sql, conn)
 }
 
@@ -131,15 +141,18 @@ where
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of deleted rows.
-pub fn delete_many<'a, T, I,C>(keys: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn delete_many<'a, T>(&mut self, keys: impl IntoIterator<Item = <T as Key>::Key> + 'a ) -> Result<u64, ToqlError>
 where
-    I: IntoIterator<Item = <T as toql_core::key::Key>::Key> + 'a,
-    T: 'a + Delete<'a, T> + toql_core::key::Key,
-    C: GenericConnection,
+  Self: Delete<'a,T> , 
+  T: Key + 'a,
+  toql_core::conn::GenericConn: Delete<'a,T>
+    
 {
-    let sql = T::delete_many_sql(keys)?;
+    
+    let sql =  <toql_core::conn::GenericConn as Delete<'a,T>>::delete_many_sql(keys)?;
 
     Ok(if let Some(sql) = sql {
+        let conn = &mut self.0;
         execute_update_delete_sql(sql, conn)?
        } else {
         0
@@ -151,15 +164,16 @@ where
 /// Optional fields with value `None` are not updated. See guide for details.
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of updated rows.
-pub fn update_many<'a, T,I, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn update_many<'a, T>(&mut self,entities: impl IntoIterator<Item = &'a T> + Clone + 'a) -> Result<u64, ToqlError>
 where
-    I: IntoIterator<Item = &'a T> + Clone + 'a,
-    T: 'a + Update<'a, T>,
-    C: GenericConnection,
+  
+    Self: Update<'a,T>, T:'a
+  
 {
-    let sql = T::update_many_sql(entities)?;
+    let sql = <Self as Update<'a, T>>::update_many_sql(entities)?;
 
     Ok(if let Some(sql) = sql {
+         let conn = &mut self.0;
         execute_update_delete_sql(sql, conn)?
     /* log_sql!(update_stmt, params);
     let mut stmt = conn.prepare(&update_stmt)?;
@@ -184,14 +198,15 @@ where
 /// Returns the number of updated rows.
 ///
 
-pub fn update_one<'a, T, C>(entity: &'a T, conn: &mut C) -> Result<u64, ToqlError>
+pub fn update_one<'a, T>(&mut self,entity: &'a T) -> Result<u64, ToqlError>
 where
-    T: 'a + Update<'a, T>,
-    C: GenericConnection,
+    Self: Update<'a,T>, T:'a
+   
 {
-    let sql = T::update_one_sql(&entity)?;
+    let sql = <Self as Update<'a, T>>::update_one_sql(&entity)?;
 
     Ok(if let Some(sql) = sql {
+          let conn = &mut self.0;
         execute_update_delete_sql(sql, conn)?
     } else {
         0
@@ -202,15 +217,16 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_many<'a, T, I, C>(entities: I, conn: &mut C) -> Result<u64, ToqlError>
+pub fn diff_many<'a, T>(&mut self,entities: impl IntoIterator<Item = (&'a T, &'a T)> + Clone + 'a) -> Result<u64, ToqlError>
 where
-    I: IntoIterator<Item = (&'a T, &'a T)> + Clone + 'a,
-    T: 'a + Update<'a, T>,
-    C: GenericConnection,
+   Self: Update<'a,T>, T:'a
+   
+  
 {
-    let sql_stmts = T::diff_many_sql(entities)?;
+    let sql_stmts = <Self as Update<'a, T>>::diff_many_sql(entities)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
+          let conn = &mut self.0;
         for sql_stmt in sql_stmts {
             affected += execute_update_delete_sql(sql_stmt, conn)?;
             /* let (update_stmt, params) = statements;
@@ -229,29 +245,30 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_one<'a, T, C>(outdated: &'a T, current: &'a T, conn: &mut C) -> Result<u64, ToqlError>
+pub fn diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64, ToqlError>
 where
-    T: 'a + Update<'a, T>,
-    C: GenericConnection,
+    Self: Update<'a,T>, T:'a
+ 
 {
-    diff_many(std::iter::once((outdated, current)), conn)
+    self.diff_many(std::iter::once((outdated, current)))
 }
 
 /// Updates difference of two collections.
 /// This will insert / update / delete database rows.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_one_collection<'a, T, C>(
+pub fn diff_one_collection<'a, T>(
+    &mut self,
     outdated: &'a Vec<T>,
     updated: &'a Vec<T>,
-    conn: &mut C,
 ) -> Result<(u64, u64, u64), ToqlError>
 where
-    T: Update<'a, T> + 'a + Key +  Delete<'a, T> +  Insert<'a, T>,
-    C: GenericConnection,
+ Self: Update<'a,T> +Delete<'a,T> +  Insert<'a,T> +  Key + 'a,
+ T:  Key +Update<'a, T> + Insert<'a, T> + Delete<'a, T> + 'a
+     
 {
-    let (insert_sql, diff_sql, delete_sql) =
-        collection_delta_sql::<'a, T>(outdated, updated)?;
+    let (insert_sql, diff_sql, delete_sql) = collection_delta_sql(outdated, updated)?;
     let mut affected = (0, 0, 0);
+      let conn = &mut self.0;
 
     if let Some(insert_sql) = insert_sql {
         affected.0 += execute_update_delete_sql(insert_sql, conn)?;
@@ -268,18 +285,19 @@ where
 
 /// Selects a single struct for a given key.
 /// This will select all base fields and join. Merged fields will be skipped
-pub fn select_one<T, C>(key: <T as Key>::Key, conn: &mut C) -> Result<T, ToqlError>
+pub fn select_one<T>(&mut self,key: <T as Key>::Key) -> Result<T, ToqlError>
 where
-    T: select::Select<T> + Key,
-    C: GenericConnection,
+    Self:  Select<T> ,
+    T: Key,
+   
 {
-    T::select_one(key, conn)
+   <Self as Select<T>>::select_one(self, key)
 }
 
 /* /// Selects many structs for a given key. (DOENS)
 /// This will select all base fields and join. Merged fields will be skipped
-pub fn select_many<T>( key: &<T as toql_core::key::Key<T>>::Key,conn: &mut Conn, first: u64,max: u16) -> Result<Vec<T> , ToqlError>
-where T : select::Select<T> + toql_core::key::Key<T>
+pub fn select_many<T>( key: &<T as Key<T>>::Key,conn: &mut Conn, first: u64,max: u16) -> Result<Vec<T> , ToqlError>
+where T : select::Select<T> + Key<T>
 {
     T::select_many(key, conn, first, max)
 } */
@@ -287,12 +305,13 @@ where T : select::Select<T> + toql_core::key::Key<T>
 /// Load a struct with dependencies for a given Toql query.
 ///
 /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-pub fn load_one<T, C>(query: &Query, mappers: &SqlMapperCache, conn: &mut C) -> Result<T, ToqlError>
+pub fn load_one<T>(&mut self,query: &Query, mappers: &SqlMapperCache) -> Result<T, ToqlError>
 where
-    T: load::Load<T>,
-    C: GenericConnection,
+    Self:  toql_core::load::Load<T> ,
+  
 {
-    T::load_one(query, mappers, conn)
+     <Self as toql_core::load::Load<T>>::load_one(self, query, mappers)
+    
 }
 
 /// Load a vector of structs with dependencies for a given Toql query.
@@ -300,17 +319,16 @@ where
 /// Returns a tuple with the structs and an optional tuple of count values.
 /// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
 /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
-pub fn load_many<T, C>(
+pub fn load_many<T>(
+    &mut self,
     query: &Query,
     mappers: &SqlMapperCache,
-    conn: &mut C,
-    count: bool,
-    first: u64,
-    max: u16,
+    page: toql_core::load::Page,
+    
 ) -> Result<(Vec<T>, Option<(u32, u32)>), ToqlError>
 where
-    T: load::Load<T>,
-    C: GenericConnection,
+     Self:  toql_core::load::Load<T> ,
 {
-    T::load_many(query, mappers, conn, count, first, max)
+   <Self as toql_core::load::Load<T>>::load_many(self, query, mappers,page)
+}
 }

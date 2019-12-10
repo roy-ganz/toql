@@ -172,9 +172,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
             quote! {
 
                 
-                impl<'a> toql::mysql::insert::Insert<'a, #struct_ident> for #struct_ident {
+                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::mutate::Insert<'a, #struct_ident> for toql::mysql::MySqlConn<T> {
 
-                     fn insert_many_sql<I>(entities: I, strategy: toql::mysql::insert::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
+                     fn insert_many_sql<I>(entities: I, strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
                      where I: IntoIterator<Item=&'a #struct_ident> + 'a
                      {
 
@@ -182,7 +182,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                             let mut params :Vec<String>= Vec::new();
                             let mut columns :Vec<String>= Vec::new();
 
-                             let ignore = if let toql::mysql::insert::DuplicateStrategy::Skip = strategy {
+                             let ignore = if let toql::mutate::DuplicateStrategy::Skip = strategy {
                                 "IGNORE "
                             } else {
                                 ""
@@ -201,7 +201,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                              if params.is_empty() {
                                 return Ok(None);
                             }
-                            if  let toql::mysql::insert::DuplicateStrategy::Update = strategy{
+                            if  let toql::mutate::DuplicateStrategy::Update = strategy{
                                 insert_stmt.push_str(" ON DUPLICATE UPDATE");
                             };
                             Ok(Some((insert_stmt, params)))

@@ -6,6 +6,10 @@ extern crate pest_derive;
 pub mod error;
 pub mod key;
 pub mod mutate;
+pub mod load;
+pub mod select;
+pub mod conn;
+
 
 #[macro_use]
 pub mod log_helper;

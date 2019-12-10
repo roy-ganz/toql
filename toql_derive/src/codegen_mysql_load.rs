@@ -212,19 +212,18 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
-                pub fn load_dependencies_from_mysql<C>(mut _entities: &mut Vec< #struct_ident >,
-                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache, _conn: &mut C)
+                fn load_dependencies(&mut self, mut _entities: &mut Vec< #struct_ident >,
+                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache)
                 -> toql::error::Result<()>
-                where C: toql::mysql::mysql::prelude::GenericConnection
                 { Ok(())}
             )
         } else {
             quote!(
-                pub fn load_dependencies_from_mysql<C>(mut entities: &mut Vec< #struct_ident >,
-                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache, conn: &mut C)
+                fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident >,
+                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache)
                 -> toql::error::Result<()>
-                where C: toql::mysql::mysql::prelude::GenericConnection
                 {
+                    let conn = &mut self.0;
                     #(#path_loaders)*
                     Ok(())
                 }
@@ -236,7 +235,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
         } else {
             quote!(
              // Restrict dependencies to parent entity
-                #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, cache, conn)?;
+                self.load_dependencies(&mut entities, &query, cache, conn)?;
             )
         };
         let load_many_call_dependencies = if path_loaders.is_empty() {
@@ -245,46 +244,23 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!(
                 // Resolve dependencies
                 // Restrict query to keys
-                #struct_ident ::load_dependencies_from_mysql(&mut entities, &query, cache, conn)?;
+                self.load_dependencies(&mut entities, &query, cache, conn)?;
             )
         };
 
         quote!(
-            impl #struct_ident {
-
-                pub fn load_path_from_mysql<C>(path: &str, query: &toql::query::Query,
-                    cache: &toql::sql_mapper::SqlMapperCache,
-                    conn: &mut C)
-                -> toql::error::Result<Option<std::vec::Vec< #struct_ident >>>
-                where C: toql::mysql::mysql::prelude::GenericConnection
-                {
-                    let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query)?;
-                    toql::log_sql!( result.to_sql(),result.params());
-
-                    if result.is_empty() {
-                        Ok(None)
-                    } else {
-                        let entities_stmt = conn.prep_exec(result.to_sql(), result.params())?;
-                        let entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
-                        Ok(Some(entities))
-                    }
-                }
-
-
-                #load_dependencies_from_mysql
-            }
-            impl toql::mysql::load::Load<#struct_ident> for #struct_ident
+          
+            impl<T: toql::mysql::mysql::prelude::GenericConnection> toql::load::Load<#struct_ident> for toql::mysql::MySqlConn<T>
             {
-                fn load_one<C>(query: &toql::query::Query,
+                fn load_one(&mut self, query: &toql::query::Query,
+                
                     cache: &toql::sql_mapper::SqlMapperCache,
-                    conn: &mut C )
+                   )
                     -> toql::error::Result<# struct_ident>
-                    where C: toql::mysql::mysql::prelude::GenericConnection
+                   
                 {
+                     let conn = &mut self.0;
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-
-
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
@@ -309,12 +285,20 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 }
 
 
-                fn load_many<C>(query: &toql::query::Query,
+                fn load_many( &mut self, query: &toql::query::Query,
+               
                 cache: &toql::sql_mapper::SqlMapperCache,
-                conn: &mut C, count:bool, first:u64, max:u16)
+                page: toql::load::Page)
                 -> toql::error::Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>)>
-                where C: toql::mysql::mysql::prelude::GenericConnection
                 {
+                    let conn = &mut self.0;
+                    let mut count = false;
+                    let mut first = 0;
+                    let mut max = 10;
+                    match page {
+                        toql::load::Page::Counted(f, m) =>  {count = true; first = f; max = m},
+                        toql::load::Page::Uncounted(f, m) =>  {count = false; first = f; max = m},
+                    };
 
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     // load base entities
@@ -353,6 +337,28 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     Ok((entities, count_result))
                 }
+                fn load_path(&mut self,path: &str, query: &toql::query::Query,
+                    cache: &toql::sql_mapper::SqlMapperCache
+                   )
+                -> toql::error::Result<Option<std::vec::Vec< #struct_ident >>>
+               
+                {
+                    let conn = &mut self.0;
+                    let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
+                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query)?;
+                    toql::log_sql!( result.to_sql(),result.params());
+
+                    if result.is_empty() {
+                        Ok(None)
+                    } else {
+                        let entities_stmt = conn.prep_exec(result.to_sql(), result.params())?;
+                        let entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
+                        Ok(Some(entities))
+                    }
+                }
+
+
+                #load_dependencies_from_mysql
             }
 
         )

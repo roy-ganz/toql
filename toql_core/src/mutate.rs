@@ -30,6 +30,10 @@
 //!
 
 use crate::error::Result;
+use std::collections::HashMap;
+use crate::key::Key;
+
+
 
 
 /// Trait for delete functions (They work with entity keys).
@@ -108,3 +112,113 @@ pub trait Update<'a, T: 'a> {
     where
         I: IntoIterator<Item = (&'a T, &'a T)> + 'a + Clone;
 }
+
+
+/// Defines a strategy to resolve the conflict, when the record to insert already exists.
+pub enum DuplicateStrategy {
+    /// Fail and return an error.
+    Fail,
+    /// Do not insert the record.
+    Skip,
+    /// Do not insert, but update the record instead.
+    Update
+}
+
+
+/// Trait for insert. They work with entities.
+/// This trait is implemented if keys of an entity are inserted too. This is typically the case for association tables.
+/// Conflicts can happed if the keys already exist. A strategy must be provided to tell how to resolve the conflict.
+pub trait Insert<'a, T: 'a> {
+    /// Insert one struct, returns tuple with SQL statement and SQL params or error.
+    fn insert_one_sql(entity: &'a T, strategy: DuplicateStrategy) -> Result<(String, Vec<String>)> {
+        Ok(Self::insert_many_sql(std::iter::once(entity), strategy)?.unwrap())
+    }
+    /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
+    fn insert_many_sql<I>(entities: I,strategy: DuplicateStrategy) -> Result<Option<(String, Vec<String>)>>
+    where
+        I: IntoIterator<Item = &'a T> + 'a;
+}
+
+
+
+/// Marker Trait for insert. They work with entities.
+/// This trait is always implemented, but recommened to use if all keys are skipped for insert (use of autovalue).
+/// Insert conflicts cannot happed, if all keys are annotated with #[toql(skip_mut)]. 
+pub trait InsertDuplicate {}
+
+
+/// Update difference of two collections
+/// Compares multiple tuples with outdated / current collections and builds insert / update / delete statements
+/// to save the changes in a database.
+///
+///
+/// Returns three tuples for insert / update / delete, each containing the SQL statement and parameters.
+
+pub fn collection_delta_sql<'a, T>(
+    outdated: &'a Vec<T>,
+    updated: &'a Vec<T>,
+) -> Result<(
+    Option<(String, Vec<String>)>,
+    Option<(String, Vec<String>)>,
+    Option<(String, Vec<String>)>,
+)>
+where
+    T: Update<'a, T> + 'a + Key + Delete<'a, T> + Insert<'a, T> 
+    
+{
+    let mut insert: Vec<&T> = Vec::new();
+    let mut diff: Vec<(&T, &T)> = Vec::new();
+    let mut delete: Vec<T::Key> = Vec::new();
+    let (mut ins, mut di, mut de) =
+        collections_delta(std::iter::once((outdated, updated)))?;
+    insert.append(&mut ins);
+    diff.append(&mut di);
+    delete.append(&mut de);
+
+    let insert_sql = <T as Insert<T>>::insert_many_sql(insert, DuplicateStrategy::Fail)?;
+    let diff_sql = <T as  Update<T>>::shallow_diff_many_sql(diff)?;
+    let delete_sql = <T as  Delete<T>>::delete_many_sql(delete)?;
+    Ok((insert_sql, diff_sql, delete_sql))
+}
+
+pub fn collections_delta<'a, I, T>(
+    collections: I,
+) ->  Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<T::Key>)>
+where
+    I: IntoIterator<Item = (&'a Vec<T>, &'a Vec<T>)> + 'a + Clone,
+    T:  Update<'a, T> + Key + 'a +  Delete<'a, T>,
+{
+    let mut diff: Vec<(&T, &T)> = Vec::new(); // Vector with entities to diff
+    let mut insert: Vec<&T> = Vec::new(); // Vector with entities to insert
+    let mut delete: Vec<T::Key> = Vec::new(); // Vector with keys to delete
+
+    for (previous_coll, current_coll) in collections {
+        let mut previous_index: HashMap<T::Key, &T> = HashMap::new();
+        for previous in previous_coll {
+            // Build up index
+            let k = Key::get_key(previous)?;
+            previous_index.insert(k, &previous);
+        }
+
+        for current in current_coll {
+            if previous_index.contains_key(&Key::get_key(current)?) {
+                diff.push((
+                    previous_index
+                        .remove(&Key::get_key(current)?)
+                        .unwrap(),
+                    &current,
+                ));
+            } else {
+                insert.push(&current);
+            }
+        }
+
+        for (_k, v) in previous_index {
+            delete.push(Key::get_key(v)?);
+        }
+    }
+
+    Ok((insert, diff, delete))
+}
+
+

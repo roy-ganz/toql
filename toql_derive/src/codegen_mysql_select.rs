@@ -94,7 +94,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 self.select_columns.push(String::from("true"));
                 self.select_columns.push(String::from("{}"));
                 self.select_columns_params
-                    .push(quote!(#rust_type_ident :: columns_sql(#alias)));
+                    .push(quote!( <Self as toql::select::Select<#rust_type_ident>>:: columns_sql(#alias)));
 
                 if join_attrs.key {
                     let key_index = syn::Index::from(self.select_keys.len());
@@ -126,7 +126,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 ));
 
                 self.select_joins_params
-                    .push(quote!(#rust_type_ident :: joins_sql()));
+                    .push(quote!(<Self as toql::select::Select<#rust_type_ident>> :: joins_sql()));
 
                 let select_join_params_format = format!(
                     "{}.{{}} = {}.{{}}",
@@ -269,7 +269,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         };
 
         let select = quote! {
-                impl<'a> toql::mysql::select::Select<#struct_ident> for #struct_ident {
+                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::select::Select<#struct_ident> for toql::mysql::MySqlConn<T> {
 
 
                     fn columns_sql(alias: &str) -> String {
@@ -281,17 +281,17 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                     }
                     fn select_sql(join: Option<&str>) -> String {
                             format!( #select_statement,
-                            Self::columns_sql(#sql_table_alias), 
-                            Self::joins_sql(),
+                            <Self as  toql::select::Select<#struct_ident>>::columns_sql(#sql_table_alias), 
+                            <Self as  toql::select::Select<#struct_ident>>::joins_sql(),
                             join.unwrap_or(""))
                     }
 
 
-                     fn select_one<C>(key: <#struct_ident as toql::key::Key>::Key, conn: &mut C)
+                     fn select_one(&mut self, key: <#struct_ident as toql::key::Key>::Key)
                      -> Result<#struct_ident,  toql::error::ToqlError>
-                     where C: toql::mysql::mysql::prelude::GenericConnection
                      {
-                        let select_stmt = format!( "{} WHERE {} LIMIT 0,2", Self::select_sql(None), [ #(#select_keys),*].join( " AND "));
+                        let conn = &mut self.0;
+                        let select_stmt = format!( "{} WHERE {} LIMIT 0,2", <Self as  toql::select::Select<#struct_ident>>::select_sql(None), [ #(#select_keys),*].join( " AND "));
 
                         let mut params :Vec<String> = Vec::new();
 
@@ -313,24 +313,23 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                      }
 
 
-                        fn select_many<C>(
+                        fn select_many(
+                            &mut self,
                             key: &<#struct_ident as toql::key::Key>::Key,
-                            conn: &mut C,
                             first: u64,
                             max: u16
                         ) -> Result<Vec< #struct_ident> ,  toql::error::ToqlError>
-                            where C: toql::mysql::mysql::prelude::GenericConnection
                         {
                                 unimplemented!();
 
 
                         }
 
-                        fn select_dependencies<C>(join: &str, params:&Vec<String>,
-                            conn: &mut C) -> Result<Vec<#struct_ident> ,  toql::error::ToqlError>
-                            where C: toql::mysql::mysql::prelude::GenericConnection
+                        fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> ,  toql::error::ToqlError>
+                           
                             {
-                                let select_stmt =  Self::select_sql(Some(join));
+                                let conn = &mut self.0;
+                                let select_stmt =  <Self as  toql::select::Select<#struct_ident>>::select_sql(Some(join));
 
                         toql::log_sql!(select_stmt, params);
 

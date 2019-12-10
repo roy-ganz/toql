@@ -385,7 +385,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
             quote! {
 
-                impl<'a> toql::mutate::Delete<'a, #struct_ident> for #struct_ident {
+                impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::conn::GenericConn {
                     fn delete_many_sql<I>(keys: I) -> toql::error::Result<Option<(String, Vec<String>)>>
                         where I:  IntoIterator<Item=<#struct_ident as toql::key::Key>::Key> +'a
                         {
@@ -425,7 +425,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
 
                 }
-                impl<'a> toql::mutate::Update<'a, #struct_ident> for #struct_ident {
+                impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::conn::GenericConn {
 
 
                     fn update_many_sql<I>(entities:I) -> toql::error::Result<Option<(String, Vec<String>)>>
@@ -550,7 +550,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                         let mut sql: Vec<(String, Vec<String>)> = Vec::new();
 
-                        let update = #struct_ident::shallow_diff_many_sql(entities.clone())?;
+                        let update = <Self as  toql::mutate::Update<#struct_ident>>::shallow_diff_many_sql(entities.clone())?;
                         if update.is_some() {
                             sql.push(update.unwrap());
                         }

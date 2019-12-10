@@ -53,6 +53,8 @@ pub use toql_core::key;
 pub use toql_core::merge;
 pub use toql_core::mutate;
 pub use toql_core::query;
+pub use toql_core::load;
+pub use toql_core::select;
 
 pub use toql_core::log_sql; // Export macro (lives at top level)
 
@@ -66,7 +68,12 @@ pub use toql_core::sql_mapper;
 
 pub use toql_derive as derive;
 
+
 pub use toql_core::log; // Reexport for derive
 
 #[cfg(feature = "mysql")]
 pub use toql_mysql as mysql;
+
+pub use toql_core::conn; // For generic connection
+
+
