@@ -32,7 +32,7 @@
 use crate::error::Result;
 use std::collections::HashMap;
 use crate::key::Key;
-
+use core::borrow::Borrow;
 
 
 
@@ -42,12 +42,11 @@ pub trait Delete<'a, T: crate::key::Key + 'a> {
     fn delete_one_sql(key: T::Key) -> Result<(String, Vec<String>)> 
     where T: crate::key::Key + 'a
     {
-        Ok(Self::delete_many_sql(std::iter::once(key))?.unwrap())
+        Ok(Self::delete_many_sql(vec![key])?.unwrap())
     }
     /// Delete many structs, returns tuple with SQL statement and SQL params or error.
-    fn delete_many_sql<I>(keys: I) -> Result<Option<(String, Vec<String>)>>
-    where
-        I: IntoIterator<Item = T::Key> + 'a;
+    fn delete_many_sql(keys: Vec<T::Key>) -> Result<Option<(String, Vec<String>)>>;
+    
 }
 
 /// Trait for update. They work with entities
@@ -72,45 +71,42 @@ pub trait Update<'a, T: 'a> {
     /// Update one struct, returns tuple with SQL statement and SQL params or error.
     /// Returns None, if no updates are required.
     
-    fn update_one_sql(entity: &'a T) -> Result<Option<(String, Vec<String>)>> {
-        Self::update_many_sql(std::iter::once(entity))
+    fn update_one_sql(entity: T) -> Result<Option<(String, Vec<String>)>> {
+        Self::update_many_sql(vec![entity])
     }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
-    fn update_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
-    where
-        I: IntoIterator<Item = &'a T> + 'a + Clone;
+    fn update_many_sql(entities: Vec<T>) -> Result<Option<(String, Vec<String>)>>;
+    
 
     /// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     /// Because merged structs are also considered, the returned SQL statements, can be insert, update and delete statements.
-    fn diff_one_sql(outdated: &'a T, updated: &'a T) -> Result<Vec<(String, Vec<String>)>> {
-        Ok(Self::diff_many_sql(std::iter::once((outdated, updated)))?.unwrap())
+    fn diff_one_sql(outdated:  T, updated: T) -> Result<Vec<(String, Vec<String>)>> {
+        Ok(Self::diff_many_sql(vec![(outdated, updated)])?.unwrap())
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuples with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn diff_many_sql<I>(entities: I) -> Result<Option<Vec<(String, Vec<String>)>>>
-    where
-        I: IntoIterator<Item = (&'a T, &'a T)> + 'a + Clone;
+    fn diff_many_sql(entities: Vec<(T,T)>) -> Result<Option<Vec<(String, Vec<String>)>>>;
+    
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup`  or set selectable fields to None in updated entity.
     fn shallow_diff_one_sql(
-        outdated: &'a T,
-        updated: &'a T,
+        outdated: T,
+        updated: T,
     ) -> Result<Option<(String, Vec<String>)>> {
-        Self::shallow_diff_many_sql(std::iter::once((outdated, updated)))
+        Self::shallow_diff_many_sql(vec![(outdated, updated)])
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn shallow_diff_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
-    where
-        I: IntoIterator<Item = (&'a T, &'a T)> + 'a + Clone;
+    fn shallow_diff_many_sql(entities: Vec<(T,T)>) -> Result<Option<(String, Vec<String>)>>;
+  
 }
 
 
@@ -130,13 +126,14 @@ pub enum DuplicateStrategy {
 /// Conflicts can happed if the keys already exist. A strategy must be provided to tell how to resolve the conflict.
 pub trait Insert<'a, T: 'a> {
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
-    fn insert_one_sql(entity: &'a T, strategy: DuplicateStrategy) -> Result<(String, Vec<String>)> {
-        Ok(Self::insert_many_sql(std::iter::once(entity), strategy)?.unwrap())
+    fn insert_one_sql(entity: T, strategy: DuplicateStrategy) -> Result<(String, Vec<String>)> 
+    
+    {
+        Ok(Self::insert_many_sql(vec![entity], strategy)?.unwrap())
     }
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
-    fn insert_many_sql<I>(entities: I,strategy: DuplicateStrategy) -> Result<Option<(String, Vec<String>)>>
-    where
-        I: IntoIterator<Item = &'a T> + 'a;
+    fn insert_many_sql(entities: Vec<T>,strategy: DuplicateStrategy) -> Result<Option<(String, Vec<String>)>>;
+    
 }
 
 
@@ -154,67 +151,70 @@ pub trait InsertDuplicate {}
 ///
 /// Returns three tuples for insert / update / delete, each containing the SQL statement and parameters.
 
-pub fn collection_delta_sql<'a, T>(
-    outdated: &'a Vec<T>,
-    updated: &'a Vec<T>,
+pub fn collection_delta_sql<'a, T, U, D, I>(
+    outdated: Vec<T>,
+    updated: Vec<T>,
 ) -> Result<(
     Option<(String, Vec<String>)>,
     Option<(String, Vec<String>)>,
     Option<(String, Vec<String>)>,
 )>
 where
-    T: Update<'a, T> + 'a + Key + Delete<'a, T> + Insert<'a, T> 
+    T:  'a + Key,
+    U: Update<'a, T>,
+    D:  Delete<'a, T>,
+    I: Insert<'a, T>
     
 {
-    let mut insert: Vec<&T> = Vec::new();
-    let mut diff: Vec<(&T, &T)> = Vec::new();
+    let mut insert: Vec<T> = Vec::new();
+    let mut diff: Vec<(T, T)> = Vec::new();
     let mut delete: Vec<T::Key> = Vec::new();
-    let (mut ins, mut di, mut de) =
-        collections_delta(std::iter::once((outdated, updated)))?;
+    let ( mut ins, mut di, mut de) = collections_delta::<T, U, D,I>(vec![(outdated, updated)])?;
     insert.append(&mut ins);
     diff.append(&mut di);
     delete.append(&mut de);
 
-    let insert_sql = <T as Insert<T>>::insert_many_sql(insert, DuplicateStrategy::Fail)?;
-    let diff_sql = <T as  Update<T>>::shallow_diff_many_sql(diff)?;
-    let delete_sql = <T as  Delete<T>>::delete_many_sql(delete)?;
+    let insert_sql = <I as Insert<T>>::insert_many_sql(insert, DuplicateStrategy::Fail)?;
+    let diff_sql = <U as  Update<T>>::shallow_diff_many_sql(diff)?;
+    let delete_sql = <D as  Delete<T>>::delete_many_sql(delete)?;
     Ok((insert_sql, diff_sql, delete_sql))
 }
 
-pub fn collections_delta<'a, I, T>(
-    collections: I,
-) ->  Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<T::Key>)>
+pub fn collections_delta<'a, T, U, D, I>(collections: Vec<(Vec<T>,Vec<T>)>) ->  Result<(Vec<T>, Vec<(T,T)>, Vec<T::Key>)>
 where
-    I: IntoIterator<Item = (&'a Vec<T>, &'a Vec<T>)> + 'a + Clone,
-    T:  Update<'a, T> + Key + 'a +  Delete<'a, T>,
+    T:  'a + Key,
+    U: Update<'a, T>,
+    D:  Delete<'a, T>,
+    I: Insert<'a, T>
 {
-    let mut diff: Vec<(&T, &T)> = Vec::new(); // Vector with entities to diff
-    let mut insert: Vec<&T> = Vec::new(); // Vector with entities to insert
+    let mut diff: Vec<(T, T)> = Vec::new(); // Vector with entities to diff
+    let mut insert: Vec<T> = Vec::new(); // Vector with entities to insert
     let mut delete: Vec<T::Key> = Vec::new(); // Vector with keys to delete
 
     for (previous_coll, current_coll) in collections {
-        let mut previous_index: HashMap<T::Key, &T> = HashMap::new();
-        for previous in previous_coll {
+        let mut previous_index: HashMap<T::Key, T> = HashMap::new();
+        for previous in previous_coll{
             // Build up index
-            let k = Key::get_key(previous)?;
-            previous_index.insert(k, &previous);
+            let k = Key::get_key(&previous)?;
+            previous_index.insert(k, previous);
         }
 
         for current in current_coll {
-            if previous_index.contains_key(&Key::get_key(current)?) {
+            if previous_index.contains_key(&Key::get_key(&current)?) {
+                let previous =  previous_index
+                        .remove(&Key::get_key(&current)?)
+                        .unwrap();
                 diff.push((
-                    previous_index
-                        .remove(&Key::get_key(current)?)
-                        .unwrap(),
-                    &current,
+                   previous,
+                    current
                 ));
             } else {
-                insert.push(&current);
+                insert.push(current);
             }
         }
 
         for (_k, v) in previous_index {
-            delete.push(Key::get_key(v)?);
+            delete.push(Key::get_key(&v)?);
         }
     }
 

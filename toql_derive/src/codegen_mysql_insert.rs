@@ -174,8 +174,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                 
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::mutate::Insert<'a, #struct_ident> for toql::mysql::MySqlConn<T> {
 
-                     fn insert_many_sql<I>(entities: I, strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
-                     where I: IntoIterator<Item=&'a #struct_ident> + 'a
+                     fn insert_many_sql(entities: Vec<#struct_ident>, strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
                      {
 
 

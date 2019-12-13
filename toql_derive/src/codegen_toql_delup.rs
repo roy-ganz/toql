@@ -386,8 +386,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
             quote! {
 
                 impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::conn::GenericConn {
-                    fn delete_many_sql<I>(keys: I) -> toql::error::Result<Option<(String, Vec<String>)>>
-                        where I:  IntoIterator<Item=<#struct_ident as toql::key::Key>::Key> +'a
+                    fn delete_many_sql(keys: Vec<<#struct_ident as toql::key::Key>::Key>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
                             let alias= "t";
                             let mut delete_stmt =format!(#delete_many_statement, alias = alias);
@@ -428,8 +427,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::conn::GenericConn {
 
 
-                    fn update_many_sql<I>(entities:I) -> toql::error::Result<Option<(String, Vec<String>)>>
-                    where I: IntoIterator<Item=&'a #struct_ident> + 'a + Clone
+                    fn update_many_sql(entities:Vec<#struct_ident>) -> toql::error::Result<Option<(String, Vec<String>)>>
                     {
                         let mut params: Vec<String> = Vec::new();
                         let mut update_stmt = String::from("UPDATE ");
@@ -485,8 +483,8 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn shallow_diff_many_sql<I>(entities:I) -> toql::error::Result<Option<(String, Vec<String>)>>
-                    where I: IntoIterator<Item=(&'a #struct_ident, &'a #struct_ident)> + 'a + Clone
+                    fn shallow_diff_many_sql(entities:Vec<(#struct_ident, #struct_ident)>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    
                     {
                         let mut params: Vec<String> = Vec::new();
                         let mut keys: Vec<String> = Vec::new();
@@ -544,8 +542,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn diff_many_sql<I> (entities: I) -> toql::error::Result<Option<Vec<(String,Vec<String>)>>>
-                    where I: IntoIterator<Item = (&'a #struct_ident, &'a #struct_ident)>  +'a +  Clone,
+                    fn diff_many_sql (entities: Vec<(#struct_ident,#struct_ident)>) -> toql::error::Result<Option<Vec<(String,Vec<String>)>>>
                     {
 
                         let mut sql: Vec<(String, Vec<String>)> = Vec::new();
