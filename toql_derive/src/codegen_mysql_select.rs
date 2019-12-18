@@ -269,7 +269,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         };
 
         let select = quote! {
-                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::select::Select<#struct_ident> for toql::mysql::MySql<T> {
+                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::select::Select<#struct_ident> for toql::mysql::MySql<'a,T> {
 
 
                     fn columns_sql(alias: &str) -> String {

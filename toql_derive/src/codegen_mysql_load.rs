@@ -250,7 +250,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
         quote!(
           
-            impl<T: toql::mysql::mysql::prelude::GenericConnection> toql::load::Load<#struct_ident> for toql::mysql::MySql<T>
+            impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::load::Load<#struct_ident> for toql::mysql::MySql<'a,T>
             {
                 fn load_one(&mut self, query: &toql::query::Query,
                 

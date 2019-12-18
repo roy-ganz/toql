@@ -491,7 +491,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     }
                 }
-                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::mutate::Diff<'_,#struct_ident>  for toql::mysql::MySql<T>
+                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Diff<'_,#struct_ident>  for toql::mysql::MySql<'a,T>
                 {
                     fn shallow_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)]) -> toql::error::Result<Option<(String, Vec<String>)>>
                     

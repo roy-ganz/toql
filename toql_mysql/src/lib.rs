@@ -9,7 +9,7 @@ use toql_core::error::ToqlError;
 use toql_core::mutate::collection_delta_sql;
 
 use toql_core::mutate::{Insert, Update, Diff, Delete, InsertDuplicate, DuplicateStrategy};
-use toql_core::load::Load;
+use toql_core::load::{Load, Page};
 use toql_core::select::Select;
 use toql_core::query::Query;
 use toql_core::sql_mapper::SqlMapperCache;
@@ -54,10 +54,10 @@ where
 
 
 
-pub struct MySql<C:GenericConnection>(pub C);
+pub struct MySql<'a, C:GenericConnection>(pub &'a mut C);
 
 
-impl<C:GenericConnection> MySql<C>{
+impl<C:GenericConnection> MySql<'_,C>{
 /// Insert one struct.
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
@@ -68,9 +68,9 @@ where
     Self:  Insert<'a,T>,
     T : 'a
 {
-    let conn = &mut self.0;
+    
     let sql = <Self as Insert<'a, T>>::insert_one_sql(entity, DuplicateStrategy::Fail)?;
-    execute_insert_sql(sql, conn)
+    execute_insert_sql(sql, self.0)
 }
 
 /// Insert a collection of structs.
@@ -84,9 +84,9 @@ where
     Q: Borrow<T>
 {
     let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, DuplicateStrategy::Fail)?;
-    let conn = &mut self.0;
+  
     Ok(if let Some(sql) = sql {
-        execute_insert_sql(sql, conn)?
+        execute_insert_sql(sql, self.0)?
     } else {
         0
     })
@@ -101,8 +101,8 @@ where
    Self:  Insert<'a,T> + InsertDuplicate,
 {
     let sql =  <Self as Insert<'a, T>>::insert_one_sql(entity, strategy)?;
-     let conn = &mut self.0;
-    execute_insert_sql(sql, conn)
+     
+    execute_insert_sql(sql, self.0)
 }
 
 /// Insert a collection of structs.
@@ -119,8 +119,8 @@ where
     let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, strategy)?;
      
     Ok(if let Some(sql) = sql {
-        let conn = &mut self.0;
-        execute_insert_sql(sql, conn)?
+        
+        execute_insert_sql(sql, self.0)?
     } else {
         0
     })
@@ -138,8 +138,8 @@ where
   
 {
     let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_one_sql(key)?;
-     let conn = &mut self.0;
-    execute_update_delete_sql(sql, conn)
+     
+    execute_update_delete_sql(sql, self.0)
 }
 
 /// Delete a collection of structs.
@@ -156,8 +156,8 @@ where
     let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_many_sql(&keys)?;
 
     Ok(if let Some(sql) = sql {
-        let conn = &mut self.0;
-        execute_update_delete_sql(sql, conn)?
+        
+        execute_update_delete_sql(sql, self.0)?
        } else {
         0
     })
@@ -177,8 +177,8 @@ where
     let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(&entities)?;
 
     Ok(if let Some(sql) = sql {
-         let conn = &mut self.0;
-        execute_update_delete_sql(sql, conn)?
+         
+        execute_update_delete_sql(sql, self.0)?
     /* log_sql!(update_stmt, params);
     let mut stmt = conn.prepare(&update_stmt)?;
     let res = stmt.execute(params)?;
@@ -211,8 +211,8 @@ where
     let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_one_sql(entity)?;
 
     Ok(if let Some(sql) = sql {
-          let conn = &mut self.0;
-        execute_update_delete_sql(sql, conn)?
+          
+        execute_update_delete_sql(sql, self.0)?
     } else {
         0
     })
@@ -222,7 +222,7 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_many<'a, T, Q:Borrow<T>>(&mut self,entities: &[(Q, Q)]) -> Result<u64, ToqlError>
+pub fn diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self,entities: &[(Q, Q)]) -> Result<u64, ToqlError>
 where
  Self:  Diff<'a,T>,
  T:'a
@@ -232,9 +232,9 @@ where
     let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
-          let conn = &mut self.0;
+          
         for sql_stmt in sql_stmts {
-            affected += execute_update_delete_sql(sql_stmt, conn)?;
+            affected += execute_update_delete_sql(sql_stmt, self.0)?;
             /* let (update_stmt, params) = statements;
             log::info!("SQL `{}` with params {:?}", update_stmt, params);
             let mut stmt = conn.prepare(&update_stmt)?;
@@ -251,7 +251,7 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_one<'a, T>(&mut self, outdated: &T, current: &T) -> Result<u64, ToqlError>
+pub fn diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64, ToqlError>
 where
     Self:  Diff<'a,T>,
     T:'a
@@ -277,16 +277,16 @@ where
     
     let (insert_sql, diff_sql, delete_sql) = collection_delta_sql::<T,Self,Self, toql_core::dialect::Generic>(outdated, updated)?;
     let mut affected = (0, 0, 0);
-      let conn = &mut self.0;
+      
 
     if let Some(insert_sql) = insert_sql {
-        affected.0 += execute_update_delete_sql(insert_sql, conn)?;
+        affected.0 += execute_update_delete_sql(insert_sql, self.0)?;
     }
     if let Some(diff_sql) = diff_sql {
-        affected.1 += execute_update_delete_sql(diff_sql, conn)?;
+        affected.1 += execute_update_delete_sql(diff_sql, self.0)?;
     }
     if let Some(delete_sql) = delete_sql {
-        affected.2 += execute_update_delete_sql(delete_sql, conn)?;
+        affected.2 += execute_update_delete_sql(delete_sql, self.0)?;
     }
    
 
@@ -317,10 +317,10 @@ where T : select::Select<T> + Key<T>
 /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
 pub fn load_one<T>(&mut self,query: &Query, mappers: &SqlMapperCache) -> Result<T, ToqlError>
 where
-    Self:  toql_core::load::Load<T> ,
+    Self:  Load<T> ,
   
 {
-     <Self as toql_core::load::Load<T>>::load_one(self, query, mappers)
+     <Self as Load<T>>::load_one(self, query, mappers)
     
 }
 
@@ -333,12 +333,12 @@ pub fn load_many<T>(
     &mut self,
     query: &Query,
     mappers: &SqlMapperCache,
-    page: toql_core::load::Page,
+    page: Page,
     
 ) -> Result<(Vec<T>, Option<(u32, u32)>), ToqlError>
 where
-     Self:  toql_core::load::Load<T> ,
+     Self:  Load<T> ,
 {
-   <Self as toql_core::load::Load<T>>::load_many(self, query, mappers,page)
+   <Self as Load<T>>::load_many(self, query, mappers,page)
 }
 }
