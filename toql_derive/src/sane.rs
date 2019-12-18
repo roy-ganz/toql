@@ -97,7 +97,7 @@ pub struct Field {
     pub rust_type_name: String,
     pub toql_field_name: String,
     pub number_of_options: u8,
-    pub ignore_wildcard: bool,
+    pub skip_wildcard: bool,
     pub roles: Vec<String>,
     pub preselect: bool,
     pub kind: FieldKind,
@@ -120,15 +120,15 @@ impl Field {
         let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
         let number_of_options = field.number_of_options();
 
-        if field.ignore_wildcard == true && field.preselect == true {
+        if field.skip_wildcard == true && field.preselect == true {
                 return Err(darling::Error::custom(
-                    "`ignore_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`.".to_string(),
+                    "`skip_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`.".to_string(),
                 )
                 .with_span(&field.ident));
         }
-        if field.ignore_wildcard == true && number_of_options == 0 {
+        if field.skip_wildcard == true && number_of_options == 0 {
                 return Err(darling::Error::custom(
-                    "`ignore_wildcard` is only allowed on selectable fields. Add `Option<..>` to field type.".to_string(),
+                    "`skip_wildcard` is only allowed on selectable fields. Add `Option<..>` to field type.".to_string(),
                 )
                 .with_span(&field.ident));
         }
@@ -297,7 +297,7 @@ impl Field {
             toql_field_name,
             number_of_options,
             skip_mut: field.skip_mut,
-            ignore_wildcard: field.ignore_wildcard,
+            skip_wildcard: field.skip_wildcard,
             roles: field.role.clone(),
             preselect: field.preselect,
             kind,

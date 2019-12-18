@@ -62,7 +62,7 @@ impl<C:GenericConnection> MySql<C>{
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id.
-pub fn insert_one<'a,T>(&mut self, entity: T) -> Result<u64, ToqlError>
+pub fn insert_one<'a,T>(&mut self, entity: &T) -> Result<u64, ToqlError>
 where
    
     Self:  Insert<'a,T>,
@@ -77,10 +77,11 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_many<'a, T >(&mut self, entities: &[T]) -> Result<u64, ToqlError>
+pub fn insert_many<'a, T,Q >(&mut self, entities: &[Q]) -> Result<u64, ToqlError>
 where
     Self:  Insert<'a, T>,
-    T: 'a
+    T: 'a,
+    Q: Borrow<T>
 {
     let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, DuplicateStrategy::Fail)?;
     let conn = &mut self.0;
@@ -94,11 +95,10 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id.
-pub fn insert_dup_one<'a, T>(&mut self, entity:  T, strategy: DuplicateStrategy) -> Result<u64, ToqlError>
+pub fn insert_dup_one<'a, T>(&mut self, entity: &T, strategy: DuplicateStrategy) -> Result<u64, ToqlError>
 where
     T: 'a,
    Self:  Insert<'a,T> + InsertDuplicate,
-    
 {
     let sql =  <Self as Insert<'a, T>>::insert_one_sql(entity, strategy)?;
      let conn = &mut self.0;
@@ -109,11 +109,11 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_dup_many<'a, T: 'a, I>(&mut self,entities: &[T], strategy: DuplicateStrategy) -> Result<u64, ToqlError>
+pub fn insert_dup_many<'a, T: 'a, I, Q>(&mut self,entities: &[Q], strategy: DuplicateStrategy) -> Result<u64, ToqlError>
 where
    Self:  Insert<'a,T> + InsertDuplicate,
    I: 'a,
-   T: Borrow<T>
+   Q: Borrow<T>
     
 {
     let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, strategy)?;
@@ -168,10 +168,11 @@ where
 /// Optional fields with value `None` are not updated. See guide for details.
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of updated rows.
-pub fn update_many<'a, T:>(&mut self,entities: &[T]) -> Result<u64, ToqlError>
+pub fn update_many<'a, T,Q>(&mut self,entities: &[Q]) -> Result<u64, ToqlError>
 where
    toql_core::dialect::Generic: Update<'a,T>,
-   T: 'a
+   T: 'a,
+   Q: Borrow<T>
 {
     let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(&entities)?;
 
@@ -201,7 +202,7 @@ where
 /// Returns the number of updated rows.
 ///
 
-pub fn update_one<'a, T>(&mut self,entity: T) -> Result<u64, ToqlError>
+pub fn update_one<'a, T>(&mut self,entity: &T) -> Result<u64, ToqlError>
 where
     toql_core::dialect::Generic: Update<'a,T>,
     T:'a
@@ -221,14 +222,14 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_many<'a, T>(&mut self,entities: Vec<(T, T)>) -> Result<u64, ToqlError>
+pub fn diff_many<'a, T, Q:Borrow<T>>(&mut self,entities: &[(Q, Q)]) -> Result<u64, ToqlError>
 where
  Self:  Diff<'a,T>,
  T:'a
    
   
 {
-    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(&entities)?;
+    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
           let conn = &mut self.0;
@@ -250,12 +251,12 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_one<'a, T>(&mut self, outdated: T, current: T) -> Result<u64, ToqlError>
+pub fn diff_one<'a, T>(&mut self, outdated: &T, current: &T) -> Result<u64, ToqlError>
 where
     Self:  Diff<'a,T>,
     T:'a
 {
-    self.diff_many(vec![(outdated, current)])
+    self.diff_many(&[(outdated, current)])
 }
 
 /// Updates difference of two collections.
