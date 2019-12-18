@@ -77,12 +77,12 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_many<'a, T >(&mut self, entities: Vec<T>) -> Result<u64, ToqlError>
+pub fn insert_many<'a, T >(&mut self, entities: &[T]) -> Result<u64, ToqlError>
 where
     Self:  Insert<'a, T>,
     T: 'a
 {
-    let sql = <Self as Insert<'a, T>>::insert_many_sql(entities, DuplicateStrategy::Fail)?;
+    let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, DuplicateStrategy::Fail)?;
     let conn = &mut self.0;
     Ok(if let Some(sql) = sql {
         execute_insert_sql(sql, conn)?
@@ -109,14 +109,14 @@ where
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
 /// Returns the last generated id
-pub fn insert_dup_many<'a, T: 'a, I>(&mut self,entities: Vec<T>, strategy: DuplicateStrategy) -> Result<u64, ToqlError>
+pub fn insert_dup_many<'a, T: 'a, I>(&mut self,entities: &[T], strategy: DuplicateStrategy) -> Result<u64, ToqlError>
 where
    Self:  Insert<'a,T> + InsertDuplicate,
    I: 'a,
    T: Borrow<T>
     
 {
-    let sql = <Self as Insert<'a, T>>::insert_many_sql(entities, strategy)?;
+    let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, strategy)?;
      
     Ok(if let Some(sql) = sql {
         let conn = &mut self.0;
@@ -146,14 +146,14 @@ where
 ///
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of deleted rows.
-pub fn delete_many<'a, T>(&mut self, keys: Vec<<T as Key>::Key>) -> Result<u64, ToqlError>
+pub fn delete_many<'a, T>(&mut self, keys: &[<T as Key>::Key]) -> Result<u64, ToqlError>
 where
   T: Key + 'a,
   toql_core::dialect::Generic: Delete<'a,T>
     
 {
     
-    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_many_sql(keys)?;
+    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_many_sql(&keys)?;
 
     Ok(if let Some(sql) = sql {
         let conn = &mut self.0;
@@ -168,12 +168,12 @@ where
 /// Optional fields with value `None` are not updated. See guide for details.
 /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
 /// Returns the number of updated rows.
-pub fn update_many<'a, T:>(&mut self,entities: Vec<T>) -> Result<u64, ToqlError>
+pub fn update_many<'a, T:>(&mut self,entities: &[T]) -> Result<u64, ToqlError>
 where
    toql_core::dialect::Generic: Update<'a,T>,
    T: 'a
 {
-    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(entities)?;
+    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(&entities)?;
 
     Ok(if let Some(sql) = sql {
          let conn = &mut self.0;
@@ -228,7 +228,7 @@ where
    
   
 {
-    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities)?;
+    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(&entities)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
           let conn = &mut self.0;
@@ -263,16 +263,17 @@ where
 /// Nested fields themself will not automatically be updated.
 pub fn diff_one_collection<'a, T>(
     &mut self,
-    outdated: Vec<T>,
-    updated:  Vec<T>,
-) -> Result<(u64, u64, u64), ToqlError>
+    outdated: &'a [T], 
+    updated:  &'a [T],
+) -> toql_core::error::Result<(u64, u64, u64)>
 where
  toql_core::dialect::Generic: Delete<'a,T>, 
   Self:   Diff<'a,T> + Insert<'a,T>,
-  T: Key + 'a
+  T: Key + 'a + Borrow<T>
  //T: Delete<'a,T> +  Insert<'a,T> + Update<'a, T> + Key + 'a,
       
 {
+    
     let (insert_sql, diff_sql, delete_sql) = collection_delta_sql::<T,Self,Self, toql_core::dialect::Generic>(outdated, updated)?;
     let mut affected = (0, 0, 0);
       let conn = &mut self.0;
@@ -286,6 +287,7 @@ where
     if let Some(delete_sql) = delete_sql {
         affected.2 += execute_update_delete_sql(delete_sql, conn)?;
     }
+   
 
     Ok(affected)
 }

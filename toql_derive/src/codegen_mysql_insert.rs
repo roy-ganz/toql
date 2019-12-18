@@ -174,9 +174,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                 
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::mutate::Insert<'a, #struct_ident> for toql::mysql::MySql<T> {
 
-                     fn insert_many_sql(entities: Vec<#struct_ident>, strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
+                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
                      {
-
 
                             let mut params :Vec<String>= Vec::new();
                             let mut columns :Vec<String>= Vec::new();
@@ -192,7 +191,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                             let placeholder = format!(" ({})",columns.iter().map(|_| "?").collect::<Vec<&str>>().join(","));
                             let mut insert_stmt = format!( #insert_statement, ignore, columns.join(","));
 
-                            for entity in entities {
+                            for bentity in entities {
+                                let entity = bentity.borrow();
                                 // #(#insert_placeholder_code)*
                                 insert_stmt.push_str( &placeholder );
                                 #(#insert_params_code)*
