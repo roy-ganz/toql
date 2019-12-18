@@ -42,11 +42,11 @@ fn build_field() {
 }
 #[test]
 fn build_wildcards() {
-    let q = Query::double_wildcard()
+    let q = Query::wildcard()
         .and(Field::from("foo"))
         .and(Wildcard::from("bar"))
         .and(Wildcard::from("bar4_")); // Underscore is optional
-    assert_eq!("**,foo,bar_*,bar4_*", q.to_string());
+    assert_eq!("*,foo,bar_*,bar4_*", q.to_string());
 }
 
 #[test]

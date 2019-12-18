@@ -220,7 +220,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     let rust_type_ident = &field.rust_type_ident;
 
                     self.merge_code.push(quote!(
-                                let #rust_field_ident = #rust_type_ident :: select_dependencies( &format!(#merge_join, key_predicate), &params, conn)?;
+                                let #rust_field_ident = <Self as toql::select::Select<#rust_type_ident>> :: select_dependencies(self, &format!(#merge_join, key_predicate), &params)?;
                                 for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
                                 #struct_ident :: #merge_function(&mut entities, #rust_field_ident);
                         ));
@@ -269,7 +269,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         };
 
         let select = quote! {
-                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::select::Select<#struct_ident> for toql::mysql::MySqlConn<T> {
+                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::select::Select<#struct_ident> for toql::mysql::MySql<T> {
 
 
                     fn columns_sql(alias: &str) -> String {
@@ -312,7 +312,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         Ok(entities.pop().unwrap())
                      }
 
-
+/* 
                         fn select_many(
                             &mut self,
                             key: &<#struct_ident as toql::key::Key>::Key,
@@ -324,7 +324,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
 
                         }
-
+ */
                         fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> ,  toql::error::ToqlError>
                            
                             {

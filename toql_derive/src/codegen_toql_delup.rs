@@ -336,10 +336,10 @@ impl<'a> GeneratedToqlDelup<'a> {
                 };
 
                 self.diff_merge_code.push( quote!(
-                        for (outdated, entity) in entities.clone() {
+                        for (outdated, entity) in entities {
                             #optional_if {
-                                 let (insert_sql, diff_sql, delete_sql) = toql::mysql::diff::collection_delta_sql::<#rust_type_ident>(outdated. #rust_field_ident.as_ref()  #optional_ok_or,
-                                 entity.#rust_field_ident.as_ref()  #optional_unwrap )?;
+                                 let (insert_sql, diff_sql, delete_sql) = toql::mutate::collection_delta_sql::<#rust_type_ident,Self, Self, toql::dialect::Generic>(outdated. #rust_field_ident  #optional_ok_or,
+                                 entity.#rust_field_ident  #optional_unwrap )?;
 
                                   if let Some( s) = insert_sql {
                                         sql.push(s);
@@ -385,7 +385,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
             quote! {
 
-                impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::conn::GenericConn {
+                impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::dialect::Generic {
                     fn delete_many_sql(keys: Vec<<#struct_ident as toql::key::Key>::Key>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
                             let alias= "t";
@@ -424,7 +424,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
 
                 }
-                impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::conn::GenericConn {
+                impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::dialect::Generic {
 
 
                     fn update_many_sql(entities:Vec<#struct_ident>) -> toql::error::Result<Option<(String, Vec<String>)>>
@@ -439,7 +439,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
 
                         // Generate  join
-                        for (i, entity) in entities.clone().into_iter().enumerate() {
+                        for (i, entity) in entities.iter().enumerate() {
                             let alias =  &format!("t{}", i);
                             if first {
                                 first = false;
@@ -451,7 +451,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                         // Generate SET
                          update_stmt.push_str("SET ");
-                         for (i, entity) in entities.clone().into_iter().enumerate() {
+                         for (i, entity) in entities.iter().enumerate() {
                                 let alias = &format!("t{}", i);
                                  #(#update_set_code)*
                          }
@@ -463,7 +463,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         }
                         update_stmt.push_str(" WHERE ");
                         let mut first = true;
-                         for (i, entity) in entities.clone().into_iter().enumerate() {
+                         for (i, entity) in entities.iter().enumerate() {
                             let alias = &format!("t{}", i);
                             if first {
                                 first = false;
@@ -483,7 +483,10 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn shallow_diff_many_sql(entities:Vec<(#struct_ident, #struct_ident)>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                }
+                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection> toql::mutate::Diff<'_,#struct_ident>  for toql::mysql::MySql<T>
+                {
+                    fn shallow_diff_many_sql(entities: Vec<(#struct_ident, #struct_ident)>) -> toql::error::Result<Option<(String, Vec<String>)>>
                     
                     {
                         let mut params: Vec<String> = Vec::new();
@@ -495,7 +498,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
 
                         // Generate  join
-                        for (i, (outdated, entity)) in entities.clone().into_iter().enumerate() {
+                        for (i, (outdated, entity)) in entities.iter().enumerate() {
                             let alias =  &format!("t{}", i);
                             if first {
                                 first = false;
@@ -507,7 +510,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                         // Generate SET
                          update_stmt.push_str("SET ");
-                         for (i, (outdated, entity)) in entities.clone().into_iter().enumerate() {
+                         for (i, (outdated, entity)) in entities.iter().enumerate() {
                                 let alias = &format!("t{}", i);
                                  #(#diff_set_code)*
                          }
@@ -519,7 +522,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         }
                         update_stmt.push_str(" WHERE ");
                         let mut first = true;
-                         for (i, (outdated, entity)) in entities.clone().into_iter().enumerate() {
+                         for (i, (outdated, entity)) in entities.iter().enumerate() {
                             let alias = &format!("t{}", i);
                             if first {
                                 first = false;
@@ -547,7 +550,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                         let mut sql: Vec<(String, Vec<String>)> = Vec::new();
 
-                        let update = <Self as  toql::mutate::Update<#struct_ident>>::shallow_diff_many_sql(entities.clone())?;
+                        let update = <Self as  toql::mutate::Diff<#struct_ident>>::shallow_diff_many_sql(entities)?;
                         if update.is_some() {
                             sql.push(update.unwrap());
                         }
@@ -561,12 +564,6 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                             Ok(Some(sql))
 
                     }
-
-
-
-
-                        
-
                 }
 
             }

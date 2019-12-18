@@ -78,7 +78,13 @@ pub trait Update<'a, T: 'a> {
     fn update_many_sql(entities: Vec<T>) -> Result<Option<(String, Vec<String>)>>;
     
 
-    /// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
+    
+  
+}
+
+/// Trait for update. They work with entities
+pub trait Diff<'a, T: 'a> {
+/// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     /// Because merged structs are also considered, the returned SQL statements, can be insert, update and delete statements.
@@ -106,9 +112,8 @@ pub trait Update<'a, T: 'a> {
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     fn shallow_diff_many_sql(entities: Vec<(T,T)>) -> Result<Option<(String, Vec<String>)>>;
-  
-}
 
+}
 
 /// Defines a strategy to resolve the conflict, when the record to insert already exists.
 pub enum DuplicateStrategy {
@@ -151,7 +156,7 @@ pub trait InsertDuplicate {}
 ///
 /// Returns three tuples for insert / update / delete, each containing the SQL statement and parameters.
 
-pub fn collection_delta_sql<'a, T, U, D, I>(
+pub fn collection_delta_sql<'a, T, I,U, D>(
     outdated: Vec<T>,
     updated: Vec<T>,
 ) -> Result<(
@@ -161,31 +166,30 @@ pub fn collection_delta_sql<'a, T, U, D, I>(
 )>
 where
     T:  'a + Key,
-    U: Update<'a, T>,
-    D:  Delete<'a, T>,
-    I: Insert<'a, T>
+    I: Insert<'a, T>,
+    U: Diff<'a, T>,
+    D:  Delete<'a, T>
+   
     
 {
     let mut insert: Vec<T> = Vec::new();
     let mut diff: Vec<(T, T)> = Vec::new();
     let mut delete: Vec<T::Key> = Vec::new();
-    let ( mut ins, mut di, mut de) = collections_delta::<T, U, D,I>(vec![(outdated, updated)])?;
+    let ( mut ins, mut di, mut de) = collections_delta::<T>(vec![(outdated, updated)])?;
     insert.append(&mut ins);
     diff.append(&mut di);
     delete.append(&mut de);
 
     let insert_sql = <I as Insert<T>>::insert_many_sql(insert, DuplicateStrategy::Fail)?;
-    let diff_sql = <U as  Update<T>>::shallow_diff_many_sql(diff)?;
+    let diff_sql = <U as  Diff<T>>::shallow_diff_many_sql(diff)?;
     let delete_sql = <D as  Delete<T>>::delete_many_sql(delete)?;
     Ok((insert_sql, diff_sql, delete_sql))
 }
 
-pub fn collections_delta<'a, T, U, D, I>(collections: Vec<(Vec<T>,Vec<T>)>) ->  Result<(Vec<T>, Vec<(T,T)>, Vec<T::Key>)>
+pub fn collections_delta<'a, T>(collections: Vec<(Vec<T>,Vec<T>)>) ->  Result<(Vec<T>, Vec<(T,T)>, Vec<T::Key>)>
 where
     T:  'a + Key,
-    U: Update<'a, T>,
-    D:  Delete<'a, T>,
-    I: Insert<'a, T>
+    
 {
     let mut diff: Vec<(T, T)> = Vec::new(); // Vector with entities to diff
     let mut insert: Vec<T> = Vec::new(); // Vector with entities to insert

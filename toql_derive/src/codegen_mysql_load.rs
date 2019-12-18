@@ -235,7 +235,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
         } else {
             quote!(
              // Restrict dependencies to parent entity
-                self.load_dependencies(&mut entities, &query, cache, conn)?;
+                self.load_dependencies(&mut entities, &query, cache)?;
             )
         };
         let load_many_call_dependencies = if path_loaders.is_empty() {
@@ -244,13 +244,13 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!(
                 // Resolve dependencies
                 // Restrict query to keys
-                self.load_dependencies(&mut entities, &query, cache, conn)?;
+                self.load_dependencies(&mut entities, &query, cache)?;
             )
         };
 
         quote!(
           
-            impl<T: toql::mysql::mysql::prelude::GenericConnection> toql::load::Load<#struct_ident> for toql::mysql::MySqlConn<T>
+            impl<T: toql::mysql::mysql::prelude::GenericConnection> toql::load::Load<#struct_ident> for toql::mysql::MySql<T>
             {
                 fn load_one(&mut self, query: &toql::query::Query,
                 
@@ -464,7 +464,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 #role_test
                                 let mut dep_query = query.clone();
                                 #(#merge_many_predicates)*
-                                let #rust_field_ident = #rust_type_ident ::load_path_from_mysql(#toql_field_name, &dep_query, cache, conn)?;
+                                //let #rust_field_ident = #rust_type_ident ::load_path_from_mysql(#toql_field_name, &dep_query, cache, conn)?;
+                                let #rust_field_ident =<Self as toql::load::Load<#rust_type_ident>>::load_path(self,#toql_field_name, &dep_query, cache)?;
                                 if #rust_field_ident .is_some() {                                    for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
                                     #struct_ident :: #merge_function (&mut entities, #rust_field_ident .unwrap());
                                 }

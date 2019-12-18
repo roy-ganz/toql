@@ -5,7 +5,7 @@ use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_builder::SqlBuilderError;
 use toql_core::sql_mapper::BasicFieldHandler;
 use toql_core::sql_mapper::FieldHandler;
-use toql_core::sql_mapper::MapperOptions;
+use toql_core::sql_mapper::FieldOptions;
 use toql_core::sql_mapper::SqlMapper;
 
 #[test]
@@ -17,15 +17,15 @@ fn custom_handler() {
     impl<T: FieldHandler> FieldHandler for CustomHandler<T> {
         fn build_select(
             &self,
-            sql: &str,
-            params: &HashMap<String, String>,
+            select: (String, Vec<String>),
+            query_params: &HashMap<String, String>,
         ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
-            self.base.build_select(sql, params)
+            self.base.build_select(select, query_params)
         }
 
         fn build_filter(
             &self,
-            sql: &str,
+            mut select: (String, Vec<String>),
             filter: &FieldFilter,
             params: &HashMap<String, String>,
         ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
@@ -38,11 +38,12 @@ fn custom_handler() {
                                 name
                             )));
                         }
-                        Ok(Some((format!("LENGTH({}) = ?", sql), args.clone())))
+                        select.1.push(args.get(0).unwrap().clone());
+                        Ok(Some((format!("LENGTH({}) = ?", select.0),select.1)))
                     }
-                    _ => self.base.build_filter(sql, filter, params),
+                    _ => self.base.build_filter(select, filter, params),
                 },
-                _ => self.base.build_filter(sql, filter, params),
+                _ => self.base.build_filter(select, filter, params),
             }
         }
         /*  fn build_param(
@@ -72,7 +73,7 @@ fn custom_handler() {
 
     let mut mapper = SqlMapper::new_with_handler("Book b", h);
     mapper
-        .map_field_with_options("id", "b.id", MapperOptions::new().preselect(true))
+        .map_field_with_options("id", "b.id", FieldOptions::new().preselect(true))
         .map_field("title", "b.title");
 
     let query = QueryParser::parse("id GT 2, title FN LN 5").unwrap();

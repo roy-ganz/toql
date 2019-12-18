@@ -4,14 +4,15 @@ use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_builder::SqlBuilderError;
 use toql_core::sql_mapper::FieldHandler;
-use toql_core::sql_mapper::MapperOptions;
+use toql_core::sql_mapper::FieldOptions;
 use toql_core::sql_mapper::SqlMapper;
+use toql_core::sql_mapper::JoinType;
 
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("Book");
     mapper
-        .join("author", "JOIN User a ON (id = a.book_id)", false) // join on demand
-        .map_field_with_options("id", "id", MapperOptions::new().preselect(true))
+        .join("author", JoinType::Left, "User a", "id = a.book_id") 
+        .map_field_with_options("id", "id", FieldOptions::new().preselect(true))
         .map_field("title", "title")
         .map_field("published", "publishedAt")
         .map_field("author_id", "a.id")
@@ -88,14 +89,14 @@ fn filter_fnc() {
     impl FieldHandler for CustomFieldHandler {
         fn build_select(
             &self,
-            sql_expression: &str,
+            select: (String, Vec<String>),
             _params: &HashMap<String, String>,
         ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
-            Ok(Some((sql_expression.to_string(), Vec::new())))
+            Ok(Some(select))
         }
         fn build_filter(
             &self,
-            sql_expression: &str,
+            mut select: (String, Vec<String>),
             filter: &FieldFilter,
             _params: &HashMap<String, String>,
         ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError> {
@@ -108,9 +109,10 @@ fn filter_fnc() {
                                 name
                             )));
                         }
+                        select.1.push(args.get(0).unwrap().clone());
                         Ok(Some((
-                            format!("MATCH ({}) AGAINST (?)", sql_expression),
-                            args.clone(),
+                            format!("MATCH ({}) AGAINST (?)", select.0),
+                            select.1,
                         )))
                     }
                     _ => Ok(None),

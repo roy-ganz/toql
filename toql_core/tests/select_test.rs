@@ -1,13 +1,14 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
-use toql_core::sql_mapper::MapperOptions;
+use toql_core::sql_mapper::FieldOptions;
 use toql_core::sql_mapper::SqlMapper;
+use toql_core::sql_mapper::JoinType;
 
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("Book b");
     mapper
-        .join("author", "JOIN User a ON (b.id = a.book_id)", false)
-        .map_field_with_options("id", "b.id", MapperOptions::new().preselect(true))
+        .join("author", JoinType::Inner, "User a", "b.id = a.book_id")
+        .map_field_with_options("id", "b.id", FieldOptions::new().preselect(true))
         .map_field("title", "b.title")
         .map_field("publishedAt", "b.published_at")
         .map_field("author_id", "a.id")

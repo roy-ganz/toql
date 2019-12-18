@@ -27,12 +27,12 @@ pub trait Select<T: Key> {
     /// Select a vector of structs with all dependencies for a given key.
     ///
     /// Returns a tuple with the structs.
-    fn select_many(
+   /*  fn select_many(
         &mut self,
         key: &<T as Key>::Key,
         first: u64,
         max: u16,
-    ) -> Result<Vec<T>, ToqlError>;
+    ) -> Result<Vec<T>, ToqlError>; */
 
     /// Select a vector of structs with all dependencies for a given JOIN clause.
     /// This function is used internally to fetch merged fields.

@@ -8,7 +8,7 @@ pub mod key;
 pub mod mutate;
 pub mod load;
 pub mod select;
-pub mod conn;
+pub mod dialect;
 
 
 #[macro_use]

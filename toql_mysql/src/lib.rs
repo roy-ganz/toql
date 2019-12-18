@@ -8,7 +8,7 @@ use mysql::prelude::GenericConnection;
 use toql_core::error::ToqlError;
 use toql_core::mutate::collection_delta_sql;
 
-use toql_core::mutate::{Insert, Update, Delete, InsertDuplicate, DuplicateStrategy};
+use toql_core::mutate::{Insert, Update, Diff, Delete, InsertDuplicate, DuplicateStrategy};
 use toql_core::load::Load;
 use toql_core::select::Select;
 use toql_core::query::Query;
@@ -54,10 +54,10 @@ where
 
 
 
-pub struct MySqlConn<C:GenericConnection>(pub C);
+pub struct MySql<C:GenericConnection>(pub C);
 
 
-impl<C:GenericConnection> MySqlConn<C>{
+impl<C:GenericConnection> MySql<C>{
 /// Insert one struct.
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
@@ -132,12 +132,12 @@ where
 /// Returns the number of deleted rows.
 pub fn delete_one<'a, T>(&mut self, key: <T as Key>::Key) -> Result<u64, ToqlError>
 where
-   toql_core::conn::GenericConn: Delete<'a,T>,
+   toql_core::dialect::Generic: Delete<'a,T>,
    T: Key + 'a
    
   
 {
-    let sql =  <toql_core::conn::GenericConn as Delete<'a,T>>::delete_one_sql(key)?;
+    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_one_sql(key)?;
      let conn = &mut self.0;
     execute_update_delete_sql(sql, conn)
 }
@@ -149,11 +149,11 @@ where
 pub fn delete_many<'a, T>(&mut self, keys: Vec<<T as Key>::Key>) -> Result<u64, ToqlError>
 where
   T: Key + 'a,
-  toql_core::conn::GenericConn: Delete<'a,T>
+  toql_core::dialect::Generic: Delete<'a,T>
     
 {
     
-    let sql =  <toql_core::conn::GenericConn as Delete<'a,T>>::delete_many_sql(keys)?;
+    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_many_sql(keys)?;
 
     Ok(if let Some(sql) = sql {
         let conn = &mut self.0;
@@ -170,10 +170,10 @@ where
 /// Returns the number of updated rows.
 pub fn update_many<'a, T:>(&mut self,entities: Vec<T>) -> Result<u64, ToqlError>
 where
-   toql_core::conn::GenericConn: Update<'a,T>,
+   toql_core::dialect::Generic: Update<'a,T>,
    T: 'a
 {
-    let sql = <toql_core::conn::GenericConn as Update<'a,T>>::update_many_sql(entities)?;
+    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(entities)?;
 
     Ok(if let Some(sql) = sql {
          let conn = &mut self.0;
@@ -203,11 +203,11 @@ where
 
 pub fn update_one<'a, T>(&mut self,entity: T) -> Result<u64, ToqlError>
 where
-    toql_core::conn::GenericConn: Update<'a,T>,
+    toql_core::dialect::Generic: Update<'a,T>,
     T:'a
    
 {
-    let sql = <toql_core::conn::GenericConn as Update<'a,T>>::update_one_sql(entity)?;
+    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_one_sql(entity)?;
 
     Ok(if let Some(sql) = sql {
           let conn = &mut self.0;
@@ -223,11 +223,12 @@ where
 /// Nested fields themself will not automatically be updated.
 pub fn diff_many<'a, T>(&mut self,entities: Vec<(T, T)>) -> Result<u64, ToqlError>
 where
-   toql_core::conn::GenericConn: Update<'a,T>, T:'a
+ Self:  Diff<'a,T>,
+ T:'a
    
   
 {
-    let sql_stmts = <toql_core::conn::GenericConn as Update<'a,T>>::diff_many_sql(entities)?;
+    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
           let conn = &mut self.0;
@@ -251,7 +252,8 @@ where
 /// Nested fields themself will not automatically be updated.
 pub fn diff_one<'a, T>(&mut self, outdated: T, current: T) -> Result<u64, ToqlError>
 where
-    toql_core::conn::GenericConn: Update<'a,T>, T:'a
+    Self:  Diff<'a,T>,
+    T:'a
 {
     self.diff_many(vec![(outdated, current)])
 }
@@ -265,13 +267,13 @@ pub fn diff_one_collection<'a, T>(
     updated:  Vec<T>,
 ) -> Result<(u64, u64, u64), ToqlError>
 where
- toql_core::conn::GenericConn: Update<'a,T> +  Delete<'a,T>, 
-  Self:  Insert<'a,T>,
+ toql_core::dialect::Generic: Delete<'a,T>, 
+  Self:   Diff<'a,T> + Insert<'a,T>,
   T: Key + 'a
  //T: Delete<'a,T> +  Insert<'a,T> + Update<'a, T> + Key + 'a,
       
 {
-    let (insert_sql, diff_sql, delete_sql) = collection_delta_sql::<T,toql_core::conn::GenericConn,toql_core::conn::GenericConn,Self>(outdated, updated)?;
+    let (insert_sql, diff_sql, delete_sql) = collection_delta_sql::<T,Self,Self, toql_core::dialect::Generic>(outdated, updated)?;
     let mut affected = (0, 0, 0);
       let conn = &mut self.0;
 
