@@ -359,6 +359,7 @@ impl SqlBuilder {
                             result.join_clause.push(' ');
                             // Ressolve nested joins
                             resolve_nested(&join, selected_paths, sql_joins, result,  join_tree);
+                            result.join_clause.pop(); // remove last whitespace
                             result.join_clause.push_str(build_join_end(&t).as_str());
                         }
                     }

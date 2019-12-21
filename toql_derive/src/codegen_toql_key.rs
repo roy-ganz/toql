@@ -213,11 +213,14 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                             #struct_key_wrapper_ident( vec![self]).into()
                     }
                 }
-                impl Into<toql::query::Query> for &#struct_key_ident {
-                    fn into(self) -> toql::query::Query {
-                             self.to_owned().into()
-                    }
+
+            impl Into<toql::query::Query> for &#struct_key_ident {
+                fn into(self) -> toql::query::Query {
+                            self.to_owned().into()
                 }
+            }
+
+            
                  
                 #[derive(Debug, Eq, PartialEq, Hash, Clone #serde)]
                 pub struct #struct_key_wrapper_ident(pub Vec<#struct_key_ident>);

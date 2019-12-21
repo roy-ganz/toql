@@ -83,6 +83,30 @@ macro_rules! impl_num_filter_arg {
 impl_num_filter_arg!(usize,u8, u16, u32, u64, u128,i8, i16, i32, i64, i128, f32, f64);
 
 
+impl<T : Into<Query>> Into<Query> for Vec<T> {
+
+    fn into(self) -> Query {
+        let mut query = Query::new();
+        for key in self{
+            query = query.or(key);
+        }
+        query
+    }
+}
+
+impl<T : Into<Query> + Clone> Into<Query> for &Vec<T> {
+
+    fn into(self) -> Query {
+        let mut query = Query::new();
+        for key in self{
+            query = query.or(key.clone());
+        }
+        query
+    }
+}
+
+
+
 
 impl FilterArg for bool {
     fn to_sql(&self) -> String {

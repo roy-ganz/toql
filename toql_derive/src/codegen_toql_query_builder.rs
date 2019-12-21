@@ -201,6 +201,8 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                        #key_predicate_code
                     }
                 } 
+              
+                
                 
          
 

@@ -317,13 +317,11 @@ impl quote::ToTokens for Toql {
                 }
 
                 // Generate insert/delete/update functionality
-                if mut_enabled {
+                if mut_enabled  {
                     toql_delup.add_delup_field(&f);
 
                      #[cfg(feature = "mysqldb")]
                     mysql_insert.add_insert_field(&f);
-
-
                 }
             }
 

@@ -35,7 +35,6 @@ impl<'a> GeneratedToqlDelup<'a> {
             diff_merge_code: Vec::new(),
         }
     }
-
     
     pub(crate) fn add_delup_field(&mut self, field: &crate::sane::Field) {
         let rust_field_ident = &field.rust_field_ident;
@@ -88,6 +87,12 @@ impl<'a> GeneratedToqlDelup<'a> {
             }
             FieldKind::Merge(_) => {}
         };
+
+        
+        if field.skip_mut {
+            return;
+        }
+        
 
         match &field.kind {
             FieldKind::Regular(regular_attrs) => {

@@ -13,7 +13,7 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
 
     insert_columns_code: Vec<TokenStream>,
 
-    insert_params_code: Vec<TokenStream>,
+    insert_values_code: Vec<TokenStream>,
 
 }
 
@@ -24,7 +24,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
             sql_table_name: toql.sql_table_name.to_owned(),
             insert_columns_code: Vec::new(),
 
-            insert_params_code: Vec::new(),
+            insert_values_code: Vec::new(),
 
            
         }
@@ -34,7 +34,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
         if field.skip_mut {
             return;
         }
-        let rust_field_name = &field.rust_field_name;
+        
         let rust_field_ident = &field.rust_field_ident;
         let rust_type_ident = &field.rust_type_ident;
 
@@ -49,35 +49,49 @@ impl<'a> GeneratedMysqlInsert<'a> {
                     }
                 };
 
-                let unwrap_null = match field.number_of_options {
+                self.insert_values_code.push( match field.number_of_options {
                     2 => {
                         // Option<Option<T>> (toql selectable of nullable column)
                         quote!(
-                            .as_ref()
-                            .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
-                            .as_ref()
-                            .map_or(String::from("NULL"), |x| x.to_string().to_owned())
+                             if  let Some(field) = &entity . #rust_field_ident  {
+                                 insert_stmt.push_str("?, ");
+                                 params.push( field.as_ref()
+                                            .map_or(String::from("NULL"), |x| x.to_string().to_owned()));
+                             } else {
+                                insert_stmt.push_str("DEFAULT,");
+                             }
                         )
                     }
                     1 if field.preselect => {
-                        // Option<T>  (nullable column)
+                        // Option<T>  selected (nullable column)
                         quote!(
+                            insert_stmt.push_str("?, ");
+                            params.push( entity . #rust_field_ident
                             .as_ref()
                             .map_or(String::from("NULL"), |x| x.to_string().to_owned())
+                            );
                         )
                     }
                     1 if !field.preselect => {
                         // Option<T>  (toql selectable)
                         quote!(
-                        .as_ref().ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
+                            if  let Some(field) = &entity . #rust_field_ident {
+                                 insert_stmt.push_str("?, ");
+                                  params.push( field.to_string().to_owned());
+                            } else {
+                                 insert_stmt.push_str("DEFAULT, ");
+                            }
                         )
                     }
-                    _ => quote!(),
-                };
+                    _ => {
+                        // selected field
+                        quote!(
+                            insert_stmt.push_str("?, ");
+                            params.push( entity . #rust_field_ident .to_string());
+                        )
+                    }
+                });
 
-                let params = quote!( params.push( entity . #rust_field_ident  #unwrap_null .to_string().to_owned()); );
-
-                self.insert_params_code.push(params);
             }
             FieldKind::Join(join_attrs) => {
                 let columns_map_code = &join_attrs.columns_map_code;
@@ -91,27 +105,29 @@ impl<'a> GeneratedMysqlInsert<'a> {
                      }
                 ));
 
-                self.insert_params_code.push(
+                self.insert_values_code.push(
                       match field.number_of_options  {
                                 2 => { // Option<Option<T>>
                                         quote!(
+                                            if let Some(field) = &entity. #rust_field_ident {
+                                                 <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("?, "));
                                                 params.extend_from_slice(
-                                                    &entity
-                                                    . #rust_field_ident .as_ref()
-                                                    .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
-                                                   .as_ref()
+                                                   & field.as_ref()
                                                    .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
                                                             .map(|c| String::from("NULL"))
                                                             .collect::<Vec<_>>())},
-                                                   | some| {Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))})?
-
-                                                );
+                                                   | some| {Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(&some)?))})?
+                                               );
+                                            } else {
+                                                <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("DEFAULT, "));
+                                            }
 
                                         )
                                     },
-                                1 if field.preselect => { // #[toql(preselect)] Option<T>
+                                1 if field.preselect => { // #[toql(preselect)] Option<T> 
                                 // TODO Option wrapping
                                     quote!(
+                                         <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("?, "));
                                          params.extend_from_slice(
                                                    &entity
                                                     . #rust_field_ident .as_ref()
@@ -122,19 +138,21 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                            )
                                 },
 
-                                1 if !field.preselect => { // Option<T>
+                                1 if !field.preselect => { // Option<T> selectable 
                                     quote!(
-                                      params.extend_from_slice(
-                                          &<#rust_type_ident as toql::key::Key>::params(
-                                                    &<#rust_type_ident as toql::key::Key>::get_key( entity
-                                                    . #rust_field_ident .as_ref()
-                                                     .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?)?
-                                          )
-                                      );
+                                        if let Some(field) = &entity. #rust_field_ident {
+                                            <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("?, "));
+                                             params.extend_from_slice(
+                                                &<#rust_type_ident as toql::key::Key>::params(
+                                                            &<#rust_type_ident as toql::key::Key>::get_key(field)?));
+                                        } else {
+                                              <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("DEFAULT, "));
+                                        }                                     
                                     )
                                 },
                                 _ => { // T
                                     quote!(
+                                        <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("?, "));
                                         params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
                                    )
                                 }
@@ -158,13 +176,13 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
       
 
-        let insert_params_code = &self.insert_params_code;
+        let insert_values_code = &self.insert_values_code;
         
 
         
         let mods = {
             let insert_statement = format!(
-                "INSERT {{}}INTO {} ({{}}) VALUES",
+                "INSERT {{}}INTO {} ({{}}) VALUES ",
                 self.sql_table_name 
             );
             let insert_columns_code = &self.insert_columns_code;
@@ -176,6 +194,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
                      fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
                      {
+                            if entities.is_empty() {
+                                return Ok(None);
+                            }
 
                             let mut params :Vec<String>= Vec::new();
                             let mut columns :Vec<String>= Vec::new();
@@ -188,19 +209,22 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
 
                             #(#insert_columns_code)*
-                            let placeholder = format!(" ({})",columns.iter().map(|_| "?").collect::<Vec<&str>>().join(","));
-                            let mut insert_stmt = format!( #insert_statement, ignore, columns.join(","));
+                            
+                            let mut insert_stmt = format!( #insert_statement, ignore, columns.join(", "));
+
+                           
 
                             for bentity in entities {
                                 let entity = bentity.borrow();
-                                // #(#insert_placeholder_code)*
-                                insert_stmt.push_str( &placeholder );
-                                #(#insert_params_code)*
+                                insert_stmt.push('(');
+                                #(#insert_values_code)*
+                                insert_stmt.pop(); // remove ', '
+                                insert_stmt.pop();
+                                insert_stmt.push_str("), ");
                             }
-                             if params.is_empty() {
-                                return Ok(None);
-                            }
-                            if  let toql::mutate::DuplicateStrategy::Update = strategy{
+                            insert_stmt.pop(); // remove ', '
+                            insert_stmt.pop();
+                            if  let toql::mutate::DuplicateStrategy::Update = strategy {
                                 insert_stmt.push_str(" ON DUPLICATE UPDATE");
                             };
                             Ok(Some((insert_stmt, params)))
