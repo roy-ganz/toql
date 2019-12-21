@@ -7,3 +7,10 @@ macro_rules! log_sql {
         $crate::log::info!("SQL `{}`", $s)
     };
 }
+
+#[macro_export]
+macro_rules! log_toql {
+    ($s:expr) => {
+        $crate::log::info!("Toql `{}`", $s)
+    };
+}

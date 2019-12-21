@@ -367,10 +367,7 @@ impl FieldHandler for BasicFieldHandler {
                 select.1.push(sql_param(criteria.clone()));
                 select.1
             }))),
-            FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(format!(
-                "no filter `{}` found.",
-                name
-            ))), // Must be implemented by user
+            FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(name.to_owned())), // Must be implemented by user
         }
     }
 }
@@ -548,20 +545,30 @@ impl SqlMapper {
     pub fn map_handler_with_options<'a, H>(
         &'a mut self,
         toql_field: &str,
-        expression: &str,
+        sql_expression: &str,
         handler: H,
         options: FieldOptions,
     ) -> &'a mut Self
     where
         H: 'static + FieldHandler + Send + Sync,
     {
+        // TODO put into function
+        let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        let sql_expression = sql_expression.to_string();
+        let mut sql_query_params = Vec::new();
+        let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
+            let name = &e[1];
+            sql_query_params.push(name.to_string());
+            "?"
+        });
+
         let t = SqlTarget {
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
             handler: Arc::new(handler),
-            expression: expression.to_string(),
-            sql_query_params: Vec::new(),
+            expression: sql_expression.to_string(),
+            sql_query_params: sql_query_params,
         };
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);

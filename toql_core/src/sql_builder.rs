@@ -47,6 +47,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt;
 
+
 struct SqlTargetData {
     selected: bool, // Target is selected
     used: bool,     // Target is either selected or filtered
@@ -373,7 +374,7 @@ impl SqlBuilder {
             } 
         }
 
-        println!("Selected joins {:?}", selected_paths);
+        //println!("Selected joins {:?}", selected_paths);
         // Process top level joins
         build_joins(join_root, selected_paths, sql_joins, result,  join_tree);
 
@@ -430,8 +431,6 @@ impl SqlBuilder {
 
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
         let mut selected_paths: BTreeSet<String> = BTreeSet::new();
-
-       // let mut used_paths: BTreeSet<String> = BTreeSet::new();
 
         let mut result = SqlBuilderResult {
             table: sql_mapper.table.clone(),
@@ -573,11 +572,12 @@ impl SqlBuilder {
                                 
                                  // Skip any field on path with failed validation
                                 if last_validated_path.1 != true {
-                                    println!("Path {} is invalid!", last_validated_path.0);
+                                   // println!("Path {} is invalid!", last_validated_path.0);
                                     continue;
-                                } else {
-                                    println!("Path {} is valid!", last_validated_path.0);
                                 }
+                                /*  else {
+                                    //println!("Path {} is valid!", last_validated_path.0);
+                                } */
                                 
                              }
                              
