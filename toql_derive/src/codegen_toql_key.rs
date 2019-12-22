@@ -208,7 +208,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             }
 
 
-            impl Into<toql::query::Query> for #struct_key_ident {
+        /*     impl Into<toql::query::Query> for #struct_key_ident {
                     fn into(self) -> toql::query::Query {
                             #struct_key_wrapper_ident( vec![self]).into()
                     }
@@ -218,7 +218,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                 fn into(self) -> toql::query::Query {
                             self.to_owned().into()
                 }
-            }
+            } */
 
             
                  

@@ -58,13 +58,9 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                     ));
                 if regular_attrs.key {
                     self.key_composite_predicates.push(quote! {
-                        .and(toql::query::Field::from(#toql_field).eq( &key . #key_index))
+                        .and(toql::query::Field::from(#toql_field).eq( &self . #key_index))
                     });
-                    
-                    self.key_simple_predicate = Some( quote!(
-                            .and(toql::query::Field::from(#toql_field).ins( it.map(|k| k. #key_index).collect()))
-                        ));
-                    } 
+                } 
                 },
             
             x @ _ => {
@@ -72,11 +68,11 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                     if join_attrs.key {
                         self.key_composite_predicates.push(
                             quote!(
-                                    .and(key. #key_index)
+                                    .and(&self. #key_index)
                                     //.and( <#rust_type_ident as toql::key::Key>::Key::key_predicate(key. #key_index))
                                 )
                         );
-                        self.key_simple_predicate = Some( quote!(
+                       /*  self.key_simple_predicate = Some( quote!(
                              .and( {
                                 let q = toql::query::Query::new();
                                 for key in it {
@@ -85,7 +81,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                                 }
                                 q
                             })
-                        ));
+                        )); */
                      
                     
                     }
@@ -130,7 +126,13 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
         let key_composite_predicates = &self.key_composite_predicates;
        
 
-        let key_predicate_code = if key_composite_predicates.len() == 1 {
+        let key_predicate_code = 
+            quote!(
+                let query = toql::query::Query::new() #(#key_composite_predicates)*;
+                query
+            );
+        
+       /*  let key_predicate_code = if key_composite_predicates.len() == 1 {
              let key_simple_predicate = self.key_simple_predicate.as_ref().unwrap();
                quote!(
                   toql::query::Query::new() #key_simple_predicate
@@ -138,20 +140,20 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
         } else {
             quote!(
                 let mut query = toql::query::Query::new();
-                for key in it{
+                for key in it {
                     let q = toql::query::Query::new() #(#key_composite_predicates)*;
                     query = query.or(q);
                 }
                 query
             )
-        };
-    let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &struct_ident), Span::call_site());
-
+        }; */
+    //let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &struct_ident), Span::call_site());
+/* 
     let serde = if self.serde_key {
             quote!( ,Deserialize, Serialize)
         } else { 
             quote!()
-        };
+        }; */
 
         let builder = quote!(
 
@@ -188,16 +190,16 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                     }
                 } */
 
-                impl Into<toql::query::Query> for #struct_key_wrapper_ident {
+                impl Into<toql::query::Query> for #struct_key_ident {
                     fn into(self) -> toql::query::Query {
-                         let it = self.0.into_iter();
+                        // let it = self.into_iter();
                         #key_predicate_code
                     }
                 } 
-                 impl Into<toql::query::Query> for &#struct_key_wrapper_ident {
+                 impl Into<toql::query::Query> for &#struct_key_ident {
                     fn into(self) -> toql::query::Query {
                        
-                       let it  =  self.0.clone().into_iter(); // Sorry for the clone, RUST just burned too much time on this.
+                       //let it  =  self.clone().into_iter(); // Sorry for the clone, RUST just burned too much time on this.
                        #key_predicate_code
                     }
                 } 
