@@ -17,7 +17,7 @@ use syn::{Ident, Path};
 
 
 
-//use darling::{Result, Error};
+
 
 #[derive(Debug, FromMeta, Clone)]
 pub struct Pair {
@@ -28,11 +28,6 @@ pub struct Pair {
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-    /*    #[darling(rename = "self_field", default)]
-    pub this_field: Option<String>,
-    #[darling(default)]
-    pub other_field: Option<String>,
-     */
     #[darling(default, multiple)]
     pub fields: Vec<Pair>,
 
@@ -42,11 +37,6 @@ pub struct MergeArg {
 
 #[derive(Debug, FromMeta)]
 pub struct JoinArg {
-    /*   #[darling(rename = "self_column", multiple)]
-    pub this_columns: Vec<String>,
-
-     #[darling(rename = "other_column", multiple)]
-    pub other_columns: Vec<String>,  */
     #[darling(default, multiple)]
     pub columns: Vec<Pair>,
 
@@ -200,6 +190,15 @@ pub enum RenameCase {
     #[darling(rename = "mixedCase")]
     MixedCase,
 }
+#[derive(FromMeta, Clone, Debug)]
+pub struct MapArg {
+    pub field : String,
+    pub sql : String,
+
+    #[darling(default)]
+    pub handler : Option<Path>
+}
+
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(toql), forward_attrs(allow, doc, cfg), supports(struct_any))]
@@ -223,8 +222,11 @@ pub struct Toql {
     pub skip_query_builder: bool,
     #[darling(default)]
     pub serde_key: bool,
+    #[darling(multiple)]
+    pub map : Vec<MapArg>,
+
     pub data: darling::ast::Data<(), ToqlField>,
-    
+  
 }
 
 impl quote::ToTokens for Toql {
@@ -258,6 +260,7 @@ impl quote::ToTokens for Toql {
             skip_query,
             skip_query_builder,
             serde_key:_,
+            map: _,
             ref data,
         } = *self;
 

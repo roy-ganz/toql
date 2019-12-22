@@ -17,13 +17,36 @@ pub(crate) struct GeneratedToqlMapper<'a> {
 
 impl<'a> GeneratedToqlMapper<'a> {
     pub(crate) fn from_toql(rust_struct: &'a Struct) -> GeneratedToqlMapper {
+        
+        let mut field_mappings : Vec<TokenStream> = Vec::new();
+        for mapping in &rust_struct.mapped_fields {
+            let toql_field_name = &mapping.field;
+            let sql_mapping = &mapping.sql;
+
+            match &mapping.handler {
+                    Some(handler) => {
+                        field_mappings.push(quote! {
+                                mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
+                                #sql_mapping, #handler (), toql::sql_mapper::FieldOptions::new());
+                            });
+                    },
+                    None => {
+                        field_mappings.push(quote! {
+                                mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
+                                #sql_mapping,toql::sql_mapper::FieldOptions::new());
+                            });
+                    }
+            }
+        }
+
         GeneratedToqlMapper {
             rust_struct,
             merge_functions: Vec::new(),
-            field_mappings: Vec::new(),
+            field_mappings,
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
         }
+
     }
 
     pub(crate) fn add_field_mapping(&mut self, field: &crate::sane::Field) -> Result<(), ()> {

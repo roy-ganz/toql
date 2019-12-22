@@ -2,8 +2,10 @@ use crate::annot::Pair;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
+use crate::annot::MapArg;
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
+
 
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
@@ -17,12 +19,17 @@ pub struct Struct {
     pub sql_table_name: String,
     pub sql_table_alias: String,
     pub rust_struct_visibility: Visibility,
-    pub serde_key:bool
+    pub serde_key: bool,
+    pub mapped_fields: Vec<MapArg>
 }
 
 impl Struct {
     pub fn create(toql: &Toql) -> Self {
         let renamed_table = crate::util::rename_or_default(&toql.ident.to_string(), &toql.tables);
+
+        let mapped_fields : Vec<MapArg> = toql.map.iter().map(|a| MapArg{ field: a.field.to_mixed_case(), sql: a.sql.clone(), handler: a.handler.clone()}).collect::<Vec<_>>();
+
+
         Struct {
             rust_struct_ident: toql.ident.clone(),
             rust_struct_name: toql.ident.to_string(),
@@ -32,7 +39,8 @@ impl Struct {
                 .clone()
                 .unwrap_or(toql.ident.to_string().to_snake_case()),
             rust_struct_visibility: toql.vis.clone(),
-            serde_key: toql.serde_key
+            serde_key: toql.serde_key,
+            mapped_fields,
         }
     }
 }

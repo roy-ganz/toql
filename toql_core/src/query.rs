@@ -363,68 +363,9 @@ impl ToString for Field {
             }
         }
         match self.filter {
-            None => s.push_str(""),
-            Some(FieldFilter::Eq(ref arg)) => {
-                s.push_str("EQ ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Eqn) => {
-                s.push_str("EQN");
-            }
-            Some(FieldFilter::Ne(ref arg)) => {
-                s.push_str("NE ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Nen) => {
-                s.push_str("NEN");
-            }
-            Some(FieldFilter::Gt(ref arg)) => {
-                s.push_str("GT ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Ge(ref arg)) => {
-                s.push_str("GE ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Lt(ref arg)) => {
-                s.push_str("LT ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Le(ref arg)) => {
-                s.push_str("LE ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Lk(ref arg)) => {
-                s.push_str("LK ");
-                s.push_str(arg);
-            }
-            Some(FieldFilter::Re(ref arg)) => {
-                s.push_str("RE ");
-                s.push_str(arg);
-            }
-            /*  Some(FieldFilter::Sc(ref arg)) => {
-                s.push_str("SC ");
-                s.push_str(arg);
-            } */
-            Some(FieldFilter::Bw(ref lower, ref upper)) => {
-                s.push_str("BW ");
-                s.push_str(lower);
-                s.push(' ');
-                s.push_str(upper);
-            }
-            Some(FieldFilter::In(ref args)) => {
-                s.push_str("IN ");
-                s.push_str(&args.join(" "))
-            }
-            Some(FieldFilter::Out(ref args)) => {
-                s.push_str("OUT ");
-                s.push_str(&args.join(" "))
-            }
-            Some(FieldFilter::Fn(ref name, ref args)) => {
-                s.push_str("FN ");
-                s.push_str(name);
-                s.push(' ');
-                s.push_str(&args.join(" "))
+            None => {},
+            Some(ref filter) => {
+                s.push_str( filter.to_string().as_str());
             }
         }
         s
@@ -463,6 +404,78 @@ pub enum FieldFilter {
     //  Sc(String),
     Fn(String, Vec<String>), // Function name, args
 }
+
+impl ToString for FieldFilter {
+
+
+    fn to_string(&self) -> String { 
+        let mut s = String::new();
+        match self {
+                FieldFilter::Eq(ref arg) => {
+                    s.push_str("EQ ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Eqn => {
+                    s.push_str("EQN");
+                }
+                FieldFilter::Ne(ref arg) => {
+                    s.push_str("NE ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Nen => {
+                    s.push_str("NEN");
+                }
+                FieldFilter::Gt(ref arg) => {
+                    s.push_str("GT ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Ge(ref arg) => {
+                    s.push_str("GE ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Lt(ref arg) => {
+                    s.push_str("LT ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Le(ref arg) => {
+                    s.push_str("LE ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Lk(ref arg) => {
+                    s.push_str("LK ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Re(ref arg) => {
+                    s.push_str("RE ");
+                    s.push_str(arg);
+                }
+                FieldFilter::Bw(ref lower, ref upper) => {
+                    s.push_str("BW ");
+                    s.push_str(lower);
+                    s.push(' ');
+                    s.push_str(upper);
+                }
+                FieldFilter::In(ref args) => {
+                    s.push_str("IN ");
+                    s.push_str(&args.join(" "))
+                }
+                FieldFilter::Out(ref args) => {
+                    s.push_str("OUT ");
+                    s.push_str(&args.join(" "))
+                }
+                FieldFilter::Fn(ref name, ref args) => {
+                    s.push_str("FN ");
+                    s.push_str(name);
+                    s.push(' ');
+                    s.push_str(&args.join(" "))
+                }
+        }
+        s
+    }
+}
+
+
+
 #[derive(Clone, Debug)]
 pub(crate) enum FieldOrder {
     Asc(u8),
