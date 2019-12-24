@@ -394,6 +394,9 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
             quote! {
 
                 impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::dialect::Generic {
+
+                    type error = toql::error::ToqlError;
+
                     fn delete_many_sql(keys: &[<#struct_ident as toql::key::Key>::Key]) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
                             let alias= "t";
@@ -434,6 +437,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 }
                 impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::dialect::Generic {
 
+                    type error = toql::error::ToqlError;
 
                     fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q]) -> toql::error::Result<Option<(String, Vec<String>)>>
                     {
@@ -498,7 +502,10 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 }
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Diff<'_,#struct_ident>  for toql::mysql::MySql<'a,T>
                 {
-                    fn shallow_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)]) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    type error = toql::mysql::error::ToqlMySqlError;
+
+                    fn shallow_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)]) 
+                    -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                     
                     {
                         let mut params: Vec<String> = Vec::new();
@@ -565,7 +572,8 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)]) -> toql::error::Result<Option<Vec<(String,Vec<String>)>>>
+                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)]) 
+                    -> Result<Option<Vec<(String,Vec<String>)>>, toql :: mysql::error:: ToqlMySqlError>
                     {
 
                         let mut sql: Vec<(String, Vec<String>)> = Vec::new();

@@ -26,7 +26,7 @@ impl SqlBuilderResult {
         !self.any_selected && self.where_clause.is_empty() && self.having_clause.is_empty()
     }
 
-    fn sql_body(&self, s: &mut String) {
+    pub fn sql_body(&self, s: &mut String) {
         if self.distinct {
             s.push_str(" DISTINCT ");
         }
@@ -51,25 +51,7 @@ impl SqlBuilderResult {
         }
     }
 
-    /// Returns SQL for MySql.
-    /// This function is only available, if you have the _mysql_ feature enabled in your Toql dependency.
-    #[cfg(feature = "mysqldb")]
-    pub fn to_sql_for_mysql(&self, hint: &str, offset: u64, max: u16) -> String {
-        let mut s = String::from("SELECT ");
-
-        if !hint.is_empty() {
-            s.push_str(hint);
-            s.push(' ');
-        }
-
-        self.sql_body(&mut s);
-        s.push_str(" LIMIT ");
-        s.push_str(&offset.to_string());
-        s.push(',');
-        s.push_str(&max.to_string());
-
-        s
-    }
+  
     /// Returns simple SQL.
     pub fn to_sql(&self) -> String {
         let mut s = String::from("SELECT ");

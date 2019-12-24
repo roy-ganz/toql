@@ -1,8 +1,8 @@
 
 use crate::query::Query;
 use crate::sql_mapper::SqlMapperCache;
-use crate::error::Result;
 
+use std::result::Result;
 
 /// Page start, offset
 pub enum Page {
@@ -10,8 +10,10 @@ pub enum Page {
     Counted(u64,u16)
 }
 
-/// Trait to load entities from MySQL database.
+/// Trait to load entities from database.
 pub trait Load<T> {
+
+    type error;
     /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
@@ -19,7 +21,7 @@ pub trait Load<T> {
         &mut self,
         query: &Query,
         mappers: &SqlMapperCache,
-    ) -> Result<T>;
+    ) -> Result<T, Self::error>;
 
     /// Load a vector of structs with dependencies for a given Toql query.
     ///
@@ -31,7 +33,7 @@ pub trait Load<T> {
         query: &Query,
         mappers: &SqlMapperCache,
         page: Page
-    ) -> Result<(Vec<T>, Option<(u32, u32)>)>;
+    ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::error>;
 
 
      fn load_path(
@@ -39,14 +41,14 @@ pub trait Load<T> {
         path: &str,
         query: &crate::query::Query,
         cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> crate::error::Result<Option<std::vec::Vec<T>>>;
+    ) -> Result<Option<std::vec::Vec<T>>, Self::error>;
 
      fn load_dependencies(
         &mut self,
         entities: &mut Vec<T>,
         query: &crate::query::Query,
         cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> crate::error::Result<()>;
+    ) -> Result<(), Self::error>;
 
 }
 

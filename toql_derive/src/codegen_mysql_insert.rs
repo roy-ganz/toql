@@ -192,7 +192,10 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                 
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Insert<'_, #struct_ident> for toql::mysql::MySql<'a,T> {
 
-                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy)-> toql::error::Result<Option<(String, Vec<String>)>>
+                    type error = toql::mysql::error::ToqlMySqlError;
+
+                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy)
+                     -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                      {
                             if entities.is_empty() {
                                 return Ok(None);

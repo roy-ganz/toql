@@ -56,8 +56,7 @@ pub use toql_core::query;
 pub use toql_core::load;
 pub use toql_core::select;
 
-pub use toql_core::log_sql; // Export macro (lives at top level)
-
+pub use toql_core::log_sql; // Export macro 
 pub use toql_core::ok_or_fail; // Export macro
 
 pub use toql_core::query_builder;
@@ -71,9 +70,7 @@ pub use toql_derive as derive;
 
 pub use toql_core::log; // Reexport for derive
 
-#[cfg(feature = "mysql")]
-pub use toql_mysql as mysql;
-
 pub use toql_core::dialect; // For generic SQL code
 
-
+#[cfg(feature = "mysql")]
+pub use toql_mysql as mysql;

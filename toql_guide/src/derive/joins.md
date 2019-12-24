@@ -87,7 +87,7 @@ There are four different join situations in a Rust struct. Depending on the situ
 Notice that inner joins are **always** added to the generated SQL, because inner joins filter the resulting dataset and this behaviour must usually be preserved.
 (Table rows that have no valid inner join to another table row do not appear in the output result).
 
-Left joins however are only added, if the query string refers to the related table. Left joins do not filter output rows.
+Left joins however are only added, if the query string refers to the related table. Left joins cannot  reduce output rows.
 
 ### `Option<Option<T>>`  
 A selectable optional relation. A LEFT JOIN is invoked if the query requests it.
@@ -115,6 +115,15 @@ Possible results are:
 An always selected relation, that must not be null. An INNER JOIN is always invoked.
 
 
+## Sidenote for SQL generation
+Toql can select individual fields. This is done for simple columns by selecting `null` instead of the table column and checking if the resulting column type is accordingly. 
+
+For left joins this is not possible because the database uses the same technique to indicate missing left joins. Therefore Toql generates for left joins
+a extra discriminator expression to distinguish a missing left join from an unselected left join.
+
+If you watch the generated SQL output, you will notice that JOIN statements look slightly more complicated from Toql than from some other frameworks (hello eclipse link). 
+
+This is because Toql builds correctly nested JOIN statements that reflect the dependencies among the joined structs. Any SQL builder that simply concatenates inner joins and left joins may accidentally turn left joins into inner joins. This database behaviour is not well known and usually surprises users - Toql avoids this.
 
 
 

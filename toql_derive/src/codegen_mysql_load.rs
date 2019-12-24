@@ -214,14 +214,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!(
                 fn load_dependencies(&mut self, mut _entities: &mut Vec< #struct_ident >,
                 _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache)
-                -> toql::error::Result<()>
+                -> Result<(), toql::mysql::error::ToqlMySqlError>
                 { Ok(())}
             )
         } else {
             quote!(
                 fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident >,
                 query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache)
-                -> toql::error::Result<()>
+                -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
                     let conn = &mut self.0;
                     #(#path_loaders)*
@@ -252,11 +252,13 @@ impl<'a> GeneratedMysqlLoad<'a> {
           
             impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::load::Load<#struct_ident> for toql::mysql::MySql<'a,T>
             {
+                type error = toql :: mysql::error::ToqlMySqlError;
+
                 fn load_one(&mut self, query: &toql::query::Query,
                 
                     cache: &toql::sql_mapper::SqlMapperCache,
                    )
-                    -> toql::error::Result<# struct_ident>
+                    -> Result<# struct_ident, toql :: mysql::error:: ToqlMySqlError>
                    
                 {
                      let conn = &mut self.0;
@@ -264,20 +266,20 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
-                    .build(mapper, &query)?;
+                    .build(mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
-                    toql::log_sql!(result.to_sql_for_mysql("", 0, 2), result.params());
-
-
+                    toql::log_sql!(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params());
 
 
-                    let entities_stmt = conn.prep_exec(result.to_sql_for_mysql( "", 0, 2), result.params())?;
+
+
+                    let entities_stmt = conn.prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params())?;
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
 
                     if entities.len() > 1 {
-                        return Err(toql::error::ToqlError::NotUnique);
+                        return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotUnique));
                     } else if entities.is_empty() {
-                        return Err(toql::error::ToqlError::NotFound);
+                        return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotFound));
                     }
 
                     #load_one_call_dependencies
@@ -289,7 +291,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                
                 cache: &toql::sql_mapper::SqlMapperCache,
                 page: toql::load::Page)
-                -> toql::error::Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>)>
+                -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql :: mysql::error:: ToqlMySqlError>
                 {
                     let conn = &mut self.0;
                     let mut count = false;
@@ -307,11 +309,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
-                    .build(mapper, &query)?;
+                    .build(mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
-                    toql::log_sql!(result.to_sql_for_mysql(&hint, first, max), result.params());
+                    toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params());
 
-                    let entities_stmt = conn.prep_exec(result.to_sql_for_mysql( &hint, first, max), result.params())?;
+                    let entities_stmt = conn.prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params())?;
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
                     let mut count_result = None;
 
@@ -323,9 +325,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                         let result = toql::sql_builder::SqlBuilder::new()
                         #(#ignored_paths)*
-                        .build_count(mapper, &query)?;
-                        toql::log_sql!(result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params());
-                        conn.prep_exec(result.to_sql_for_mysql("SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
+                        .build_count(mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
+                        toql::log_sql!(toql::mysql::sql_from_query_result( &result, "SQL_CALC_FOUND_ROWS", 0, 0), result.params());
+                        conn.prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
 
                         toql::log_sql!("SELECT FOUND_ROWS();");
                         let r = conn.query("SELECT FOUND_ROWS();")?;
@@ -340,12 +342,12 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 fn load_path(&mut self,path: &str, query: &toql::query::Query,
                     cache: &toql::sql_mapper::SqlMapperCache
                    )
-                -> toql::error::Result<Option<std::vec::Vec< #struct_ident >>>
+                -> Result<Option<std::vec::Vec< #struct_ident >>,toql :: mysql::error:: ToqlMySqlError>
                
                 {
                     let conn = &mut self.0;
                     let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query)?;
+                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
                     toql::log_sql!( result.to_sql(),result.params());
 
                     if result.is_empty() {
@@ -496,6 +498,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
 
 
             impl toql :: mysql :: row:: FromResultRow < #struct_ident > for #struct_ident {
+           
             fn forward_row(mut i : usize) -> usize {
                 i += #regular_fields ;
                 #(#forward_joins)*
@@ -503,7 +506,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
             }
 
             fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize) 
-                -> std::result::Result < #struct_ident , toql:: error :: ToqlError > {
+                -> toql :: mysql :: error:: Result < #struct_ident> {
 
                 Ok ( #struct_ident {
                     #(#mysql_deserialize_fields),*

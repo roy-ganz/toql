@@ -8,9 +8,6 @@ use std::fmt;
 
 use pest::error::Error as PestError;
 
-#[cfg(feature = "mysqldb")]
-use mysql::error::Error;
-
 #[macro_export]
 macro_rules! ok_or_fail {
     ( $var:expr ) => {
@@ -37,10 +34,6 @@ pub enum ToqlError {
     ValueMissing(String),
     /// SQL Builder failed to turn Toql query into SQL query.
     SqlBuilderError(SqlBuilderError),
-    #[cfg(feature = "mysqldb")]
-    /// MySQL failed to run the SQL query. For feature `mysql`
-    MySqlError(Error),
-
     /// Toql failed to convert row value into struct field
     DeserializeError(String, String),
 
@@ -55,12 +48,7 @@ impl From<SqlBuilderError> for ToqlError {
     }
 }
 
-#[cfg(feature = "mysqldb")]
-impl From<Error> for ToqlError {
-    fn from(err: Error) -> ToqlError {
-        ToqlError::MySqlError(err)
-    }
-}
+
 
 impl From<PestError<Rule>> for ToqlError {
     fn from(err: PestError<Rule>) -> ToqlError {
@@ -75,8 +63,7 @@ impl fmt::Display for ToqlError {
             ToqlError::NotUnique => write!(f, "no unique result found "),
             ToqlError::MapperMissing(ref s) => write!(f, "no mapper found for `{}`", s),
             ToqlError::ValueMissing(ref s) => write!(f, "no value found for `{}`", s),
-            #[cfg(feature = "mysqldb")]
-            ToqlError::MySqlError(ref e) => e.fmt(f),
+          
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),

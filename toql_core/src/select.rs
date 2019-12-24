@@ -1,9 +1,12 @@
 
-use crate::error::ToqlError;
+
 use crate::key::Key;
 
 /// Trait to select entities from database.
 pub trait Select<T: Key> {
+
+    type  error;
+
     /// SQL fragment to select columns
     /// (internal use)
     fn columns_sql(alias: &str) -> String;
@@ -22,7 +25,7 @@ pub trait Select<T: Key> {
         &mut self,
         key: <T as Key>::Key,
        
-    ) -> Result<T, ToqlError>;
+    ) -> Result<T, Self::error>;
 
     /// Select a vector of structs with all dependencies for a given key.
     ///
@@ -41,5 +44,5 @@ pub trait Select<T: Key> {
         &mut self,
         join: &str,
         params: &Vec<String>,
-    ) -> Result<Vec<T>, ToqlError>;
+    ) -> Result<Vec<T>, Self::error>;
 }

@@ -271,6 +271,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         let select = quote! {
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::select::Select<#struct_ident> for toql::mysql::MySql<'a,T> {
 
+                    type error = toql :: mysql::error:: ToqlMySqlError;
+
 
                     fn columns_sql(alias: &str) -> String {
                            #columns_sql_code
@@ -288,7 +290,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
 
                      fn select_one(&mut self, key: <#struct_ident as toql::key::Key>::Key)
-                     -> Result<#struct_ident,  toql::error::ToqlError>
+                     -> Result<#struct_ident, toql :: mysql::error:: ToqlMySqlError>
                      {
                         let conn = &mut self.0;
                         let select_stmt = format!( "{} WHERE {} LIMIT 0,2", <Self as  toql::select::Select<#struct_ident>>::select_sql(None), [ #(#select_keys),*].join( " AND "));
@@ -302,9 +304,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         let mut entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
 
                         if entities.len() > 1 {
-                            return Err( toql::error::ToqlError::NotUnique);
+                            return Err( toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::NotUnique));
                         } else if entities.is_empty() {
-                            return Err( toql::error::ToqlError::NotFound);
+                            return Err( toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::NotFound));
                         }
 
                         let key_predicate = [ #(#select_keys),*].join( " AND ");
@@ -312,20 +314,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         Ok(entities.pop().unwrap())
                      }
 
-/* 
-                        fn select_many(
-                            &mut self,
-                            key: &<#struct_ident as toql::key::Key>::Key,
-                            first: u64,
-                            max: u16
-                        ) -> Result<Vec< #struct_ident> ,  toql::error::ToqlError>
-                        {
-                                unimplemented!();
-
-
-                        }
- */
-                        fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> ,  toql::error::ToqlError>
+                        fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> , toql :: mysql::error:: ToqlMySqlError>
                            
                             {
                                 let conn = &mut self.0;
