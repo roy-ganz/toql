@@ -345,7 +345,8 @@ impl<'a> GeneratedToqlDelup<'a> {
                              let outdated = boutdated.borrow();
                              let entity = bentity.borrow();
                             #optional_if {
-                                 let (insert_sql, diff_sql, delete_sql) = toql::mutate::collection_delta_sql::<#rust_type_ident,Self, Self, toql::dialect::Generic>(
+                                 let (insert_sql, diff_sql, delete_sql) = 
+                                        toql::mutate::collection_delta_sql::<#rust_type_ident,Self, Self, toql::dialect::Generic, toql::mysql::error::ToqlMySqlError>(
                                      outdated. #rust_field_ident .as_ref() #optional_ok_or,
                                     entity.#rust_field_ident .as_ref() #optional_unwrap )?;
 
