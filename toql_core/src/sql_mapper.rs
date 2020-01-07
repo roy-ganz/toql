@@ -98,6 +98,7 @@ pub struct FieldOptions {
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) ignore_wildcard: bool, // Ignore field for wildcard selection
     pub(crate) roles: BTreeSet<String>, // Only for use by these roles
+    pub(crate) filter_only: bool,   // This field cannot be loaded, its only used as a filter
 }
 
 impl FieldOptions {
@@ -109,6 +110,7 @@ impl FieldOptions {
             count_select: false,
             ignore_wildcard: false,
             roles: BTreeSet::new(),
+            filter_only: false
         }
     }
 
@@ -143,6 +145,13 @@ impl FieldOptions {
     /// the _admin_ role.
     pub fn restrict_roles(mut self, roles: BTreeSet<String>) -> Self {
         self.roles = roles;
+        self
+    }
+
+    /// The field can only be used to filter query results. 
+    /// It is ommitted in the select statement and cannot be deserialized
+    pub fn filter_only(mut self, filter_only: bool) -> Self {
+        self.filter_only = filter_only;
         self
     }
 }

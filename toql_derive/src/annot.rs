@@ -223,7 +223,7 @@ pub struct Toql {
     #[darling(default)]
     pub serde_key: bool,
     #[darling(multiple)]
-    pub map : Vec<MapArg>,
+    pub map_filter : Vec<MapArg>,
 
     pub data: darling::ast::Data<(), ToqlField>,
   
@@ -260,7 +260,7 @@ impl quote::ToTokens for Toql {
             skip_query,
             skip_query_builder,
             serde_key:_,
-            map: _,
+            map_filter: _,
             ref data,
         } = *self;
 

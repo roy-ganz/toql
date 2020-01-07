@@ -20,14 +20,14 @@ pub struct Struct {
     pub sql_table_alias: String,
     pub rust_struct_visibility: Visibility,
     pub serde_key: bool,
-    pub mapped_fields: Vec<MapArg>
+    pub mapped_filter_fields: Vec<MapArg>
 }
 
 impl Struct {
     pub fn create(toql: &Toql) -> Self {
         let renamed_table = crate::util::rename_or_default(&toql.ident.to_string(), &toql.tables);
 
-        let mapped_fields : Vec<MapArg> = toql.map.iter().map(|a| MapArg{ field: a.field.to_mixed_case(), sql: a.sql.clone(), handler: a.handler.clone()}).collect::<Vec<_>>();
+        let mapped_filter_fields : Vec<MapArg> = toql.map_filter.iter().map(|a| MapArg{ field: a.field.to_mixed_case(), sql: a.sql.clone(), handler: a.handler.clone()}).collect::<Vec<_>>();
 
 
         Struct {
@@ -40,7 +40,7 @@ impl Struct {
                 .unwrap_or(toql.ident.to_string().to_snake_case()),
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
-            mapped_fields,
+            mapped_filter_fields,
         }
     }
 }

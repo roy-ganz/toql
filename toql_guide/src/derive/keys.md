@@ -1,7 +1,11 @@
 # Keys
-Toql requires you to attribute the field(s) that correspond to the primary key(s) in your database with `key`.
+Toql requires you to add the attribute the `key` to field(s) that correspond to the primary key(s) in your database.
 
+For composite keys mark multiple fields with the `key` attribute.
 
+Auto generated database columns (auto increment values) should be attributed with `skip_mut` to avoid insert or update operations on them. 
+
+#### Example:
 ```struct
 struct User {
   #[toql(key, skip_skip)] // Key for delete / update, never insert / update
@@ -10,44 +14,39 @@ struct User {
 }
 ```
 
-For composite keys mark multiple fields with the `key`.
-
-Auto generated keys (auto increment) are usually attributed with `skip_mut` to avoid insert or update. 
-
 
 ## Joins
-It is also possible to mark an *inner* join with `key`. This is useful for association tables, like so
+*Inner* joins can also have the `key` attribute. This is useful for association tables.
 
+For a join used as a key the SQL builder takes the primary key(s) of the joined struct to guess the foreign key columns.
+
+#### Example:
 ```struct
 struct UserLanguage {
   #[toql(key)] 
   user_id: u64
 
   #[toql(join(), key)]  
-  language: Language
+  language: Language; // key field inside 'Language' is assumed to be 'code'
 }
 ```
-
-For a join used as a key the SQL builder takes the primary key(s) of the joined struct to guess the foreign key columns.
-
-For the example above the database table is assumed to have two columns : user_id and language_id.
-
+For the example above Toql assumes that the database table `UserLanguage`  has a composite key made up of the two columns `user_id` and `language_code`.
 
 ## Generated key struct
-The Delete and Select functions require a key to the struct you want to delete, resp. select. 
-The Toql derive creates key structs. 
+The delete and select functions require a key instead of a struct to work.
+The Toql derive creates for every `Toql` attributed struct a corresponding key struct. 
 
-A struct can be converted into their key struct. This operation can however fail, if optional key fields are none.
+A struct can be converted into its key struct. This conversion however fails, if optional key fields are `None`.
 
+#### Example
 ```
+use crate::user::{User, UserKey};
+
 let key = UserKey(10);
 let user = toql.select::<User>(key);
-
-toql.delete::<User>(user.try_into()?); // Convert struct into key
-
+toql.delete::<User>(user.try_into()?); // Convert struct into key, may fail
 ```
-
 
 
 ## Unkeyable fields
-Merged fields `Vec<T>` and fields that map to an SQL expression `#[toql(sql="..")` cannot be used as keys.
+Merged fields (`Vec<T>`) and fields that map to an SQL expression (`#[toql(sql="..")`) cannot be used as keys.

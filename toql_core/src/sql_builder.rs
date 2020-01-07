@@ -208,8 +208,10 @@ impl SqlBuilder {
         let mut any_selected = false;
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
+
+               
                 // For selected fields there exists target data
-                if sql_target.options.count_select {
+                if sql_target.options.count_select && !sql_target.options.filter_only {
                     let params = sql_target.sql_query_param_values(query_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
@@ -250,6 +252,12 @@ impl SqlBuilder {
 
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
+
+                // Skip fields that must not appear in select statement
+                if sql_target.options.filter_only {
+                    continue;
+                }
+
                 let path: &str = toql_field.trim_end_matches(|c | c != '_').trim_end_matches('_');
 
                 
