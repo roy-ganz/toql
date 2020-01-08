@@ -538,9 +538,9 @@ pub struct Query {
     pub(crate) tokens: Vec<QueryToken>,
     /// Select DISTINCT
     pub distinct: bool,
-    /// Roles a query has to access fields.
+    /* /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
-    pub roles: BTreeSet<String>,
+    pub roles: BTreeSet<String>, */
     pub params: HashMap<String, String>, // generic params
 
     pub where_predicates: Vec<String>, // Additional where clause
@@ -553,7 +553,7 @@ impl Query {
         Query {
             tokens: vec![],
             distinct: false,
-            roles: BTreeSet::new(),
+           // roles: BTreeSet::new(),
             params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
@@ -573,7 +573,7 @@ impl Query {
         Query {
             tokens: vec![QueryToken::Wildcard(Wildcard::new())],
             distinct: false,
-            roles: BTreeSet::new(),
+            //roles: BTreeSet::new(),
             params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
@@ -646,19 +646,21 @@ impl Query {
         self
     } */
 
-    /// Asserts that a query contains all required roles.
+   
+}
+
+    /// Asserts that the provided roles contains all required roles.
     /// The first missing role is returned as error.
-    pub fn assert_roles( &self, required_roles: &BTreeSet<String>) ->Result<(),  String>{
+    pub fn assert_roles(provided_roles: &BTreeSet<String>, required_roles: &BTreeSet<String>) ->Result<(),  String>{
               
                 for r in required_roles {
-                    if !self.roles.contains(r) {
+                    if !provided_roles.contains(r) {
                         return Err(r.to_owned());
                     }
                 }
            
         Ok(())
     }
-}
 
 // Doc: Display  implements automatically .to_string()
 impl fmt::Display for Query {

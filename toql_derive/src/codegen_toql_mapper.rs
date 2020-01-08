@@ -115,7 +115,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!()
                 };
 
-                let roles = &field.roles;
+                let roles = &field.load_roles;
                 let roles_ident = if roles.is_empty() {
                     quote!()
                 } else {
@@ -159,7 +159,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!()
                 };
 
-                let roles = &field.roles;
+                let roles = &field.load_roles;
                 let roles_ident = if roles.is_empty() {
                     quote!()
                 } else {

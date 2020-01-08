@@ -10,6 +10,8 @@ use crate::heck::SnakeCase;
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
 
+use std::collections::BTreeSet;
+
 //use crate::error::Result;
 use darling::Result;
 
@@ -20,7 +22,9 @@ pub struct Struct {
     pub sql_table_alias: String,
     pub rust_struct_visibility: Visibility,
     pub serde_key: bool,
-    pub mapped_filter_fields: Vec<MapArg>
+    pub mapped_filter_fields: Vec<MapArg>,
+    pub ins_roles: BTreeSet<String>,
+    pub upd_roles: BTreeSet<String>,
 }
 
 impl Struct {
@@ -41,6 +45,8 @@ impl Struct {
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
             mapped_filter_fields,
+            ins_roles: toql.ins_role.iter().cloned().collect::<BTreeSet<_>>(),
+            upd_roles: toql.upd_role.iter().cloned().collect::<BTreeSet<_>>()
         }
     }
 }
@@ -106,7 +112,8 @@ pub struct Field {
     pub toql_field_name: String,
     pub number_of_options: u8,
     pub skip_wildcard: bool,
-    pub roles: Vec<String>,
+    pub load_roles: BTreeSet<String>,
+    pub upd_roles: BTreeSet<String>,
     pub preselect: bool,
     pub kind: FieldKind,
     pub skip_mut: bool,
@@ -306,9 +313,11 @@ impl Field {
             number_of_options,
             skip_mut: field.skip_mut,
             skip_wildcard: field.skip_wildcard,
-            roles: field.role.clone(),
+            load_roles: field.load_role.iter().cloned().collect::<BTreeSet<_>>().clone(),
+            upd_roles: field.upd_role.iter().cloned().collect::<BTreeSet<_>>().clone(),
             preselect: field.preselect,
             kind,
         })
     }
 }
+

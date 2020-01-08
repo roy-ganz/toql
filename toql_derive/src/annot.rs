@@ -73,7 +73,9 @@ pub struct ToqlField {
     #[darling(default)]
     pub sql: Option<String>,
     #[darling(multiple)]
-    pub role: Vec<String>,
+    pub load_role: Vec<String>,
+    #[darling(multiple)]
+    pub upd_role: Vec<String>,
     #[darling(default)]
     pub merge: Option<MergeArg>,
     #[darling(default)]
@@ -224,6 +226,10 @@ pub struct Toql {
     pub serde_key: bool,
     #[darling(multiple)]
     pub map_filter : Vec<MapArg>,
+    #[darling(multiple)]
+    pub ins_role : Vec<String>,
+    #[darling(multiple)]
+    pub upd_role : Vec<String>,
 
     pub data: darling::ast::Data<(), ToqlField>,
   
@@ -261,6 +267,8 @@ impl quote::ToTokens for Toql {
             skip_query_builder,
             serde_key:_,
             map_filter: _,
+            ins_role:_,
+            upd_role: _,
             ref data,
         } = *self;
 

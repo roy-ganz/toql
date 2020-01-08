@@ -20,6 +20,8 @@ use core::borrow::Borrow;
 
 use toql_core::sql_builder_result::SqlBuilderResult;
 
+use std::collections::BTreeSet;
+
 //pub mod diff;
 //pub mod insert;
 pub mod row;
@@ -58,10 +60,42 @@ where
 
 
 
-pub struct MySql<'a, C:GenericConnection>(pub &'a mut C);
+pub struct MySql<'a, C:GenericConnection>{
+    conn: &'a mut C, 
+    roles: BTreeSet<String>
+}
+
 
 
 impl<C:GenericConnection> MySql<'_,C>{
+
+
+/// Create connection wrapper from MySql connection or transaction.
+///
+/// Use the connection wrapper to access all Toql functionality.
+pub fn from<'a>(conn: &'a mut C) -> MySql<'a,C> {
+    
+     MySql{
+        conn,
+        roles: BTreeSet::new()
+    }
+}
+
+/// Set roles
+///
+/// After setting the roles all Toql functions are validated against these roles.
+/// Roles on fields can be used to restrict the access (Only super admin can see this field, only group admin can update this field),
+pub fn set_roles(&mut self, roles: BTreeSet<String>) {
+    self.roles= roles;
+}
+
+pub fn conn(&mut self) -> &'_ mut C {
+    self.conn
+}
+pub fn roles(&self) -> &BTreeSet<String> {
+    &self.roles
+}
+
 /// Insert one struct.
 ///
 /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
@@ -73,8 +107,8 @@ where
     T : 'a
 {
     
-    let sql = <Self as Insert<'a, T>>::insert_one_sql(entity, DuplicateStrategy::Fail)?;
-    execute_insert_sql(sql, self.0)
+    let sql = <Self as Insert<'a, T>>::insert_one_sql(entity, DuplicateStrategy::Fail, &self.roles)?;
+    execute_insert_sql(sql, self.conn)
 }
 
 /// Insert a collection of structs.
@@ -87,10 +121,10 @@ where
     T: 'a,
     Q: Borrow<T>
 {
-    let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, DuplicateStrategy::Fail)?;
+    let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, DuplicateStrategy::Fail, &self.roles)?;
   
     Ok(if let Some(sql) = sql {
-        execute_insert_sql(sql, self.0)?
+        execute_insert_sql(sql, self.conn)?
     } else {
         0
     })
@@ -104,9 +138,9 @@ where
     T: 'a,
    Self:  Insert<'a,T, error = ToqlMySqlError> + InsertDuplicate,
 {
-    let sql =  <Self as Insert<'a, T>>::insert_one_sql(entity, strategy)?;
+    let sql =  <Self as Insert<'a, T>>::insert_one_sql(entity, strategy, &self.roles)?;
      
-    execute_insert_sql(sql, self.0)
+    execute_insert_sql(sql, self.conn)
 }
 
 /// Insert a collection of structs.
@@ -120,11 +154,11 @@ where
    Q: Borrow<T>
     
 {
-    let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, strategy)?;
+    let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, strategy, &self.roles)?;
      
     Ok(if let Some(sql) = sql {
         
-        execute_insert_sql(sql, self.0)?
+        execute_insert_sql(sql, self.conn)?
     } else {
         0
     })
@@ -141,9 +175,9 @@ where
    
   
 {
-    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_one_sql(key)?;
+    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_one_sql(key, &self.roles)?;
      
-    execute_update_delete_sql(sql, self.0)
+    execute_update_delete_sql(sql, self.conn)
 }
 
 /// Delete a collection of structs.
@@ -157,11 +191,11 @@ where
     
 {
     
-    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_many_sql(&keys)?;
+    let sql =  <toql_core::dialect::Generic as Delete<'a,T>>::delete_many_sql(&keys, &self.roles)?;
 
     Ok(if let Some(sql) = sql {
         
-        execute_update_delete_sql(sql, self.0)?
+        execute_update_delete_sql(sql, self.conn)?
        } else {
         0
     })
@@ -178,11 +212,11 @@ where
    T: 'a,
    Q: Borrow<T>
 {
-    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(&entities)?;
+    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_many_sql(&entities, &self.roles)?;
 
     Ok(if let Some(sql) = sql {
          
-        execute_update_delete_sql(sql, self.0)?
+        execute_update_delete_sql(sql, self.conn)?
     /* log_sql!(update_stmt, params);
     let mut stmt = conn.prepare(&update_stmt)?;
     let res = stmt.execute(params)?;
@@ -212,11 +246,11 @@ where
     T:'a
    
 {
-    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_one_sql(entity)?;
+    let sql = <toql_core::dialect::Generic as Update<'a,T>>::update_one_sql(entity, &self.roles)?;
 
     Ok(if let Some(sql) = sql {
           
-        execute_update_delete_sql(sql, self.0)?
+        execute_update_delete_sql(sql, self.conn)?
     } else {
         0
     })
@@ -233,12 +267,12 @@ where
    
   
 {
-    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities)?;
+    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities, &self.roles)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
           
         for sql_stmt in sql_stmts {
-            affected += execute_update_delete_sql(sql_stmt, self.0)?;
+            affected += execute_update_delete_sql(sql_stmt, self.conn)?;
             /* let (update_stmt, params) = statements;
             log::info!("SQL `{}` with params {:?}", update_stmt, params);
             let mut stmt = conn.prepare(&update_stmt)?;
@@ -278,18 +312,18 @@ where
       
 {
     
-    let (insert_sql, diff_sql, delete_sql) = collection_delta_sql::<T,Self,Self, toql_core::dialect::Generic, ToqlMySqlError>(outdated, updated)?;
+    let (insert_sql, diff_sql, delete_sql) = collection_delta_sql::<T,Self,Self, toql_core::dialect::Generic, ToqlMySqlError>(outdated, updated, &self.roles)?;
     let mut affected = (0, 0, 0);
       
 
     if let Some(insert_sql) = insert_sql {
-        affected.0 += execute_update_delete_sql(insert_sql, self.0)?;
+        affected.0 += execute_update_delete_sql(insert_sql, self.conn)?;
     }
     if let Some(diff_sql) = diff_sql {
-        affected.1 += execute_update_delete_sql(diff_sql, self.0)?;
+        affected.1 += execute_update_delete_sql(diff_sql, self.conn)?;
     }
     if let Some(delete_sql) = delete_sql {
-        affected.2 += execute_update_delete_sql(delete_sql, self.0)?;
+        affected.2 += execute_update_delete_sql(delete_sql, self.conn)?;
     }
    
 

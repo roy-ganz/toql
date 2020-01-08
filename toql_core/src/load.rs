@@ -11,10 +11,14 @@ pub enum Page {
 }
 
 /// Trait to load entities from database.
+/// This is implemented for each SQL dialect, whereas <T> is the entity to load: E.g. impl Load<User> for MySql
 pub trait Load<T> {
 
     type error;
     /// Load a struct with dependencies for a given Toql query.
+    /// 
+    /// /// Roles a query has to access fields.
+    /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
     fn load_one(
@@ -32,7 +36,7 @@ pub trait Load<T> {
         &mut self,
         query: &Query,
         mappers: &SqlMapperCache,
-        page: Page
+        page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::error>;
 
 

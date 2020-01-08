@@ -38,6 +38,7 @@ use crate::query::Concatenation;
 use crate::query::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
+use crate::query::assert_roles;
 use crate::sql_builder_result::SqlBuilderResult;
 use crate::sql_mapper::Join;
 use crate::sql_mapper::JoinType;
@@ -138,9 +139,10 @@ impl SqlBuilder {
         &mut self,
         sql_mapper: &SqlMapper,
         query: &Query,
+        roles: &BTreeSet<String>
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.count_query = true;
-        self.build(sql_mapper, query)
+        self.build(sql_mapper, query, roles)
     }
 
     // Build normal query for this path
@@ -149,6 +151,7 @@ impl SqlBuilder {
         path: T,
         sql_mapper: &SqlMapper,
         query: &Query,
+        roles: &BTreeSet<String>
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.subpath = {
             let p = path.into();
@@ -158,7 +161,7 @@ impl SqlBuilder {
                 format!("{}_", p)
             }
         };
-        self.build(sql_mapper, query)
+        self.build(sql_mapper, query, roles)
     }
     
     fn build_ordering(
@@ -427,6 +430,7 @@ impl SqlBuilder {
         &mut self,
         sql_mapper: &SqlMapper,
         query: &Query,
+        roles: &BTreeSet<String>
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         let mut ordinals: BTreeSet<u8> = BTreeSet::new();
         let mut ordering: HashMap<u8, Vec<(FieldOrder, String)>> = HashMap::new();
@@ -504,7 +508,7 @@ impl SqlBuilder {
                         let mut path = wildcard_path;
                         while !path.is_empty() {
                             if let Some (join) = sql_mapper.joins.get(path) {
-                                query.assert_roles( &join.options.roles).map_err(|role| SqlBuilderError::RoleRequired(role))?;
+                                assert_roles( &roles, &join.options.roles).map_err(|role| SqlBuilderError::RoleRequired(role))?;
                             } else {
                                 return Err(SqlBuilderError::FieldMissing(path.to_owned()));
                             }
@@ -540,7 +544,7 @@ impl SqlBuilder {
 
                             // Skip fields with missing role
                             
-                            if  query.assert_roles(&sql_target.options.roles).is_err() {
+                            if assert_roles(&roles, &sql_target.options.roles).is_err() {
                                 continue;
                             }
 
@@ -656,7 +660,7 @@ impl SqlBuilder {
                             Some(sql_target) => {
                                 // Verify user role and skip field role mismatches
                                
-                               query.assert_roles(&sql_target.options.roles).map_err(|role| SqlBuilderError::RoleRequired(role))?;
+                               assert_roles( &roles,  &sql_target.options.roles).map_err(|role| SqlBuilderError::RoleRequired(role))?;
                                 
                                 // Skip filtering and ordering in count queries for unfiltered fields
                                 if self.count_query == true && !sql_target.options.count_filter {

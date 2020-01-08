@@ -6,6 +6,7 @@
 use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::TokenStream;
 use syn::Ident;
+use std::collections::BTreeSet;
 
 pub(crate) struct GeneratedMysqlInsert<'a> {
     struct_ident: &'a Ident,
@@ -14,6 +15,7 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
 
     insert_values_code: Vec<TokenStream>,
+    ins_roles: &'a BTreeSet<String>
 
 }
 
@@ -25,8 +27,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
             insert_columns_code: Vec::new(),
 
             insert_values_code: Vec::new(),
-
-           
+            ins_roles : &toql.ins_roles
         }
     }
 
@@ -187,6 +188,16 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
             );
             let insert_columns_code = &self.insert_columns_code;
 
+            let role_test = if self.ins_roles.is_empty() {
+                        quote!()
+                    } else {
+                        let roles = &self.ins_roles;
+                        quote!(
+                            toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                            .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
+                        
+                    )};
+
             quote! {
 
                 
@@ -194,9 +205,11 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
                     type error = toql::mysql::error::ToqlMySqlError;
 
-                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy)
+                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy, roles: &std::collections::BTreeSet<String>)
                      -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                      {
+                            #role_test
+
                             if entities.is_empty() {
                                 return Ok(None);
                             }

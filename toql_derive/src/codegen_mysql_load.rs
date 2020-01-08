@@ -223,7 +223,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
-                    let conn = &mut self.0;
+                    //let conn = self.conn();
                     #(#path_loaders)*
                     Ok(())
                 }
@@ -261,19 +261,19 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     -> Result<# struct_ident, toql :: mysql::error:: ToqlMySqlError>
                    
                 {
-                     let conn = &mut self.0;
+                  //   let conn = self.conn();
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
-                    .build(mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
+                    .build(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
                     toql::log_sql!(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params());
 
 
 
 
-                    let entities_stmt = conn.prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params())?;
+                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params())?;
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
 
                     if entities.len() > 1 {
@@ -293,7 +293,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 page: toql::load::Page)
                 -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql :: mysql::error:: ToqlMySqlError>
                 {
-                    let conn = &mut self.0;
+                 //   let conn = self.conn();
                     let mut count = false;
                     let mut first = 0;
                     let mut max = 10;
@@ -309,28 +309,28 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     let result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
-                    .build(mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
+                    .build(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
                     toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params());
 
-                    let entities_stmt = conn.prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params())?;
+                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params())?;
                     let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
                     let mut count_result = None;
 
                     // Get count values
                     if count {
                         toql::log_sql!("SELECT FOUND_ROWS();");
-                        let r = conn.query("SELECT FOUND_ROWS();")?;
+                        let r = self.conn().query("SELECT FOUND_ROWS();")?;
                         let total_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
 
                         let result = toql::sql_builder::SqlBuilder::new()
                         #(#ignored_paths)*
-                        .build_count(mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
+                        .build_count(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
                         toql::log_sql!(toql::mysql::sql_from_query_result( &result, "SQL_CALC_FOUND_ROWS", 0, 0), result.params());
-                        conn.prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
+                        self.conn().prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
 
                         toql::log_sql!("SELECT FOUND_ROWS();");
-                        let r = conn.query("SELECT FOUND_ROWS();")?;
+                        let r = self.conn().query("SELECT FOUND_ROWS();")?;
                         let filtered_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
                         count_result = Some((total_count ,filtered_count))
                     }
@@ -345,15 +345,15 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 -> Result<Option<std::vec::Vec< #struct_ident >>,toql :: mysql::error:: ToqlMySqlError>
                
                 {
-                    let conn = &mut self.0;
+                    //let conn = self.conn();
                     let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
+                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
                     toql::log_sql!( result.to_sql(),result.params());
 
                     if result.is_empty() {
                         Ok(None)
                     } else {
-                        let entities_stmt = conn.prep_exec(result.to_sql(), result.params())?;
+                        let entities_stmt = self.conn().prep_exec(result.to_sql(), result.params())?;
                         let entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
                         Ok(Some(entities))
                     }
@@ -451,14 +451,18 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             quote!()
                         };
 
-                    let role_test = if field.roles.is_empty() {
+                    let role_test = if field.load_roles.is_empty() {
                         quote!()
                     } else {
-                        let roles = &field.roles;
-                        quote! (query
+                        let roles = &field.load_roles;
+                        quote!(
+                            toql::query::assert_roles(&self.roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                            .map_err(|e| SqlBuilderError::RoleRequired(e))?;
+                        )
+                        /* quote! (query
                                 .assert_roles( &[ #(String::from(#roles)),* ].iter().cloned().collect())
                                 .map_err(|e| SqlBuilderError::RoleRequired(e))?;  
-                        )
+                        ) */
                     };
                     
                     self.path_loaders.push( quote!(

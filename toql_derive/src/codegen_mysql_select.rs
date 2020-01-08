@@ -292,7 +292,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                      fn select_one(&mut self, key: <#struct_ident as toql::key::Key>::Key)
                      -> Result<#struct_ident, toql :: mysql::error:: ToqlMySqlError>
                      {
-                        let conn = &mut self.0;
+                        let conn = self.conn();
                         let select_stmt = format!( "{} WHERE {} LIMIT 0,2", <Self as  toql::select::Select<#struct_ident>>::select_sql(None), [ #(#select_keys),*].join( " AND "));
 
                         let mut params :Vec<String> = Vec::new();
@@ -317,7 +317,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> , toql :: mysql::error:: ToqlMySqlError>
                            
                             {
-                                let conn = &mut self.0;
+                                let conn = self.conn();
                                 let select_stmt =  <Self as  toql::select::Select<#struct_ident>>::select_sql(Some(join));
 
                         toql::log_sql!(select_stmt, params);
