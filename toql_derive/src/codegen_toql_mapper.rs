@@ -21,7 +21,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         let mut field_mappings : Vec<TokenStream> = Vec::new();
         for mapping in &rust_struct.mapped_filter_fields {
             let toql_field_name = &mapping.field;
-            let sql_mapping = &mapping.sql;
+            let sql_mapping = &mapping.sql.replace("..",&format!("{}.", &rust_struct.sql_table_alias ));
 
             match &mapping.handler {
                     Some(handler) => {
@@ -268,6 +268,7 @@ impl<'a> GeneratedToqlMapper<'a> {
 impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
+        let struct_name = &self.rust_struct.rust_struct_name;
 
         let sql_table_name = &self.rust_struct.sql_table_name;
         let sql_table_alias = &self.rust_struct.sql_table_alias;
@@ -279,6 +280,10 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let builder = quote!(
 
             impl toql::sql_mapper::Mapped for #struct_ident {
+
+                fn type_name() -> String {
+                    String::from(#struct_name)
+                }
 
                 fn table_name() -> String {
                     String::from(#sql_table_name)

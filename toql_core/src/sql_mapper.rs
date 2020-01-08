@@ -396,8 +396,8 @@ impl SqlMapperCache {
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
         let m = SqlMapper::from_mapped::<M>();
-        self.mappers.insert(String::from(M::table_name()), m);
-        M::table_name()
+        self.mappers.insert(String::from(M::type_name()), m);
+        M::type_name()
         //self.cache.get_mut(&M::table_name()).unwrap()
     }
     pub fn insert_new_mapper_with_handler<M: Mapped, H>(&mut self, handler: H) -> String
@@ -405,8 +405,8 @@ impl SqlMapperCache {
         H: 'static + FieldHandler + Send + Sync,
     {
         let m = SqlMapper::from_mapped_with_handler::<M, _>(handler);
-        self.mappers.insert(String::from(M::table_name()), m);
-        M::table_name()
+        self.mappers.insert(String::from(M::type_name()), m);
+        M::type_name()
     }
 }
 
@@ -442,6 +442,7 @@ pub(crate) struct Join {
 pub trait Mapped {
     fn table_name() -> String;
     fn table_alias() -> String;
+    fn type_name() -> String;
     fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str); // Map entity fields
 }
 
