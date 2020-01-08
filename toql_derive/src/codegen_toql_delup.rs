@@ -20,6 +20,7 @@ pub(crate) struct GeneratedToqlDelup<'a> {
 
     diff_merge_code: Vec<TokenStream>,
     struct_upd_roles: &'a BTreeSet<String>
+    struct_ins_roles: &'a BTreeSet<String>
 }
 
 impl<'a> GeneratedToqlDelup<'a> {
@@ -35,7 +36,8 @@ impl<'a> GeneratedToqlDelup<'a> {
             diff_set_code: Vec::new(),
 
             diff_merge_code: Vec::new(),
-            struct_upd_roles : &toql.upd_roles
+            struct_upd_roles : &toql.upd_roles,
+            struct_ins_roles : &toql.ins_roles
         }
     }
     
@@ -438,7 +440,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
             let key_columns_code = &self.key_columns_code;
             let sql_table_name = &self.sql_table_name;
 
-             let role_test = if self.struct_upd_roles.is_empty() {
+             let upd_role_test = if self.struct_upd_roles.is_empty() {
                         quote!()
                     } else {
                         let roles = &self.struct_upd_roles;
@@ -447,6 +449,16 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                             .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
                         
                     )};
+                let ins_role_test = if self.struct_ins_roles.is_empty() {
+                        quote!()
+                    } else {
+                        let roles = &self.struct_ins_roles;
+                        quote!(
+                            toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                            .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
+                        
+                    )};
+
 
             quote! {
 
@@ -456,6 +468,8 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     fn delete_many_sql(keys: &[<#struct_ident as toql::key::Key>::Key],roles: &std::collections::BTreeSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
+                            #ins_role_test
+
                             let alias= "t";
                             let mut delete_stmt =format!(#delete_many_statement, alias = alias);
 
@@ -498,7 +512,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::BTreeSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                     {
-                        #role_test
+                        #upd_role_test
 
                         let mut params: Vec<String> = Vec::new();
                         let mut update_stmt = String::from("UPDATE ");
@@ -567,7 +581,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                     -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                     
                     {
-                        #role_test
+                        #upd_role_test
 
                         let mut params: Vec<String> = Vec::new();
                         let mut keys: Vec<String> = Vec::new();
@@ -637,7 +651,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                     -> Result<Option<Vec<(String,Vec<String>)>>, toql :: mysql::error:: ToqlMySqlError>
                     {
 
-                        #role_test
+                        #upd_role_test
 
                         let mut sql: Vec<(String, Vec<String>)> = Vec::new();
 
