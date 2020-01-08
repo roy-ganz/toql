@@ -20,7 +20,7 @@ use core::borrow::Borrow;
 
 use toql_core::sql_builder_result::SqlBuilderResult;
 
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 //pub mod diff;
 //pub mod insert;
@@ -62,7 +62,7 @@ where
 
 pub struct MySql<'a, C:GenericConnection>{
     conn: &'a mut C, 
-    roles: BTreeSet<String>
+    roles: HashSet<String>
 }
 
 
@@ -77,7 +77,7 @@ pub fn from<'a>(conn: &'a mut C) -> MySql<'a,C> {
     
      MySql{
         conn,
-        roles: BTreeSet::new()
+        roles: HashSet::new()
     }
 }
 
@@ -85,14 +85,14 @@ pub fn from<'a>(conn: &'a mut C) -> MySql<'a,C> {
 ///
 /// After setting the roles all Toql functions are validated against these roles.
 /// Roles on fields can be used to restrict the access (Only super admin can see this field, only group admin can update this field),
-pub fn set_roles(&mut self, roles: BTreeSet<String>) {
+pub fn set_roles(&mut self, roles: HashSet<String>) {
     self.roles= roles;
 }
 
 pub fn conn(&mut self) -> &'_ mut C {
     self.conn
 }
-pub fn roles(&self) -> &BTreeSet<String> {
+pub fn roles(&self) -> &HashSet<String> {
     &self.roles
 }
 

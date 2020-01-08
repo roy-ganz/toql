@@ -44,7 +44,7 @@ use crate::sql_mapper::Join;
 use crate::sql_mapper::JoinType;
 use crate::sql_mapper::SqlMapper;
 use crate::sql_mapper::SqlTarget;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -67,9 +67,9 @@ impl Default for SqlTargetData {
 pub struct SqlBuilder {
     count_query: bool,          // Build count query
     subpath: String,            // Build only subpath
-    joins: BTreeSet<String>,    // Use this joins
+    joins: HashSet<String>,    // Use this joins
     ignored_paths: Vec<String>, // Ignore paths, no errors are raised for them
-    selected_paths: BTreeSet<String>, // Selected paths
+    selected_paths: HashSet<String>, // Selected paths
 }
 
 #[derive(Debug)]
@@ -110,9 +110,9 @@ impl SqlBuilder {
         SqlBuilder {
             count_query: false,
             subpath: "".to_string(),
-            joins: BTreeSet::new(),
+            joins: HashSet::new(),
             ignored_paths: Vec::new(),
-            selected_paths: BTreeSet::new(),
+            selected_paths: HashSet::new(),
         }
     }
     /// Add path to list of ignore paths.
@@ -139,7 +139,7 @@ impl SqlBuilder {
         &mut self,
         sql_mapper: &SqlMapper,
         query: &Query,
-        roles: &BTreeSet<String>
+        roles: &HashSet<String>
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.count_query = true;
         self.build(sql_mapper, query, roles)
@@ -151,7 +151,7 @@ impl SqlBuilder {
         path: T,
         sql_mapper: &SqlMapper,
         query: &Query,
-        roles: &BTreeSet<String>
+        roles: &HashSet<String>
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.subpath = {
             let p = path.into();
@@ -169,7 +169,7 @@ impl SqlBuilder {
         query_parameters: &HashMap<String, String>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
-        ordinals: &BTreeSet<u8>,
+        ordinals: &HashSet<u8>,
         ordering: &HashMap<u8, Vec<(FieldOrder, String)>>,
     ) -> Result<(), SqlBuilderError> {
         // Build ordering clause
@@ -244,8 +244,8 @@ impl SqlBuilder {
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
-      //  used_paths: &BTreeSet<String>,
-        selected_paths: &BTreeSet<String>,
+      //  used_paths: &HashSet<String>,
+        selected_paths: &HashSet<String>,
        // joins: &HashMap<String, Join>,
     ) -> Result<(), SqlBuilderError> {
         // Build select clause
@@ -321,7 +321,7 @@ impl SqlBuilder {
     fn build_join_clause(
         join_root: &Vec<String>,
         join_tree: &HashMap<String, Vec<String>>,
-        selected_paths: &mut BTreeSet<String>,
+        selected_paths: &mut HashSet<String>,
         sql_joins: &HashMap<String, Join>,
         result: &mut SqlBuilderResult,
     ) {
@@ -341,7 +341,7 @@ impl SqlBuilder {
                         result
 
          }
-        fn build_joins(joins:&Vec<String>,selected_paths: &mut BTreeSet<String>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>){
+        fn build_joins(joins:&Vec<String>,selected_paths: &mut HashSet<String>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>){
             
             for join in joins {
 
@@ -378,7 +378,7 @@ impl SqlBuilder {
             }
 
         }
-        fn resolve_nested(path:&str, selected_paths: &mut BTreeSet<String>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>) {
+        fn resolve_nested(path:&str, selected_paths: &mut HashSet<String>, sql_joins: &HashMap<String, Join>, result: &mut SqlBuilderResult,  join_tree:&HashMap<String, Vec<String>>) {
 
              if join_tree.contains_key(path) {
                  let joins = join_tree.get(path).unwrap();
@@ -430,9 +430,9 @@ impl SqlBuilder {
         &mut self,
         sql_mapper: &SqlMapper,
         query: &Query,
-        roles: &BTreeSet<String>
+        roles: &HashSet<String>
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
-        let mut ordinals: BTreeSet<u8> = BTreeSet::new();
+        let mut ordinals: HashSet<u8> = HashSet::new();
         let mut ordering: HashMap<u8, Vec<(FieldOrder, String)>> = HashMap::new();
 
         let mut need_where_concatenation = false;
@@ -443,7 +443,7 @@ impl SqlBuilder {
         let mut pending_having_parens: u8 = 0;
 
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
-        let mut selected_paths: BTreeSet<String> = BTreeSet::new();
+        let mut selected_paths: HashSet<String> = HashSet::new();
 
         let mut result = SqlBuilderResult {
             table: sql_mapper.table.clone(),

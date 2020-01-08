@@ -31,7 +31,7 @@
 
 use crate::error::ToqlError;
 use std::result::Result;
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{HashMap, HashSet};
 use crate::key::Key;
 use core::borrow::Borrow;
 
@@ -42,13 +42,13 @@ pub trait Delete<'a, T: crate::key::Key + 'a> {
 
     type error;
      /// Delete one structs, returns tuple with SQL statement and SQL params or error.
-    fn delete_one_sql(key: T::Key, roles: &BTreeSet<String>) -> Result<(String, Vec<String>), Self::error> 
+    fn delete_one_sql(key: T::Key, roles: &HashSet<String>) -> Result<(String, Vec<String>), Self::error> 
     where T: crate::key::Key + 'a
     {
         Ok(Self::delete_many_sql(&[key], roles)?.unwrap())
     }
     /// Delete many structs, returns tuple with SQL statement and SQL params or error.
-    fn delete_many_sql(keys: &[T::Key], roles: &BTreeSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    fn delete_many_sql(keys: &[T::Key], roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
     
 }
 
@@ -75,11 +75,11 @@ pub trait Update<'a, T: 'a> {
     /// Update one struct, returns tuple with SQL statement and SQL params or error.
     /// Returns None, if no updates are required.
     
-    fn update_one_sql<Q : Borrow<T>>(entity: Q, roles: &BTreeSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error> {
+    fn update_one_sql<Q : Borrow<T>>(entity: Q, roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error> {
         Self::update_many_sql(&[entity], roles)
     }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
-    fn update_many_sql<Q : Borrow<T>>(entities: &[Q], roles: &BTreeSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    fn update_many_sql<Q : Borrow<T>>(entities: &[Q], roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
     
 
     
@@ -94,14 +94,14 @@ pub trait Diff<'a, T: 'a> {
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     /// Because merged structs are also considered, the returned SQL statements, can be insert, update and delete statements.
-    fn diff_one_sql<Q : Borrow<T>>(outdated:  Q, updated: Q, roles: &BTreeSet<String>) -> Result<Vec<(String, Vec<String>)>, Self::error> {
+    fn diff_one_sql<Q : Borrow<T>>(outdated:  Q, updated: Q, roles: &HashSet<String>) -> Result<Vec<(String, Vec<String>)>, Self::error> {
         Ok(Self::diff_many_sql(&[(outdated, updated)], roles)?.unwrap())
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuples with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &BTreeSet<String>) -> Result<Option<Vec<(String, Vec<String>)>>, Self::error>;
+    fn diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &HashSet<String>) -> Result<Option<Vec<(String, Vec<String>)>>, Self::error>;
     
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
@@ -110,7 +110,7 @@ pub trait Diff<'a, T: 'a> {
     fn shallow_diff_one_sql<Q : Borrow<T>>(
         outdated: Q,
         updated: Q,
-        roles: &BTreeSet<String>
+        roles: &HashSet<String>
     ) -> Result<Option<(String, Vec<String>)>, Self::error> {
         Self::shallow_diff_many_sql(&[(outdated, updated)], roles)
     }
@@ -118,7 +118,7 @@ pub trait Diff<'a, T: 'a> {
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn shallow_diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &BTreeSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    fn shallow_diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
 
 }
 
@@ -141,13 +141,13 @@ pub trait Insert<'a, T: 'a> {
     type error;
 
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
-    fn insert_one_sql<Q : Borrow<T>>(entity: Q, strategy: DuplicateStrategy, roles: &BTreeSet<String>) -> Result<(String, Vec<String>), Self::error> 
+    fn insert_one_sql<Q : Borrow<T>>(entity: Q, strategy: DuplicateStrategy, roles: &HashSet<String>) -> Result<(String, Vec<String>), Self::error> 
     
     {
         Ok(Self::insert_many_sql(&[entity], strategy, roles)?.unwrap())
     }
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
-    fn insert_many_sql<Q : Borrow<T>>(entities: &[Q],strategy: DuplicateStrategy, roles: &BTreeSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    fn insert_many_sql<Q : Borrow<T>>(entities: &[Q],strategy: DuplicateStrategy, roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
     
 }
 
@@ -169,7 +169,7 @@ pub trait InsertDuplicate {}
 pub fn collection_delta_sql<'a, T, I,U, D, E>(
     outdated: &'a [T],
     updated: &'a [T],
-    roles: &BTreeSet<String>
+    roles: &HashSet<String>
 ) -> Result<(
     Option<(String, Vec<String>)>,
     Option<(String, Vec<String>)>,

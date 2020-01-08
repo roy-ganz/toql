@@ -6,7 +6,7 @@
 use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::TokenStream;
 use syn::Ident;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 pub(crate) struct GeneratedToqlDelup<'a> {
     struct_ident: &'a Ident,
@@ -19,8 +19,8 @@ pub(crate) struct GeneratedToqlDelup<'a> {
     diff_set_code: Vec<TokenStream>,
 
     diff_merge_code: Vec<TokenStream>,
-    struct_upd_roles: &'a BTreeSet<String>,
-    struct_ins_roles: &'a BTreeSet<String>
+    struct_upd_roles: &'a HashSet<String>,
+    struct_ins_roles: &'a HashSet<String>
 }
 
 impl<'a> GeneratedToqlDelup<'a> {
@@ -466,7 +466,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     type error = toql::error::ToqlError;
 
-                    fn delete_many_sql(keys: &[<#struct_ident as toql::key::Key>::Key],roles: &std::collections::BTreeSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    fn delete_many_sql(keys: &[<#struct_ident as toql::key::Key>::Key],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
                             #ins_role_test
 
@@ -510,7 +510,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     type error = toql::error::ToqlError;
 
-                    fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::BTreeSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                     {
                         #upd_role_test
 
@@ -577,7 +577,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 {
                     type error = toql::mysql::error::ToqlMySqlError;
 
-                    fn shallow_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::BTreeSet<String>) 
+                    fn shallow_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
                     -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                     
                     {
@@ -647,7 +647,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::BTreeSet<String>) 
+                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
                     -> Result<Option<Vec<(String,Vec<String>)>>, toql :: mysql::error:: ToqlMySqlError>
                     {
 

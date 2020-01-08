@@ -36,7 +36,7 @@
 
 use crate::query::FieldFilter;
 use crate::sql_builder::SqlBuilderError;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -97,7 +97,7 @@ pub struct FieldOptions {
     pub(crate) count_filter: bool, // Filter field on count query
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) ignore_wildcard: bool, // Ignore field for wildcard selection
-    pub(crate) roles: BTreeSet<String>, // Only for use by these roles
+    pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) filter_only: bool,   // This field cannot be loaded, its only used as a filter
 }
 
@@ -109,7 +109,7 @@ impl FieldOptions {
             count_filter: false,
             count_select: false,
             ignore_wildcard: false,
-            roles: BTreeSet::new(),
+            roles: HashSet::new(),
             filter_only: false
         }
     }
@@ -143,7 +143,7 @@ impl FieldOptions {
     /// these roles.
     /// Example: The email address is only visible to users with
     /// the _admin_ role.
-    pub fn restrict_roles(mut self, roles: BTreeSet<String>) -> Self {
+    pub fn restrict_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
         self
     }
@@ -161,7 +161,7 @@ impl FieldOptions {
 pub struct JoinOptions {
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) ignore_wildcard: bool, // Ignore field on this join for wildcard selection
-    pub(crate) roles: BTreeSet<String>, // Only for use by these roles
+    pub(crate) roles: HashSet<String>, // Only for use by these roles
 }
 
 impl JoinOptions {
@@ -170,7 +170,7 @@ impl JoinOptions {
         JoinOptions {
             preselect: false,
             ignore_wildcard: false,
-            roles: BTreeSet::new(),
+            roles: HashSet::new(),
         }
     }
 
@@ -189,7 +189,7 @@ impl JoinOptions {
     /// these roles.
     /// Example: The email address is only visible to users with
     /// the _admin_ role.
-    pub fn restrict_roles(mut self, roles: BTreeSet<String>) -> Self {
+    pub fn restrict_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
         self
     }

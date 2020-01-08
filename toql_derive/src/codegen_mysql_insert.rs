@@ -6,7 +6,7 @@
 use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::TokenStream;
 use syn::Ident;
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 pub(crate) struct GeneratedMysqlInsert<'a> {
     struct_ident: &'a Ident,
@@ -15,7 +15,7 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
 
     insert_values_code: Vec<TokenStream>,
-    ins_roles: &'a BTreeSet<String>
+    ins_roles: &'a HashSet<String>
 
 }
 
@@ -205,7 +205,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
                     type error = toql::mysql::error::ToqlMySqlError;
 
-                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy, roles: &std::collections::BTreeSet<String>)
+                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy, roles: &std::collections::HashSet<String>)
                      -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                      {
                             #role_test
