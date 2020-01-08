@@ -19,7 +19,7 @@ pub(crate) struct GeneratedToqlDelup<'a> {
     diff_set_code: Vec<TokenStream>,
 
     diff_merge_code: Vec<TokenStream>,
-    struct_upd_roles: &'a BTreeSet<String>
+    struct_upd_roles: &'a BTreeSet<String>,
     struct_ins_roles: &'a BTreeSet<String>
 }
 
