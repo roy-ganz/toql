@@ -112,7 +112,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 };
 
                 let increment = if self.mysql_deserialize_fields.is_empty() {
-                    quote!(s)
+                    quote!()
                 } else {
                     quote!(*i += 1;)
                 };

@@ -81,12 +81,24 @@ pub fn from<'a>(conn: &'a mut C) -> MySql<'a,C> {
     }
 }
 
+/// Create connection wrapper from MySql connection or transaction and roles.
+///
+/// Use the connection wrapper to access all Toql functionality.
+pub fn with_roles<'a>(conn: &'a mut C, roles: HashSet<String>) -> MySql<'a,C> {
+    
+     MySql{
+        conn,
+        roles,
+    }
+}
+
 /// Set roles
 ///
 /// After setting the roles all Toql functions are validated against these roles.
 /// Roles on fields can be used to restrict the access (Only super admin can see this field, only group admin can update this field),
-pub fn set_roles(&mut self, roles: HashSet<String>) {
+pub fn set_roles(&mut self, roles: HashSet<String>) ->&mut Self{
     self.roles= roles;
+    self
 }
 
 pub fn conn(&mut self) -> &'_ mut C {

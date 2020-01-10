@@ -384,6 +384,7 @@ impl Into<QueryToken> for Field {
     }
 }
 
+
 /// The filter operation on a field. You use this when creating a [FieldHandler](../sql_mapper/trait.FieldHandler.html)
 /// to provide custom functions through the _Fn_ filter or implement a alternative mapping to SQL.
 #[derive(Clone, Debug)]
@@ -559,6 +560,7 @@ impl Query {
             where_predicate_params: Vec::new(),
         }
     }
+    
 
     /// Create a new query from another query.
     pub fn from<T>(query: T) -> Self 
