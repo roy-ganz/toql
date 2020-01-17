@@ -201,6 +201,14 @@ pub struct MapArg {
     pub handler : Option<Path>
 }
 
+#[derive(FromMeta, Clone, Debug)]
+pub struct ParamArg {
+    pub name : String,
+    #[darling(default)]
+    pub value : String,
+}
+
+
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(toql), forward_attrs(allow, doc, cfg), supports(struct_any))]
@@ -227,9 +235,11 @@ pub struct Toql {
     #[darling(multiple)]
     pub map_filter : Vec<MapArg>,
     #[darling(multiple)]
-    pub ins_role : Vec<String>,
+    pub insdel_role : Vec<String>,
     #[darling(multiple)]
     pub upd_role : Vec<String>,
+    #[darling(multiple)]
+    pub param : Vec<ParamArg>,
 
     pub data: darling::ast::Data<(), ToqlField>,
   
@@ -267,8 +277,9 @@ impl quote::ToTokens for Toql {
             skip_query_builder,
             serde_key:_,
             map_filter: _,
-            ins_role:_,
+            insdel_role:_,
             upd_role: _,
+            param: _,
             ref data,
         } = *self;
 

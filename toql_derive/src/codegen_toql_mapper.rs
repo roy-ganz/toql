@@ -37,6 +37,18 @@ impl<'a> GeneratedToqlMapper<'a> {
                             });
                     }
             }
+
+            for p in &rust_struct.params {
+                let name = &p.name;
+                let value = &p.value;
+
+                 field_mappings.push(quote! {
+                                mapper.params.insert(String::from(#name), String::from(#value));
+                            });
+
+            }
+
+
         }
 
         GeneratedToqlMapper {

@@ -2,7 +2,7 @@ use crate::annot::Pair;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
-use crate::annot::MapArg;
+use crate::annot::{MapArg, ParamArg};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
@@ -10,7 +10,7 @@ use crate::heck::SnakeCase;
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
 
-use std::collections::HashSet;
+use std::collections::{HashSet};
 
 //use crate::error::Result;
 use darling::Result;
@@ -23,8 +23,9 @@ pub struct Struct {
     pub rust_struct_visibility: Visibility,
     pub serde_key: bool,
     pub mapped_filter_fields: Vec<MapArg>,
-    pub ins_roles: HashSet<String>,
+    pub insdel_roles: HashSet<String>,
     pub upd_roles: HashSet<String>,
+    pub params: Vec<ParamArg>,
 }
 
 impl Struct {
@@ -45,8 +46,9 @@ impl Struct {
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
             mapped_filter_fields,
-            ins_roles: toql.ins_role.iter().cloned().collect::<HashSet<_>>(),
-            upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>()
+            insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
+            upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
+            params: toql.param.clone()
         }
     }
 }

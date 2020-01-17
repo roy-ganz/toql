@@ -62,11 +62,11 @@ pub(crate) struct SqlTarget {
 
 
 impl SqlTarget {
-    pub fn sql_query_param_values(&self, query_params: &HashMap<String, String>) -> Result<Vec<String>, SqlBuilderError> {
+    pub fn sql_query_param_values(&self, build_params: &HashMap<String, String>) -> Result<Vec<String>, SqlBuilderError> {
                 let mut params : Vec<String> = Vec::with_capacity(self.sql_query_params.len());
                     for p in &self.sql_query_params {
                     let qp = 
-                        query_params
+                        build_params
                         .get(p)
                         .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
                         params.push(qp.to_owned());
@@ -230,7 +230,7 @@ pub trait FieldHandler {
     fn build_select(
         &self,
         select: (String,Vec<String>),
-        _query_params: &HashMap<String, String>,
+        _build_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         Ok(Some(select))
     }
@@ -242,7 +242,7 @@ pub trait FieldHandler {
         &self,
         _select: (String, Vec<String>),
         _filter: &FieldFilter,
-        query_params: &HashMap<String, String>,
+        build_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError>;
     /* /// Return the parameters for your `?`
     fn build_param(
@@ -253,7 +253,7 @@ pub trait FieldHandler {
     /// Return addition SQL join clause for this field or None
     fn build_join(
         &self,
-        _query_params: &HashMap<String, String>,
+        _build_params: &HashMap<String, String>,
     ) -> Result<Option<String>, crate::sql_builder::SqlBuilderError> {
         Ok(None)
     }
@@ -303,7 +303,7 @@ impl FieldHandler for BasicFieldHandler {
         &self,
         mut select: (String, Vec<String>),
         filter: &FieldFilter,
-        _query_params: &HashMap<String, String>,
+        _build_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
@@ -420,6 +420,7 @@ pub struct SqlMapper {
     pub(crate) joins: HashMap<String, Join>,
     pub(crate) joins_root: Vec<String>,                  // Top joins
     pub(crate) joins_tree: HashMap<String,  Vec<String>>, // Subjoins
+    pub params: HashMap<String, String>,                  // generic params
     
 }
 
@@ -472,7 +473,8 @@ impl SqlMapper {
             fields: HashMap::new(),
             field_order: Vec::new(),
             joins_root: Vec::new(),
-            joins_tree: HashMap::new()
+            joins_tree: HashMap::new(),
+            params: HashMap::new()
         }
     }
     pub fn from_mapped<M: Mapped>() -> SqlMapper // Create new SQL Mapper and map entity fields

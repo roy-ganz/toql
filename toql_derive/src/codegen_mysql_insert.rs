@@ -15,7 +15,7 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
 
     insert_values_code: Vec<TokenStream>,
-    ins_roles: &'a HashSet<String>
+    insdel_roles: &'a HashSet<String>
 
 }
 
@@ -27,7 +27,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
             insert_columns_code: Vec::new(),
 
             insert_values_code: Vec::new(),
-            ins_roles : &toql.ins_roles
+            insdel_roles : &toql.insdel_roles
         }
     }
 
@@ -188,10 +188,10 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
             );
             let insert_columns_code = &self.insert_columns_code;
 
-            let role_test = if self.ins_roles.is_empty() {
+            let role_test = if self.insdel_roles.is_empty() {
                         quote!()
                     } else {
-                        let roles = &self.ins_roles;
+                        let roles = &self.insdel_roles;
                         quote!(
                             toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
                             .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;

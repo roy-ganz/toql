@@ -166,7 +166,7 @@ impl SqlBuilder {
     
     fn build_ordering(
         result: &mut SqlBuilderResult,
-        query_parameters: &HashMap<String, String>,
+        build_params: &HashMap<String, String>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &HashSet<u8>,
@@ -183,10 +183,10 @@ impl SqlBuilder {
                     if let Some(_sql_target_data) = sql_target_data.get(toql_field.as_str()) {
                        
                         if let Some(sql_target) = sql_targets.get(toql_field) {
-                            let params = sql_target.sql_query_param_values(query_parameters)?;
+                            let params = sql_target.sql_query_param_values(build_params)?;
                             if let Some(s) = sql_target
                                 .handler
-                                .build_select((sql_target.expression.to_owned(), params), query_parameters)?
+                                .build_select((sql_target.expression.to_owned(), params), build_params)?
                             {
                                 result.order_clause.push_str(&s.0);
                                 result.order_params.extend_from_slice(&s.1);
@@ -204,7 +204,7 @@ impl SqlBuilder {
 
     fn build_count_select_clause(
         result: &mut SqlBuilderResult,
-        query_params: &HashMap<String, String>,
+        build_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
     ) -> Result<(), SqlBuilderError> {
@@ -215,10 +215,10 @@ impl SqlBuilder {
                
                 // For selected fields there exists target data
                 if sql_target.options.count_select && !sql_target.options.filter_only {
-                    let params = sql_target.sql_query_param_values(query_params)?;
+                    let params = sql_target.sql_query_param_values(build_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select((sql_target.expression.to_owned(), params), query_params)?
+                        .build_select((sql_target.expression.to_owned(), params), build_params)?
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
@@ -240,7 +240,7 @@ impl SqlBuilder {
 
     fn build_select_clause(
         result: &mut SqlBuilderResult,
-        query_params: &HashMap<String, String>,
+        build_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
@@ -286,11 +286,10 @@ impl SqlBuilder {
                         .map_or(false, |d| d.selected);
 
                 if selected {
-
-                    let params = sql_target.sql_query_param_values(query_params)?;
+                    let params = sql_target.sql_query_param_values(build_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select((sql_target.expression.to_owned(), params), query_params)?
+                        .build_select((sql_target.expression.to_owned(), params), build_params)?
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
@@ -461,6 +460,20 @@ impl SqlBuilder {
             combined_params: vec![],
         };
 
+        let mut combined_params : HashMap<String,String> = HashMap::new();
+       
+
+        let build_params: &HashMap<String, String> = { if query.params.is_empty() {
+                &sql_mapper.params
+            } else if sql_mapper.params.is_empty() {
+                &query.params
+            } else {
+                 combined_params.extend(query.params.iter().map(|(k, v)| (k.clone(), v.clone())));
+                combined_params.extend(sql_mapper.params.iter().map(|(k, v)| (k.clone(), v.clone())));
+                &combined_params
+            }
+        };
+        
 
         for t in &query.tokens {
             {
@@ -719,20 +732,20 @@ impl SqlBuilder {
                                         .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
                                      params.push(qp.to_owned());
                                     } */
-
                                    
-                                    let params = sql_target.sql_query_param_values(&query.params)?;
+                                   
+                                    let params = sql_target.sql_query_param_values(build_params)?;
                                  
 
                                     let expression = sql_target
                                         .handler
-                                        .build_select((sql_target.expression.to_owned(), params), &query.params)?
+                                        .build_select((sql_target.expression.to_owned(), params), build_params)?
                                         .unwrap_or(("null".to_string(), vec![]));
 
                                     if let Some(f) = sql_target.handler.build_filter(
                                         expression, // todo change build_filter signature to take tuple
                                         &f,
-                                        &query.params,
+                                        build_params,
                                     )? {
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {
@@ -807,7 +820,7 @@ impl SqlBuilder {
                                                                            result.where_params.append(&mut p);
                                                                        }
                                     */
-                                    if let Some(j) = sql_target.handler.build_join(&query.params)? {
+                                    if let Some(j) = sql_target.handler.build_join(build_params)? {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
                                     }
@@ -888,14 +901,14 @@ impl SqlBuilder {
         if self.count_query {
             Self::build_count_select_clause(
                 &mut result,
-                &query.params,
+                build_params,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
             )?;
         } else {
             Self::build_ordering(
                 &mut result,
-                &query.params,
+                build_params,
                 &sql_target_data,
                 &sql_mapper.fields,
                 &ordinals,
@@ -903,7 +916,7 @@ impl SqlBuilder {
             )?;
             Self::build_select_clause(
                 &mut result,
-                &query.params,
+                build_params,
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
@@ -982,13 +995,13 @@ impl SqlBuilder {
 
     pub fn resolve_query_params(
         expression: &str,
-        query_params: &HashMap<String, String>,
+        build_params: &HashMap<String, String>,
     ) -> Result<(String, Vec<String>), SqlBuilderError> {
         let (sql, params) = Self::extract_query_params(expression);
 
         let mut resolved: Vec<String> = Vec::new();
         for p in params {
-            let v = query_params
+            let v = build_params
                 .get(&p)
                 .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
             resolved.push(v.to_string());

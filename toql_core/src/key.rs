@@ -21,3 +21,12 @@ pub trait Key {
     // Return key as params for a given entity.
     fn params(key: &Self::Key) -> Vec<String>;
 }
+
+
+pub fn keys<K :Key>(entities: &[K]) ->  crate::error::Result<Vec<K::Key>>{
+    let mut keys = Vec::with_capacity(entities.len());
+    for e in entities {
+        keys.push(e.get_key()?);
+    }
+    Ok(keys)
+}

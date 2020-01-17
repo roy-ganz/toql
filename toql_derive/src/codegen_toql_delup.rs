@@ -20,7 +20,7 @@ pub(crate) struct GeneratedToqlDelup<'a> {
 
     diff_merge_code: Vec<TokenStream>,
     struct_upd_roles: &'a HashSet<String>,
-    struct_ins_roles: &'a HashSet<String>
+    struct_insdel_roles: &'a HashSet<String>
 }
 
 impl<'a> GeneratedToqlDelup<'a> {
@@ -37,7 +37,7 @@ impl<'a> GeneratedToqlDelup<'a> {
 
             diff_merge_code: Vec::new(),
             struct_upd_roles : &toql.upd_roles,
-            struct_ins_roles : &toql.ins_roles
+            struct_insdel_roles : &toql.insdel_roles
         }
     }
     
@@ -449,10 +449,10 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                             .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
                         
                     )};
-                let ins_role_test = if self.struct_ins_roles.is_empty() {
+                let ins_role_test = if self.struct_insdel_roles.is_empty() {
                         quote!()
                     } else {
-                        let roles = &self.struct_ins_roles;
+                        let roles = &self.struct_insdel_roles;
                         quote!(
                             toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
                             .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
