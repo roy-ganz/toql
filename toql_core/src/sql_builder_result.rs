@@ -5,7 +5,7 @@ use crate::query::Concatenation;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 pub struct SqlBuilderResult {
-    pub(crate) table: String,
+    pub(crate) aliased_table: String,
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
     pub(crate) join_clause: String,
@@ -32,7 +32,7 @@ impl SqlBuilderResult {
         }
         s.push_str(&self.select_clause);
         s.push_str(" FROM ");
-        s.push_str(&self.table);
+        s.push_str(&self.aliased_table);
         if !self.join_clause.is_empty() {
             s.push(' ');
             s.push_str(&self.join_clause);

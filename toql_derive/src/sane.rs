@@ -42,7 +42,7 @@ impl Struct {
             sql_table_alias: toql
                 .alias
                 .clone()
-                .unwrap_or(toql.ident.to_string().to_snake_case()),
+                .unwrap_or(toql.ident.to_string()).to_mixed_case(),
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
             mapped_filter_fields,
@@ -74,6 +74,8 @@ pub struct JoinField {
     pub join_alias: String,
     pub default_self_column_code: TokenStream,
     pub columns_map_code: TokenStream,
+    pub translated_default_self_column_code: TokenStream,
+    pub translated_columns_map_code: TokenStream,
     pub on_sql: Option<String>,
     pub key: bool,
 }
@@ -186,6 +188,19 @@ impl Field {
                 })
                 .collect::<Vec<_>>();
             
+            let translated_columns_translation = field
+                .join
+                .as_ref()
+                .unwrap()
+                .columns
+                .iter()
+                .map(|column| {
+                    let tc = &column.this;
+                    let oc = &column.other;
+                    quote!(#oc => mapper.translate_aliased_column(sql_alias,#tc), )
+                })
+                .collect::<Vec<_>>();
+
             let other_columns: Vec<String> = field
                 .join
                 .as_ref()
@@ -199,6 +214,9 @@ impl Field {
 
             let default_self_column_format = format!("{}_{{}}", field.ident.as_ref().unwrap());
             let default_self_column_code = quote!( let default_self_column= format!(#default_self_column_format, other_column););
+
+             
+            let translated_default_self_column_code = quote!( let default_self_column= mapper.translate_aliased_column(sql_alias, other_column););
 
             let safety_check_for_column_mapping = if other_columns.is_empty() { quote!()}  else {
                 quote!(
@@ -215,7 +233,7 @@ impl Field {
                                 .iter()
                                 .map(|c| c.to_string())
                                 .collect::<Vec<_>>(); */
-                        toql::log::warn!("On `{}` invalid columns found: `{}`. Valid columns are: `{}`", #rust_field_name, invalid_columns.join(","),valid_columns.join(","));
+                        toql::log::warn!("On `{}::{}` invalid columns found: `{}`. Valid columns are: `{}`", #rust_type_name, #rust_field_name, invalid_columns.join(","),valid_columns.join(","));
                         }
                     }
                 )
@@ -233,16 +251,30 @@ impl Field {
                 self_column
             });
 
+            let translated_columns_map_code = quote!( {
+
+                #safety_check_for_column_mapping
+
+                let self_column = match other_column.as_str(){
+                        #(#translated_columns_translation)*
+                        _ => default_self_column
+                };
+                self_column
+            });
+
             FieldKind::Join(JoinField {
                 sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
                     .alias
                     .as_ref()
-                    .unwrap_or(&rust_field_name.to_snake_case())
+                    .unwrap_or(&rust_field_name)
+                    .to_mixed_case()
                     .to_owned(),
                 sql_join_table_name,
                 default_self_column_code,
                 columns_map_code,
+                translated_default_self_column_code,
+                translated_columns_map_code,
                 on_sql: field.join.as_ref().unwrap().on_sql.clone(),
                 key: field.key,
             })

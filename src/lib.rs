@@ -55,6 +55,7 @@ pub use toql_core::mutate;
 pub use toql_core::query;
 pub use toql_core::load;
 pub use toql_core::select;
+pub use toql_core::alias;
 
 pub use toql_core::log_sql; // Export macro 
 pub use toql_core::ok_or_fail; // Export macro

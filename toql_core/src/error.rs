@@ -4,6 +4,7 @@
 //!
 use crate::query_parser::Rule;
 use crate::sql_builder::SqlBuilderError;
+use crate::sql_mapper::SqlMapperError;
 use std::fmt;
 
 use pest::error::Error as PestError;
@@ -30,6 +31,8 @@ pub enum ToqlError {
     EncodingError(std::str::Utf8Error),
     /// No mapper was found for a given struct. Contains the struct name.
     MapperMissing(String),
+    /// The Mapper encountered an error
+    SqlMapperError(SqlMapperError),
     /// Unable to put database result into struct. Contains field name.
     ValueMissing(String),
     /// SQL Builder failed to turn Toql query into SQL query.
@@ -47,6 +50,11 @@ impl From<SqlBuilderError> for ToqlError {
         ToqlError::SqlBuilderError(err)
     }
 }
+impl From<SqlMapperError> for ToqlError {
+    fn from(err: SqlMapperError) -> ToqlError {
+        ToqlError::SqlMapperError(err)
+    }
+}
 
 
 
@@ -62,6 +70,7 @@ impl fmt::Display for ToqlError {
             ToqlError::NotFound => write!(f, "no result found"),
             ToqlError::NotUnique => write!(f, "no unique result found "),
             ToqlError::MapperMissing(ref s) => write!(f, "no mapper found for `{}`", s),
+            ToqlError::SqlMapperError(ref e) => e.fmt(f),
             ToqlError::ValueMissing(ref s) => write!(f, "no value found for `{}`", s),
           
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),

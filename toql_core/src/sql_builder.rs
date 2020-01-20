@@ -63,6 +63,7 @@ impl Default for SqlTargetData {
     }
 }
 
+
 /// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder {
     count_query: bool,          // Build count query
@@ -115,6 +116,9 @@ impl SqlBuilder {
             selected_paths: HashSet::new(),
         }
     }
+
+
+
     /// Add path to list of ignore paths.
     pub fn ignore_path<T: Into<String>>(mut self, path: T) -> Self {
         self.ignored_paths.push(path.into());
@@ -445,7 +449,7 @@ impl SqlBuilder {
         let mut selected_paths: HashSet<String> = HashSet::new();
 
         let mut result = SqlBuilderResult {
-            table: sql_mapper.table.clone(),
+            aliased_table: sql_mapper.aliased_table.clone(),
             any_selected: false,
             distinct: query.distinct,
             join_clause: String::from(""),
@@ -1032,4 +1036,6 @@ impl SqlBuilder {
         }
         false
     }
+
+    
 }

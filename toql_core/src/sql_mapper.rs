@@ -34,13 +34,30 @@
 //! load the full dependency tree.
 //!
 
+use crate::alias::AliasFormat;
 use crate::query::FieldFilter;
 use crate::sql_builder::SqlBuilderError;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::sync::Arc;
-
+use std::fmt;
 use enquote::unquote;
+
+
+
+#[derive(Debug)]
+/// Represents all errors from the SQL Builder
+pub enum SqlMapperError {
+    /// The requested canonical alias is not used. Contains the alias name.
+    CanonicalAliasMissing(String),
+}
+impl fmt::Display for SqlMapperError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SqlMapperError::CanonicalAliasMissing(ref s) => write!(f, "canonical sql alias `{}` is missing", s),
+        }
+    }
+}
 
 #[derive(Debug)]
 #[allow(dead_code)] // IMPROVE Having AND None are considered unused
@@ -387,15 +404,17 @@ impl FieldHandler for BasicFieldHandler {
 #[derive(Debug)]
 pub struct SqlMapperCache {
     pub mappers: HashMap<String, SqlMapper>,
+    pub alias_format: AliasFormat,                         // 
 }
 impl SqlMapperCache {
-    pub fn new() -> SqlMapperCache {
+    pub fn new(alias_format: AliasFormat) -> SqlMapperCache {
         SqlMapperCache {
             mappers: HashMap::new(),
+            alias_format,
         }
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
-        let m = SqlMapper::from_mapped::<M>();
+        let m = SqlMapper::from_mapped::<M>( self.alias_format.clone());
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()
         //self.cache.get_mut(&M::table_name()).unwrap()
@@ -404,7 +423,8 @@ impl SqlMapperCache {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        let m = SqlMapper::from_mapped_with_handler::<M, _>(handler);
+        let m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
+        
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()
     }
@@ -413,15 +433,19 @@ impl SqlMapperCache {
 /// Translates Toql fields into columns or SQL expressions.
 #[derive(Debug)]
 pub struct SqlMapper {
+    pub aliased_table: String,
+    pub alias_format: AliasFormat,                         // 
+    
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>,
-    pub(crate) table: String,
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
     pub(crate) joins: HashMap<String, Join>,
     pub(crate) joins_root: Vec<String>,                  // Top joins
     pub(crate) joins_tree: HashMap<String,  Vec<String>>, // Subjoins
-    pub params: HashMap<String, String>,                  // generic params
-    
+    pub(crate) params: HashMap<String, String>,                  // builds params
+    pub(crate) alias_translation: HashMap<String, String>,
+   
+    pub(crate) table_index: u16,                          //table index for aliases
 }
 
 #[derive(Debug, PartialEq)]
@@ -448,51 +472,56 @@ pub trait Mapped {
 }
 
 impl SqlMapper {
+
+   
     /// Create new mapper for _table_ or _table alias_.
     /// Example: `::new("Book")` or `new("Book b")`.
     /// If you use an alias you must map all
     /// SQL columns with the alias too.
-    pub fn new<T>(table: T) -> Self
+    pub fn new<T>(table: T, alias_format: AliasFormat) -> Self
     where
         T: Into<String>,
     {
         let f = BasicFieldHandler {};
-        Self::new_with_handler(table, f)
+        Self::new_with_handler(table, alias_format, f)
     }
     /// Creates new mapper with a custom handler.
     /// Use this to provide custom filter functions for all fields.
-    pub fn new_with_handler<T, H>(table: T, handler: H) -> Self
+    pub fn new_with_handler<T, H>(aliased_table: T, alias_format: AliasFormat, handler: H) -> Self
     where
         T: Into<String>,
         H: 'static + FieldHandler + Send + Sync, // TODO improve lifetime
     {
         SqlMapper {
             handler: Arc::new(handler),
-            table: table.into(),
+            aliased_table: aliased_table.into(),
             joins: HashMap::new(),
             fields: HashMap::new(),
             field_order: Vec::new(),
             joins_root: Vec::new(),
             joins_tree: HashMap::new(),
-            params: HashMap::new()
+            params: HashMap::new(),
+            table_index: 0,   // will be incremented before use
+            alias_format: alias_format,
+            alias_translation: HashMap::new()
         }
     }
-    pub fn from_mapped<M: Mapped>() -> SqlMapper // Create new SQL Mapper and map entity fields
+    pub fn from_mapped<M: Mapped>(alias_format: AliasFormat) -> SqlMapper // Create new SQL Mapper and map entity fields
     {
-        Self::from_mapped_with_alias::<M>(&M::table_alias())
+        Self::from_mapped_with_alias::<M>(&M::table_alias(), alias_format)
     }
-    pub fn from_mapped_with_alias<M: Mapped>(sql_alias: &str) -> SqlMapper // Create new SQL Mapper and map entity fields
+    pub fn from_mapped_with_alias<M: Mapped>(sql_alias: &str, alias_format: AliasFormat) -> SqlMapper // Create new SQL Mapper and map entity fields
     {
         let s = format!("{} {}", M::table_name(), sql_alias);
-        let mut m = Self::new(if sql_alias.is_empty() {
+         let mut m = Self::new(if sql_alias.is_empty() {
             M::table_name()
         } else {
             s
-        });
-        M::map(&mut m, "", sql_alias);
+        }, alias_format); 
+        M::map(&mut m, "", &M::table_alias());
         m
     }
-    pub fn from_mapped_with_handler<M: Mapped, H>(handler: H) -> SqlMapper
+    pub fn from_mapped_with_handler<M: Mapped, H>(alias_format: AliasFormat, handler: H) -> SqlMapper
     where
         H: 'static + FieldHandler + Send + Sync,
     {
@@ -503,8 +532,10 @@ impl SqlMapper {
             } else {
                 s
             },
+            alias_format,
             handler,
         );
+        
         M::map(&mut m, "", &M::table_alias());
         m
     }
@@ -635,12 +666,12 @@ impl SqlMapper {
         sql_target.options = options;
         self
     }
-    /// Adds a new field -or updates an existing field- to the mapper.
+    /// Adds a new field - or updates an existing field - to the mapper.
     pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_field: &str) -> &'a mut Self {
         self.map_field_with_options(toql_field, sql_field, FieldOptions::new())
     }
 
-    /// Adds a new field -or updates an existing field- to the mapper.
+    /// Adds a new field - or updates an existing field - to the mapper.
     pub fn map_field_with_options<'a>(
         &'a mut self,
         toql_field: &str,
@@ -732,6 +763,76 @@ impl SqlMapper {
         j.aliased_table = aliased_table.to_string();
         j.on_predicate = on_predicate.to_string();
         self
+    }
+    /// Translates a canonical sql alias into a shorter alias
+    pub fn translate_alias(&mut self, canonical_alias : &str) -> String {
+        use std::collections::hash_map::Entry;
+        
+            
+          let a =   match self.alias_translation.entry(canonical_alias.to_owned()) {
+                Entry::Occupied(o) => o.into_mut(),
+                Entry::Vacant(v) => {
+                    let alias  =match self.alias_format {
+                        AliasFormat::TinyIndex => {self.table_index = self.table_index + 1; AliasFormat::tiny_index(self.table_index)},
+                        AliasFormat::ShortIndex => {self.table_index = self.table_index + 1; AliasFormat::short_index(&canonical_alias, self.table_index)},
+                        AliasFormat::MediumIndex => {self.table_index = self.table_index + 1; AliasFormat::medium_index(&canonical_alias, self.table_index)},
+                        _ => canonical_alias.to_owned()
+                        };
+                    v.insert(alias)}
+            }.to_owned();
+
+            //println!("{} -> {}", canonical_alias, &a);
+            a
+    }
+    /// Helper method to build an aliased column with a canonical sql alias
+    /// Example for `AliasFormat::TinyIndex`: user_address_country.id translates into t1.id 
+    pub fn translate_aliased_column(&mut self,canonical_alias: &str, column: &str) -> String{
+        let translated_alias = self.translate_alias(canonical_alias);
+            format!(
+                "{}{}{}",
+                &translated_alias,
+                if canonical_alias.is_empty() { "" } else { "." },
+                column
+            )
+
+    }
+    /// Helper method to build an aliased table with a canonical SQL alias
+    /// Example for `AliasFormat::TinyIndex`:  Country user_address_country translates into Country t1 
+    pub fn translate_aliased_table(&mut self,table: &str, canonical_alias: &str ) -> String{
+         let translated_alias = self.translate_alias(canonical_alias);
+            format!(
+                "{}{}{}",
+                table,
+                if canonical_alias.is_empty() { "" } else { " " },
+                &translated_alias
+            )
+    }
+
+    /// Helper method to replace alias placeholders in SQL expression
+    /// '[canonical_sql_alias]' is replaced with translated alias
+    pub fn replace_aliases(&mut self,sql_with_aliases: &str) -> Result<String,  SqlMapperError>{
+              lazy_static! {
+            static ref REGEX: regex::Regex = regex::Regex::new(r"\[([\w_]+)\]").unwrap();
+        }
+
+        if cfg!(debug_assertions) {
+            for m in  REGEX.find_iter(sql_with_aliases) {
+                if !self.alias_translation.contains_key(m.as_str()) {
+                    return Err(SqlMapperError::CanonicalAliasMissing(m.as_str().to_owned()));
+                }
+            }
+        }
+        
+        let sql = REGEX.replace(sql_with_aliases, |e: &regex::Captures| {
+            let canonical_alias = &e[1];
+            let alias = self.alias_translation.get(canonical_alias);
+            if  let Some(a) = alias {
+                a.to_owned()
+            }else {
+                String::from(canonical_alias)
+            }
+        });
+        Ok(sql.to_string())
     }
 
 }

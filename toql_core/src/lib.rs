@@ -9,7 +9,7 @@ pub mod mutate;
 pub mod load;
 pub mod select;
 pub mod dialect;
-
+pub mod alias;
 
 #[macro_use]
 pub mod log_helper;
