@@ -25,6 +25,12 @@ impl SqlBuilderResult {
     pub fn is_empty(&self) -> bool {
         !self.any_selected && self.where_clause.is_empty() && self.having_clause.is_empty()
     }
+    pub fn push_select(&mut self, s: &str) {
+        if !self.select_clause.trim_end().ends_with(',') {
+            self.select_clause.push(',');
+        }
+        self.select_clause.push_str(s);
+    }
 
     pub fn sql_body(&self, s: &mut String) {
         if self.distinct {

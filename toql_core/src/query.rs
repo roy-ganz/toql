@@ -546,6 +546,7 @@ pub struct Query {
 
     pub where_predicates: Vec<String>, // Additional where clause
     pub where_predicate_params: Vec<String>, // Query params for additional sql restriction
+    pub select_columns: Vec<String>     // Additional select columns
 }
 
 impl Query {
@@ -558,6 +559,7 @@ impl Query {
             params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
+            select_columns: Vec::new()
         }
     }
     
@@ -579,6 +581,7 @@ impl Query {
             params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
+            select_columns: Vec::new()
         }
     }
     
