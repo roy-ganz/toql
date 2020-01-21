@@ -785,10 +785,10 @@ impl SqlMapper {
             //println!("{} -> {}", canonical_alias, &a);
             a
     }
-     /// Returns a translated alias or the canonical alias if it's not beed translated
+     /// Returns a translated alias or the canonical alias if it's not been translated
     pub fn translated_alias(&self, canonical_alias : &str) -> String {
        
-        println!("{:?}", self.alias_translation);
+       // println!("{:?}", self.alias_translation);
         self.alias_translation.get(canonical_alias).unwrap_or(&canonical_alias.to_owned()).to_owned()
           
     }
