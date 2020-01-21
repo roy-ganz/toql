@@ -223,6 +223,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
+                    let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     //let conn = self.conn();
                     #(#path_loaders)*
                     Ok(())
@@ -388,7 +389,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         let merge_on = if merge_with_params.contains("..") {
                             let aliased_merge_on = merge_with_params.replace("..", "{alias}.");
                             quote!(
-                                format!(#aliased_merge_on, alias = <#rust_type_ident as toql::sql_mapper::Mapped>::table_alias() )
+                                format!(#aliased_merge_on, alias = mapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()))
                             )
                         } else {
                             quote!( #merge_with_params)
@@ -425,13 +426,17 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         let merge_one = format!("{{}}.{} = {{}}", other_column);
 
                         merge_one_predicates.push( quote!(
-                                query.where_predicates.push( format!(#merge_one, <#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()));
+                            let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
+                            let joinmapper = cache.mapper.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
+                                query.where_predicates.push( format!(#merge_one, joinmapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias())));
                                 query.where_predicate_params.push(_entity. #this_field_ident .to_string());
                             ));
 
                         merge_many_predicates.push( quote!(
+                            let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
+                            let joinmapper = cache.mappers.get(&<table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
                                 let q = entities.iter().map(|entity| "?" ).collect::<Vec<&str>>().join(", ");
-                                dep_query.where_predicates.push(format!(#merge_many, <#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(), q));
+                                dep_query.where_predicates.push(format!(#merge_many, joinmapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()), q));
                                 dep_query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #this_field_ident .to_string()).collect::<Vec<String>>().as_ref());
                             ));
                     }

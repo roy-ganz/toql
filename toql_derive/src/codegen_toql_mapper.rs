@@ -315,6 +315,9 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     String::from(#sql_table_alias)
                 }
                 fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str, canonical_sql_alias: &str) {
+                    if toql_path.is_empty() {
+                        mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
+                    }
                     #(#field_mappings)*
                 }
             }

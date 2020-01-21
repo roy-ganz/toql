@@ -414,17 +414,17 @@ impl SqlMapperCache {
         }
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
-        let m = SqlMapper::from_mapped::<M>( self.alias_format.clone());
+        let mut m = SqlMapper::from_mapped::<M>( self.alias_format.clone());
+        //m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()
-        //self.cache.get_mut(&M::table_name()).unwrap()
     }
     pub fn insert_new_mapper_with_handler<M: Mapped, H>(&mut self, handler: H) -> String
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        let m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
-        
+        let mut m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
+       // m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()
     }
@@ -435,6 +435,7 @@ impl SqlMapperCache {
 pub struct SqlMapper {
     pub aliased_table: String,
     pub alias_format: AliasFormat,                         // 
+    pub params: HashMap<String, String>,                  // builds params
     
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>,
     pub(crate) field_order: Vec<String>,
@@ -442,7 +443,7 @@ pub struct SqlMapper {
     pub(crate) joins: HashMap<String, Join>,
     pub(crate) joins_root: Vec<String>,                  // Top joins
     pub(crate) joins_tree: HashMap<String,  Vec<String>>, // Subjoins
-    pub(crate) params: HashMap<String, String>,                  // builds params
+    
     pub(crate) alias_translation: HashMap<String, String>,
    
     pub(crate) table_index: u16,                          //table index for aliases
@@ -783,6 +784,13 @@ impl SqlMapper {
 
             //println!("{} -> {}", canonical_alias, &a);
             a
+    }
+     /// Returns a translated alias or the canonical alias if it's not beed translated
+    pub fn translated_alias(&self, canonical_alias : &str) -> String {
+       
+        println!("{:?}", self.alias_translation);
+        self.alias_translation.get(canonical_alias).unwrap_or(&canonical_alias.to_owned()).to_owned()
+          
     }
     /// Helper method to build an aliased column with a canonical sql alias
     /// Example for `AliasFormat::TinyIndex`: user_address_country.id translates into t1.id 

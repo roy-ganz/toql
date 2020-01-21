@@ -21,16 +21,28 @@ impl AliasFormat {
     tiny_name
     }
     
+    // First two characters of last join + unique number
     pub fn short_index(name: &str, index: u16) -> String {
          
-        let mut it = name.chars();
+         let medium_name = String::from(
+            if name.is_empty() {"t"} else {
+                let x = name.rfind('_');
+                if let Some(xi) = x {
+                    &name[(xi + 1)..]
+                } else {
+                    name
+                }
+                
+                });
+
+        let mut it = medium_name.chars();
         let f = it.next().unwrap_or('t');
         let mut short_name = String::new();
         short_name.push(f);
-        let l = it.last();
-        if let Some(lv) = l{
-            short_name.push(lv);
-            if lv.is_ascii_digit() {
+        let s = it.next();
+        if let Some(sv) = s{
+            short_name.push(sv);
+            if sv.is_ascii_digit() {
                 short_name.push('_');
             }
         }
