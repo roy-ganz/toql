@@ -366,7 +366,7 @@ where T : select::Select<T> + Key<T>
 /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
 pub fn load_one<T>(&mut self,query: &Query, mappers: &SqlMapperCache) -> Result<T>
 where
-    Self:  Load<T,error = ToqlMySqlError> ,
+    Self:  Load<T,error = ToqlMySqlError> , T: toql_core::key::Key
   
 {
      <Self as Load<T>>::load_one(self, query, mappers)
@@ -386,7 +386,7 @@ pub fn load_many<T>(
     
 ) -> Result<(Vec<T>, Option<(u32, u32)>)>
 where
-     Self:  Load<T, error = ToqlMySqlError> ,
+     Self:  Load<T, error = ToqlMySqlError> , T: toql_core::key::Key
 {
    <Self as Load<T>>::load_many(self, query, mappers,page)
 }

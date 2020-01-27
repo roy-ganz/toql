@@ -633,7 +633,7 @@ impl Query {
             let pth= p.as_str();
             match t {
                 QueryToken::Field(field) => field.name.starts_with(pth),
-                QueryToken::Wildcard(wildcard) => wildcard.path.starts_with(pth),
+                QueryToken::Wildcard(wildcard) => wildcard.path.is_empty() || wildcard.path.starts_with(pth),
                 _ => false
             }   
         })

@@ -209,21 +209,21 @@ impl<'a> GeneratedMysqlLoad<'a> {
         let struct_name = &self.rust_struct.rust_struct_name;
         let path_loaders = &self.path_loaders;
         let ignored_paths = &self.ignored_paths;
-
+        let struct_key_ident = Ident::new(&format!("{}Key", struct_ident), Span::call_site());
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
-                fn load_dependencies(&mut self, mut _entities: &mut Vec< #struct_ident >,
+               /*  fn load_dependencies(&mut self, mut _entities: &mut Vec< #struct_ident >,
                 _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
-                { Ok(())}
+                { Ok(())} */
             )
         } else {
             quote!(
-                fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident >,
+                fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident>,mut entity_keys: & Vec< #struct_key_ident >,
                 query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
-                    let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
+                    //let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     //let conn = self.conn();
                     #(#path_loaders)*
                     Ok(())
@@ -231,7 +231,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             )
         };
 
-        let load_one_call_dependencies = if path_loaders.is_empty() {
+        /* let load_one_call_dependencies = if path_loaders.is_empty() {
             quote!()
         } else {
             quote!(
@@ -248,6 +248,34 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 self.load_dependencies(&mut entities, &query, cache)?;
             )
         };
+ */
+        let optional_add_primary_keys = if self.merge_fields.is_empty() {
+            quote!()}else {
+                quote!(
+                     <#struct_ident as toql::key::Key>::columns().iter().for_each(|c|{
+                        result.push_select(&mapper.aliased_column(&<#struct_ident as toql::sql_mapper::Mapped>::table_alias(),&c))   
+                    });
+                )
+        };
+
+        let from_query_result = if self.merge_fields.is_empty() {
+            quote!(
+                let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
+            )
+            }else {
+                quote!(
+                    let (mut entities, keys) = toql::mysql::row::from_query_result_with_primary_keys::<User, UserKey>(entities_stmt)?;
+                    )
+        };
+
+        let optional_load_merges = if self.merge_fields.is_empty() {
+            quote!()
+            }else {
+                quote!(
+                    self.load_dependencies(&mut entities, &keys, &query, cache)?;
+                    )
+        };
+
 
         quote!(
           
@@ -265,9 +293,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
                   //   let conn = self.conn();
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
 
-                    let result = toql::sql_builder::SqlBuilder::new()
+                    let mut result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
                     .build(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
+
+                    #optional_add_primary_keys
 
                     toql::log_sql!(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params());
 
@@ -275,7 +305,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
 
                     let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params())?;
-                    let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
+                    #from_query_result
+                    //let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
 
                     if entities.len() > 1 {
                         return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotUnique));
@@ -283,7 +314,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotFound));
                     }
 
-                    #load_one_call_dependencies
+                    #optional_load_merges
                     Ok(entities.pop().unwrap())
                 }
 
@@ -303,19 +334,23 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         toql::load::Page::Uncounted(f, m) =>  {count = false; first = f; max = m},
                     };
 
-                    let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
+                    let mapper = cache.mappers.get( #struct_name)
+                            .ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     // load base entities
 
                     let hint = String::from( if count {"SQL_CALC_FOUND_ROWS" }else{""});
 
-                    let result = toql::sql_builder::SqlBuilder::new()
+                    let mut result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
                     .build(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
+                    #optional_add_primary_keys
+                    
+                      
                     toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params());
-
                     let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params())?;
-                    let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
+                    #from_query_result
+                    //let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
                     let mut count_result = None;
 
                     // Get count values
@@ -336,11 +371,23 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         count_result = Some((total_count ,filtered_count))
                     }
 
-                   #load_many_call_dependencies
+                   #optional_load_merges
 
                     Ok((entities, count_result))
                 }
-                fn load_path(&mut self,path: &str, query: &toql::query::Query,
+                fn build_path(&mut self,path: &str, query: &toql::query::Query,
+                    cache: &toql::sql_mapper::SqlMapperCache
+                   )
+                -> Result<toql::sql_builder_result::SqlBuilderResult,toql :: mysql::error:: ToqlMySqlError>
+               
+                {
+                    let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
+                    Ok( toql::sql_builder::SqlBuilder::new()
+                        .build_path(path, mapper, &query, self.roles())
+                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?)
+                }
+
+                /* fn load_path(&mut self,path: &str, query: &toql::query::Query,
                     cache: &toql::sql_mapper::SqlMapperCache
                    )
                 -> Result<Option<std::vec::Vec< #struct_ident >>,toql :: mysql::error:: ToqlMySqlError>
@@ -359,7 +406,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         Ok(Some(entities))
                     }
                 }
-
+ */
 
                 #load_dependencies_from_mysql
             }
@@ -381,6 +428,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 FieldKind::Merge(merge_attrs) => {
                     let mut merge_one_predicates: Vec<TokenStream> = Vec::new();
                     let mut merge_many_predicates: Vec<TokenStream> = Vec::new();
+
+                    let mut merge_select_columns: Vec<TokenStream> = Vec::new();
 
                     if let Some(sql) = &merge_attrs.on_sql {
                         let (merge_with_params, merge_params) =
@@ -410,6 +459,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         );
                         merge_one_predicates.push(predicate.clone());
                         merge_many_predicates.push(predicate);
+
+                       
                     }
 
                     // Build join for all keys of that struct
@@ -426,28 +477,40 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         let merge_one = format!("{{}}.{} = {{}}", other_column);
 
                         merge_one_predicates.push( quote!(
-                            let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
-                            let joinmapper = cache.mapper.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
-                                query.where_predicates.push( format!(#merge_one, joinmapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias())));
+                           
+                                query.where_predicates.push( format!(#merge_one, mapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias())));
                                 query.where_predicate_params.push(_entity. #this_field_ident .to_string());
                             ));
 
                         merge_many_predicates.push( quote!(
-                            let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
-                            let joinmapper = cache.mappers.get(&<table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
-                                let q = entities.iter().map(|entity| "?" ).collect::<Vec<&str>>().join(", ");
-                                dep_query.where_predicates.push(format!(#merge_many, joinmapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()), q));
+                           
+                                let q = entities.iter().map(|_e| "?" ).collect::<Vec<&str>>().join(", ");
+                                dep_query.where_predicates.push(format!(#merge_many, mapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()), q));
                                 dep_query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #this_field_ident .to_string()).collect::<Vec<String>>().as_ref());
                             ));
+                            
+                        // If column is already aliased, translate provided alias otherwise take canonical alias
+                        merge_select_columns.push(
+                            quote!(
+                                result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),#other_column));
+                                )
+                            );
                     }
 
-                    let merge_function =
-                        Ident::new(&format!("merge_{}", &rust_field_ident), Span::call_site());
+                    /* let merge_function =
+                        Ident::new(&format!("merge_{}", &rust_field_ident), Span::call_site()); */
 
                     let merge_field_init = if field.number_of_options > 0 {
-                        quote!(Some(Vec::new()))
+                        quote!(e . #rust_field_ident = Some(Vec::new()))
                     } else {
-                        quote!(Vec::new())
+                        quote!(e . #rust_field_ident = Vec::new())
+                    };
+                     let merge_field_assign = if field.number_of_options > 0 {
+                          quote!(if e. #rust_field_ident. is_some() {
+                                    e. #rust_field_ident. as_mut().unwrap().push(m);
+                                })
+                    } else {
+                       quote!(e.  #rust_field_ident. push(m);)
                     };
 
                     let path_test = if field.number_of_options > 0 && !field.preselect { 
@@ -473,13 +536,61 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     self.path_loaders.push( quote!(
                             #path_test {
                                 #role_test
+                               
+                                let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
+                                let mapper = cache.mappers.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
                                 let mut dep_query = query.clone();
+                                // Add merge keys
                                 #(#merge_many_predicates)*
+
+
+
                                 //let #rust_field_ident = #rust_type_ident ::load_path_from_mysql(#toql_field_name, &dep_query, cache, conn)?;
-                                let #rust_field_ident =<Self as toql::load::Load<#rust_type_ident>>::load_path(self,#toql_field_name, &dep_query, cache)?;
-                                if #rust_field_ident .is_some() {                                    for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
+                                let mut result =<Self as toql::load::Load<#rust_type_ident>>::build_path(self,#toql_field_name, &dep_query, cache)?;
+                                if !result .is_empty() {  
+                                     
+                                    // primary keys
+                                     <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|{
+                                        result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),&c))   
+                                    });
+                                    
+                                    #(#merge_select_columns)*
+                                    // foreign keys
+                                    /*  <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|{
+                                        result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),&c))   
+                                    }); */
+
+                                    toql::log_sql!(result.to_sql(), result.params());
+                                    let entities_stmt = self.conn().prep_exec(result.to_sql(), result.params())?;
+                                    let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Key>::Key, <#struct_ident as toql::key::Key>::Key>(entities_stmt)?;
+                                    //let mut pslit = user_languages.iter().map(|u| &u.0).collect::<Vec<&UserLanguage>>();
+                                    
+                                    if !merge_entities.is_empty() {
+                                        self.load_dependencies(&mut merge_entities, &merge_keys, query, cache)?;
+                                       
+                                        toql::merge::merge2(&mut entities, &entity_keys, merge_entities, &parent_keys,
+                                            |e| { #merge_field_init;},
+                                            |e,m|{ #merge_field_assign
+                                                // TODO only use Option if selectable
+                                              /*   let t: Option<&mut Vec<#rust_type_ident>> = Option::from(&mut e.#rust_field_ident);
+                                                        if t.is_some() {
+                                                            t.unwrap().push(m);
+                                                        }  */
+                                                        } 
+                                                    )
+                                    /*  for e in entities.iter_mut() {
+                            e.languages = Some(Vec::new());
+                        } */
+                        // TODO User::merge_languages_with_key(&mut entities, entity_keys, user_languages,merge_keys);
+                        // TODO
+                        //merge_entities (result, entities);
+                        //User::merge_languages(&mut entities, languages.unwrap());
+                                    }
+                                }    
+
+                                    /* for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
                                     #struct_ident :: #merge_function (&mut entities, #rust_field_ident .unwrap());
-                                }
+                                } */
                             }
                         ));
                 }

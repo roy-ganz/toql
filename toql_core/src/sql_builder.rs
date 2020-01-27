@@ -510,7 +510,8 @@ impl SqlBuilder {
                             continue;
                         }
                         // Skip field from other path
-                        if !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
+                        //if !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
+                        if !self.subpath.starts_with(&wildcard.path) {
                             continue;
                         }
                         

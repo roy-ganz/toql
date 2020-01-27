@@ -12,7 +12,7 @@ pub enum Page {
 
 /// Trait to load entities from database.
 /// This is implemented for each SQL dialect, whereas <T> is the entity to load: E.g. impl Load<User> for MySql
-pub trait Load<T> {
+pub trait Load<T: crate::key::Key> {
 
     type error;
     /// Load a struct with dependencies for a given Toql query.
@@ -40,19 +40,41 @@ pub trait Load<T> {
     ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::error>;
 
 
-     fn load_path(
+    /*  fn load_path(
          &mut self,
         path: &str,
         query: &crate::query::Query,
         cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> Result<Option<std::vec::Vec<T>>, Self::error>;
+    ) -> Result<Option<std::vec::Vec<T>>, Self::error>; */
 
-     fn load_dependencies(
+
+    /* fn load_path_with_keys<J, K>(
         &mut self,
-        entities: &mut Vec<T>,
+        path: &str,
         query: &crate::query::Query,
         cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> Result<(), Self::error>;
+       
+    ) -> Result<Option<std::vec::Vec<(T, J, K)>>, Self::error> 
+        
+    {
+        Ok(None)
+    } */
+    fn build_path(
+         &mut self,
+        path: &str,
+        query: &crate::query::Query,
+        cache: &crate::sql_mapper::SqlMapperCache,
+    ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::error>;
+     
+     fn load_dependencies(
+        &mut self,
+        _entities: &mut Vec<T>,
+        _entity_keys: &Vec<T::Key>,
+        _query: &crate::query::Query,
+        _cache: &crate::sql_mapper::SqlMapperCache,
+    ) -> Result<(), Self::error> {
+        Ok(())
+    }
 
 }
 

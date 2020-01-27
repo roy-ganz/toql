@@ -256,7 +256,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         other_tuple.push(quote!(o. #other_key_field));
                     }
 
-                    let this_tuple_ref = &this_tuple;
+                 /*    let this_tuple_ref = &this_tuple;
                     let other_tuple_ref = &other_tuple;
 
                     let self_fnc: proc_macro2::TokenStream = if self.key_field_names.len() == 1 {
@@ -268,9 +268,9 @@ impl<'a> GeneratedToqlMapper<'a> {
                         quote!( Option::from( #(#other_tuple_ref)*) )
                     } else {
                         quote!( if #( (Option::from (#other_tuple_ref)).or)* (None).is_some() { Option::from((#(#other_tuple_ref),* ))} else {None} )
-                    };
+                    }; */
 
-                    self.merge_functions.push(quote!(
+                    /* self.merge_functions.push(quote!(
                                     pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #rust_type_ident > ) {
                                             toql :: merge :: merge ( t , o ,
                                             | t | #self_fnc ,
@@ -278,7 +278,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                             | t , o |  {let t : Option<&mut Vec<#rust_type_ident>>= Option::from( &mut t. #rust_field_ident ); if t.is_some() { t.unwrap().push(o);}}
                                             ) ;
                                     }
-                                ));
+                                )); */
                 }
                 _ => {
                     panic!("Should be never called!");
@@ -296,7 +296,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let sql_table_name = &self.rust_struct.sql_table_name;
         let sql_table_alias = &self.rust_struct.sql_table_alias;
 
-        let merge_functions = &self.merge_functions;
+       // let merge_functions = &self.merge_functions;
 
         let field_mappings = &self.field_mappings;
 
@@ -322,11 +322,11 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                 }
             }
 
-            impl #struct_ident {
+           /*  impl #struct_ident {
 
                 #(#merge_functions)*
 
-            }
+            } */
 
         );
 

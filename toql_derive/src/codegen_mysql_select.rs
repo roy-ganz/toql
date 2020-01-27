@@ -166,7 +166,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
         Ok(())
     }
 
-    pub fn build_merge(&mut self) {
+    /* pub fn build_merge(&mut self) {
         // Build all merge fields
         // This must be done after the first pass, becuase all key names must be known at this point
         for field in &self.merge_fields {
@@ -230,7 +230,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 }
             }
         }
-    }
+    } */
 }
 
 impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
@@ -310,7 +310,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                         }
 
                         let key_predicate = [ #(#select_keys),*].join( " AND ");
-                        #(#merge_code)*
+                    //    #(#merge_code)* TODO merge
                         Ok(entities.pop().unwrap())
                      }
 
@@ -327,7 +327,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
 
                         let key_predicate = [ #(#select_keys),*].join( " AND ");
-                        #(#merge_code)*
+                      //  #(#merge_code)* TODO merge
 
                         Ok(entities)
                         }

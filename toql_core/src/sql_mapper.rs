@@ -804,6 +804,17 @@ impl SqlMapper {
             )
 
     }
+    /// Helper method to build an aliased column with a canonical sql alias
+    /// Example for `AliasFormat::TinyIndex`: user_address_country.id translates into t1.id 
+    pub fn aliased_column(&self,canonical_alias: &str, column: &str) -> String{
+        let translated_alias = self.translated_alias(canonical_alias);
+            format!(
+                "{}{}{}",
+                &translated_alias,
+                if canonical_alias.is_empty() { "" } else { "." },
+                column
+            )
+    }
     /// Helper method to build an aliased table with a canonical SQL alias
     /// Example for `AliasFormat::TinyIndex`:  Country user_address_country translates into Country t1 
     pub fn translate_aliased_table(&mut self,table: &str, canonical_alias: &str ) -> String{
