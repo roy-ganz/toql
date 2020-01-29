@@ -215,7 +215,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             quote!()
         };
 
-        let struct_key_wrapper_ident = Ident::new(&format!("{}Keys", &rust_stuct_ident), Span::call_site());
+        
 
         let forward_key_columns = &self.forward_key_columns;
         let forward_key_joins=  &self.forward_key_joins;
@@ -281,17 +281,6 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             }
 
 
-        /*     impl Into<toql::query::Query> for #struct_key_ident {
-                    fn into(self) -> toql::query::Query {
-                            #struct_key_wrapper_ident( vec![self]).into()
-                    }
-                }
-
-            impl Into<toql::query::Query> for &#struct_key_ident {
-                fn into(self) -> toql::query::Query {
-                            self.to_owned().into()
-                }
-            } */
 
            
             impl toql :: mysql :: row:: FromResultRow < #struct_key_ident > for #struct_key_ident {
@@ -313,33 +302,9 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             }
             
                  
-                #[derive(Debug, Eq, PartialEq, Hash, Clone #serde)]
-                pub struct #struct_key_wrapper_ident(pub Vec<#struct_key_ident>);
+                
 
-                /* impl<T: IntoIterator<Item = #struct_key_ident>> std::ops::Deref for #struct_key_wrapper_ident<T> {
-                    type Target = T;
-
-                    fn deref(&self) -> &Self::Target {
-                        &self.0
-                    }
-                }
-
-
- */
-                impl Into<#struct_key_wrapper_ident> for #struct_key_ident  {
-                    fn into(self) -> #struct_key_wrapper_ident {
-                          #struct_key_wrapper_ident(vec![self])
-                    }
-                }
-
-                impl IntoIterator for #struct_key_wrapper_ident {
-                    type Item = #struct_key_ident;
-                    type IntoIter = ::std::vec::IntoIter<Self::Item>;
-
-                    fn into_iter(self) -> Self::IntoIter {
-                        self.0.into_iter()
-                    }
-                }
+               
         };
 
         log::debug!(

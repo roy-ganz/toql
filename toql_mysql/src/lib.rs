@@ -353,6 +353,18 @@ where
    <Self as Select<T>>::select_one(self, key)
 }
 
+
+/// Selects a single struct for a given key.
+/// This will select all base fields and join. Merged fields will be skipped
+pub fn select_many<T>(&mut self,keys: &[<T as Key>::Key]) -> Result<Vec<T>>
+where
+    Self:  Select<T, error = ToqlMySqlError> ,
+    T: Key,
+   
+{
+   <Self as Select<T>>::select_many(self, keys)
+}
+
 /* /// Selects many structs for a given key. (DOENS)
 /// This will select all base fields and join. Merged fields will be skipped
 pub fn select_many<T>( key: &<T as Key<T>>::Key,conn: &mut Conn, first: u64,max: u16) -> Result<Vec<T> >
