@@ -4,12 +4,12 @@ extern crate pest_derive;
 
 #[macro_use]
 pub mod error;
-pub mod key;
-pub mod mutate;
-pub mod load;
-pub mod select;
-pub mod dialect;
 pub mod alias;
+pub mod dialect;
+pub mod key;
+pub mod load;
+pub mod mutate;
+pub mod select;
 
 #[macro_use]
 pub mod log_helper;

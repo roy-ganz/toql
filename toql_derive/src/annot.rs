@@ -1,6 +1,6 @@
+use crate::codegen_toql_delup::GeneratedToqlDelup;
 use crate::codegen_toql_key::GeneratedToqlKey;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
-use crate::codegen_toql_delup::GeneratedToqlDelup;
 use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 
 #[cfg(feature = "mysqldb")]
@@ -18,8 +18,6 @@ use crate::codegen_mysql_insert::GeneratedMysqlInsert;
 use syn::GenericArgument::Type;
 use syn::{Ident, Path};
 
-
-
 #[derive(Debug, FromMeta, Clone)]
 pub struct Pair {
     #[darling(rename = "self")]
@@ -27,18 +25,15 @@ pub struct Pair {
     pub other: String,
 }
 
-
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
-   /*  #[darling(default, multiple)]
+    /*  #[darling(default, multiple)]
     pub fields: Vec<Pair>, */
-
     #[darling(default, multiple)]
     pub columns: Vec<Pair>,
-/* 
+    /*
     #[darling(default)]
     pub on_sql: Option<String>, */
-
     #[darling(default)]
     pub join_sql: Option<String>,
 }
@@ -202,21 +197,19 @@ pub enum RenameCase {
 }
 #[derive(FromMeta, Clone, Debug)]
 pub struct MapArg {
-    pub field : String,
-    pub sql : String,
+    pub field: String,
+    pub sql: String,
 
     #[darling(default)]
-    pub handler : Option<Path>
+    pub handler: Option<Path>,
 }
 
 #[derive(FromMeta, Clone, Debug)]
 pub struct ParamArg {
-    pub name : String,
+    pub name: String,
     #[darling(default)]
-    pub value : String,
+    pub value: String,
 }
-
-
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(attributes(toql), forward_attrs(allow, doc, cfg), supports(struct_any))]
@@ -241,16 +234,15 @@ pub struct Toql {
     #[darling(default)]
     pub serde_key: bool,
     #[darling(multiple)]
-    pub map_filter : Vec<MapArg>,
+    pub map_filter: Vec<MapArg>,
     #[darling(multiple)]
-    pub insdel_role : Vec<String>,
+    pub insdel_role: Vec<String>,
     #[darling(multiple)]
-    pub upd_role : Vec<String>,
+    pub upd_role: Vec<String>,
     #[darling(multiple)]
-    pub param : Vec<ParamArg>,
+    pub param: Vec<ParamArg>,
 
     pub data: darling::ast::Data<(), ToqlField>,
-  
 }
 
 impl quote::ToTokens for Toql {
@@ -273,7 +265,7 @@ impl quote::ToTokens for Toql {
         let mut mysql_insert = GeneratedMysqlInsert::from_toql(&rust_struct);
 
         #[cfg(feature = "mysqldb")]
-        let mut mysql_key= GeneratedMysqlKey::from_toql(&rust_struct);
+        let mut mysql_key = GeneratedMysqlKey::from_toql(&rust_struct);
 
         let Toql {
             vis: _,
@@ -286,9 +278,9 @@ impl quote::ToTokens for Toql {
             skip_mut,
             skip_query,
             skip_query_builder,
-            serde_key:_,
+            serde_key: _,
             map_filter: _,
-            insdel_role:_,
+            insdel_role: _,
             upd_role: _,
             param: _,
             ref data,
@@ -336,8 +328,6 @@ impl quote::ToTokens for Toql {
 
                         #[cfg(feature = "mysqldb")]
                         mysql_load.add_path_loader(&f);
-                        
-
                     }
 
                     #[cfg(feature = "mysqldb")]
@@ -355,7 +345,7 @@ impl quote::ToTokens for Toql {
                 }
 
                 // Generate insert/delete/update functionality
-                if mut_enabled  {
+                if mut_enabled {
                     toql_delup.add_delup_field(&f);
 
                     #[cfg(feature = "mysqldb")]
@@ -373,7 +363,7 @@ impl quote::ToTokens for Toql {
             toql_mapper.build_merge();
 
             // Build merge functionality
-           /*  #[cfg(feature = "mysqldb")]
+            /*  #[cfg(feature = "mysqldb")]
             mysql_select.build_merge();  SELECT on signle table only*/
             #[cfg(feature = "mysqldb")]
             mysql_load.build_merge();

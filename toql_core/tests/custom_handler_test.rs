@@ -39,7 +39,7 @@ fn custom_handler() {
                             )));
                         }
                         select.1.push(args.get(0).unwrap().clone());
-                        Ok(Some((format!("LENGTH({}) = ?", select.0),select.1)))
+                        Ok(Some((format!("LENGTH({}) = ?", select.0), select.1)))
                     }
                     _ => self.base.build_filter(select, filter, params),
                 },

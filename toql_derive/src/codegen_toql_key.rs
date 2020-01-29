@@ -11,8 +11,6 @@ pub(crate) struct GeneratedToqlKey<'a> {
     key_fields: Vec<TokenStream>,
     key_setters: Vec<TokenStream>,
     serde_key: bool,
-
- 
 }
 
 impl<'a> GeneratedToqlKey<'a> {
@@ -26,7 +24,6 @@ impl<'a> GeneratedToqlKey<'a> {
             key_fields: Vec::new(),
             key_setters: Vec::new(),
             serde_key: toql.serde_key,
-            
         }
     }
 
@@ -45,8 +42,6 @@ impl<'a> GeneratedToqlKey<'a> {
                 if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
                     self.key_columns_code
                         .push(quote!( columns.push( String::from(#column)); ));
-
-                    
 
                     if let Some(inverse_column) = &regular_attrs.default_inverse_column {
                         self.key_inverse_columns_code
@@ -74,7 +69,7 @@ impl<'a> GeneratedToqlKey<'a> {
                     self.key_setters
                         .push(quote!(self. #rust_field_ident = key . #index;))
                 }
-               
+
                 let key_index = syn::Index::from(self.key_fields.len() - 1);
 
                 self.key_params_code
@@ -88,25 +83,24 @@ impl<'a> GeneratedToqlKey<'a> {
                 let key_index = syn::Index::from(self.key_types.len());
                 self.key_types
                     .push(quote!( <#rust_type_ident as toql::key::Key>::Key));
-                let columns_map_code= &join_attrs.columns_map_code;
-                self.key_columns_code.push( quote!( 
-                    
-                        <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|other_column| {
-                            #default_self_column_code;
-                            let column = #columns_map_code;
-                            columns.push(column.to_string());
-                        });
-                        ));
+                let columns_map_code = &join_attrs.columns_map_code;
+                self.key_columns_code.push(quote!(
 
-                        self.key_inverse_columns_code.push( quote!( 
-                    
+                <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|other_column| {
+                    #default_self_column_code;
+                    let column = #columns_map_code;
+                    columns.push(column.to_string());
+                });
+                ));
+
+                self.key_inverse_columns_code.push( quote!(
+
                         <#rust_type_ident as toql::key::Key>::default_inverse_columns().iter().for_each(|other_column| {
                             #default_self_column_code;
                             let column = #columns_map_code;
                             columns.push(column.to_string());
                         });
                         ));
-                
 
                 self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(& key. #key_index));));
 
@@ -132,8 +126,6 @@ impl<'a> GeneratedToqlKey<'a> {
                                     < #rust_type_ident as toql::key::Key>::set_key(&mut self. #rust_field_ident,key . #key_index)?;
                             ));
                 }
-
-               
             }
             _ => {}
         }
@@ -165,26 +157,30 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         let key_setters = &self.key_setters;
 
         // Single type or tuple
-        let key_type_arg =  if  self.key_types.len() == 1 {
+        let key_type_arg = if self.key_types.len() == 1 {
             quote!( #(#key_types),* )
         } else {
             quote!( ( #( #key_types),*) )
         };
-         let key_index_code =  if  self.key_types.len() == 1 {
-            quote!( key )
+        let key_index_code = if self.key_types.len() == 1 {
+            quote!(key)
         } else {
-            let key_codes = key_types.iter().enumerate()
-                .map(|(i, _)| {let index = syn::Index::from(i); quote!( key. #index) })
-                .collect::<Vec<_>>(); 
+            let key_codes = key_types
+                .iter()
+                .enumerate()
+                .map(|(i, _)| {
+                    let index = syn::Index::from(i);
+                    quote!( key. #index)
+                })
+                .collect::<Vec<_>>();
             quote!(  #( #key_codes),* )
         };
 
         let serde = if self.serde_key {
             quote!( ,Deserialize, Serialize)
-        } else { 
+        } else {
             quote!()
         };
-
 
         let key = quote! {
 
@@ -231,7 +227,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
             impl std::convert::From<#key_type_arg> for #struct_key_ident
             {
-                
+
                 fn from(key: #key_type_arg) ->Self {
                     Self( #key_index_code )
                 }
@@ -244,7 +240,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                     <#rust_stuct_ident as toql::key::Key>::get_key(self).ok().hash(state);
                 }
             }
- 
+
         };
 
         log::debug!(

@@ -39,7 +39,6 @@ pub enum ToqlError {
     SqlBuilderError(SqlBuilderError),
     /// Toql failed to convert row value into struct field
     DeserializeError(String, String),
-
 }
 
 /// A result with a [`ToqlError`](enum.ToqlError.html)
@@ -56,8 +55,6 @@ impl From<SqlMapperError> for ToqlError {
     }
 }
 
-
-
 impl From<PestError<Rule>> for ToqlError {
     fn from(err: PestError<Rule>) -> ToqlError {
         ToqlError::QueryParserError(err)
@@ -72,11 +69,13 @@ impl fmt::Display for ToqlError {
             ToqlError::MapperMissing(ref s) => write!(f, "no mapper found for `{}`", s),
             ToqlError::SqlMapperError(ref e) => e.fmt(f),
             ToqlError::ValueMissing(ref s) => write!(f, "no value found for `{}`", s),
-          
+
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),
-            ToqlError::DeserializeError(ref n, ref e) => write!(f, "unable to deserialize field `{}` because: {}", n, e),
+            ToqlError::DeserializeError(ref n, ref e) => {
+                write!(f, "unable to deserialize field `{}` because: {}", n, e)
+            }
         }
     }
 }

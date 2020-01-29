@@ -146,7 +146,7 @@ impl QueryParser {
                         }
                     }
                 }
-               
+
                 Rule::wildcard => {
                     query.tokens.push(QueryToken::Wildcard(Wildcard {
                         concatenation: con.clone(),

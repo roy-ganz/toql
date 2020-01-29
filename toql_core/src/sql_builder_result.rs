@@ -63,7 +63,6 @@ impl SqlBuilderResult {
         }
     }
 
-  
     /// Returns simple SQL.
     pub fn to_sql(&self) -> String {
         let mut s = String::from("SELECT ");

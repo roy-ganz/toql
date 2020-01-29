@@ -18,13 +18,11 @@
 //!
 //! Read the guide for more information on the query syntax.
 //!
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 
-
 pub trait QueryWith {
-
     fn with(&self, query: Query) -> Query;
 }
 
@@ -33,8 +31,7 @@ pub trait FilterArg {
     fn to_sql(&self) -> String;
 }
 
-
- impl FilterArg for &str {
+impl FilterArg for &str {
     fn to_sql(&self) -> String {
         let mut s = String::from("'");
         // TODO escape for sql
@@ -42,7 +39,7 @@ pub trait FilterArg {
         s.push('\'');
         s
     }
-} 
+}
 // TODO combine with above
 impl FilterArg for String {
     fn to_sql(&self) -> String {
@@ -53,7 +50,7 @@ impl FilterArg for String {
         s
     }
 }
- impl FilterArg for &String {
+impl FilterArg for &String {
     fn to_sql(&self) -> String {
         let mut s = String::from("'");
         // TODO escape for sql
@@ -61,7 +58,7 @@ impl FilterArg for String {
         s.push('\'');
         s
     }
-} 
+}
 
 macro_rules! impl_num_filter_arg {
     ($($mty:ty),+) => {
@@ -75,38 +72,32 @@ macro_rules! impl_num_filter_arg {
                  fn to_sql(&self) -> String {
                     self.to_string()
                  }
-            } 
+            }
         )+
     }
 }
 
-impl_num_filter_arg!(usize,u8, u16, u32, u64, u128,i8, i16, i32, i64, i128, f32, f64);
+impl_num_filter_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
-
-impl<T : Into<Query>> Into<Query> for Vec<T> {
-
+impl<T: Into<Query>> Into<Query> for Vec<T> {
     fn into(self) -> Query {
         let mut query = Query::new();
-        for key in self{
+        for key in self {
             query = query.or(key);
         }
         query
     }
 }
 
-impl<T : Into<Query> + Clone> Into<Query> for &Vec<T> {
-
+impl<T: Into<Query> + Clone> Into<Query> for &Vec<T> {
     fn into(self) -> Query {
         let mut query = Query::new();
-        for key in self{
+        for key in self {
             query = query.or(key.clone());
         }
         query
     }
 }
-
-
-
 
 impl FilterArg for bool {
     fn to_sql(&self) -> String {
@@ -119,7 +110,6 @@ impl FilterArg for &bool {
         String::from(if **self == true { "1" } else { "0" })
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub(crate) enum Concatenation {
@@ -363,9 +353,9 @@ impl ToString for Field {
             }
         }
         match self.filter {
-            None => {},
+            None => {}
             Some(ref filter) => {
-                s.push_str( filter.to_string().as_str());
+                s.push_str(filter.to_string().as_str());
             }
         }
         s
@@ -383,7 +373,6 @@ impl Into<QueryToken> for Field {
         QueryToken::Field(self)
     }
 }
-
 
 /// The filter operation on a field. You use this when creating a [FieldHandler](../sql_mapper/trait.FieldHandler.html)
 /// to provide custom functions through the _Fn_ filter or implement a alternative mapping to SQL.
@@ -407,75 +396,71 @@ pub enum FieldFilter {
 }
 
 impl ToString for FieldFilter {
-
-
-    fn to_string(&self) -> String { 
+    fn to_string(&self) -> String {
         let mut s = String::new();
         match self {
-                FieldFilter::Eq(ref arg) => {
-                    s.push_str("EQ ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Eqn => {
-                    s.push_str("EQN");
-                }
-                FieldFilter::Ne(ref arg) => {
-                    s.push_str("NE ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Nen => {
-                    s.push_str("NEN");
-                }
-                FieldFilter::Gt(ref arg) => {
-                    s.push_str("GT ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Ge(ref arg) => {
-                    s.push_str("GE ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Lt(ref arg) => {
-                    s.push_str("LT ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Le(ref arg) => {
-                    s.push_str("LE ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Lk(ref arg) => {
-                    s.push_str("LK ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Re(ref arg) => {
-                    s.push_str("RE ");
-                    s.push_str(arg);
-                }
-                FieldFilter::Bw(ref lower, ref upper) => {
-                    s.push_str("BW ");
-                    s.push_str(lower);
-                    s.push(' ');
-                    s.push_str(upper);
-                }
-                FieldFilter::In(ref args) => {
-                    s.push_str("IN ");
-                    s.push_str(&args.join(" "))
-                }
-                FieldFilter::Out(ref args) => {
-                    s.push_str("OUT ");
-                    s.push_str(&args.join(" "))
-                }
-                FieldFilter::Fn(ref name, ref args) => {
-                    s.push_str("FN ");
-                    s.push_str(name);
-                    s.push(' ');
-                    s.push_str(&args.join(" "))
-                }
+            FieldFilter::Eq(ref arg) => {
+                s.push_str("EQ ");
+                s.push_str(arg);
+            }
+            FieldFilter::Eqn => {
+                s.push_str("EQN");
+            }
+            FieldFilter::Ne(ref arg) => {
+                s.push_str("NE ");
+                s.push_str(arg);
+            }
+            FieldFilter::Nen => {
+                s.push_str("NEN");
+            }
+            FieldFilter::Gt(ref arg) => {
+                s.push_str("GT ");
+                s.push_str(arg);
+            }
+            FieldFilter::Ge(ref arg) => {
+                s.push_str("GE ");
+                s.push_str(arg);
+            }
+            FieldFilter::Lt(ref arg) => {
+                s.push_str("LT ");
+                s.push_str(arg);
+            }
+            FieldFilter::Le(ref arg) => {
+                s.push_str("LE ");
+                s.push_str(arg);
+            }
+            FieldFilter::Lk(ref arg) => {
+                s.push_str("LK ");
+                s.push_str(arg);
+            }
+            FieldFilter::Re(ref arg) => {
+                s.push_str("RE ");
+                s.push_str(arg);
+            }
+            FieldFilter::Bw(ref lower, ref upper) => {
+                s.push_str("BW ");
+                s.push_str(lower);
+                s.push(' ');
+                s.push_str(upper);
+            }
+            FieldFilter::In(ref args) => {
+                s.push_str("IN ");
+                s.push_str(&args.join(" "))
+            }
+            FieldFilter::Out(ref args) => {
+                s.push_str("OUT ");
+                s.push_str(&args.join(" "))
+            }
+            FieldFilter::Fn(ref name, ref args) => {
+                s.push_str("FN ");
+                s.push_str(name);
+                s.push(' ');
+                s.push_str(&args.join(" "))
+            }
         }
         s
     }
 }
-
-
 
 #[derive(Clone, Debug)]
 pub(crate) enum FieldOrder {
@@ -493,7 +478,7 @@ pub(crate) enum QueryToken {
 
 impl From<&str> for QueryToken {
     fn from(s: &str) -> QueryToken {
-       if s.ends_with("*") {
+        if s.ends_with("*") {
             QueryToken::Wildcard(Wildcard::from(s))
         } else {
             QueryToken::Field(Field::from(s))
@@ -546,7 +531,7 @@ pub struct Query {
 
     pub where_predicates: Vec<String>, // Additional where clause
     pub where_predicate_params: Vec<String>, // Query params for additional sql restriction
-    pub select_columns: Vec<String>     // Additional select columns
+    pub select_columns: Vec<String>,   // Additional select columns
 }
 
 impl Query {
@@ -555,21 +540,20 @@ impl Query {
         Query {
             tokens: vec![],
             distinct: false,
-           // roles: HashSet::new(),
+            // roles: HashSet::new(),
             params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
-            select_columns: Vec::new()
+            select_columns: Vec::new(),
         }
     }
-    
 
     /// Create a new query from another query.
-    pub fn from<T>(query: T) -> Self 
+    pub fn from<T>(query: T) -> Self
     where
-        T: Into<Query>
+        T: Into<Query>,
     {
-       query.into()
+        query.into()
     }
 
     /// Create a new query that select all top fields.
@@ -581,10 +565,10 @@ impl Query {
             params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
-            select_columns: Vec::new()
+            select_columns: Vec::new(),
         }
     }
-    
+
     /// Wrap query with parentheses.
     pub fn parenthesize(mut self) -> Self {
         if self.tokens.is_empty() {
@@ -617,25 +601,25 @@ impl Query {
             field.concatenation = Concatenation::Or;
         } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
             wildcard.concatenation = Concatenation::Or;
-        } 
+        }
 
         self.tokens.append(&mut query.tokens);
         self
     }
     pub fn with(self, query_with: impl QueryWith) -> Self {
         query_with.with(self)
-       
     }
-    pub fn contains_path(&self, path: &str) ->bool{
-        
+    pub fn contains_path(&self, path: &str) -> bool {
         let p = format!("{}_", path.trim_end_matches('_')); // ensure path ends with _
         self.tokens.iter().any(|t| {
-            let pth= p.as_str();
+            let pth = p.as_str();
             match t {
                 QueryToken::Field(field) => field.name.starts_with(pth),
-                QueryToken::Wildcard(wildcard) => wildcard.path.is_empty() || wildcard.path.starts_with(pth),
-                _ => false
-            }   
+                QueryToken::Wildcard(wildcard) => {
+                    wildcard.path.is_empty() || wildcard.path.starts_with(pth)
+                }
+                _ => false,
+            }
         })
     }
     // Not sure if needed
@@ -650,22 +634,22 @@ impl Query {
 
         self
     } */
-
-   
 }
 
-    /// Asserts that the provided roles contains all required roles.
-    /// The first missing role is returned as error.
-    pub fn assert_roles(provided_roles: &HashSet<String>, required_roles: &HashSet<String>) ->Result<(),  String>{
-              
-                for r in required_roles {
-                    if !provided_roles.contains(r) {
-                        return Err(r.to_owned());
-                    }
-                }
-           
-        Ok(())
+/// Asserts that the provided roles contains all required roles.
+/// The first missing role is returned as error.
+pub fn assert_roles(
+    provided_roles: &HashSet<String>,
+    required_roles: &HashSet<String>,
+) -> Result<(), String> {
+    for r in required_roles {
+        if !provided_roles.contains(r) {
+            return Err(r.to_owned());
+        }
     }
+
+    Ok(())
+}
 
 // Doc: Display  implements automatically .to_string()
 impl fmt::Display for Query {
@@ -731,12 +715,11 @@ impl From<Wildcard> for Query {
 impl From<&str> for Query {
     fn from(string: &str) -> Query {
         let mut q = Query::new();
-        q.tokens.push(
-        if string.ends_with("*") {
-                QueryToken::Wildcard(Wildcard::from(string))
-            } else {
-                QueryToken::Field(Field::from(string))
-            });
+        q.tokens.push(if string.ends_with("*") {
+            QueryToken::Wildcard(Wildcard::from(string))
+        } else {
+            QueryToken::Field(Field::from(string))
+        });
         q
     }
 }

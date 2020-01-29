@@ -23,7 +23,6 @@ pub(crate) fn rename_or_default(string: &str, renaming: &Option<RenameCase>) -> 
     }
 }
 
-
 pub fn extract_query_params(expression: &str) -> (String, Vec<String>) {
     let regex: regex::Regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
 

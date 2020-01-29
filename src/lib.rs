@@ -46,18 +46,17 @@
 //! Have a look at the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs) that serves users with Rocket and MySQL.
 //!
 
-
+pub use toql_core::alias;
 pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::key;
+pub use toql_core::load;
 pub use toql_core::merge;
 pub use toql_core::mutate;
 pub use toql_core::query;
-pub use toql_core::load;
 pub use toql_core::select;
-pub use toql_core::alias;
 
-pub use toql_core::log_sql; // Export macro 
+pub use toql_core::log_sql; // Export macro
 pub use toql_core::ok_or_fail; // Export macro
 
 pub use toql_core::query_builder;
@@ -67,7 +66,6 @@ pub use toql_core::sql_builder_result;
 pub use toql_core::sql_mapper;
 
 pub use toql_derive as derive;
-
 
 pub use toql_core::log; // Reexport for derive
 

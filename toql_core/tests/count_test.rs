@@ -1,8 +1,8 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_mapper::FieldOptions;
-use toql_core::sql_mapper::SqlMapper;
 use toql_core::sql_mapper::JoinType;
+use toql_core::sql_mapper::SqlMapper;
 
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("User");

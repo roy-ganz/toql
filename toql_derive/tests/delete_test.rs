@@ -24,8 +24,7 @@ struct DeleteUser {
 
 #[test]
 fn delete_one() {
-   
-    let (sql, params) = DeleteBook::delete_one_sql( DeleteBookKey(5)).unwrap();
+    let (sql, params) = DeleteBook::delete_one_sql(DeleteBookKey(5)).unwrap();
 
     assert_eq!("DELETE t FROM DeleteBook t WHERE (t.id = ?)", sql);
     assert_eq!(["5"], *params);
@@ -33,7 +32,6 @@ fn delete_one() {
 
 #[test]
 fn delete_many() {
-    
     let books = vec![DeleteBookKey(5), DeleteBookKey(24)];
 
     let (sql, params) = DeleteBook::delete_many_sql(books).unwrap().unwrap();

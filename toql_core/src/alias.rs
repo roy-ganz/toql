@@ -1,6 +1,3 @@
-
-
-
 /// Desired alias format that the Sql builder uses.
 /// Long -> concatenated paths -> user_address_country
 /// Medium -> last path with index -> country1
@@ -11,68 +8,66 @@ pub enum AliasFormat {
     TinyIndex,
     ShortIndex,
     MediumIndex,
-    Canonical
+    Canonical,
 }
 
 impl AliasFormat {
-    pub fn tiny_index( index: u16) -> String {
-    let mut tiny_name= String::from("t");
-    tiny_name.push_str(index.to_string().as_str());
-    tiny_name
+    pub fn tiny_index(index: u16) -> String {
+        let mut tiny_name = String::from("t");
+        tiny_name.push_str(index.to_string().as_str());
+        tiny_name
     }
-    
+
     // First two characters of last join + unique number
     pub fn short_index(name: &str, index: u16) -> String {
-         
-         let medium_name = String::from(
-            if name.is_empty() {"t"} else {
-                let x = name.rfind('_');
-                if let Some(xi) = x {
-                    &name[(xi + 1)..]
-                } else {
-                    name
-                }
-                
-                });
+        let medium_name = String::from(if name.is_empty() {
+            "t"
+        } else {
+            let x = name.rfind('_');
+            if let Some(xi) = x {
+                &name[(xi + 1)..]
+            } else {
+                name
+            }
+        });
 
         let mut it = medium_name.chars();
         let f = it.next().unwrap_or('t');
         let mut short_name = String::new();
         short_name.push(f);
         let s = it.next();
-        if let Some(sv) = s{
+        if let Some(sv) = s {
             short_name.push(sv);
             if sv.is_ascii_digit() {
                 short_name.push('_');
             }
         }
         short_name.push_str(index.to_string().as_str());
-       short_name
+        short_name
     }
     pub fn medium_index(name: &str, index: u16) -> String {
         let mut wrap = false;
-        let mut medium_name = String::from(
-                    if name.is_empty() {"t"} else {
-                        let x = name.rfind('_');
-                        if let Some(xi) = x {
-                            &name[(xi + 1)..]
-                        } else {
-                            name
-                        }
-                        
-                        });
+        let mut medium_name = String::from(if name.is_empty() {
+            "t"
+        } else {
+            let x = name.rfind('_');
+            if let Some(xi) = x {
+                &name[(xi + 1)..]
+            } else {
+                name
+            }
+        });
         let c = medium_name.chars().last().unwrap();
         if c.is_ascii_digit() {
             medium_name.push('$');
             wrap = true;
         }
-       medium_name.push_str(index.to_string().as_str());
+        medium_name.push_str(index.to_string().as_str());
 
-       if wrap {
-           format!("`{}`", medium_name)
-       } else {
-        medium_name
-       }
+        if wrap {
+            format!("`{}`", medium_name)
+        } else {
+            medium_name
+        }
     }
 }
-

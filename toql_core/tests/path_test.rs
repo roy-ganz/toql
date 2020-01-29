@@ -1,13 +1,13 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_mapper::FieldOptions;
-use toql_core::sql_mapper::SqlMapper;
 use toql_core::sql_mapper::JoinType;
+use toql_core::sql_mapper::SqlMapper;
 
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("User");
     mapper
-        .join("book", JoinType::Inner, "Book b","id = b.id")
+        .join("book", JoinType::Inner, "Book b", "id = b.id")
         .map_field_with_options("id", "id", FieldOptions::new().preselect(true))
         .map_field("username", "username")
         .map_field_with_options("book_", "IS_NULL(id)", FieldOptions::new().preselect(true)) // on this path

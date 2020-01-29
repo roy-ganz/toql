@@ -5,13 +5,13 @@
 
 use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::TokenStream;
-use syn::Ident;
 use std::collections::HashSet;
+use syn::Ident;
 
 pub(crate) struct GeneratedToqlDelup<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
-   
+
     key_params_code: Vec<TokenStream>,
     key_columns_code: Vec<TokenStream>,
 
@@ -20,7 +20,7 @@ pub(crate) struct GeneratedToqlDelup<'a> {
 
     diff_merge_code: Vec<TokenStream>,
     struct_upd_roles: &'a HashSet<String>,
-    struct_insdel_roles: &'a HashSet<String>
+    struct_insdel_roles: &'a HashSet<String>,
 }
 
 impl<'a> GeneratedToqlDelup<'a> {
@@ -28,7 +28,7 @@ impl<'a> GeneratedToqlDelup<'a> {
         GeneratedToqlDelup {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
-           
+
             key_columns_code: Vec::new(),
             key_params_code: Vec::new(),
 
@@ -36,11 +36,11 @@ impl<'a> GeneratedToqlDelup<'a> {
             diff_set_code: Vec::new(),
 
             diff_merge_code: Vec::new(),
-            struct_upd_roles : &toql.upd_roles,
-            struct_insdel_roles : &toql.insdel_roles
+            struct_upd_roles: &toql.upd_roles,
+            struct_insdel_roles: &toql.insdel_roles,
         }
     }
-    
+
     pub(crate) fn add_delup_field(&mut self, field: &crate::sane::Field) {
         let rust_field_ident = &field.rust_field_ident;
         let rust_field_name = &field.rust_field_name;
@@ -93,23 +93,18 @@ impl<'a> GeneratedToqlDelup<'a> {
             FieldKind::Merge(_) => {}
         };
 
-        
         if field.skip_mut {
             return;
         }
-        
-         
 
         let role_assert = if field.load_roles.is_empty() {
-                quote!()
-            } else {
-                let roles = &field.load_roles;
-                quote!(
-                    if toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect()).is_ok() 
-                )
-            };
-                    
-
+            quote!()
+        } else {
+            let roles = &field.load_roles;
+            quote!(
+                if toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect()).is_ok()
+            )
+        };
 
         match &field.kind {
             FieldKind::Regular(regular_attrs) => {
@@ -122,8 +117,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                         }
                     }
                 );
-                 
-                
+
                 // Selectable fields
                 // Option<T>, <Option<Option<T>>
                 if field.number_of_options > 0 && !field.preselect {
@@ -132,7 +126,6 @@ impl<'a> GeneratedToqlDelup<'a> {
                     } else {
                         quote!()
                     };
-                   
 
                     // update statement
                     // Doesn't update primary key
@@ -167,7 +160,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                     } else {
                         quote!()
                     };
-                  
+
                     //update statement
                     if !regular_attrs.key {
                         self.update_set_code.push(quote!(
@@ -205,8 +198,8 @@ impl<'a> GeneratedToqlDelup<'a> {
 
                 let set_params_code = match field.number_of_options {
                     2 => {
-                        // Option<Option<T>> 
-                        quote!( 
+                        // Option<Option<T>>
+                        quote!(
                             params.extend_from_slice(
                                    &entity. #rust_field_ident
                                         .as_ref()
@@ -220,7 +213,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                         )
                     }
                     1 if field.preselect => {
-                        // #[toql(preselect)] Option<T> 
+                        // #[toql(preselect)] Option<T>
                         quote!(
                             params.extend_from_slice(
                                    &entity
@@ -240,7 +233,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                         )
                     }
                     _ => {
-                        // T 
+                        // T
                         quote!(
                                            params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(
                                                &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
@@ -392,7 +385,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                              let outdated = boutdated.borrow();
                              let entity = bentity.borrow();
                             #optional_if {
-                                 let (insert_sql, diff_sql, delete_sql) = 
+                                 let (insert_sql, diff_sql, delete_sql) =
                                         toql::mutate::collection_delta_sql::<#rust_type_ident,Self, Self, toql::dialect::Generic, toql::mysql::error::ToqlMySqlError>(
                                      outdated. #rust_field_ident .as_ref() #optional_ok_or,
                                     entity.#rust_field_ident .as_ref() #optional_unwrap,
@@ -413,8 +406,6 @@ impl<'a> GeneratedToqlDelup<'a> {
             }
         }
     }
-
-   
 }
 impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
@@ -423,15 +414,12 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
         let update_set_code = &self.update_set_code;
         let diff_set_code = &self.diff_set_code;
 
-       
         let key_params_code = &self.key_params_code;
 
         let diff_merge_code = &self.diff_merge_code;
 
         // Generate modules if there are keys available
         let mods = {
-           
-
             let delete_many_statement = format!(
                 "DELETE {{alias}} FROM {} {{alias}} WHERE ",
                 self.sql_table_name
@@ -440,25 +428,26 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
             let key_columns_code = &self.key_columns_code;
             let sql_table_name = &self.sql_table_name;
 
-             let upd_role_test = if self.struct_upd_roles.is_empty() {
-                        quote!()
-                    } else {
-                        let roles = &self.struct_upd_roles;
-                        quote!(
-                            toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                            .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
-                        
-                    )};
-                let ins_role_test = if self.struct_insdel_roles.is_empty() {
-                        quote!()
-                    } else {
-                        let roles = &self.struct_insdel_roles;
-                        quote!(
-                            toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                            .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
-                        
-                    )};
+            let upd_role_test = if self.struct_upd_roles.is_empty() {
+                quote!()
+            } else {
+                let roles = &self.struct_upd_roles;
+                quote!(
+                        toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
 
+                )
+            };
+            let ins_role_test = if self.struct_insdel_roles.is_empty() {
+                quote!()
+            } else {
+                let roles = &self.struct_insdel_roles;
+                quote!(
+                        toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
+
+                )
+            };
 
             quote! {
 
@@ -474,10 +463,10 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                             let mut delete_stmt =format!(#delete_many_statement, alias = alias);
 
                             let mut params :Vec<String>= Vec::new();
-                            
+
                             let mut first = true;
 
-                           
+
 
                               let key_comparison = <#struct_ident as toql::key::Key>::columns().iter()
                                 .map(|key| format!("{}.{} = ?", alias, key))
@@ -518,7 +507,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         let mut update_stmt = String::from("UPDATE ");
                         let mut first = true;
                         let mut keys: Vec<String> = Vec::new();
-                        
+
                          #(#key_columns_code)*
 
 
@@ -577,9 +566,9 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 {
                     type error = toql::mysql::error::ToqlMySqlError;
 
-                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
+                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
                     -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
-                    
+
                     {
                         #upd_role_test
 
@@ -647,7 +636,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn full_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
+                    fn full_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
                     -> Result<Option<Vec<(String,Vec<String>)>>, toql :: mysql::error:: ToqlMySqlError>
                     {
 

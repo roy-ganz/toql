@@ -20,7 +20,6 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
 
     select_keys: Vec<TokenStream>,
 
-    
     select_keys_params: Vec<TokenStream>,
 
     merge_code: Vec<TokenStream>,
@@ -44,7 +43,6 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
             select_keys: Vec::new(),
 
-           
             select_keys_params: Vec::new(),
 
             merge_code: Vec::new(),
@@ -93,8 +91,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 let alias = &join_attrs.join_alias;
                 self.select_columns.push(String::from("true"));
                 self.select_columns.push(String::from("{}"));
-                self.select_columns_params
-                    .push(quote!( <Self as toql::select::Select<#rust_type_ident>>:: columns_sql(#alias)));
+                self.select_columns_params.push(
+                    quote!( <Self as toql::select::Select<#rust_type_ident>>:: columns_sql(#alias)),
+                );
 
                 if join_attrs.key {
                     let key_index = syn::Index::from(self.select_keys.len());
@@ -114,7 +113,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     self.merge_self_fields.push(rust_field_name.to_string());
                 }
 
-                let join_type = if field.number_of_options == 0 || (field.number_of_options == 1 && field.preselect == false) {
+                let join_type = if field.number_of_options == 0
+                    || (field.number_of_options == 1 && field.preselect == false)
+                {
                     ""
                 } else {
                     "LEFT "
@@ -156,8 +157,6 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     } else {
                         quote!("")
                     });
-
-               
             }
             FieldKind::Merge(_) => {
                 self.merge_fields.push(field.clone());
@@ -252,104 +251,101 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
             sql_table_name, sql_table_alias
         );
 
-       
         let columns_sql_code = if select_columns_params.is_empty() {
-            quote!( format!(#select_columns, alias=alias))
+            quote!(format!(#select_columns, alias=alias))
         } else {
-            quote!( format!(#select_columns, #(#select_columns_params),*, alias = alias))
+            quote!(format!(#select_columns, #(#select_columns_params),*, alias = alias))
         };
         let joins_sql_code = if select_joins_params.is_empty() {
             quote!( String::from(#select_joins))
         } else {
-            quote!( format!(#select_joins, #(#select_joins_params),*))
+            quote!(format!(#select_joins, #(#select_joins_params),*))
         };
-        
-
 
         let select = quote! {
-                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::select::Select<#struct_ident> for toql::mysql::MySql<'a,T> {
+                       impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::select::Select<#struct_ident> for toql::mysql::MySql<'a,T> {
 
-                    type error = toql :: mysql::error:: ToqlMySqlError;
-
-
-                    fn columns_sql(alias: &str) -> String {
-                           #columns_sql_code
-
-                    }
-                    fn joins_sql() -> String {
-                            #joins_sql_code
-                    } 
-                    fn select_sql(join: Option<&str>) -> String {
-                            format!( #select_statement,
-                            <Self as  toql::select::Select<#struct_ident>>::columns_sql(#sql_table_alias), 
-                            <Self as  toql::select::Select<#struct_ident>>::joins_sql(),
-                            join.unwrap_or(""))
-                    }
+                           type error = toql :: mysql::error:: ToqlMySqlError;
 
 
-                     fn select_one(&mut self, key: <#struct_ident as toql::key::Key>::Key)
-                     -> Result<#struct_ident, toql :: mysql::error:: ToqlMySqlError>
-                     {
-                       let conn = self.conn();
-                        
-                        let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( &[key], Some(#sql_table_alias));
-                        let select_stmt = format!(
-                            "{} WHERE {} LIMIT 0,2",
-                            <Self as toql::select::Select<#struct_ident>>::select_sql(None),
-                            predicate
-                        );
-                        
-                        toql::log_sql!(select_stmt, params);
+                           fn columns_sql(alias: &str) -> String {
+                                  #columns_sql_code
 
-                        let entities_stmt = conn.prep_exec(select_stmt, &params)?;
-                        let mut entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
+                           }
+                           fn joins_sql() -> String {
+                                   #joins_sql_code
+                           }
+                           fn select_sql(join: Option<&str>) -> String {
+                                   format!( #select_statement,
+                                   <Self as  toql::select::Select<#struct_ident>>::columns_sql(#sql_table_alias),
+                                   <Self as  toql::select::Select<#struct_ident>>::joins_sql(),
+                                   join.unwrap_or(""))
+                           }
 
-                        if entities.len() > 1 {
-                            return Err( toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::NotUnique));
-                        } else if entities.is_empty() {
-                            return Err( toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::NotFound));
-                        }
 
-                        Ok(entities.pop().unwrap())
-                     }
-                      fn select_many(&mut self, keys: &[<#struct_ident as toql::key::Key>::Key]) -> Result<Vec<#struct_ident>, Self::error>{
-
-                            let conn = self.conn();
-                            let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( keys, Some(#sql_table_alias));
-                       
-                             let select_stmt = format!(
-                            "{} WHERE {}",
-                            <Self as toql::select::Select<#struct_ident>>::select_sql(None),
-                            predicate,
-                        );
-                         
-                        toql::log_sql!(select_stmt, params);
-                        let entities_stmt = conn.prep_exec(select_stmt, &params)?;
-                        let entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
-                        Ok(entities)
-                      }
-
-                       /*  fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> , toql :: mysql::error:: ToqlMySqlError>
-                           
+                            fn select_one(&mut self, key: <#struct_ident as toql::key::Key>::Key)
+                            -> Result<#struct_ident, toql :: mysql::error:: ToqlMySqlError>
                             {
-                                let conn = self.conn();
-                                let select_stmt =  <Self as  toql::select::Select<#struct_ident>>::select_sql(Some(join));
+                              let conn = self.conn();
 
-                        toql::log_sql!(select_stmt, params);
+                               let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( &[key], Some(#sql_table_alias));
+                               let select_stmt = format!(
+                                   "{} WHERE {} LIMIT 0,2",
+                                   <Self as toql::select::Select<#struct_ident>>::select_sql(None),
+                                   predicate
+                               );
 
-                        let entities_stmt = conn.prep_exec(select_stmt, params)?;
-                        let mut entities = toql::mysql::row::from_query_result::<#struct_ident>(entities_stmt)?;
+                               toql::log_sql!(select_stmt, params);
+
+                               let entities_stmt = conn.prep_exec(select_stmt, &params)?;
+                               let mut entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
+
+                               if entities.len() > 1 {
+                                   return Err( toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::NotUnique));
+                               } else if entities.is_empty() {
+                                   return Err( toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::NotFound));
+                               }
+
+                               Ok(entities.pop().unwrap())
+                            }
+                             fn select_many(&mut self, keys: &[<#struct_ident as toql::key::Key>::Key]) -> Result<Vec<#struct_ident>, Self::error>{
+
+                                   let conn = self.conn();
+                                   let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( keys, Some(#sql_table_alias));
+
+                                    let select_stmt = format!(
+                                   "{} WHERE {}",
+                                   <Self as toql::select::Select<#struct_ident>>::select_sql(None),
+                                   predicate,
+                               );
+
+                               toql::log_sql!(select_stmt, params);
+                               let entities_stmt = conn.prep_exec(select_stmt, &params)?;
+                               let entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
+                               Ok(entities)
+                             }
+
+                              /*  fn select_dependencies( &mut self, join: &str, params:&Vec<String>) -> Result<Vec<#struct_ident> , toql :: mysql::error:: ToqlMySqlError>
+
+                                   {
+                                       let conn = self.conn();
+                                       let select_stmt =  <Self as  toql::select::Select<#struct_ident>>::select_sql(Some(join));
+
+                               toql::log_sql!(select_stmt, params);
+
+                               let entities_stmt = conn.prep_exec(select_stmt, params)?;
+                               let mut entities = toql::mysql::row::from_query_result::<#struct_ident>(entities_stmt)?;
 
 
-                        let key_predicate = [ #(#select_keys),*].join( " AND ");
-                      //  #(#merge_code)* TODO merge
+                               let key_predicate = [ #(#select_keys),*].join( " AND ");
+                             //  #(#merge_code)* TODO merge
 
-                        Ok(entities)
-                        }
- */
-                }
+                               Ok(entities)
+                               }
+        */
+                       }
 
-        };
+               };
 
         log::debug!(
             "Source code for `{}`:\n{}",

@@ -1,13 +1,11 @@
-  
-  
-    /// MySQL failed to run the SQL query. For feature `mysql`
-use toql_core::error::ToqlError;
 use mysql::Error;
+/// MySQL failed to run the SQL query. For feature `mysql`
+use toql_core::error::ToqlError;
 
 #[derive(Debug)]
 pub enum ToqlMySqlError {
     ToqlError(ToqlError),
-    MySqlError(Error)
+    MySqlError(Error),
 }
 
 impl From<Error> for ToqlMySqlError {

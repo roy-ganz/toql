@@ -6,11 +6,10 @@ use crate::annot::{MapArg, ParamArg};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
-
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
 
-use std::collections::{HashSet};
+use std::collections::HashSet;
 
 //use crate::error::Result;
 use darling::Result;
@@ -32,8 +31,15 @@ impl Struct {
     pub fn create(toql: &Toql) -> Self {
         let renamed_table = crate::util::rename_or_default(&toql.ident.to_string(), &toql.tables);
 
-        let mapped_filter_fields : Vec<MapArg> = toql.map_filter.iter().map(|a| MapArg{ field: a.field.to_mixed_case(), sql: a.sql.clone(), handler: a.handler.clone()}).collect::<Vec<_>>();
-
+        let mapped_filter_fields: Vec<MapArg> = toql
+            .map_filter
+            .iter()
+            .map(|a| MapArg {
+                field: a.field.to_mixed_case(),
+                sql: a.sql.clone(),
+                handler: a.handler.clone(),
+            })
+            .collect::<Vec<_>>();
 
         Struct {
             rust_struct_ident: toql.ident.clone(),
@@ -42,13 +48,14 @@ impl Struct {
             sql_table_alias: toql
                 .alias
                 .clone()
-                .unwrap_or(toql.ident.to_string()).to_mixed_case(),
+                .unwrap_or(toql.ident.to_string())
+                .to_mixed_case(),
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
             mapped_filter_fields,
             insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
-            params: toql.param.clone()
+            params: toql.param.clone(),
         }
     }
 }
@@ -66,8 +73,7 @@ pub struct RegularField {
     pub count_select: bool,
     pub count_filter: bool,
     pub handler: Option<Path>,
-    pub default_inverse_column: Option<String>
-    
+    pub default_inverse_column: Option<String>,
 }
 #[derive(Clone)]
 pub struct JoinField {
@@ -85,17 +91,17 @@ pub struct JoinField {
 #[derive(Clone)]
 pub enum MergeColumn {
     Aliased(String),
-    Unaliased(String)
+    Unaliased(String),
 }
 #[derive(Clone)]
 pub struct MergeMatch {
-    pub other: MergeColumn, 
+    pub other: MergeColumn,
     pub this: String,
 }
 
 #[derive(Clone)]
 pub struct MergeField {
-   // pub columns: RenameCase,
+    // pub columns: RenameCase,
     pub sql_join_table_ident: Ident,
     pub sql_join_table_name: String,
     pub join_alias: String,
@@ -105,7 +111,7 @@ pub struct MergeField {
 }
 
 impl MergeField {
-   /*  pub fn column(&self, field_name: &str) -> String {
+    /*  pub fn column(&self, field_name: &str) -> String {
         crate::util::rename(&field_name, &self.columns)
     } */
 
@@ -154,18 +160,18 @@ impl Field {
         let number_of_options = field.number_of_options();
 
         if field.skip_wildcard == true && field.preselect == true {
-                return Err(darling::Error::custom(
-                    "`skip_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`.".to_string(),
-                )
-                .with_span(&field.ident));
+            return Err(darling::Error::custom(
+                "`skip_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`."
+                    .to_string(),
+            )
+            .with_span(&field.ident));
         }
         if field.skip_wildcard == true && number_of_options == 0 {
-                return Err(darling::Error::custom(
+            return Err(darling::Error::custom(
                     "`skip_wildcard` is only allowed on selectable fields. Add `Option<..>` to field type.".to_string(),
                 )
                 .with_span(&field.ident));
         }
-
 
         let kind = if field.join.is_some() {
             if field.handler.is_some() {
@@ -181,8 +187,6 @@ impl Field {
                 )
                 .with_span(&field.ident));
             }
-
-            
 
             let renamed_table = crate::util::rename_or_default(
                 field.first_non_generic_type().unwrap().to_string().as_str(),
@@ -201,7 +205,7 @@ impl Field {
                     quote!(#oc => #tc, )
                 })
                 .collect::<Vec<_>>();
-            
+
             let translated_columns_translation = field
                 .join
                 .as_ref()
@@ -221,18 +225,17 @@ impl Field {
                 .unwrap()
                 .columns
                 .iter()
-                .map(|column| {
-                    String::from(column.other.as_str())
-                })
+                .map(|column| String::from(column.other.as_str()))
                 .collect::<Vec<_>>();
 
             let default_self_column_format = format!("{}_{{}}", field.ident.as_ref().unwrap());
             let default_self_column_code = quote!( let default_self_column= format!(#default_self_column_format, other_column););
 
-             
             let translated_default_self_column_code = quote!( let default_self_column= mapper.translate_aliased_column(sql_alias, other_column););
 
-            let safety_check_for_column_mapping = if other_columns.is_empty() { quote!()}  else {
+            let safety_check_for_column_mapping = if other_columns.is_empty() {
+                quote!()
+            } else {
                 quote!(
                     if cfg!(debug_assertions) {
                         let valid_columns = <#rust_type_ident as toql::key::Key>::columns();
@@ -251,7 +254,6 @@ impl Field {
                         }
                     }
                 )
-
             };
 
             let columns_map_code = quote!( {
@@ -319,33 +321,33 @@ impl Field {
             );
             let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
 
-            let mut columns :Vec<MergeMatch>= Vec::new();
-            
+            let mut columns: Vec<MergeMatch> = Vec::new();
+
             for m in &field.merge.as_ref().unwrap().columns {
-               /*  let parts = m.key.split(".").collect::<Vec<&str>>();
-               
-               let key =  match parts.len()  {
-                    1 =>  MergeKey::Field(parts.get(0).unwrap() .to_string()),
-                    2 =>  MergeKey::Join(parts.get(0).unwrap() .to_string(), parts.get(1).unwrap().to_string()),
-                    _ => {
-                        return Err(darling::Error::custom(
-                            "`key` can only reference field only immediate joined key."
-                                .to_string(),
-                        )
-                        .with_span(&field.ident));
-                    }
-                }; */
-                let other =  match m.other.find('.').unwrap_or(0){
+                /*  let parts = m.key.split(".").collect::<Vec<&str>>();
+
+                let key =  match parts.len()  {
+                     1 =>  MergeKey::Field(parts.get(0).unwrap() .to_string()),
+                     2 =>  MergeKey::Join(parts.get(0).unwrap() .to_string(), parts.get(1).unwrap().to_string()),
+                     _ => {
+                         return Err(darling::Error::custom(
+                             "`key` can only reference field only immediate joined key."
+                                 .to_string(),
+                         )
+                         .with_span(&field.ident));
+                     }
+                 }; */
+                let other = match m.other.find('.').unwrap_or(0) {
                     0 => MergeColumn::Unaliased(m.other.to_string()),
-                    _ => MergeColumn::Aliased(m.other.to_string())
+                    _ => MergeColumn::Aliased(m.other.to_string()),
                 };
 
-                columns.push( MergeMatch {
+                columns.push(MergeMatch {
                     other,
                     this: m.this.clone(),
                 });
             }
-             
+
             FieldKind::Merge(MergeField {
                 sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
@@ -355,11 +357,11 @@ impl Field {
                     .to_owned(),
                 sql_join_table_name,
                 join_sql: field.merge.as_ref().unwrap().join_sql.to_owned(),
-               /*  columns: toql
-                    .columns
-                    .as_ref()
-                    .unwrap_or(&RenameCase::SnakeCase)
-                    .to_owned(), */
+                /*  columns: toql
+                .columns
+                .as_ref()
+                .unwrap_or(&RenameCase::SnakeCase)
+                .to_owned(), */
                 columns,
             })
         } else {
@@ -372,11 +374,16 @@ impl Field {
                         None => crate::util::rename_or_default(&rust_field_name, &toql.columns),
                     })
                 },
-                default_inverse_column: if field.sql.is_some() {None}  else {
+                default_inverse_column: if field.sql.is_some() {
+                    None
+                } else {
                     // TODO put table renaming into separate function
-                    
+
                     let table_name = toql.table.clone().unwrap_or(toql.ident.to_string());
-                    Some(crate::util::rename( &format!("{}_{}",&table_name,  &rust_field_name), toql.columns.as_ref().unwrap_or(&RenameCase::SnakeCase)))
+                    Some(crate::util::rename(
+                        &format!("{}_{}", &table_name, &rust_field_name),
+                        toql.columns.as_ref().unwrap_or(&RenameCase::SnakeCase),
+                    ))
                 },
                 key: field.key,
                 count_select: field.count_select,
@@ -394,11 +401,20 @@ impl Field {
             number_of_options,
             skip_mut: field.skip_mut,
             skip_wildcard: field.skip_wildcard,
-            load_roles: field.load_role.iter().cloned().collect::<HashSet<_>>().clone(),
-            upd_roles: field.upd_role.iter().cloned().collect::<HashSet<_>>().clone(),
+            load_roles: field
+                .load_role
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>()
+                .clone(),
+            upd_roles: field
+                .upd_role
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>()
+                .clone(),
             preselect: field.preselect,
             kind,
         })
     }
 }
-

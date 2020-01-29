@@ -5,8 +5,8 @@
 
 use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::TokenStream;
-use syn::Ident;
 use std::collections::HashSet;
+use syn::Ident;
 
 pub(crate) struct GeneratedMysqlInsert<'a> {
     struct_ident: &'a Ident,
@@ -16,8 +16,7 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
 
     insert_values_code: Vec<TokenStream>,
     insdel_roles: &'a HashSet<String>,
-    duplicate: bool
-
+    duplicate: bool,
 }
 
 impl<'a> GeneratedMysqlInsert<'a> {
@@ -28,16 +27,16 @@ impl<'a> GeneratedMysqlInsert<'a> {
             insert_columns_code: Vec::new(),
 
             insert_values_code: Vec::new(),
-            insdel_roles : &toql.insdel_roles,
-            duplicate: false
+            insdel_roles: &toql.insdel_roles,
+            duplicate: false,
         }
     }
 
-     pub(crate) fn add_insert_field(&mut self, field: &crate::sane::Field) {
+    pub(crate) fn add_insert_field(&mut self, field: &crate::sane::Field) {
         if field.skip_mut {
             return;
         }
-        
+
         let rust_field_ident = &field.rust_field_ident;
         let rust_type_ident = &field.rust_type_ident;
 
@@ -98,9 +97,8 @@ impl<'a> GeneratedMysqlInsert<'a> {
                 // Structs with keys that are insertable may have duplicates
                 // Implement marker trait for them
                 if regular_attrs.key && !field.skip_mut {
-                    self.duplicate = true; 
+                    self.duplicate = true;
                 }
-
             }
             FieldKind::Join(join_attrs) => {
                 let columns_map_code = &join_attrs.columns_map_code;
@@ -156,7 +154,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                                             &<#rust_type_ident as toql::key::Key>::get_key(field)?));
                                         } else {
                                               <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|  insert_stmt.push_str("DEFAULT, "));
-                                        }                                     
+                                        }
                                     )
                                 },
                                 _ => { // T
@@ -168,57 +166,46 @@ impl<'a> GeneratedMysqlInsert<'a> {
                             }
                 );
                 if join_attrs.key && !field.skip_mut {
-                    self.duplicate = true; 
+                    self.duplicate = true;
                 }
             }
             FieldKind::Merge(_) => {
                 return;
             }
         }
-    
-
-    
     }
-
-  
 }
 impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
 
-      
-
         let insert_values_code = &self.insert_values_code;
-        
 
-        
         let mods = {
-            let insert_statement = format!(
-                "INSERT {{}}INTO {} ({{}}) VALUES ",
-                self.sql_table_name 
-            );
+            let insert_statement =
+                format!("INSERT {{}}INTO {} ({{}}) VALUES ", self.sql_table_name);
             let insert_columns_code = &self.insert_columns_code;
 
             let role_test = if self.insdel_roles.is_empty() {
-                        quote!()
-                    } else {
-                        let roles = &self.insdel_roles;
-                        quote!(
-                            toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                            .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
-                        
-                    )};
-            
+                quote!()
+            } else {
+                let roles = &self.insdel_roles;
+                quote!(
+                        toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
+                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
+
+                )
+            };
+
             let optional_insert_duplicate_impl = if self.duplicate {
                 quote!( impl toql::mutate::InsertDuplicate for #struct_ident {})
-
             } else {
                 quote!()
             };
 
             quote! {
                 #optional_insert_duplicate_impl
-                
+
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Insert<'_, #struct_ident> for toql::mysql::MySql<'a,T> {
 
                     type error = toql::mysql::error::ToqlMySqlError;
@@ -243,10 +230,10 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
 
                             #(#insert_columns_code)*
-                            
+
                             let mut insert_stmt = format!( #insert_statement, ignore, columns.join(", "));
 
-                           
+
 
                             for bentity in entities {
                                 let entity = bentity.borrow();

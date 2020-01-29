@@ -5,13 +5,13 @@ use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_builder::SqlBuilderError;
 use toql_core::sql_mapper::FieldHandler;
 use toql_core::sql_mapper::FieldOptions;
-use toql_core::sql_mapper::SqlMapper;
 use toql_core::sql_mapper::JoinType;
+use toql_core::sql_mapper::SqlMapper;
 
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("Book");
     mapper
-        .join("author", JoinType::Left, "User a", "id = a.book_id") 
+        .join("author", JoinType::Left, "User a", "id = a.book_id")
         .map_field_with_options("id", "id", FieldOptions::new().preselect(true))
         .map_field("title", "title")
         .map_field("published", "publishedAt")

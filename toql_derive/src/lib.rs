@@ -46,9 +46,9 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 
 mod annot;
+mod codegen_toql_delup;
 mod codegen_toql_key;
 mod codegen_toql_mapper;
-mod codegen_toql_delup;
 mod codegen_toql_query_builder;
 
 #[cfg(feature = "mysqldb")]
@@ -66,7 +66,6 @@ mod codegen_mysql_insert;
 mod sane;
 mod util;
 
-
 #[proc_macro_derive(ToqlFilterArg)]
 pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
@@ -74,31 +73,30 @@ pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
     //let gen = impl_filter_arg_derive(&ast);
     let name = &ast.ident;
     let gen = quote! {
-				impl toql::query::FilterArg for  &#name {
-					fn to_sql(&self) -> String {
-						 self.to_string().to_sql()
-					}
-				}
+                impl toql::query::FilterArg for  &#name {
+                    fn to_sql(&self) -> String {
+                         self.to_string().to_sql()
+                    }
+                }
                 impl toql::query::FilterArg for  #name {
-					fn to_sql(&self) -> String {
-						 self.to_string().to_sql()
-					}
-				}
+                    fn to_sql(&self) -> String {
+                         self.to_string().to_sql()
+                    }
+                }
     };
-     log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
-    TokenStream::from( gen)
+    log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
+    TokenStream::from(gen)
 }
-
 
 /* fn impl_filter_arg_derive(ast: &syn::DeriveInput) ->TokenStream {
     let name = &ast.ident;
 
     quote! {
-				impl toql::query::FilterArg for  &#name {
-					fn to_sql(&self) () -> String {
-						 self.to_string().to_sql()
-					}
-				}
+                impl toql::query::FilterArg for  &#name {
+                    fn to_sql(&self) () -> String {
+                         self.to_string().to_sql()
+                    }
+                }
     }
 } */
 

@@ -17,38 +17,36 @@ pub(crate) struct GeneratedToqlMapper<'a> {
 
 impl<'a> GeneratedToqlMapper<'a> {
     pub(crate) fn from_toql(rust_struct: &'a Struct) -> GeneratedToqlMapper {
-        
-        let mut field_mappings : Vec<TokenStream> = Vec::new();
+        let mut field_mappings: Vec<TokenStream> = Vec::new();
         for mapping in &rust_struct.mapped_filter_fields {
             let toql_field_name = &mapping.field;
-            let sql_mapping = &mapping.sql.replace("..",&format!("{}.", &rust_struct.sql_table_alias ));
+            let sql_mapping = &mapping
+                .sql
+                .replace("..", &format!("{}.", &rust_struct.sql_table_alias));
 
             match &mapping.handler {
-                    Some(handler) => {
-                        field_mappings.push(quote! {
+                Some(handler) => {
+                    field_mappings.push(quote! {
                                 mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                 #sql_mapping, #handler (), toql::sql_mapper::FieldOptions::new().filter_only(true));
                             });
-                    },
-                    None => {
-                        field_mappings.push(quote! {
+                }
+                None => {
+                    field_mappings.push(quote! {
                                 mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                 #sql_mapping,toql::sql_mapper::FieldOptions::new().filter_only(true));
                             });
-                    }
+                }
             }
 
             for p in &rust_struct.params {
                 let name = &p.name;
                 let value = &p.value;
 
-                 field_mappings.push(quote! {
-                                mapper.params.insert(String::from(#name), String::from(#value));
-                            });
-
+                field_mappings.push(quote! {
+                    mapper.params.insert(String::from(#name), String::from(#value));
+                });
             }
-
-
         }
 
         GeneratedToqlMapper {
@@ -58,7 +56,6 @@ impl<'a> GeneratedToqlMapper<'a> {
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
         }
-
     }
 
     pub(crate) fn add_field_mapping(&mut self, field: &crate::sane::Field) -> Result<(), ()> {
@@ -75,7 +72,9 @@ impl<'a> GeneratedToqlMapper<'a> {
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
 
                 // Add discriminator field for LEFT joins
-                if field.number_of_options > 1 || (field.number_of_options == 1 && field.preselect == true) {
+                if field.number_of_options > 1
+                    || (field.number_of_options == 1 && field.preselect == true)
+                {
                     self.field_mappings.push(
                                     quote!(
                                         let none_condition = <#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
@@ -96,9 +95,9 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .map(|other_column| {
                         #default_self_column_code;
                         let self_column= #columns_map_code;
-                          
+
                         //format!("{}{}{} = {}.{}",canonical_sql_alias , if canonical_sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
-                        format!("{} = {}", & mapper.translate_aliased_column(canonical_sql_alias, &self_column), 
+                        format!("{} = {}", & mapper.translate_aliased_column(canonical_sql_alias, &self_column),
                         & mapper.translate_aliased_column(&join_alias,other_column))
                     }).collect::<Vec<String>>().join(" AND ")
                 );
@@ -109,19 +108,19 @@ impl<'a> GeneratedToqlMapper<'a> {
                     String::from("")
                 };
 
-             
-               
                 //let join_aliased_table = quote!(mapper.translate_aliased_table(sql_join_table_name, join_alias));
-                let join_predicate_format = format!("{{}}{}",on_sql); 
+                let join_predicate_format = format!("{{}}{}", on_sql);
                 let join_predicate = quote!(&format!( #join_predicate_format, join_expression));
 
-                let join_type = if field.number_of_options == 0 || (field.number_of_options == 1 && field.preselect == false) {
-                    quote!(toql::sql_mapper::JoinType::Inner)   
+                let join_type = if field.number_of_options == 0
+                    || (field.number_of_options == 1 && field.preselect == false)
+                {
+                    quote!(toql::sql_mapper::JoinType::Inner)
                 } else {
-                    quote!(toql::sql_mapper::JoinType::Left)   
+                    quote!(toql::sql_mapper::JoinType::Left)
                 };
 
-                  let select_ident = if field.preselect || (field.number_of_options == 0) {
+                let select_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
                 } else {
                     quote!()
@@ -138,7 +137,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                 } else {
                     quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
                 };
-                
+
                 self.field_mappings.push(quote! {
                     #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",
@@ -147,8 +146,8 @@ impl<'a> GeneratedToqlMapper<'a> {
 
                     let aliased_table = mapper.translate_aliased_table(#sql_join_table_name, &join_alias);
                     mapper.join_with_options( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                     #join_type,  
-                     &aliased_table, 
+                     #join_type,
+                     &aliased_table,
                      #join_predicate,
                      toql::sql_mapper::JoinOptions::new() #select_ident #ignore_wc_ident #roles_ident );
                 });
@@ -236,14 +235,13 @@ impl<'a> GeneratedToqlMapper<'a> {
         for field in &self.merge_fields {
             let rust_type_ident = &field.rust_type_ident;
             let rust_field_ident = &field.rust_field_ident;
-            
 
             match &field.kind {
                 FieldKind::Merge(merge_attrs) => {
-                   /*  let function_ident =
-                        syn::Ident::new(&format!("merge_{}", rust_field_ident), Span::call_site()); */
+                    /*  let function_ident =
+                    syn::Ident::new(&format!("merge_{}", rust_field_ident), Span::call_site()); */
 
-                   /*  let mut this_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
+                    /*  let mut this_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
                     let mut other_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
                     for column in &merge_attrs.columns {
                         let default_other_field =
@@ -256,7 +254,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         other_tuple.push(quote!(o. #other_key_field));
                     } */
 
-                 /*    let this_tuple_ref = &this_tuple;
+                    /*    let this_tuple_ref = &this_tuple;
                     let other_tuple_ref = &other_tuple;
 
                     let self_fnc: proc_macro2::TokenStream = if self.key_field_names.len() == 1 {
@@ -271,14 +269,14 @@ impl<'a> GeneratedToqlMapper<'a> {
                     }; */
 
                     /* self.merge_functions.push(quote!(
-                                    pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #rust_type_ident > ) {
-                                            toql :: merge :: merge ( t , o ,
-                                            | t | #self_fnc ,
-                                            | o | #other_fnc ,
-                                            | t , o |  {let t : Option<&mut Vec<#rust_type_ident>>= Option::from( &mut t. #rust_field_ident ); if t.is_some() { t.unwrap().push(o);}}
-                                            ) ;
-                                    }
-                                )); */
+                        pub fn #function_ident ( t : & mut Vec < #struct_ident > , o : Vec < #rust_type_ident > ) {
+                                toql :: merge :: merge ( t , o ,
+                                | t | #self_fnc ,
+                                | o | #other_fnc ,
+                                | t , o |  {let t : Option<&mut Vec<#rust_type_ident>>= Option::from( &mut t. #rust_field_ident ); if t.is_some() { t.unwrap().push(o);}}
+                                ) ;
+                        }
+                    )); */
                 }
                 _ => {
                     panic!("Should be never called!");
@@ -296,7 +294,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let sql_table_name = &self.rust_struct.sql_table_name;
         let sql_table_alias = &self.rust_struct.sql_table_alias;
 
-       // let merge_functions = &self.merge_functions;
+        // let merge_functions = &self.merge_functions;
 
         let field_mappings = &self.field_mappings;
 
