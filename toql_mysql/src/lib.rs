@@ -272,14 +272,14 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
-pub fn diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self,entities: &[(Q, Q)]) -> Result<u64>
+pub fn full_diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self,entities: &[(Q, Q)]) -> Result<u64>
 where
  Self:  Diff<'a,T,error = ToqlMySqlError>,
  T:'a
    
   
 {
-    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities, &self.roles)?;
+    let sql_stmts = <Self as Diff<'a,T>>::full_diff_many_sql(entities, &self.roles)?;
     Ok(if let Some(sql_stmts) = sql_stmts {
         let mut affected = 0u64;
           
@@ -301,6 +301,37 @@ where
 /// This will updated struct fields and foreign keys from joins.
 /// Collections in a struct will be inserted, updated or deleted.
 /// Nested fields themself will not automatically be updated.
+pub fn full_diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64>
+where
+    Self:  Diff<'a,T,error = ToqlMySqlError>,
+    T:'a
+{
+    self.full_diff_many(&[(outdated, current)])
+}
+
+/// Updates difference of many tuples that contain an outdated and current struct..
+/// This will updated struct fields and foreign keys from joins.
+/// Collections in a struct will be inserted, updated or deleted.
+/// Nested fields themself will not automatically be updated.
+pub fn diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self,entities: &[(Q, Q)]) -> Result<u64>
+where
+ Self:  Diff<'a,T,error = ToqlMySqlError>,
+ T:'a
+{
+    let sql_stmts = <Self as Diff<'a,T>>::diff_many_sql(entities, &self.roles)?;
+    Ok(if let Some((update_stmt, params)) = sql_stmts {
+        log_sql!(update_stmt, params);
+        let mut stmt = self.conn.prepare(&update_stmt)?;
+        let res = stmt.execute(params)?;
+           res.affected_rows()
+    } else {
+        0
+    })
+}
+
+/// Updates difference of two struct.
+/// This will updated struct fields and foreign keys from joins.
+/// Collections in a struct will be ignored.
 pub fn diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64>
 where
     Self:  Diff<'a,T,error = ToqlMySqlError>,
@@ -308,6 +339,7 @@ where
 {
     self.diff_many(&[(outdated, current)])
 }
+
 
 /// Updates difference of two collections.
 /// This will insert / update / delete database rows.

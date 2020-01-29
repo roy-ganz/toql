@@ -577,7 +577,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 {
                     type error = toql::mysql::error::ToqlMySqlError;
 
-                    fn shallow_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
+                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
                     -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
                     
                     {
@@ -647,7 +647,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
+                    fn full_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>) 
                     -> Result<Option<Vec<(String,Vec<String>)>>, toql :: mysql::error:: ToqlMySqlError>
                     {
 
@@ -655,7 +655,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                         let mut sql: Vec<(String, Vec<String>)> = Vec::new();
 
-                        let update = <Self as  toql::mutate::Diff<#struct_ident>>::shallow_diff_many_sql(entities, roles)?;
+                        let update = <Self as  toql::mutate::Diff<#struct_ident>>::diff_many_sql(entities, roles)?;
                         if update.is_some() {
                             sql.push(update.unwrap());
                         }

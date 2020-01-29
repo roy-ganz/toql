@@ -15,7 +15,8 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
 
     insert_values_code: Vec<TokenStream>,
-    insdel_roles: &'a HashSet<String>
+    insdel_roles: &'a HashSet<String>,
+    duplicate: bool
 
 }
 
@@ -27,7 +28,8 @@ impl<'a> GeneratedMysqlInsert<'a> {
             insert_columns_code: Vec::new(),
 
             insert_values_code: Vec::new(),
-            insdel_roles : &toql.insdel_roles
+            insdel_roles : &toql.insdel_roles,
+            duplicate: false
         }
     }
 
@@ -92,6 +94,12 @@ impl<'a> GeneratedMysqlInsert<'a> {
                         )
                     }
                 });
+
+                // Structs with keys that are insertable may have duplicates
+                // Implement marker trait for them
+                if regular_attrs.key && !field.skip_mut {
+                    self.duplicate = true; 
+                }
 
             }
             FieldKind::Join(join_attrs) => {
@@ -159,6 +167,9 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                 }
                             }
                 );
+                if join_attrs.key && !field.skip_mut {
+                    self.duplicate = true; 
+                }
             }
             FieldKind::Merge(_) => {
                 return;
@@ -197,9 +208,16 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                             .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
                         
                     )};
+            
+            let optional_insert_duplicate_impl = if self.duplicate {
+                quote!( impl toql::mutate::InsertDuplicate for #struct_ident {})
+
+            } else {
+                quote!()
+            };
 
             quote! {
-
+                #optional_insert_duplicate_impl
                 
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Insert<'_, #struct_ident> for toql::mysql::MySql<'a,T> {
 

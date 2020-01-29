@@ -94,31 +94,31 @@ pub trait Diff<'a, T: 'a> {
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     /// Because merged structs are also considered, the returned SQL statements, can be insert, update and delete statements.
-    fn diff_one_sql<Q : Borrow<T>>(outdated:  Q, updated: Q, roles: &HashSet<String>) -> Result<Vec<(String, Vec<String>)>, Self::error> {
-        Ok(Self::diff_many_sql(&[(outdated, updated)], roles)?.unwrap())
+    fn full_diff_one_sql<Q : Borrow<T>>(outdated:  Q, updated: Q, roles: &HashSet<String>) -> Result<Vec<(String, Vec<String>)>, Self::error> {
+        Ok(Self::full_diff_many_sql(&[(outdated, updated)], roles)?.unwrap())
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuples with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &HashSet<String>) -> Result<Option<Vec<(String, Vec<String>)>>, Self::error>;
+    fn full_diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &HashSet<String>) -> Result<Option<Vec<(String, Vec<String>)>>, Self::error>;
     
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup`  or set selectable fields to None in updated entity.
-    fn shallow_diff_one_sql<Q : Borrow<T>>(
+    fn diff_one_sql<Q : Borrow<T>>(
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>
     ) -> Result<Option<(String, Vec<String>)>, Self::error> {
-        Self::shallow_diff_many_sql(&[(outdated, updated)], roles)
+        Self::diff_many_sql(&[(outdated, updated)], roles)
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn shallow_diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    fn diff_many_sql<Q : Borrow<T>>(entities: &[(Q,Q)], roles: &HashSet<String>) -> Result<Option<(String, Vec<String>)>, Self::error>;
 
 }
 
@@ -194,7 +194,7 @@ where
     delete.append(&mut de);
 
     let insert_sql = <I as Insert<T>>::insert_many_sql(&insert, DuplicateStrategy::Fail, roles)?;
-    let diff_sql = <U as  Diff<T>>::shallow_diff_many_sql(&diff, roles)?;
+    let diff_sql = <U as  Diff<T>>::diff_many_sql(&diff, roles)?;
     let delete_sql = <D as  Delete<T>>::delete_many_sql(&delete, roles)?;
     Ok((insert_sql, diff_sql, delete_sql))
 }
