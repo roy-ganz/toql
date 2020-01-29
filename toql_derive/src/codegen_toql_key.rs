@@ -12,10 +12,7 @@ pub(crate) struct GeneratedToqlKey<'a> {
     key_setters: Vec<TokenStream>,
     serde_key: bool,
 
-    forward_key_columns : usize,
-    forward_key_joins: Vec<TokenStream>,
-    mysql_deserialize_key: Vec<TokenStream>,
-    mysql_forward_join_key: Vec<TokenStream>
+ 
 }
 
 impl<'a> GeneratedToqlKey<'a> {
@@ -29,10 +26,7 @@ impl<'a> GeneratedToqlKey<'a> {
             key_fields: Vec::new(),
             key_setters: Vec::new(),
             serde_key: toql.serde_key,
-            forward_key_columns : 0,
-            forward_key_joins: Vec::new(),
-            mysql_deserialize_key: Vec::new(),
-            mysql_forward_join_key: Vec::new(),
+            
         }
     }
 
@@ -80,20 +74,7 @@ impl<'a> GeneratedToqlKey<'a> {
                     self.key_setters
                         .push(quote!(self. #rust_field_ident = key . #index;))
                 }
-                
-                let error_field = format!("{}Key::{}", &self.rust_struct.rust_struct_ident, rust_field_name);
-                 let increment = if self.mysql_deserialize_key.is_empty() {
-                    quote!(*i)
-                } else {
-                    quote!({*i = *i + 1;*i})
-                };
-                self.mysql_deserialize_key.push(quote!(
-                    row.take_opt( #increment).unwrap()
-                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
-                            )?
-                ));
-                self.forward_key_columns = self.forward_key_columns + 1;
-
+               
                 let key_index = syn::Index::from(self.key_fields.len() - 1);
 
                 self.key_params_code
@@ -152,18 +133,7 @@ impl<'a> GeneratedToqlKey<'a> {
                             ));
                 }
 
-                // Impl key from result row
-                self.mysql_forward_join_key.push(quote!(
-                   *i = < #rust_type_ident > ::forward_row(*i);
-                ));
-                 let increment = if self.mysql_deserialize_key.is_empty() {
-                    quote!(i)
-                } else {
-                    quote!({*i = *i + 1; i})
-                };
-                self.mysql_deserialize_key.push(quote!(
-                     << #rust_type_ident as toql :: key :: Key > :: Key >:: from_row_with_index (row, #increment)?
-                ));
+               
             }
             _ => {}
         }
@@ -215,11 +185,6 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             quote!()
         };
 
-        
-
-        let forward_key_columns = &self.forward_key_columns;
-        let forward_key_joins=  &self.forward_key_joins;
-        let mysql_deserialize_key= &self.mysql_deserialize_key;
 
         let key = quote! {
 
@@ -279,32 +244,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                     <#rust_stuct_ident as toql::key::Key>::get_key(self).ok().hash(state);
                 }
             }
-
-
-
-           
-            impl toql :: mysql :: row:: FromResultRow < #struct_key_ident > for #struct_key_ident {
-           
-            fn forward_row(mut i : usize) -> usize {
-                i = i + #forward_key_columns;
-                #(#forward_key_joins)*
-                i
-            }
-
-            fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize) 
-                -> toql :: mysql :: error:: Result < #struct_key_ident> {
-
-                Ok ( #struct_key_ident(
-                    #(#mysql_deserialize_key),*
-
-                ))
-            }
-            }
-            
-                 
-                
-
-               
+ 
         };
 
         log::debug!(

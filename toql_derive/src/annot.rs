@@ -7,6 +7,9 @@ use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
 use crate::codegen_mysql_load::GeneratedMysqlLoad;
 
 #[cfg(feature = "mysqldb")]
+use crate::codegen_mysql_key::GeneratedMysqlKey;
+
+#[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_select::GeneratedMysqlSelect;
 
 #[cfg(feature = "mysqldb")]
@@ -14,8 +17,6 @@ use crate::codegen_mysql_insert::GeneratedMysqlInsert;
 
 use syn::GenericArgument::Type;
 use syn::{Ident, Path};
-
-
 
 
 
@@ -271,6 +272,9 @@ impl quote::ToTokens for Toql {
         #[cfg(feature = "mysqldb")]
         let mut mysql_insert = GeneratedMysqlInsert::from_toql(&rust_struct);
 
+        #[cfg(feature = "mysqldb")]
+        let mut mysql_key= GeneratedMysqlKey::from_toql(&rust_struct);
+
         let Toql {
             vis: _,
             ident: _,
@@ -332,10 +336,15 @@ impl quote::ToTokens for Toql {
 
                         #[cfg(feature = "mysqldb")]
                         mysql_load.add_path_loader(&f);
+                        
+
                     }
 
                     #[cfg(feature = "mysqldb")]
                     mysql_load.add_mysql_deserialize(&f);
+
+                    #[cfg(feature = "mysqldb")]
+                    mysql_key.add_key_deserialize(&f);
 
                     #[cfg(feature = "mysqldb")]
                     let result = mysql_select.add_select_field(&f);
@@ -349,7 +358,7 @@ impl quote::ToTokens for Toql {
                 if mut_enabled  {
                     toql_delup.add_delup_field(&f);
 
-                     #[cfg(feature = "mysqldb")]
+                    #[cfg(feature = "mysqldb")]
                     mysql_insert.add_insert_field(&f);
                 }
             }
@@ -389,6 +398,9 @@ impl quote::ToTokens for Toql {
 
                     #[cfg(feature = "mysqldb")]
                     tokens.extend(quote!(#mysql_load));
+
+                    #[cfg(feature = "mysqldb")]
+                    tokens.extend(quote!(#mysql_key));
 
                     #[cfg(feature = "mysqldb")]
                     tokens.extend(quote!(#mysql_select));

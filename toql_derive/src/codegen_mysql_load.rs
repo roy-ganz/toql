@@ -55,10 +55,12 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
     pub(crate) fn add_mysql_deserialize(&mut self, field: &crate::sane::Field) {
         // Regular fields
+        let rust_field_name = &field.rust_field_name;
+        let error_field = format!("{}::{}", &self.rust_struct.rust_struct_ident, rust_field_name);
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 let rust_field_ident = &field.rust_field_ident;
-                let rust_field_name = &field.rust_field_name;
+                
                 self.regular_fields += 1;
 
                 let assignment = if self.mysql_deserialize_fields.is_empty() {
@@ -85,14 +87,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             None
                         } else {
                             row.take_opt( *i).unwrap()
-                                .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
+                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                         }
                     }
                 ));
                 } else {
                     self.mysql_deserialize_fields.push(quote!(
                         #rust_field_ident : row.take_opt( #assignment).unwrap()
-                            .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
+                            .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                     ));
                 }
 
@@ -148,7 +150,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                         None
                                        }
                                        else if row.take_opt::<bool,_>(*i).unwrap()
-                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
+                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                         == false {
                                         //*i += 1; // Step over discriminator field,
                                         *i = < #rust_type_ident > ::forward_row(*i);
@@ -165,7 +167,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 #rust_field_ident : {
                                      #increment
                                      if row.take_opt::<bool,_>(*i).unwrap()
-                                      .map_err(|e| toql::error::ToqlError::DeserializeError(#rust_field_name.to_string(), e.to_string()))?
+                                      .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                       == false {
                                              *i = < #rust_type_ident > ::forward_row(*i);
                                         None
@@ -497,57 +499,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     }else {
                         quote!()
                     };
-
-                    // For keys with only one value use simplified predicate
-                      /*   let predicate_builder = if self.key_field_names.len() == 1 {
-                            quote!(
-                                let mut predicate = String::from(inverse_columns.get(0).unwrap());
-                                predicate.push_str(" IN (");
-                                for entity in entities.iter() {
-                                    predicate.push_str(" ?, ");
-
-                                    dep_query.where_predicate_params.extend_from_slice(
-                                            & <User as toql::key::Key>::params(
-                                                &<User as toql::key::Key>::get_key(&entity)?));
-                                }
-                                // Remove ' ,'
-                                predicate.pop();
-                                predicate.pop();
-                                predicate.push(')');
-                                
-                            )
-                        } else {
-                            quote!(
-                             let mut key_predicate = String::from("(");
-                                for c in &inverse_columns {
-                                    key_predicate.push_str(c);
-                                    key_predicate.push_str(" = ? AND ");
-                                };
-                                key_predicate.pop();
-                                key_predicate.pop();
-                                key_predicate.pop();
-                                key_predicate.pop();
-                                key_predicate.push(')');
-
-                                let mut predicate = String::from("(");
-                                for entity in entities.iter() {
-                                    predicate.push_str(&key_predicate);
-                                    predicate.push_str(" OR ");
-
-                                    dep_query.where_predicate_params.extend_from_slice(
-                                            & <User as toql::key::Key>::params(
-                                                &<User as toql::key::Key>::get_key(&entity)?));
-                                }
-                                // OR
-                                predicate.pop();
-                                predicate.pop();
-                                predicate.pop();
-                                predicate.pop();
-                                predicate.push(')');
-                              
-                            )
-                        }; */
-
 
 
                     self.path_loaders.push( quote!(
