@@ -26,13 +26,20 @@ pub struct Pair {
     pub other: String,
 }
 
+
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
+   /*  #[darling(default, multiple)]
+    pub fields: Vec<Pair>, */
+
     #[darling(default, multiple)]
-    pub fields: Vec<Pair>,
+    pub columns: Vec<Pair>,
+/* 
+    #[darling(default)]
+    pub on_sql: Option<String>, */
 
     #[darling(default)]
-    pub on_sql: Option<String>,
+    pub join_sql: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]

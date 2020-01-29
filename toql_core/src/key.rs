@@ -15,8 +15,19 @@ pub trait Key {
     /// Sets the key on a given entity.
     fn set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
 
-    // Return key columns for a given entity.
+    /// Return primary key columns for a given entity.
     fn columns() -> Vec<String>;
+
+    /// Return foreign key columns for a given entity.
+    /// The names are calculated and do not necessarily match
+    /// the actual foreign keys on the other table. 
+    /// The translation rules are (for snake case):
+    /// - normal fields -> tablename + normal field
+    ///   id -> user_id
+    ///   access_code -> user_access_code
+    /// - joins -> no change
+    ///   language_id -> language_id
+    fn default_inverse_columns() -> Vec<String>;
 
     // Return key as params for a given entity.
     fn params(key: &Self::Key) -> Vec<String>;
@@ -30,3 +41,6 @@ pub fn keys<K :Key>(entities: &[K]) ->  crate::error::Result<Vec<K::Key>>{
     }
     Ok(keys)
 }
+
+
+

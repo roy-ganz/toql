@@ -4,6 +4,7 @@
 */
 
 
+use heck::SnakeCase;
 use heck::MixedCase;
 use proc_macro2::Span;
 
@@ -12,6 +13,9 @@ use syn::Ident;
 
 use crate::sane::FieldKind;
 use crate::sane::Struct;
+use crate::sane::{MergeMatch, MergeColumn};
+use std::collections::HashMap;
+use darling::{Error, Result};
 
 pub(crate) struct GeneratedMysqlLoad<'a> {
     rust_struct: &'a Struct,
@@ -24,7 +28,8 @@ pub(crate) struct GeneratedMysqlLoad<'a> {
     regular_fields: usize, // Impl for mysql::row::ColumnIndex,
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
-}
+    merge_field_getter: HashMap<String, TokenStream>
+    }
 
 impl<'a> GeneratedMysqlLoad<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlLoad {
@@ -37,6 +42,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             regular_fields: 0,
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
+            merge_field_getter: HashMap::new()
         }
     }
 
@@ -94,7 +100,19 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                 if regular_attrs.key {
                     self.key_field_names.push(rust_field_name.to_string());
+
+                    // Merge field getter for non null columns
+                    match field.number_of_options {
+                        0 => {self.merge_field_getter.insert(rust_field_name.to_string(), quote!(entity. #rust_field_ident. to_string())); },
+                        1 if !field.preselect  => {self.merge_field_getter.insert(rust_field_name.to_string(), 
+                            quote!(entity. #rust_field_ident .as_ref()
+                                .ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?.to_string()));},
+                        _ =>  {}
+                                
+                    };
                 }
+
+                
             }
             FieldKind::Join(join_attrs) => {
                 let rust_field_ident = &field.rust_field_ident;
@@ -179,6 +197,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                 if join_attrs.key {
                     self.key_field_names.push(rust_field_name.to_string());
+
                 }
             }
             FieldKind::Merge(_merge_attrs) => {
@@ -231,24 +250,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
             )
         };
 
-        /* let load_one_call_dependencies = if path_loaders.is_empty() {
-            quote!()
-        } else {
-            quote!(
-             // Restrict dependencies to parent entity
-                self.load_dependencies(&mut entities, &query, cache)?;
-            )
-        };
-        let load_many_call_dependencies = if path_loaders.is_empty() {
-            quote!()
-        } else {
-            quote!(
-                // Resolve dependencies
-                // Restrict query to keys
-                self.load_dependencies(&mut entities, &query, cache)?;
-            )
-        };
- */
         let optional_add_primary_keys = if self.merge_fields.is_empty() {
             quote!()}else {
                 quote!(
@@ -275,8 +276,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     self.load_dependencies(&mut entities, &keys, &query, cache)?;
                     )
         };
-
-
+        
         quote!(
           
             impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::load::Load<#struct_ident> for toql::mysql::MySql<'a,T>
@@ -387,32 +387,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         .map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?)
                 }
 
-                /* fn load_path(&mut self,path: &str, query: &toql::query::Query,
-                    cache: &toql::sql_mapper::SqlMapperCache
-                   )
-                -> Result<Option<std::vec::Vec< #struct_ident >>,toql :: mysql::error:: ToqlMySqlError>
-               
-                {
-                    //let conn = self.conn();
-                    let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                    let result = toql::sql_builder::SqlBuilder::new().build_path(path, mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
-                    toql::log_sql!( result.to_sql(),result.params());
-
-                    if result.is_empty() {
-                        Ok(None)
-                    } else {
-                        let entities_stmt = self.conn().prep_exec(result.to_sql(), result.params())?;
-                        let entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
-                        Ok(Some(entities))
-                    }
-                }
- */
-
                 #load_dependencies_from_mysql
             }
 
         )
     }
+
+
+   
 
     pub fn build_merge(&mut self) {
         // Build all merge fields
@@ -426,76 +408,113 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
             match &field.kind {
                 FieldKind::Merge(merge_attrs) => {
-                    let mut merge_one_predicates: Vec<TokenStream> = Vec::new();
-                    let mut merge_many_predicates: Vec<TokenStream> = Vec::new();
+                   // let mut merge_one_predicates: Vec<TokenStream> = Vec::new();
+                    //let mut merge_many_predicates: Vec<TokenStream> = Vec::new();
 
-                    let mut merge_select_columns: Vec<TokenStream> = Vec::new();
-
-                    if let Some(sql) = &merge_attrs.on_sql {
-                        let (merge_with_params, merge_params) =
-                            crate::util::extract_query_params(sql);
-                        // If on_sql contains `..` replace them with table alias
-                        let merge_on = if merge_with_params.contains("..") {
-                            let aliased_merge_on = merge_with_params.replace("..", "{alias}.");
-                            quote!(
-                                format!(#aliased_merge_on, alias = mapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()))
-                            )
-                        } else {
-                            quote!( #merge_with_params)
-                        };
-
-                        let params = merge_params.iter().map(|p| {
-                                quote!( query.where_predicate_params.push( query.params
-                                            .get(  #p)
-                                            .ok_or(toql::sql_builder::SqlBuilderError::QueryParamMissing(#p))?);
-                                    )
-                            }).collect::<proc_macro2::TokenStream>();
-
-                        let predicate = quote!(
-                            dep_query.where_predicates.push(#merge_on);
-
-                            #(#params)*
-
-                        );
-                        merge_one_predicates.push(predicate.clone());
-                        merge_many_predicates.push(predicate);
-
-                       
-                    }
+                   // let mut merge_select_columns: Vec<TokenStream> = Vec::new();
+                    let mut inverse_column_translation: Vec<TokenStream> = Vec::new();
 
                     // Build join for all keys of that struct
-                    for this_field in &self.key_field_names {
-                        let default_other_field =
-                            format!("{}_{}", struct_name.to_mixed_case(), &this_field);
-                        let other_field = merge_attrs.other_field(&this_field, default_other_field);
+                    // If no matches are provided by user
+                    // build default matches, using all key names and guess colum names 
+                   // let mut auto_matches: Vec<MergeMatch> = Vec::new();
+                 /*    let matches = if merge_attrs.matches.is_empty() {
+                        
+                        auto_matches = self.key_field_names.iter().map(| k| {
+                            let other_column = format!("{}_{}", &self.rust_struct.sql_table_name, k).to_snake_case();
+                            MergeMatch {
+                                key:  k.to_string(),
+                                column:  MergeColumn::Unaliased(other_column)
+                            }
+                        }).collect::<Vec<_>>();
+                        &auto_matches
+                    } else {
+                        &merge_attrs.matches
+                    }; */
 
-                        let other_column = merge_attrs.column(&other_field);
-
-                        let this_field_ident = syn::Ident::new(this_field, Span::call_site());
-
-                        let merge_many = format!("{{}}.{} IN ({{}})", other_column);
-                        let merge_one = format!("{{}}.{} = {{}}", other_column);
-
-                        merge_one_predicates.push( quote!(
-                           
-                                query.where_predicates.push( format!(#merge_one, mapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias())));
-                                query.where_predicate_params.push(_entity. #this_field_ident .to_string());
-                            ));
-
-                        merge_many_predicates.push( quote!(
-                           
-                                let q = entities.iter().map(|_e| "?" ).collect::<Vec<&str>>().join(", ");
-                                dep_query.where_predicates.push(format!(#merge_many, mapper.translated_alias(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias()), q));
-                                dep_query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| entity. #this_field_ident .to_string()).collect::<Vec<String>>().as_ref());
-                            ));
-                            
-                        // If column is already aliased, translate provided alias otherwise take canonical alias
-                        merge_select_columns.push(
-                            quote!(
-                                result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),#other_column));
-                                )
-                            );
+                    //let mut merge_field_getters= Vec::new();
+                    
+                    for  m in &merge_attrs.columns {
+                        let untranslated_column =  &m.this;
+                        match &m.other {
+                                MergeColumn::Unaliased(other_column) => {
+                                    inverse_column_translation.push( quote!( #untranslated_column => mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),#other_column), ));
+                                },
+                                MergeColumn::Aliased(other_column) => {
+                                         inverse_column_translation.push( quote!( #untranslated_column => String::from(#other_column),));
+                                }
+                            };
                     }
+                      /*   let field_getter = self.merge_field_getter.get(&m.key)
+                        .ok_or( {
+                            let fields = self.merge_field_getter.keys().cloned().collect::<Vec<String>>();
+                            Error::custom(format!("Key `{}` does not exist in struct `{}`. Valid keys for merging are `{}`. Use a valid field in `#[toql(..)]`", 
+                                &m.key, &struct_name, fields.join("`, `") ))
+                                .with_span(&rust_field_ident)
+                            })?; */
+                      
+                /* merge_select_columns.push( quote!(
+                                result.push_select(#aliased_other_column_expr);
+                        ));
+                    merge_field_getters.push((aliased_other_column_expr, field_getter));
+  
+                    } */
+
+                    // Build merge code
+                    // for a single match use IN (..)
+                    // for complex match use ((.. AND ..) OR (.. AND ..))
+                    /* if merge_field_getters.len() == 1 {
+                        let (aliased_other_column_expr, field_getter) = merge_field_getters.get(0).unwrap();
+                         merge_many_predicates.push( 
+                         quote!(
+                                let q = entities.iter().map(|_e| "?" ).collect::<Vec<&str>>().join(", ");
+                                dep_query.where_predicates.push(format!("{} IN ({})",#aliased_other_column_expr, q));
+                                dep_query.where_predicate_params.extend_from_slice(entities.iter().map(|entity| #field_getter .to_string()).collect::<Vec<String>>().as_ref());
+                            ));
+                    } else {
+                        let mut single_predicate= String::from("(");
+                        let mut params = Vec::new();
+                        let mut fields = Vec::new();
+                        
+                        for (aliased_field, getter)  in merge_field_getters {
+                            single_predicate.push_str("{} = ? AND ");
+                            params.push( quote!(dep_query.where_predicate_params.push(#getter);) );
+                            fields.push(aliased_field);
+                        };
+                        // remove last ' AND '
+                        single_predicate.pop();
+                        single_predicate.pop();
+                        single_predicate.pop();
+                        single_predicate.pop();
+                        single_predicate.pop();
+                        single_predicate.push(')');
+
+
+                       let single_predicate = single_predicate.trim_end_matches(" AND ");
+
+                        merge_many_predicates.push( 
+                         quote!(
+                             let mut predicate = String::from("(");
+                             for entity in entities.iter() {
+                                 predicate.push_str(&format!(#single_predicate, #(#fields),* ));
+                                 predicate.push_str(" OR ");
+
+                                 #(#params)*
+                             }
+
+                             // Remove last ' OR '
+                             predicate.pop();
+                             predicate.pop();
+                             predicate.pop();
+                             predicate.pop();
+                             predicate.push(')');
+
+                            dep_query.where_predicates.push(predicate);
+                            ));
+                    } */
+
+
+
 
                     /* let merge_function =
                         Ident::new(&format!("merge_{}", &rust_field_ident), Span::call_site()); */
@@ -533,6 +552,106 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         ) */
                     };
                     
+                    let optional_join = if let Some(join) = &merge_attrs.join_sql {
+                        if join.contains("..") {
+                            let formatted_join = join.replace("..", "{alias}.");
+                             quote!( result.push_join(&format!(#formatted_join, alias = &mapper.translated_alias(
+                            &<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias() ) )); )
+                        } else {
+                            quote!( result.push_join(#join);)
+                        }
+                        
+                    } else { quote!() };
+
+                    let self_keys: Vec<&str> =  merge_attrs.columns.iter().map( |c| {
+                        c.this.as_str()
+                    }).collect();
+
+                    let self_column_validation = 
+                        quote!(
+                            if cfg!(debug_assertions) {
+                            for c in &[ #(#self_keys),* ] {
+                                if !<#rust_type_ident as toql::key::Key>::columns().contains(&c.to_string()) {
+                                let t = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
+                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
+                                let e2 = toql::error::ToqlError::SqlMapperError(e);
+                                return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
+                                }
+                            }
+                        }
+                        );
+                    
+
+                    // Column validation only, if no custom join is required
+                    let optional_inverse_column_validation = if merge_attrs.join_sql.is_none() {
+                        quote!(
+                            if cfg!(debug_assertions) {
+                            for c in &inverse_columns {
+                                if !<UserLanguage as toql::key::Key>::columns().contains(c) {
+                                let t = <UserLanguage as toql::sql_mapper::Mapped>::table_name();
+                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
+                                let e2 = toql::error::ToqlError::SqlMapperError(e);
+                                return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
+                                }
+                            }
+                        }
+                        )
+                    }else {
+                        quote!()
+                    };
+
+                    // For keys with only one value use simplified predicate
+                        let predicate_builder = if self.key_field_names.len() == 1 {
+                            quote!(
+                                let mut predicate = String::from(inverse_columns.get(0).unwrap());
+                                predicate.push_str(" IN (");
+                                for entity in entities.iter() {
+                                    predicate.push_str(" ?, ");
+
+                                    dep_query.where_predicate_params.extend_from_slice(
+                                            & <User as toql::key::Key>::params(
+                                                &<User as toql::key::Key>::get_key(&entity)?));
+                                }
+                                // Remove ' ,'
+                                predicate.pop();
+                                predicate.pop();
+                                predicate.push(')');
+                                
+                            )
+                        } else {
+                            quote!(
+                             let mut key_predicate = String::from("(");
+                                for c in &inverse_columns {
+                                    key_predicate.push_str(c);
+                                    key_predicate.push_str(" = ? AND ");
+                                };
+                                key_predicate.pop();
+                                key_predicate.pop();
+                                key_predicate.pop();
+                                key_predicate.pop();
+                                key_predicate.push(')');
+
+                                let mut predicate = String::from("(");
+                                for entity in entities.iter() {
+                                    predicate.push_str(&key_predicate);
+                                    predicate.push_str(" OR ");
+
+                                    dep_query.where_predicate_params.extend_from_slice(
+                                            & <User as toql::key::Key>::params(
+                                                &<User as toql::key::Key>::get_key(&entity)?));
+                                }
+                                // OR
+                                predicate.pop();
+                                predicate.pop();
+                                predicate.pop();
+                                predicate.pop();
+                                predicate.push(')');
+                              
+                            )
+                        };
+
+
+
                     self.path_loaders.push( quote!(
                             #path_test {
                                 #role_test
@@ -540,8 +659,35 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
                                 let mapper = cache.mappers.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
                                 let mut dep_query = query.clone();
-                                // Add merge keys
-                                #(#merge_many_predicates)*
+
+                    #self_column_validation
+
+                    let default_inverse_columns= <User as toql::key::Key>::default_inverse_columns();          
+                     let inverse_columns = <User as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+
+                        let inverse_column = match c.as_str() {
+                                #(#inverse_column_translation)*
+                            _ => {
+                                    mapper.aliased_column(
+                                        &<UserLanguage as toql::sql_mapper::Mapped>::table_alias(),
+                                    default_inverse_columns.get(i).unwrap()
+                                    )
+                                }
+                        // in debug without custom join validate invese columns 
+                    /*  if !<UserLanguage as toql::key::Key>::columns().iter().any(|c|c == &inverse_column) {
+                            panic!("fsfda"); // err
+                        } */
+                        };
+                        inverse_column
+                        
+                    }).collect::<Vec<String>>();
+
+                    #optional_inverse_column_validation
+
+                    #predicate_builder
+                    dep_query.where_predicates.push(predicate);
+
+                               
 
 
 
@@ -553,8 +699,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                      <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|{
                                         result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),&c))   
                                     });
+
+                                    // foreign keys (inverse primary keys) on merged table
+                                    inverse_columns.iter().for_each(|c|{
+                                        result.push_select(&c);   
+                                    });
                                     
-                                    #(#merge_select_columns)*
+                                   // #(#merge_select_columns)*
+                                    #optional_join
                                     // foreign keys
                                     /*  <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|{
                                         result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),&c))   
@@ -568,7 +720,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     if !merge_entities.is_empty() {
                                         self.load_dependencies(&mut merge_entities, &merge_keys, query, cache)?;
                                        
-                                        toql::merge::merge2(&mut entities, &entity_keys, merge_entities, &parent_keys,
+                                        toql::merge::merge(&mut entities, &entity_keys, merge_entities, &parent_keys,
                                             |e| { #merge_field_init;},
                                             |e,m|{ #merge_field_assign
                                                 // TODO only use Option if selectable
@@ -599,6 +751,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 }
             }
         }
+       
     }
 }
 

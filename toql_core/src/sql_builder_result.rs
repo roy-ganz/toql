@@ -31,6 +31,12 @@ impl SqlBuilderResult {
         }
         self.select_clause.push_str(s);
     }
+    pub fn push_join(&mut self, s: &str) {
+        if !self.join_clause.ends_with(' ') {
+            self.join_clause.push(' ');
+        }
+        self.join_clause.push_str(s);
+    }
 
     pub fn sql_body(&self, s: &mut String) {
         if self.distinct {

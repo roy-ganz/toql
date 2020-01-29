@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 
 
-pub fn merge2<A, K, B, F, G>( entities: &mut Vec<A>, pkeys: &Vec<K>, merges: Vec<B>, mkeys: &Vec<K>, init: F, assign:G )
+pub fn merge<A, K, B, F, G>( entities: &mut Vec<A>, pkeys: &Vec<K>, merges: Vec<B>, mkeys: &Vec<K>, init: F, assign:G )
 where F: Fn(&mut A), G: Fn(&mut A, B), K: std::cmp::Eq + std::hash::Hash
 {
     
@@ -29,7 +29,7 @@ where F: Fn(&mut A), G: Fn(&mut A, B), K: std::cmp::Eq + std::hash::Hash
     
     
 }
-
+/* 
 pub fn merge<T, O, K, F, X, Y>(
     this: &mut std::vec::Vec<T>,
     mut other: Vec<O>,
@@ -80,3 +80,4 @@ pub fn merge<T, O, K, F, X, Y>(
         }
     }
 }
+ */

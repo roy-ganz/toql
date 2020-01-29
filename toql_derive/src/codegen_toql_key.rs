@@ -5,6 +5,7 @@ use syn::Ident;
 pub(crate) struct GeneratedToqlKey<'a> {
     rust_struct: &'a crate::sane::Struct,
     key_columns_code: Vec<TokenStream>,
+    key_inverse_columns_code: Vec<TokenStream>,
     key_params_code: Vec<TokenStream>,
     key_types: Vec<TokenStream>,
     key_fields: Vec<TokenStream>,
@@ -22,6 +23,7 @@ impl<'a> GeneratedToqlKey<'a> {
         GeneratedToqlKey {
             rust_struct: &toql,
             key_columns_code: Vec::new(),
+            key_inverse_columns_code: Vec::new(),
             key_params_code: Vec::new(),
             key_types: Vec::new(),
             key_fields: Vec::new(),
@@ -49,6 +51,13 @@ impl<'a> GeneratedToqlKey<'a> {
                 if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
                     self.key_columns_code
                         .push(quote!( columns.push( String::from(#column)); ));
+
+                    
+
+                    if let Some(inverse_column) = &regular_attrs.default_inverse_column {
+                        self.key_inverse_columns_code
+                            .push(quote!( columns.push( String::from(#inverse_column)); ));
+                    }
                 } else {
                     // TODO Raise error
                 }
@@ -102,6 +111,15 @@ impl<'a> GeneratedToqlKey<'a> {
                 self.key_columns_code.push( quote!( 
                     
                         <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|other_column| {
+                            #default_self_column_code;
+                            let column = #columns_map_code;
+                            columns.push(column.to_string());
+                        });
+                        ));
+
+                        self.key_inverse_columns_code.push( quote!( 
+                    
+                        <#rust_type_ident as toql::key::Key>::default_inverse_columns().iter().for_each(|other_column| {
                             #default_self_column_code;
                             let column = #columns_map_code;
                             columns.push(column.to_string());
@@ -164,6 +182,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
         let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
         let key_columns_code = &self.key_columns_code;
+        let key_inverse_columns_code = &self.key_inverse_columns_code;
         let key_params_code = &self.key_params_code;
 
         let key_types = &self.key_types;
@@ -221,6 +240,12 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                      let mut columns: Vec<String>= Vec::new();
 
                     #(#key_columns_code)*
+                    columns
+                }
+                 fn default_inverse_columns() ->Vec<String> {
+                     let mut columns: Vec<String>= Vec::new();
+
+                    #(#key_inverse_columns_code)*
                     columns
                 }
                 fn params(key: &Self::Key) ->Vec<String> {

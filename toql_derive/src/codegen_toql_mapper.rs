@@ -240,12 +240,12 @@ impl<'a> GeneratedToqlMapper<'a> {
 
             match &field.kind {
                 FieldKind::Merge(merge_attrs) => {
-                    let function_ident =
-                        syn::Ident::new(&format!("merge_{}", rust_field_ident), Span::call_site());
+                   /*  let function_ident =
+                        syn::Ident::new(&format!("merge_{}", rust_field_ident), Span::call_site()); */
 
-                    let mut this_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
+                   /*  let mut this_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
                     let mut other_tuple: Vec<proc_macro2::TokenStream> = Vec::new();
-                    for this_field in &self.key_field_names {
+                    for column in &merge_attrs.columns {
                         let default_other_field =
                             format!("{}_{}", struct_name.to_snake_case(), &this_field);
                         let other_field = merge_attrs.other_field(&this_field, default_other_field);
@@ -254,7 +254,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         this_tuple.push(quote!(t. #this_key_field));
                         let other_key_field = Ident::new(&other_field, Span::call_site());
                         other_tuple.push(quote!(o. #other_key_field));
-                    }
+                    } */
 
                  /*    let this_tuple_ref = &this_tuple;
                     let other_tuple_ref = &other_tuple;

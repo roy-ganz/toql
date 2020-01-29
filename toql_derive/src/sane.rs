@@ -66,6 +66,8 @@ pub struct RegularField {
     pub count_select: bool,
     pub count_filter: bool,
     pub handler: Option<Path>,
+    pub default_inverse_column: Option<String>
+    
 }
 #[derive(Clone)]
 pub struct JoinField {
@@ -79,32 +81,44 @@ pub struct JoinField {
     pub on_sql: Option<String>,
     pub key: bool,
 }
+
+#[derive(Clone)]
+pub enum MergeColumn {
+    Aliased(String),
+    Unaliased(String)
+}
+#[derive(Clone)]
+pub struct MergeMatch {
+    pub other: MergeColumn, 
+    pub this: String,
+}
+
 #[derive(Clone)]
 pub struct MergeField {
-    pub columns: RenameCase,
+   // pub columns: RenameCase,
     pub sql_join_table_ident: Ident,
     pub sql_join_table_name: String,
     pub join_alias: String,
 
-    pub fields: Vec<Pair>,
-    pub on_sql: Option<String>,
+    pub columns: Vec<MergeMatch>,
+    pub join_sql: Option<String>,
 }
 
 impl MergeField {
-    pub fn column(&self, field_name: &str) -> String {
+   /*  pub fn column(&self, field_name: &str) -> String {
         crate::util::rename(&field_name, &self.columns)
-    }
+    } */
 
-    pub fn other_field(&self, this_field: &str, default_other_field: String) -> String {
+    /* pub fn other_field(&self, this_field: &str, default_other_field: String) -> String {
         // Lookup field renaming
         let other_field = self
-            .fields
+            .cols
             .iter()
             .find(|&f| &f.this == this_field)
             .map_or(default_other_field, |p| String::from(p.other.as_str()));
 
         other_field
-    }
+    } */
 }
 
 #[derive(Clone)]
@@ -305,6 +319,33 @@ impl Field {
             );
             let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
 
+            let mut columns :Vec<MergeMatch>= Vec::new();
+            
+            for m in &field.merge.as_ref().unwrap().columns {
+               /*  let parts = m.key.split(".").collect::<Vec<&str>>();
+               
+               let key =  match parts.len()  {
+                    1 =>  MergeKey::Field(parts.get(0).unwrap() .to_string()),
+                    2 =>  MergeKey::Join(parts.get(0).unwrap() .to_string(), parts.get(1).unwrap().to_string()),
+                    _ => {
+                        return Err(darling::Error::custom(
+                            "`key` can only reference field only immediate joined key."
+                                .to_string(),
+                        )
+                        .with_span(&field.ident));
+                    }
+                }; */
+                let other =  match m.other.find('.').unwrap_or(0){
+                    0 => MergeColumn::Unaliased(m.other.to_string()),
+                    _ => MergeColumn::Aliased(m.other.to_string())
+                };
+
+                columns.push( MergeMatch {
+                    other,
+                    this: m.this.clone(),
+                });
+            }
+             
             FieldKind::Merge(MergeField {
                 sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
@@ -313,13 +354,13 @@ impl Field {
                     .unwrap_or(&sql_join_table_name.to_snake_case())
                     .to_owned(),
                 sql_join_table_name,
-                on_sql: field.merge.as_ref().unwrap().on_sql.to_owned(),
-                columns: toql
+                join_sql: field.merge.as_ref().unwrap().join_sql.to_owned(),
+               /*  columns: toql
                     .columns
                     .as_ref()
                     .unwrap_or(&RenameCase::SnakeCase)
-                    .to_owned(),
-                fields: field.merge.as_ref().unwrap().fields.clone(),
+                    .to_owned(), */
+                columns,
             })
         } else {
             FieldKind::Regular(RegularField {
@@ -330,6 +371,12 @@ impl Field {
                         Some(string) => string.to_owned(),
                         None => crate::util::rename_or_default(&rust_field_name, &toql.columns),
                     })
+                },
+                default_inverse_column: if field.sql.is_some() {None}  else {
+                    // TODO put table renaming into separate function
+                    
+                    let table_name = toql.table.clone().unwrap_or(toql.ident.to_string());
+                    Some(crate::util::rename( &format!("{}_{}",&table_name,  &rust_field_name), toql.columns.as_ref().unwrap_or(&RenameCase::SnakeCase)))
                 },
                 key: field.key,
                 count_select: field.count_select,
