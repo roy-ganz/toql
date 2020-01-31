@@ -40,7 +40,7 @@ impl SqlBuilderResult {
 
     pub fn sql_body(&self, s: &mut String) {
         if self.distinct {
-            s.push_str(" DISTINCT ");
+            s.push_str("DISTINCT ");
         }
         s.push_str(&self.select_clause);
         s.push_str(" FROM ");

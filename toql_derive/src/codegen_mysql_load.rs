@@ -512,8 +512,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     self.path_loaders.push( quote!(
                             #path_test {
                                 #role_test
-
-                                let table_name = <#struct_ident as toql::sql_mapper::Mapped>::table_name();
+                                let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
                                 let mapper = cache.mappers.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
                                 let mut dep_query = query.clone();
 
@@ -542,6 +541,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             toql::key::predicate_from_columns_sql::<#struct_ident,_>(entity_keys, &inverse_columns);
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
+                            dep_query.distinct = true; // Chained joins may yield multiple records with same content
 
 
 
