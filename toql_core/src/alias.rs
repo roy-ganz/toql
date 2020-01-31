@@ -1,24 +1,40 @@
-/// Desired alias format that the Sql builder uses.
-/// Long -> concatenated paths -> user_address_country
-/// Medium -> last path with index -> country1
-/// Short -> first and last character withindex -> cy1
-/// Tiny -> Letter t with number -> t1
+//! Alias formatter.
+//!
+//! AliasFormat determines how the [SqlMapper](../sql_mapper/struct.SqlMapper.html) formats table aliases in SQL code. 
+//! Table aliases are needed for every column. E.g. in  `country.id` the table alias is `country` and `ìd` is the column.
+//! 
+//! There are 4 different formats supported:
+//!  - Canonical, this is the internal default alias format. 
+//!    It is the most verbose and useful for debugging, it can however blow SQL state up in size.
+//!  - TinyIndex, the shortes possible alias, not human friendly, but useful for production as it's fast for the database to parse.
+//!  - ShortIndex and MediumIndex, readable and fast to parse. 
+//! 
+
+
+/// Represents the table alias format
 #[derive(Clone, Debug)]
 pub enum AliasFormat {
+    /// Letter t plus number (t1)
     TinyIndex,
+    /// First 2 characters plus number (co1)
     ShortIndex,
+    /// Table name plus number (country1)
     MediumIndex,
+    /// Full path (user_address_country)
     Canonical,
 }
 
 impl AliasFormat {
+    
+    /// Creates a tiny alias from an index number
     pub fn tiny_index(index: u16) -> String {
         let mut tiny_name = String::from("t");
         tiny_name.push_str(index.to_string().as_str());
         tiny_name
     }
 
-    // First two characters of last join + unique number
+    /// Creates a short alias from a name and an index number. 
+    /// If the name ends with a number an underscore is added to separate it from the index.
     pub fn short_index(name: &str, index: u16) -> String {
         let medium_name = String::from(if name.is_empty() {
             "t"
@@ -45,6 +61,8 @@ impl AliasFormat {
         short_name.push_str(index.to_string().as_str());
         short_name
     }
+    /// Creates a medium alias from a name and an index number. 
+    /// If the name ends with a number an underscore is added to separate it from the index.
     pub fn medium_index(name: &str, index: u16) -> String {
         let mut wrap = false;
         let mut medium_name = String::from(if name.is_empty() {

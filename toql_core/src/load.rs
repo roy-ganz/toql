@@ -3,14 +3,28 @@ use crate::sql_mapper::SqlMapperCache;
 
 use std::result::Result;
 
-/// Page start, offset
+/// [Page](enum.Page.html) is used as an argument in load functions. It tells Toql to build and run an additional query
+/// to count the total number of records. 
+/// 
+/// In Toql there are 2 types of counts: A filtered count and a total count. Lets take a datagrid where the user searches his contacts with a name starting with 'Alice'.
+/// The datagrid would show the following:
+///  - Total number of contacts (Total count)
+///  - Number of found contacts with the name 'Alice' (Filtered count)
+///
+/// While the filtered count is almost for free and returned for every query, 
+/// the total count needs a seperate query with a different SQL filter predicate. 
+/// Toql can do that out of the box, but the fields must be mapped accordingly in the [SqlMapper](../sql_mapper/struct.SqlMapper.html)
 pub enum Page {
+    /// Retrieve filtered count only.
+    /// Argments are *start index* and *number of records*.
     Uncounted(u64, u16),
+    // Retrieve filtered count and total count.
+    /// Argments are *start index* and *number of records*.
     Counted(u64, u16),
 }
 
 /// Trait to load entities from database.
-/// This is implemented for each SQL dialect, whereas <T> is the entity to load: E.g. impl Load<User> for MySql
+/// This is implemented for each struct in each SQL dialect. E.g. `impl Load<User> for MySql<..>`
 pub trait Load<T: crate::key::Key> {
     type error;
     /// Load a struct with dependencies for a given Toql query.
@@ -24,8 +38,6 @@ pub trait Load<T: crate::key::Key> {
     /// Load a vector of structs with dependencies for a given Toql query.
     ///
     /// Returns a tuple with the structs and an optional tuple of count values.
-    /// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
-    /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
     fn load_many(
         &mut self,
         query: &Query,
@@ -33,24 +45,9 @@ pub trait Load<T: crate::key::Key> {
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::error>;
 
-    /*  fn load_path(
-         &mut self,
-        path: &str,
-        query: &crate::query::Query,
-        cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> Result<Option<std::vec::Vec<T>>, Self::error>; */
-
-    /* fn load_path_with_keys<J, K>(
-        &mut self,
-        path: &str,
-        query: &crate::query::Query,
-        cache: &crate::sql_mapper::SqlMapperCache,
-
-    ) -> Result<Option<std::vec::Vec<(T, J, K)>>, Self::error>
-
-    {
-        Ok(None)
-    } */
+    /// Build SQL for a toql path. This is used by the Toql derive to load a collection (merged entities). 
+    /// Collections are referenced in the Toql query language throught a field with a path, say `user_addresses`.
+    /// This function can now be used to build a full SQL statement for the collection `addresses`.
     fn build_path(
         &mut self,
         path: &str,
@@ -58,6 +55,8 @@ pub trait Load<T: crate::key::Key> {
         cache: &crate::sql_mapper::SqlMapperCache,
     ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::error>;
 
+    /// Loads all collections for a given struct. This is used by the Toql derive
+    /// and issues as many select statements as there merged entities.
     fn load_dependencies(
         &mut self,
         _entities: &mut Vec<T>,

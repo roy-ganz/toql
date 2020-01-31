@@ -551,7 +551,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     // foreign keys (inverse primary keys) on merged table
                                     inverse_columns.iter().for_each(|c|{
                                         result.push_select(&c);
-                                    });clipp
+                                    });
 
 
                                     #optional_join

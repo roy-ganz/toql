@@ -34,15 +34,4 @@ pub fn extract_query_params(expression: &str) -> (String, Vec<String>) {
     });
     (sql.to_string(), query_params)
 }
-/*
-pub(crate) enum FieldType {
-    Regular,
-    Join,   // JOin(JoinInfo)
-    Merge
-}
 
-pub(crate) fn field_type() ->FieldType {
-    FieldType::Regular
-
-}
- */

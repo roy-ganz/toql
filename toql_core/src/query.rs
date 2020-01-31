@@ -1,5 +1,5 @@
 //!
-//! This module contains the query and all functions to build one programatically.
+//! This module contains the query builder to build a Toql query programatically.
 //!
 //! ## Example
 //!
@@ -13,10 +13,11 @@
 //! ```
 //!
 //! To avoid typing mistakes the Toql derive builds functions for all fields in a struct.
+//! 
 //! In the example above it would be possible to write
 //! `.and(Foobar::fields().bar().desc(2)` for a derived struct `Foobar`.
 //!
-//! Read the guide for more information on the query syntax.
+//! Read the guide for more information on the query syntax or see (Query)[struct.Query.html]
 //!
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -79,7 +80,7 @@ macro_rules! impl_num_filter_arg {
 
 impl_num_filter_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
-impl<T: Into<Query>> Into<Query> for Vec<T> {
+ impl<T: Into<Query>> Into<Query> for Vec<T> {
     fn into(self) -> Query {
         let mut query = Query::new();
         for key in self {
@@ -97,7 +98,7 @@ impl<T: Into<Query> + Clone> Into<Query> for &Vec<T> {
         }
         query
     }
-}
+} 
 
 impl FilterArg for bool {
     fn to_sql(&self) -> String {
@@ -503,15 +504,28 @@ impl ToString for QueryToken {
     }
 }
 
-/// A Query contains fields and wildcards.
-/// It can be turned into SQL using the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
+/// A Query allows to create a Toql query programmatically or modify a parsed string query.
+/// 
+/// This is faster than the [QueryParser](../query_parser/struct.QueryParser.html) and cannot fail. 
+/// It should be used whenever possible.
+/// 
+/// A query can be turned into SQL using the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 ///
-/// To build a big query simple add fields and wildcards with _and_ resp. _or_ function.
+/// To build a big query simply add fields, wildcards ans other (sub)querries with [and()](struct.Query.html#method.and) resp. [or()](struct.Query.html#method.or) function.
 ///
 /// Watch out: Logical AND has precendence over OR. So `a OR b AND c` is the same as `a OR (b AND c)`.
-/// Avoid to restrict your query with a permission field WITHOUT parenthesize the incoming query.
-/// Malicious users will circumvent your permission filter with a simple OR clause at the beginning.
-/// Consider this: `(*, id nen); id, permission ne ""` vs `((*, id nen); id), permission ne ""`.
+/// 
+/// **Always parenthesize a user query if you add a permission filter to it**.
+/// 
+/// Malicious users will try circumvent your permission filter with a simple OR clause at the beginning.
+/// Compare an evil query with a safe one: 
+/// 
+/// Evil: `(*, id nen); id, permission ne ""` 
+/// 
+/// Safe: `((*, id nen); id), permission ne ""`.
+/// 
+/// In the evil query, the permission is ignored, because the predicate `id nen` is always true and returns all records.
+/// 
 /// To parenthesize a query use the [parenthesize()](struct.Query.html#method.parenthesize) method.
 ///
 /// ``` ignore
@@ -519,6 +533,18 @@ impl ToString for QueryToken {
 /// let q2 = Query::new().and(Field("a").eq(1)).or(q1.parens());
 ///
 /// assert_eq!("a eq 1; (b eq 3, c eq 2)", q2.to_string())
+/// ```
+/// 
+/// For every fields of a struct the Toql derive generates fields.
+/// For a Toql derived struct it's possible to write
+/// 
+/// ``` ignore
+/// let q1 = Query::wildcard().and(User::fields().addresses().street().eq("miller street")).and(UserKey(10));
+/// ```
+/// 
+/// To modify q query with a custom struct see [QueryWith](struct.QueryWith.html)
+/// 
+/// 
 #[derive(Clone, Debug)]
 pub struct Query {
     pub(crate) tokens: Vec<QueryToken>,
@@ -622,18 +648,7 @@ impl Query {
             }
         })
     }
-    // Not sure if needed
-    /* pub fn prepend<T>(mut self, query: T) -> Self
-    where
-        T: Into<Query>,
-    {
-        // Swap queries for better append performance
-        let mut q = query.into();
-        q.tokens.append(&mut self.tokens);
-        std::mem::swap(&mut q.tokens, &mut self.tokens);
-
-        self
-    } */
+  
 }
 
 /// Asserts that the provided roles contains all required roles.

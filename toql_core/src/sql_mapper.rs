@@ -415,7 +415,7 @@ impl SqlMapperCache {
         }
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
-        let mut m = SqlMapper::from_mapped::<M>(self.alias_format.clone());
+        let m = SqlMapper::from_mapped::<M>(self.alias_format.clone());
         //m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()
@@ -424,7 +424,7 @@ impl SqlMapperCache {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        let mut m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
+        let m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
         // m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()

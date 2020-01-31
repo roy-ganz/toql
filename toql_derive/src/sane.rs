@@ -1,4 +1,3 @@
-use crate::annot::Pair;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;

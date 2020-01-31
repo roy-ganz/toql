@@ -360,8 +360,6 @@ impl quote::ToTokens for Toql {
                 ));
             }
 
-            toql_mapper.build_merge();
-
             // Build merge functionality
             /*  #[cfg(feature = "mysqldb")]
             mysql_select.build_merge();  SELECT on signle table only*/
