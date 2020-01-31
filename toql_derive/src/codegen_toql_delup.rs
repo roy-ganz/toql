@@ -206,7 +206,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                                         .unwrap()
                                         .as_ref()
                                    .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
-                                    .map(|c| String::from("NULL")).collect::<Vec<_>>())},
+                                    .map(|_| String::from("NULL")).collect::<Vec<_>>())},
                                         | some| { Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?)) })?
 
                                     );
@@ -219,7 +219,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                                    &entity
                                     . #rust_field_ident .as_ref()
                                    .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
-                                    .map(|c| String::from("NULL")).collect::<Vec<_>>())},
+                                    .map(|_| String::from("NULL")).collect::<Vec<_>>())},
                                    | some| {
                                        Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))
                                        })?);

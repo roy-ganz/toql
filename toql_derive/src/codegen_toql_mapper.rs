@@ -16,16 +16,20 @@ impl<'a> GeneratedToqlMapper<'a> {
         let mut field_mappings: Vec<TokenStream> = Vec::new();
         for mapping in &rust_struct.mapped_filter_fields {
             let toql_field_name = &mapping.field;
-            let sql_mapping = &mapping
-                .sql
-                .replace("..", "{alias}."); 
+            let sql_mapping = &mapping.sql;
+            let sql_expr = if sql_mapping.contains(".."){
+                let sql_mapping = sql_mapping.replace("..", "{alias}."); 
+                quote!(&format!(#sql_mapping, alias = mapper.translated_alias(&canonical_sql_alias)))
+            } else {
+                quote!(#sql_mapping)
+            };
 
             match &mapping.handler {
                 Some(handler) => {
                     field_mappings.push(quote! {
                                 mapper.map_handler_with_options(
                                     &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                    &format!(#sql_mapping, alias = mapper.translated_alias(&canonical_sql_alias)) ,
+                                    #sql_expr ,
                                     #handler (), 
                                     toql::sql_mapper::FieldOptions::new().filter_only(true));
                             });
@@ -34,7 +38,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     field_mappings.push(quote! {
                                 mapper.map_field_with_options(
                                     &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                &format!(#sql_mapping, alias = mapper.translated_alias(&canonical_sql_alias)),
+                                #sql_expr,
                                 toql::sql_mapper::FieldOptions::new()
                                 .filter_only(true));
                             });

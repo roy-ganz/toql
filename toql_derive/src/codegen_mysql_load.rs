@@ -270,7 +270,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             )
         } else {
             quote!(
-            let (mut entities, keys) = toql::mysql::row::from_query_result_with_primary_keys::<User, UserKey>(entities_stmt)?;
+            let (mut entities, keys) = toql::mysql::row::from_query_result_with_primary_keys::<#struct_ident, #struct_key_ident>(entities_stmt)?;
             )
         };
 
@@ -473,18 +473,23 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         .map(|c| c.this.as_str())
                         .collect();
 
-                    let self_column_validation = quote!(
-                        if cfg!(debug_assertions) {
-                        for c in &[ #(#self_keys),* ] {
-                            if !<#struct_ident as toql::key::Key>::columns().contains(&c.to_string()) {
-                            let t = <#struct_ident as toql::sql_mapper::Mapped>::table_name();
-                            let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
-                            let e2 = toql::error::ToqlError::SqlMapperError(e);
-                            return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
+                    // only validate user provided columns, auto generated column are always valid
+                    let optional_self_column_validation = if merge_attrs.columns.is_empty() {
+                         quote!()
+                    } else {
+                        quote!(
+                            if cfg!(debug_assertions) {
+                            for c in &[ #(#self_keys),* ] {
+                                if !<#struct_ident as toql::key::Key>::columns().contains(&c.to_string()) {
+                                let t = <#struct_ident as toql::sql_mapper::Mapped>::table_name();
+                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
+                                let e2 = toql::error::ToqlError::SqlMapperError(e);
+                                return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
+                                }
                             }
                         }
-                    }
-                    );
+                    )
+                    };
 
                     // Column validation only, if no custom join is required
                     let optional_inverse_column_validation = if merge_attrs.join_sql.is_none() {
@@ -508,20 +513,20 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             #path_test {
                                 #role_test
 
-                                let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
+                                let table_name = <#struct_ident as toql::sql_mapper::Mapped>::table_name();
                                 let mapper = cache.mappers.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
                                 let mut dep_query = query.clone();
 
-                    #self_column_validation
+                    #optional_self_column_validation
 
-                    let default_inverse_columns= <User as toql::key::Key>::default_inverse_columns();
-                     let inverse_columns = <User as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+                    let default_inverse_columns= <#struct_ident as toql::key::Key>::default_inverse_columns();
+                     let inverse_columns = <#struct_ident as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
 
                         let inverse_column = match c.as_str() {
                                 #(#inverse_column_translation)*
                             _ => {
                                     mapper.aliased_column(
-                                        &<UserLanguage as toql::sql_mapper::Mapped>::table_alias(),
+                                        &<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),
                                     default_inverse_columns.get(i).unwrap()
                                     )
                                 }
@@ -534,7 +539,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                    // #predicate_builder
                     let (predicate, params) =
-                            toql::key::predicate_from_columns_sql::<User,_>(entity_keys, &inverse_columns);
+                            toql::key::predicate_from_columns_sql::<#struct_ident,_>(entity_keys, &inverse_columns);
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
 
@@ -561,8 +566,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     toql::log_sql!(result.to_sql(), result.params());
                                     let entities_stmt = self.conn().prep_exec(result.to_sql(), result.params())?;
                                     let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Key>::Key, <#struct_ident as toql::key::Key>::Key>(entities_stmt)?;
-                                    //let mut pslit = user_languages.iter().map(|u| &u.0).collect::<Vec<&UserLanguage>>();
-
+                                    
                                     if !merge_entities.is_empty() {
                                         self.load_dependencies(&mut merge_entities, &merge_keys, query, cache)?;
 

@@ -1,7 +1,6 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::Ident;
-use heck::MixedCase;
 
 use crate::sane::{FieldKind, Struct};
 
@@ -22,7 +21,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
         for args in &toql.mapped_filter_fields {
             let rust_struct_visibility = &toql.rust_struct_visibility;
             let field_ident = Ident::new(&args.field, Span::call_site());
-            let toql_field=  args.field.as_str().trim_start_matches("r#").to_mixed_case();
+            let toql_field=  args.field.as_str().trim_start_matches("r#");
             builder_fields.push(quote!(
                         #rust_struct_visibility fn #field_ident (mut self) -> toql :: query :: Field {
                             self . 0 . push_str ( #toql_field ) ;
