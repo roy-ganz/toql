@@ -491,6 +491,16 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     )
                     };
 
+                    // Custom joins may yield multiple records with same content
+                    // In automatic joins this does not happen
+                    let optional_distinct = if merge_attrs.join_sql.is_some() {
+                        quote!(
+                            dep_query.distinct = true; 
+                        )
+                    } else {
+                        quote!()
+                    };
+
                     // Column validation only, if no custom join is required
                     let optional_inverse_column_validation = if merge_attrs.join_sql.is_none() {
                         quote!(
@@ -541,7 +551,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             toql::key::predicate_from_columns_sql::<#struct_ident,_>(entity_keys, &inverse_columns);
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
-                            dep_query.distinct = true; // Chained joins may yield multiple records with same content
+                           
+                            #optional_distinct
 
 
 
