@@ -453,7 +453,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                 impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::dialect::Generic {
 
-                    type error = toql::error::ToqlError;
+                    type Error = toql::error::ToqlError;
 
                     fn delete_many_sql(keys: &[<#struct_ident as toql::key::Key>::Key],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
@@ -497,7 +497,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 }
                 impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::dialect::Generic {
 
-                    type error = toql::error::ToqlError;
+                    type Error = toql::error::ToqlError;
 
                     fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                     {
@@ -564,7 +564,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 }
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Diff<'_,#struct_ident>  for toql::mysql::MySql<'a,T>
                 {
-                    type error = toql::mysql::error::ToqlMySqlError;
+                    type Error = toql::mysql::error::ToqlMySqlError;
 
                     fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
                     -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>

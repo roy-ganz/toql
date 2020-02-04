@@ -17,7 +17,9 @@ pub struct SqlBuilderResult {
     pub(crate) where_params: Vec<String>,
     pub(crate) having_params: Vec<String>,
     pub(crate) order_params: Vec<String>,
+    pub(crate) join_params: Vec<String>, // Not sure if needed
     pub(crate) combined_params: Vec<String>,
+    
 }
 
 impl SqlBuilderResult {
@@ -36,7 +38,8 @@ impl SqlBuilderResult {
             self.join_clause.push(' ');
         }
         self.join_clause.push_str(s);
-    }
+    }  
+    
 
     pub fn sql_body(&self, s: &mut String) {
         if self.distinct {

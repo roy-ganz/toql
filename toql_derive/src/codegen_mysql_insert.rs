@@ -208,7 +208,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
 
                 impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Insert<'_, #struct_ident> for toql::mysql::MySql<'a,T> {
 
-                    type error = toql::mysql::error::ToqlMySqlError;
+                    type Error = toql::mysql::error::ToqlMySqlError;
 
                      fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy, roles: &std::collections::HashSet<String>)
                      -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>

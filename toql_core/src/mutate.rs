@@ -37,12 +37,12 @@ use std::result::Result;
 
 /// Trait for delete functions (They work with entity keys).
 pub trait Delete<'a, T: crate::key::Key + 'a> {
-    type error;
+    type Error;
     /// Delete one structs, returns tuple with SQL statement and SQL params or error.
     fn delete_one_sql(
         key: T::Key,
         roles: &HashSet<String>,
-    ) -> Result<(String, Vec<String>), Self::error>
+    ) -> Result<(String, Vec<String>), Self::Error>
     where
         T: crate::key::Key + 'a,
     {
@@ -52,48 +52,28 @@ pub trait Delete<'a, T: crate::key::Key + 'a> {
     fn delete_many_sql(
         keys: &[T::Key],
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
 }
 
 /// Trait for update. They work with entities
 pub trait Update<'a, T: 'a> {
-    type error;
-    /* /// Insert one struct, returns tuple with SQL statement and SQL params or error.
-    fn insert_one_sql(entity: &'a T) -> Result<(String, Vec<String>)> {
-        Ok(Self::insert_many_sql(std::iter::once(entity))?.unwrap())
-    }
-    /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
-    fn insert_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
-    where
-        I: IntoIterator<Item = &'a T> + 'a; */
-
-    /*   /// Delete one structs, returns tuple with SQL statement and SQL params or error.
-    fn delete_one_sql(entity: &'a T) -> Result<(String, Vec<String>)> {
-        Ok(Self::delete_many_sql(std::iter::once(entity))?.unwrap())
-    }
-    /// Delete many structs, returns tuple with SQL statement and SQL params or error.
-    fn delete_many_sql<I>(entities: I) -> Result<Option<(String, Vec<String>)>>
-    where
-        I: IntoIterator<Item = &'a T> + 'a; */
-    /// Update one struct, returns tuple with SQL statement and SQL params or error.
-    /// Returns None, if no updates are required.
-
+    type Error;
     fn update_one_sql<Q: Borrow<T>>(
         entity: Q,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::error> {
+    ) -> Result<Option<(String, Vec<String>)>, Self::Error> {
         Self::update_many_sql(&[entity], roles)
     }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
     fn update_many_sql<Q: Borrow<T>>(
         entities: &[Q],
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
 }
 
 /// Trait for update. They work with entities
 pub trait Diff<'a, T: 'a> {
-    type error;
+    type Error;
     /// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
@@ -102,7 +82,7 @@ pub trait Diff<'a, T: 'a> {
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-    ) -> Result<Vec<(String, Vec<String>)>, Self::error> {
+    ) -> Result<Vec<(String, Vec<String>)>, Self::Error> {
         Ok(Self::full_diff_many_sql(&[(outdated, updated)], roles)?.unwrap())
     }
 
@@ -112,7 +92,7 @@ pub trait Diff<'a, T: 'a> {
     fn full_diff_many_sql<Q: Borrow<T>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-    ) -> Result<Option<Vec<(String, Vec<String>)>>, Self::error>;
+    ) -> Result<Option<Vec<(String, Vec<String>)>>, Self::Error>;
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
@@ -121,7 +101,7 @@ pub trait Diff<'a, T: 'a> {
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::error> {
+    ) -> Result<Option<(String, Vec<String>)>, Self::Error> {
         Self::diff_many_sql(&[(outdated, updated)], roles)
     }
 
@@ -131,7 +111,7 @@ pub trait Diff<'a, T: 'a> {
     fn diff_many_sql<Q: Borrow<T>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
 }
 
 /// Defines a strategy to resolve the conflict, when the record to insert already exists.
@@ -148,14 +128,14 @@ pub enum DuplicateStrategy {
 /// This trait is implemented if keys of an entity are inserted too. This is typically the case for association tables.
 /// Conflicts can happed if the keys already exist. A strategy must be provided to tell how to resolve the conflict.
 pub trait Insert<'a, T: 'a> {
-    type error;
+    type Error;
 
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
     fn insert_one_sql<Q: Borrow<T>>(
         entity: Q,
         strategy: DuplicateStrategy,
         roles: &HashSet<String>,
-    ) -> Result<(String, Vec<String>), Self::error> {
+    ) -> Result<(String, Vec<String>), Self::Error> {
         Ok(Self::insert_many_sql(&[entity], strategy, roles)?.unwrap())
     }
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
@@ -163,7 +143,7 @@ pub trait Insert<'a, T: 'a> {
         entities: &[Q],
         strategy: DuplicateStrategy,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::error>;
+    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
 }
 
 /// Marker Trait for insert. They work with entities.
@@ -195,9 +175,9 @@ where
     I: Insert<'a, T>,
     U: Diff<'a, T>,
     D: Delete<'a, T>,
-    E: std::convert::From<<U as Diff<'a, T>>::error>
-        + std::convert::From<<I as Insert<'a, T>>::error>
-        + std::convert::From<<D as Delete<'a, T>>::error>
+    E: std::convert::From<<U as Diff<'a, T>>::Error>
+        + std::convert::From<<I as Insert<'a, T>>::Error>
+        + std::convert::From<<D as Delete<'a, T>>::Error>
         + std::convert::From<ToqlError>,
 {
     let mut insert: Vec<&T> = Vec::new();

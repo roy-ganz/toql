@@ -13,7 +13,7 @@ use toql_core::load::{Load, Page};
 use toql_core::mutate::{Delete, Diff, DuplicateStrategy, Insert, InsertDuplicate, Update};
 use toql_core::query::Query;
 use toql_core::select::Select;
-use toql_core::sql_mapper::SqlMapperCache;
+use toql_core::sql_mapper::SqlMapperRegistry;
 
 use core::borrow::Borrow;
 use toql_core::log_sql;
@@ -99,7 +99,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns the last generated id.
     pub fn insert_one<'a, T>(&mut self, entity: &T) -> Result<u64>
     where
-        Self: Insert<'a, T, error = ToqlMySqlError>,
+        Self: Insert<'a, T, Error = ToqlMySqlError>,
         T: 'a,
     {
         let sql =
@@ -113,7 +113,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns the last generated id
     pub fn insert_many<'a, T, Q>(&mut self, entities: &[Q]) -> Result<u64>
     where
-        Self: Insert<'a, T, error = ToqlMySqlError>,
+        Self: Insert<'a, T, Error = ToqlMySqlError>,
         T: 'a,
         Q: Borrow<T>,
     {
@@ -136,7 +136,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn insert_dup_one<'a, T>(&mut self, entity: &T, strategy: DuplicateStrategy) -> Result<u64>
     where
         T: 'a,
-        Self: Insert<'a, T, error = ToqlMySqlError> + InsertDuplicate,
+        Self: Insert<'a, T, Error = ToqlMySqlError> + InsertDuplicate,
     {
         let sql = <Self as Insert<'a, T>>::insert_one_sql(entity, strategy, &self.roles)?;
 
@@ -153,7 +153,7 @@ impl<C: GenericConnection> MySql<'_, C> {
         strategy: DuplicateStrategy,
     ) -> Result<u64>
     where
-        Self: Insert<'a, T, error = ToqlMySqlError> + InsertDuplicate,
+        Self: Insert<'a, T, Error = ToqlMySqlError> + InsertDuplicate,
         I: 'a,
         Q: Borrow<T>,
     {
@@ -172,7 +172,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns the number of deleted rows.
     pub fn delete_one<'a, T>(&mut self, key: <T as Key>::Key) -> Result<u64>
     where
-        toql_core::dialect::Generic: Delete<'a, T, error = toql_core::error::ToqlError>,
+        toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
         T: Key + 'a,
     {
         let sql = <toql_core::dialect::Generic as Delete<'a, T>>::delete_one_sql(key, &self.roles)?;
@@ -187,7 +187,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn delete_many<'a, T>(&mut self, keys: &[<T as Key>::Key]) -> Result<u64>
     where
         T: Key + 'a,
-        toql_core::dialect::Generic: Delete<'a, T, error = toql_core::error::ToqlError>,
+        toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
     {
         let sql =
             <toql_core::dialect::Generic as Delete<'a, T>>::delete_many_sql(&keys, &self.roles)?;
@@ -206,7 +206,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns the number of updated rows.
     pub fn update_many<'a, T, Q>(&mut self, entities: &[Q]) -> Result<u64>
     where
-        toql_core::dialect::Generic: Update<'a, T, error = toql_core::error::ToqlError>,
+        toql_core::dialect::Generic: Update<'a, T, Error = toql_core::error::ToqlError>,
         T: 'a,
         Q: Borrow<T>,
     {
@@ -242,7 +242,7 @@ impl<C: GenericConnection> MySql<'_, C> {
 
     pub fn update_one<'a, T>(&mut self, entity: &T) -> Result<u64>
     where
-        toql_core::dialect::Generic: Update<'a, T, error = toql_core::error::ToqlError>,
+        toql_core::dialect::Generic: Update<'a, T, Error = toql_core::error::ToqlError>,
         T: 'a,
     {
         let sql =
@@ -261,7 +261,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Nested fields themself will not automatically be updated.
     pub fn full_diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self, entities: &[(Q, Q)]) -> Result<u64>
     where
-        Self: Diff<'a, T, error = ToqlMySqlError>,
+        Self: Diff<'a, T, Error = ToqlMySqlError>,
         T: 'a,
     {
         let sql_stmts = <Self as Diff<'a, T>>::full_diff_many_sql(entities, &self.roles)?;
@@ -288,7 +288,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Nested fields themself will not automatically be updated.
     pub fn full_diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64>
     where
-        Self: Diff<'a, T, error = ToqlMySqlError>,
+        Self: Diff<'a, T, Error = ToqlMySqlError>,
         T: 'a,
     {
         self.full_diff_many(&[(outdated, current)])
@@ -300,7 +300,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Nested fields themself will not automatically be updated.
     pub fn diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self, entities: &[(Q, Q)]) -> Result<u64>
     where
-        Self: Diff<'a, T, error = ToqlMySqlError>,
+        Self: Diff<'a, T, Error = ToqlMySqlError>,
         T: 'a,
     {
         let sql_stmts = <Self as Diff<'a, T>>::diff_many_sql(entities, &self.roles)?;
@@ -319,7 +319,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Collections in a struct will be ignored.
     pub fn diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64>
     where
-        Self: Diff<'a, T, error = ToqlMySqlError>,
+        Self: Diff<'a, T, Error = ToqlMySqlError>,
         T: 'a,
     {
         self.diff_many(&[(outdated, current)])
@@ -334,8 +334,8 @@ impl<C: GenericConnection> MySql<'_, C> {
         updated: &'a [T],
     ) -> Result<(u64, u64, u64)>
     where
-        toql_core::dialect::Generic: Delete<'a, T, error = toql_core::error::ToqlError>,
-        Self: Diff<'a, T, error = ToqlMySqlError> + Insert<'a, T, error = ToqlMySqlError>,
+        toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
+        Self: Diff<'a, T, Error = ToqlMySqlError> + Insert<'a, T, Error = ToqlMySqlError>,
         T: Key + 'a + Borrow<T>,
     {
         let (insert_sql, diff_sql, delete_sql) =
@@ -363,7 +363,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// This will select all base fields and join. Merged fields will be skipped
     pub fn select_one<T>(&mut self, key: <T as Key>::Key) -> Result<T>
     where
-        Self: Select<T, error = ToqlMySqlError>,
+        Self: Select<T, Error = ToqlMySqlError>,
         T: Key,
     {
         <Self as Select<T>>::select_one(self, key)
@@ -373,7 +373,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// This will select all base fields and join. Merged fields will be skipped
     pub fn select_many<T>(&mut self, keys: &[<T as Key>::Key]) -> Result<Vec<T>>
     where
-        Self: Select<T, error = ToqlMySqlError>,
+        Self: Select<T, Error = ToqlMySqlError>,
         T: Key,
     {
         <Self as Select<T>>::select_many(self, keys)
@@ -390,9 +390,9 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn load_one<T>(&mut self, query: &Query, mappers: &SqlMapperCache) -> Result<T>
+    pub fn load_one<T>(&mut self, query: &Query, mappers: &SqlMapperRegistry) -> Result<T>
     where
-        Self: Load<T, error = ToqlMySqlError>,
+        Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Key,
     {
         <Self as Load<T>>::load_one(self, query, mappers)
@@ -406,11 +406,11 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn load_many<T>(
         &mut self,
         query: &Query,
-        mappers: &SqlMapperCache,
+        mappers: &SqlMapperRegistry,
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
-        Self: Load<T, error = ToqlMySqlError>,
+        Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Key,
     {
         <Self as Load<T>>::load_many(self, query, mappers, page)

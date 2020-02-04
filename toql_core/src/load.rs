@@ -1,5 +1,5 @@
 use crate::query::Query;
-use crate::sql_mapper::SqlMapperCache;
+use crate::sql_mapper::SqlMapperRegistry;
 
 use std::result::Result;
 
@@ -26,14 +26,14 @@ pub enum Page {
 /// Trait to load entities from database.
 /// This is implemented for each struct in each SQL dialect. E.g. `impl Load<User> for MySql<..>`
 pub trait Load<T: crate::key::Key> {
-    type error;
+    type Error;
     /// Load a struct with dependencies for a given Toql query.
     ///
     /// /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    fn load_one(&mut self, query: &Query, mappers: &SqlMapperCache) -> Result<T, Self::error>;
+    fn load_one(&mut self, query: &Query, mappers: &SqlMapperRegistry) -> Result<T, Self::Error>;
 
     /// Load a vector of structs with dependencies for a given Toql query.
     ///
@@ -41,9 +41,9 @@ pub trait Load<T: crate::key::Key> {
     fn load_many(
         &mut self,
         query: &Query,
-        mappers: &SqlMapperCache,
+        mappers: &SqlMapperRegistry,
         page: Page,
-    ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::error>;
+    ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::Error>;
 
     /// Build SQL for a toql path. This is used by the Toql derive to load a collection (merged entities). 
     /// Collections are referenced in the Toql query language throught a field with a path, say `user_addresses`.
@@ -52,8 +52,8 @@ pub trait Load<T: crate::key::Key> {
         &mut self,
         path: &str,
         query: &crate::query::Query,
-        cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::error>;
+        cache: &crate::sql_mapper::SqlMapperRegistry,
+    ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::Error>;
 
     /// Loads all collections for a given struct. This is used by the Toql derive
     /// and issues as many select statements as there merged entities.
@@ -62,8 +62,8 @@ pub trait Load<T: crate::key::Key> {
         _entities: &mut Vec<T>,
         _entity_keys: &Vec<T::Key>,
         _query: &crate::query::Query,
-        _cache: &crate::sql_mapper::SqlMapperCache,
-    ) -> Result<(), Self::error> {
+        _cache: &crate::sql_mapper::SqlMapperRegistry,
+    ) -> Result<(), Self::Error> {
         Ok(())
     }
 }

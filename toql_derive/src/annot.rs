@@ -334,7 +334,7 @@ impl quote::ToTokens for Toql {
                     mysql_load.add_mysql_deserialize(&f);
 
                     #[cfg(feature = "mysqldb")]
-                    mysql_key.add_key_deserialize(&f);
+                    mysql_key.add_key_deserialize(&f)?;
 
                     #[cfg(feature = "mysqldb")]
                     let result = mysql_select.add_select_field(&f);

@@ -1,7 +1,7 @@
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{TokenStream};
 use syn::Ident;
 
-use heck::MixedCase;
+
 
 use darling::{Error, Result};
 
@@ -22,7 +22,7 @@ pub(crate) struct GeneratedMysqlSelect<'a> {
 
     select_keys_params: Vec<TokenStream>,
 
-    merge_code: Vec<TokenStream>,
+   
 
     merge_fields: Vec<crate::sane::Field>,
     merge_self_fields: Vec<String>,
@@ -45,7 +45,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
             select_keys_params: Vec::new(),
 
-            merge_code: Vec::new(),
+          
             merge_fields: Vec::new(),
             merge_self_fields: Vec::new(),
         }
@@ -165,71 +165,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
         Ok(())
     }
 
-    /* pub fn build_merge(&mut self) {
-        // Build all merge fields
-        // This must be done after the first pass, becuase all key names must be known at this point
-        for field in &self.merge_fields {
-            match &field.kind {
-                FieldKind::Merge(merge_attrs) => {
-                    let mut on_condition: Vec<String> = Vec::new();
-                    if let Some(sql) = &merge_attrs.on_sql {
-                        // resolve ..
-                        on_condition.push(
-                            sql.replace("..", &format!("{}.", merge_attrs.join_alias).to_owned()),
-                        );
-                    }
-
-                    // Build join for all keys of that struct
-                    for self_field in &self.merge_self_fields {
-                        let default_other_field =
-                            format!("{}_{}", field.rust_type_name.to_mixed_case(), &self_field);
-                        let other_field = merge_attrs.other_field(&self_field, default_other_field);
-
-                        let self_column = merge_attrs.column(&self_field);
-                        let other_column = merge_attrs.column(&other_field);
-
-                        on_condition.push(format!(
-                            "{}.{} = {}.{}",
-                            merge_attrs.join_alias,
-                            self_column,
-                            merge_attrs.join_alias,
-                            other_column
-                        ));
-                    }
-
-                    let merge_join = format!(
-                        "JOIN {} {} ON ({} AND {{}})",
-                        merge_attrs.sql_join_table_name,
-                        merge_attrs.join_alias,
-                        on_condition.join(" AND ")
-                    );
-
-                    let struct_ident = self.struct_ident;
-                    let merge_function = Ident::new(
-                        &format!("merge_{}", &field.rust_field_name),
-                        Span::call_site(),
-                    );
-
-                    let merge_field_init = if field.number_of_options > 0 {
-                        quote!(Some(Vec::new()))
-                    } else {
-                        quote!(Vec::new())
-                    };
-                    let rust_field_ident = &field.rust_field_ident;
-                    let rust_type_ident = &field.rust_type_ident;
-
-                    self.merge_code.push(quote!(
-                                let #rust_field_ident = <Self as toql::select::Select<#rust_type_ident>> :: select_dependencies(self, &format!(#merge_join, key_predicate), &params)?;
-                                for e in entities.iter_mut() { e . #rust_field_ident = #merge_field_init; }
-                                #struct_ident :: #merge_function(&mut entities, #rust_field_ident);
-                        ));
-                }
-                _ => {
-                    panic!("Should be never called!");
-                }
-            }
-        }
-    } */
+   
 }
 
 impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
@@ -265,7 +201,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         let select = quote! {
                        impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::select::Select<#struct_ident> for toql::mysql::MySql<'a,T> {
 
-                           type error = toql :: mysql::error:: ToqlMySqlError;
+                           type Error = toql :: mysql::error:: ToqlMySqlError;
 
 
                            fn columns_sql(alias: &str) -> String {
@@ -308,7 +244,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                                Ok(entities.pop().unwrap())
                             }
-                             fn select_many(&mut self, keys: &[<#struct_ident as toql::key::Key>::Key]) -> Result<Vec<#struct_ident>, Self::error>{
+                             fn select_many(&mut self, keys: &[<#struct_ident as toql::key::Key>::Key]) -> Result<Vec<#struct_ident>, Self::Error>{
 
                                    let conn = self.conn();
                                    let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( keys, Some(#sql_table_alias));

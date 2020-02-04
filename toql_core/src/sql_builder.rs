@@ -447,6 +447,7 @@ impl SqlBuilder {
             order_clause: String::from(""),
             having_clause: String::from(""),
             select_params: vec![], // query parameters in select clause, due to sql expr with <param>
+            join_params: vec![],
             where_params: vec![],
             having_params: vec![],
             order_params: vec![],

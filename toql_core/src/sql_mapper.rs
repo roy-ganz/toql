@@ -57,7 +57,7 @@ impl fmt::Display for SqlMapperError {
                 write!(f, "canonical sql alias `{}` is missing", s)
             }
             SqlMapperError::ColumnMissing(ref t, ref c) => {
-                write!(f, "sql column `{}` is missing on database table `{}`", t, c)
+                write!(f, "database table `{}` is missing column `{}`", t, c)
             }
         }
     }
@@ -400,16 +400,16 @@ impl FieldHandler for BasicFieldHandler {
 }
 
 /// A cache that holds mappers.
-//pub type SqlMapperCache = HashMap<String, SqlMapper>;
+//pub type SqlMapperRegistry = HashMap<String, SqlMapper>;
 
 #[derive(Debug)]
-pub struct SqlMapperCache {
+pub struct SqlMapperRegistry {
     pub mappers: HashMap<String, SqlMapper>,
     pub alias_format: AliasFormat, //
 }
-impl SqlMapperCache {
-    pub fn new(alias_format: AliasFormat) -> SqlMapperCache {
-        SqlMapperCache {
+impl SqlMapperRegistry {
+    pub fn new(alias_format: AliasFormat) -> SqlMapperRegistry {
+        SqlMapperRegistry {
             mappers: HashMap::new(),
             alias_format,
         }
@@ -551,12 +551,12 @@ impl SqlMapper {
 
     /*  /// Creates and inserts a new mapper into a cache.
     /// Returns a mutable reference to the created mapper. Use it for configuration.
-    pub fn insert_new_mapper<T: Mapped>(cache: &mut SqlMapperCache) -> &mut SqlMapper {
+    pub fn insert_new_mapper<T: Mapped>(cache: &mut SqlMapperRegistry) -> &mut SqlMapper {
         T::insert_new_mapper(cache)
     }
     /// Creates a new mapper with a custom field handler and insert it into a cache.
     /// Returns a mutable reference to the created mapper. Use it for configuration.
-     pub fn insert_new_mapper_with_handler<T, H>(cache: &mut SqlMapperCache, handler: H) -> &mut SqlMapper
+     pub fn insert_new_mapper_with_handler<T, H>(cache: &mut SqlMapperRegistry, handler: H) -> &mut SqlMapper
      where T: Mapped,
             H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
      {

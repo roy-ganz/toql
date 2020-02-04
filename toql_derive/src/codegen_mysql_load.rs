@@ -236,14 +236,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
                /*  fn load_dependencies(&mut self, mut _entities: &mut Vec< #struct_ident >,
-                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperCache)
+                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperRegistry)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 { Ok(())} */
             )
         } else {
             quote!(
                 fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident>,mut entity_keys: & Vec< #struct_key_ident >,
-                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperCache)
+                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperRegistry)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
                     //let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
@@ -286,11 +286,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
             impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::load::Load<#struct_ident> for toql::mysql::MySql<'a,T>
             {
-                type error = toql :: mysql::error::ToqlMySqlError;
+                type Error = toql :: mysql::error::ToqlMySqlError;
 
                 fn load_one(&mut self, query: &toql::query::Query,
 
-                    cache: &toql::sql_mapper::SqlMapperCache,
+                    cache: &toql::sql_mapper::SqlMapperRegistry,
                    )
                     -> Result<# struct_ident, toql :: mysql::error:: ToqlMySqlError>
 
@@ -326,7 +326,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                 fn load_many( &mut self, query: &toql::query::Query,
 
-                cache: &toql::sql_mapper::SqlMapperCache,
+                cache: &toql::sql_mapper::SqlMapperRegistry,
                 page: toql::load::Page)
                 -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql :: mysql::error:: ToqlMySqlError>
                 {
@@ -381,7 +381,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     Ok((entities, count_result))
                 }
                 fn build_path(&mut self,path: &str, query: &toql::query::Query,
-                    cache: &toql::sql_mapper::SqlMapperCache
+                    cache: &toql::sql_mapper::SqlMapperRegistry
                    )
                 -> Result<toql::sql_builder_result::SqlBuilderResult,toql :: mysql::error:: ToqlMySqlError>
 
@@ -402,7 +402,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
         // Build all merge fields
         // This must be done after the first pass, becuase all key names must be known at this point
         let struct_ident = &self.rust_struct.rust_struct_ident;
-        let struct_name = &self.rust_struct.rust_struct_name;
+        
         for field in &self.merge_fields {
             let rust_type_ident = &field.rust_type_ident;
             let rust_field_ident = &field.rust_field_ident;
@@ -454,15 +454,43 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             .map_err(|e| SqlBuilderError::RoleRequired(e))?;
                         )
                     };
+                    
+                   
 
                     let optional_join = if let Some(join) = &merge_attrs.join_sql {
-                        if join.contains("..") {
-                            let formatted_join = join.replace("..", "{alias}.");
-                            quote!( result.push_join(&format!(#formatted_join, alias = &mapper.translated_alias(
-                            &<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias() ) )); )
+
+                         // Quick guess if params are used
+                         let join_contains_build_params = join.contains('<');
+                         let optional_query_params = if join_contains_build_params
+                        {
+                            quote!(
+                            let (ref join_stmt, ref join_params) = toql::sql_builder::SqlBuilder::resolve_query_params(join_stmt, &query.params)
+                                .map_err(|e| toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::SqlBuilderError(e)))?;
+                            )
                         } else {
-                            quote!( result.push_join(#join);)
-                        }
+                            quote!()
+                        };
+                        let optional_join_params_push = if join_contains_build_params {
+                            quote!( params.extend_from_slice(&join_params); )
+                        } else {
+                            quote!()
+                        };
+
+                       let aliased_join_statement =  if join.contains("..") {
+                            let formatted_join = join.replace("..", "{alias}.");
+                            quote!( 
+                                let join_stmt = &format!(#formatted_join, alias = &mapper.translated_alias(
+                                &<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias() ));
+                            )
+                        } else {
+                            quote!( let join_stmt = #join; )
+                        };
+                        quote!(
+                            #aliased_join_statement
+                            #optional_query_params
+                            result . push_join(join_stmt);
+                             #optional_join_params_push
+                        )
                     } else {
                         quote!()
                     };
