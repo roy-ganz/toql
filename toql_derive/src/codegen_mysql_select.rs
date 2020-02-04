@@ -123,7 +123,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
 
                 self.select_joins.push(format!(
                     "{}JOIN {} {} {{}}ON ({{}}{{}})",
-                    join_type, join_attrs.sql_join_table_name, rust_field_name
+                    join_type, join_attrs.sql_join_table_name, &join_attrs.join_alias
                 ));
 
                 self.select_joins_params

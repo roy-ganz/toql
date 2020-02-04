@@ -24,8 +24,11 @@ pub struct SqlBuilderResult {
 
 impl SqlBuilderResult {
     /// Returns true if no field is neither selected nor filtered.
-    pub fn is_empty(&self) -> bool {
+    /* pub fn is_empty(&self) -> bool {
         !self.any_selected && self.where_clause.is_empty() && self.having_clause.is_empty()
+    } */
+    pub fn any_selected(&self) -> bool {
+        self.any_selected 
     }
     pub fn push_select(&mut self, s: &str) {
         if !self.select_clause.trim_end().ends_with(',') {

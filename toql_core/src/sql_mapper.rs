@@ -272,7 +272,7 @@ pub trait FieldHandler {
     fn build_join(
         &self,
         _build_params: &HashMap<String, String>,
-    ) -> Result<Option<String>, crate::sql_builder::SqlBuilderError> {
+    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         Ok(None)
     }
 }

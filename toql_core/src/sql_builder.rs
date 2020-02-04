@@ -454,7 +454,7 @@ impl SqlBuilder {
             combined_params: vec![],
         };
 
-        let mut combined_params: HashMap<String, String> = HashMap::new();
+        let mut combined_build_params: HashMap<String, String> = HashMap::new();
 
         let build_params: &HashMap<String, String> = {
             if query.params.is_empty() {
@@ -462,14 +462,14 @@ impl SqlBuilder {
             } else if sql_mapper.params.is_empty() {
                 &query.params
             } else {
-                combined_params.extend(query.params.iter().map(|(k, v)| (k.clone(), v.clone())));
-                combined_params.extend(
+                combined_build_params.extend(query.params.iter().map(|(k, v)| (k.clone(), v.clone())));
+                combined_build_params.extend(
                     sql_mapper
                         .params
                         .iter()
                         .map(|(k, v)| (k.clone(), v.clone())),
                 );
-                &combined_params
+                &combined_build_params
             }
         };
 
@@ -503,8 +503,11 @@ impl SqlBuilder {
                             continue;
                         }
                         // Skip field from other path
-                        //if !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
-                        if !self.subpath.starts_with(&wildcard.path) {
+                        
+                        if !(wildcard.path.starts_with(&self.subpath) || self.subpath.starts_with(&wildcard.path)){
+                        //if  !self.wildcard.is_empty() && !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
+                       // if !wildcard.path.starts_with(&self.subpath) {
+                        //if !self.subpath.starts_with(&wildcard.path) {
                             continue;
                         }
 
@@ -819,9 +822,10 @@ impl SqlBuilder {
                                                                            result.where_params.append(&mut p);
                                                                        }
                                     */
-                                    if let Some(j) = sql_target.handler.build_join(build_params)? {
+                                    if let Some((j, p)) = sql_target.handler.build_join(build_params)? {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
+                                        result.join_params.extend_from_slice(&p);
                                     }
                                 }
                                 if let Some(o) = &query_field.order {
@@ -902,6 +906,11 @@ impl SqlBuilder {
             &mut result,
         );
 
+        // Add Auxiliary joins
+          // Add auxiliary joins
+         result.join_clause.push_str( &query.join_stmts.join(" "));
+         result.join_params.extend_from_slice(&query.join_stmt_params);
+
         //println!("Selected joins including inner joins {:?}", selected_paths);
 
         if self.count_query {
@@ -976,6 +985,9 @@ impl SqlBuilder {
             .extend_from_slice(&result.select_params);
         result
             .combined_params
+            .extend_from_slice(&result.join_params);
+        result
+            .combined_params
             .extend_from_slice(&result.where_params);
         result
             .combined_params
@@ -984,15 +996,7 @@ impl SqlBuilder {
             .combined_params
             .extend_from_slice(&result.order_params);
 
-        // Create combined params if needed
-        /* if !result.having_params.is_empty() && !result.where_params.is_empty() {
-            result
-                .combined_params
-                .extend_from_slice(&result.where_params);
-            result
-                .combined_params
-                .extend_from_slice(&result.having_params);
-        } */
+       
 
         Ok(result)
     }

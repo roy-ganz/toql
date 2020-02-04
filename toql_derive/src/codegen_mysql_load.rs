@@ -440,7 +440,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     };
 
                     let path_test = if field.number_of_options > 0 && !field.preselect {
-                        quote!( if query.contains_path(#toql_field_name))
+                        if field.skip_wildcard {
+                               quote!( if query.contains_path_starts_with(#toql_field_name))
+                        }else {
+                            quote!( if query.contains_path(#toql_field_name))
+                        }
                     } else {
                         quote!()
                     };
@@ -460,21 +464,18 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     let optional_join = if let Some(join) = &merge_attrs.join_sql {
 
                          // Quick guess if params are used
-                         let join_contains_build_params = join.contains('<');
-                         let optional_query_params = if join_contains_build_params
+                        let optional_join_code = if join.contains('<')
                         {
                             quote!(
-                            let (ref join_stmt, ref join_params) = toql::sql_builder::SqlBuilder::resolve_query_params(join_stmt, &query.params)
+                            let ( join_stmt, join_params) = toql::sql_builder::SqlBuilder::resolve_query_params(join_stmt, &query.params)
                                 .map_err(|e| toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::SqlBuilderError(e)))?;
+                                dep_query.join_stmt_params.extend_from_slice(&join_params);
+                                dep_query.join_stmts.push(join_stmt);
                             )
                         } else {
                             quote!()
                         };
-                        let optional_join_params_push = if join_contains_build_params {
-                            quote!( params.extend_from_slice(&join_params); )
-                        } else {
-                            quote!()
-                        };
+                       
 
                        let aliased_join_statement =  if join.contains("..") {
                             let formatted_join = join.replace("..", "{alias}.");
@@ -487,9 +488,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         };
                         quote!(
                             #aliased_join_statement
-                            #optional_query_params
-                            result . push_join(join_stmt);
-                             #optional_join_params_push
+                            #optional_join_code
                         )
                     } else {
                         quote!()
@@ -534,9 +533,14 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         quote!(
                             if cfg!(debug_assertions) {
                             for c in &inverse_columns {
-                                if !<#rust_type_ident as toql::key::Key>::columns().contains(c) {
+                                 let unaliased_column =  if let Some(i) = c.find('.') {
+                                        String::from(&c[(i + 1)..])
+                                      } else {
+                                        String::from(c)
+                                    };
+                                if !<#rust_type_ident as toql::key::Key>::columns().contains(&unaliased_column) {
                                 let t = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
-                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
+                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, unaliased_column);
                                 let e2 = toql::error::ToqlError::SqlMapperError(e);
                                 return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
                                 }
@@ -550,8 +554,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     self.path_loaders.push( quote!(
                             #path_test {
                                 #role_test
-                                let table_name = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
-                                let mapper = cache.mappers.get(&table_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&table_name)))?;
+                                let type_name = <#rust_type_ident as toql::sql_mapper::Mapped>::type_name();
+                                let mapper = cache.mappers.get(&type_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&type_name)))?;
                                 let mut dep_query = query.clone();
 
                     #optional_self_column_validation
@@ -579,13 +583,15 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             toql::key::predicate_from_columns_sql::<#struct_ident,_>(entity_keys, &inverse_columns);
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
+
+                            #optional_join
                            
                             #optional_distinct
 
 
 
                                 let mut result =<Self as toql::load::Load<#rust_type_ident>>::build_path(self,#toql_field_name, &dep_query, cache)?;
-                                if !result .is_empty() {
+                                if result .any_selected() {
 
                                     // primary keys
                                      <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|{
@@ -598,7 +604,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     });
 
 
-                                    #optional_join
+                                 
                                     // foreign keys
 
 
@@ -608,14 +614,16 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     
                                     if !merge_entities.is_empty() {
                                         self.load_dependencies(&mut merge_entities, &merge_keys, query, cache)?;
-
-                                        toql::merge::merge(&mut entities, &entity_keys, merge_entities, &parent_keys,
-                                            |e| { #merge_field_init;},
-                                            |e,m|{ #merge_field_assign
-
-                                                        }
-                                                    )
                                     }
+                                    toql::merge::merge(&mut entities, &entity_keys, merge_entities, &parent_keys,
+                                        |e| { #merge_field_init;},
+                                        |e,m|{ #merge_field_assign
+
+                                                    }
+                                                );
+                                    
+                                } else {
+                                    entities.iter_mut().for_each(|mut e| { #merge_field_init;});
                                 }
 
                             }

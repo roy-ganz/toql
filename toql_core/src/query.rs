@@ -553,11 +553,14 @@ pub struct Query {
     /* /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: HashSet<String>, */
-    pub params: HashMap<String, String>, // generic params
+    pub params: HashMap<String, String>, // generic build params
 
     pub where_predicates: Vec<String>, // Additional where clause
     pub where_predicate_params: Vec<String>, // Query params for additional sql restriction
     pub select_columns: Vec<String>,   // Additional select columns
+
+    pub join_stmts: Vec<String>, // Additional joins statements
+    pub join_stmt_params: Vec<String>, // Join params for additional sql restriction
 }
 
 impl Query {
@@ -571,6 +574,8 @@ impl Query {
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
             select_columns: Vec::new(),
+            join_stmts: Vec::new(),
+            join_stmt_params: Vec::new(),
         }
     }
 
@@ -592,6 +597,8 @@ impl Query {
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
             select_columns: Vec::new(),
+            join_stmts: Vec::new(),
+            join_stmt_params: Vec::new(),
         }
     }
 
@@ -635,6 +642,9 @@ impl Query {
     pub fn with(self, query_with: impl QueryWith) -> Self {
         query_with.with(self)
     }
+    /// Check if query contains path
+    /// Example: Path is 'user_address'
+    /// Valid query paths are 'user_*', 'user_address_*', 'user_address_country_*,'user_address_id'
     pub fn contains_path(&self, path: &str) -> bool {
         let p = format!("{}_", path.trim_end_matches('_')); // ensure path ends with _
         self.tokens.iter().any(|t| {
@@ -642,7 +652,23 @@ impl Query {
             match t {
                 QueryToken::Field(field) => field.name.starts_with(pth),
                 QueryToken::Wildcard(wildcard) => {
-                    wildcard.path.is_empty() || wildcard.path.starts_with(pth)
+                    path.starts_with(&wildcard.path) ||  wildcard.path.starts_with(pth)
+                }
+                _ => false,
+            }
+        })
+    }
+    /// Check if query contains path starting with a subpath
+    /// Example: Path is 'user_address'
+    /// Valid query paths are 'user_address_*', 'user_address_id'
+    pub fn contains_path_starts_with(&self, path: &str) -> bool {
+        let p = format!("{}_", path.trim_end_matches('_')); // ensure path ends with _
+        self.tokens.iter().any(|t| {
+            let pth = p.as_str();
+            match t {
+                QueryToken::Field(field) => field.name.starts_with(pth),
+                QueryToken::Wildcard(wildcard) => {
+                    wildcard.path.starts_with(pth)
                 }
                 _ => false,
             }
