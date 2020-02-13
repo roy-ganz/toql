@@ -461,7 +461,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     
                    
 
-                    let optional_join = if let Some(join) = &merge_attrs.join_sql {
+                    let custom_join_code = if let Some(join) = &merge_attrs.join_sql {
 
                          // Quick guess if params are used
                         let optional_join_code = if join.contains('<')
@@ -473,7 +473,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 dep_query.join_stmts.push(join_stmt);
                             )
                         } else {
-                            quote!()
+                            quote!(dep_query.join_stmts.push(join_stmt.to_string());)
                         };
                        
 
@@ -584,7 +584,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
 
-                            #optional_join
+                            #custom_join_code
                            
                             #optional_distinct
 
