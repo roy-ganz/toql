@@ -87,6 +87,8 @@ pub struct ToqlField {
     pub table: Option<String>, // Alternative sql table name
     #[darling(default)]
     pub handler: Option<Path>,
+    #[darling(multiple)]
+    pub param: Vec<ParamArg>,
 }
 
 impl ToqlField {
@@ -239,9 +241,9 @@ pub struct Toql {
     pub insdel_role: Vec<String>,
     #[darling(multiple)]
     pub upd_role: Vec<String>,
-    #[darling(multiple)]
-    pub param: Vec<ParamArg>,
-
+   
+    #[darling(default)]
+    pub wildcard: Option<String>,
     pub data: darling::ast::Data<(), ToqlField>,
 }
 
@@ -282,7 +284,7 @@ impl quote::ToTokens for Toql {
             map_filter: _,
             insdel_role: _,
             upd_role: _,
-            param: _,
+            wildcard:_,
             ref data,
         } = *self;
 

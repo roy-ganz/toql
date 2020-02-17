@@ -44,6 +44,7 @@ use crate::sql_mapper::Join;
 use crate::sql_mapper::JoinType;
 use crate::sql_mapper::SqlMapper;
 use crate::sql_mapper::SqlTarget;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -62,6 +63,12 @@ impl Default for SqlTargetData {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum WildcardScope {
+    All,
+    Only(HashSet<String>),
+}
+
 /// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder {
     count_query: bool,               // Build count query
@@ -69,6 +76,7 @@ pub struct SqlBuilder {
     joins: HashSet<String>,          // Use this joins
     ignored_paths: Vec<String>,      // Ignore paths, no errors are raised for them
     selected_paths: HashSet<String>, // Selected paths
+    wildcard_scope: WildcardScope,   // Wildcard restriction
 }
 
 #[derive(Debug)]
@@ -111,7 +119,28 @@ impl SqlBuilder {
             joins: HashSet::new(),
             ignored_paths: Vec::new(),
             selected_paths: HashSet::new(),
+            wildcard_scope: WildcardScope::All,
         }
+    }
+
+    /// Add path to list of ignore paths.
+    pub fn scope_wildcard(mut self, scope: &WildcardScope) -> Self {
+        // TODO make compatible to other methods and add fields to existing scope
+
+        self.wildcard_scope = scope.clone();
+
+        /*   match self.wildcard_scope {
+            WildcardScope::All => self.wildcard_scope = scope.to_owned(),
+            WildcardScope::Only(only)  => {
+                if let WildcardScope(scope) =
+                 for s in scope {
+                only.insert(s.to_owned());
+            }
+            }
+
+
+        } */
+        self
     }
 
     /// Add path to list of ignore paths.
@@ -165,7 +194,7 @@ impl SqlBuilder {
 
     fn build_ordering(
         result: &mut SqlBuilderResult,
-        build_params: &HashMap<String, String>,
+        query_aux_params: &HashMap<String, String>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &HashSet<u8>,
@@ -181,10 +210,16 @@ impl SqlBuilder {
                     };
                     if let Some(_sql_target_data) = sql_target_data.get(toql_field.as_str()) {
                         if let Some(sql_target) = sql_targets.get(toql_field) {
-                            let params = sql_target.sql_query_param_values(build_params)?;
+                            let mut combined_aux_params: HashMap<String, String> = HashMap::new();
+                            let aux_params = Self::combine_aux_params(
+                                &mut combined_aux_params,
+                                query_aux_params,
+                                &sql_target.options.aux_params,
+                            );
+                            let aux_param_values = sql_target.sql_aux_param_values(aux_params)?;
                             if let Some(s) = sql_target.handler.build_select(
-                                (sql_target.expression.to_owned(), params),
-                                build_params,
+                                (sql_target.expression.to_owned(), aux_param_values),
+                                aux_params,
                             )? {
                                 result.order_clause.push_str(&s.0);
                                 result.order_params.extend_from_slice(&s.1);
@@ -202,7 +237,7 @@ impl SqlBuilder {
 
     fn build_count_select_clause(
         result: &mut SqlBuilderResult,
-        build_params: &HashMap<String, String>,
+        query_aux_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
     ) -> Result<(), SqlBuilderError> {
@@ -211,11 +246,18 @@ impl SqlBuilder {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
                 if sql_target.options.count_select && !sql_target.options.filter_only {
-                    let params = sql_target.sql_query_param_values(build_params)?;
-                    if let Some(sql_field) = sql_target
-                        .handler
-                        .build_select((sql_target.expression.to_owned(), params), build_params)?
-                    {
+                    let mut combined_aux_params: HashMap<String, String> = HashMap::new();
+                      let aux_params = Self::combine_aux_params(
+                                &mut combined_aux_params,
+                                query_aux_params,
+                                &sql_target.options.aux_params,
+                            );
+
+                    let aux_param_values = sql_target.sql_aux_param_values(aux_params)?;
+                    if let Some(sql_field) = sql_target.handler.build_select(
+                        (sql_target.expression.to_owned(), aux_param_values),
+                        aux_params,
+                    )? {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
                         result.select_clause.push_str(", ");
@@ -236,7 +278,7 @@ impl SqlBuilder {
 
     fn build_select_clause(
         result: &mut SqlBuilderResult,
-        build_params: &HashMap<String, String>,
+        query_aux_params: &HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
@@ -257,17 +299,6 @@ impl SqlBuilder {
                 let path: &str = toql_field
                     .trim_end_matches(|c| c != '_')
                     .trim_end_matches('_');
-
-                /*   let join_selected = if sql_target.options.preselect {
-                    if let Some(sql_join) = joins.get(path.as_str()) {
-                        selected_paths.contains(path.as_str())
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }; */
-
                 // For selected fields there exists target data
                 // For always selected fields, check if path is used by query
                 let selected = (/*join_selected
@@ -279,10 +310,17 @@ impl SqlBuilder {
                         .map_or(false, |d| d.selected);
 
                 if selected {
-                    let params = sql_target.sql_query_param_values(build_params)?;
+                    let mut combined_aux_params: HashMap<String, String> = HashMap::new();
+                       let aux_params = Self::combine_aux_params(
+                                &mut combined_aux_params,
+                                query_aux_params,
+                                &sql_target.options.aux_params,
+                            );
+
+                    let params = sql_target.sql_aux_param_values(aux_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select((sql_target.expression.to_owned(), params), build_params)?
+                        .build_select((sql_target.expression.to_owned(), params), aux_params)?
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
@@ -454,25 +492,6 @@ impl SqlBuilder {
             combined_params: vec![],
         };
 
-        let mut combined_build_params: HashMap<String, String> = HashMap::new();
-
-        let build_params: &HashMap<String, String> = {
-            if query.params.is_empty() {
-                &sql_mapper.params
-            } else if sql_mapper.params.is_empty() {
-                &query.params
-            } else {
-                combined_build_params.extend(query.params.iter().map(|(k, v)| (k.clone(), v.clone())));
-                combined_build_params.extend(
-                    sql_mapper
-                        .params
-                        .iter()
-                        .map(|(k, v)| (k.clone(), v.clone())),
-                );
-                &combined_build_params
-            }
-        };
-
         for t in &query.tokens {
             {
                 match t {
@@ -503,11 +522,13 @@ impl SqlBuilder {
                             continue;
                         }
                         // Skip field from other path
-                        
-                        if !(wildcard.path.starts_with(&self.subpath) || self.subpath.starts_with(&wildcard.path)){
-                        //if  !self.wildcard.is_empty() && !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
-                       // if !wildcard.path.starts_with(&self.subpath) {
-                        //if !self.subpath.starts_with(&wildcard.path) {
+
+                        if !(wildcard.path.starts_with(&self.subpath)
+                            || self.subpath.starts_with(&wildcard.path))
+                        {
+                            //if  !self.wildcard.is_empty() && !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
+                            // if !wildcard.path.starts_with(&self.subpath) {
+                            //if !self.subpath.starts_with(&wildcard.path) {
                             continue;
                         }
 
@@ -524,7 +545,7 @@ impl SqlBuilder {
                         {
                             continue;
                         }
-
+                        // Validate path roles
                         let mut path = wildcard_path;
                         while !path.is_empty() {
                             if let Some(join) = sql_mapper.joins.get(path) {
@@ -540,10 +561,90 @@ impl SqlBuilder {
                         // println!("Wildcard path {:?}, skipping :{:?}", wildcard_path, sql_mapper.joins_ignoring_wildcard.iter().any(|p| p.starts_with(wildcard_path)));
 
                         let mut last_validated_path = ("", true); // Path result
+
+                        // test wildcard restrictions
+                        /* let mut selection :Vec<String> = Vec::new();
+                        let fields =  {
+                                 match &self.wildcard_scope {
+                                    WildcardScope::All => &sql_mapper.field_order,
+                                    WildcardScope::Only(scopes) => {
+                                        for s in scopes {
+                                            println!("Scope {}, Subpath {}", s, &self.subpath);
+                                            if !s.starts_with(&self.subpath) {
+                                                continue;
+                                            }
+                                            // remove subpath
+                                            let s = s.trim_start_matches(&self.subpath);
+                                            println!("Trimmed {}", s);
+                                            if s == "*" {
+                                                selection.extend_from_slice(&sql_mapper.field_order);
+                                               // &sql_mapper.field_order
+                                            } else {
+                                                if !sql_mapper.fields.contains_key(s) {
+                                                     println!("Not found in fields {}", s);
+                                                }
+                                                selection.push(s.to_string());
+                                            };
+                                        }
+                                        &selection
+                                    }
+                            }
+                        };
+                        println!("Suggested fields {:?}", &fields); */
+
+                        let mut last_validated_scope_wildcard = ("", "", false);
                         for (field_name, sql_target) in &sql_mapper.fields {
                             let field_path = field_name
                                 .trim_end_matches(|c| c != '_')
                                 .trim_end_matches('_');
+
+                            // println!("Scope: {:?}", &self.wildcard_scope);
+                            // Skip field if not in wildcard restriction
+                            let wildcard_in_scope = match &self.wildcard_scope {
+                                WildcardScope::All => true,
+                                WildcardScope::Only(scopes) => {
+                                    // Restriction valid, if field is added through wildcard or explicit
+                                    println!("Field: {}", field_name);
+                                    // println!("Scope field: {}", &scope_field);
+                                    // println!("Scope wildcard: {}", scope_wildcard);
+
+                                    /*   println!("Sub path: {}", &self.subpath);
+                                     println!("Field path: {}", &field_path);
+                                    */
+                                    if last_validated_scope_wildcard
+                                        == (&self.subpath, &field_path, true)
+                                    {
+                                        true
+                                    } else {
+                                        let scope_wildcard = format!(
+                                            "{}{}{}*",
+                                            &self.subpath,
+                                            &field_path,
+                                            if field_path.is_empty() { "" } else { "_" }
+                                        );
+                                        let scope_field =
+                                            format!("{}{}", &self.subpath, &field_name);
+
+                                        if scopes.contains(&scope_wildcard) {
+                                            last_validated_scope_wildcard =
+                                                (&self.subpath, &field_path, true);
+                                            true
+                                        } else {
+                                            scopes.contains(&scope_field)
+                                            /*  (self.subpath.is_empty() && field_path.is_empty() && scopes.contains("*"))
+                                            // || scopes.contains(&scope_wildcard)
+                                             || scopes.contains(&scope_field) */
+                                        }
+                                    }
+                                }
+                            };
+
+                            if !wildcard_in_scope {
+                                //   println!("Skipped {:?}", field_name);
+                                continue;
+                            } else {
+                                println!("Included {:?}", field_name);
+                            }
 
                             // Skip field if it doesn't belong to wildcard path
                             if !field_path.starts_with(wildcard_path) {
@@ -560,7 +661,6 @@ impl SqlBuilder {
                             }
 
                             // Skip fields with missing role
-
                             if assert_roles(&roles, &sql_target.options.roles).is_err() {
                                 continue;
                             }
@@ -671,7 +771,6 @@ impl SqlBuilder {
                         match sql_mapper.fields.get(field_name) {
                             Some(sql_target) => {
                                 // Verify user role and skip field role mismatches
-
                                 assert_roles(&roles, &sql_target.options.roles)
                                     .map_err(|role| SqlBuilderError::RoleRequired(role))?;
 
@@ -724,30 +823,29 @@ impl SqlBuilder {
                                 } */
 
                                 if let Some(f) = &query_field.filter {
-                                    // Get actual expression
-                                    /*  let params : Vec<String> = Vec::new();
-                                    for p in &sql_target.sql_query_params {
-                                    let qp = query
-                                        .params
-                                        .get(p)
-                                        .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
-                                     params.push(qp.to_owned());
-                                    } */
+                                    // Combine aux params from query and target
+                                    let mut combined_aux_params: HashMap<String, String> =
+                                        HashMap::new();
+                                     let aux_params = Self::combine_aux_params(
+                                                &mut combined_aux_params,
+                                                &query.aux_params,
+                                                &sql_target.options.aux_params,
+                                            );
 
-                                    let params = sql_target.sql_query_param_values(build_params)?;
+                                    let aux_param_values =
+                                        sql_target.sql_aux_param_values(aux_params)?;
 
                                     let expression = sql_target
                                         .handler
                                         .build_select(
-                                            (sql_target.expression.to_owned(), params),
-                                            build_params,
+                                            (sql_target.expression.to_owned(), aux_param_values),
+                                            aux_params,
                                         )?
                                         .unwrap_or(("null".to_string(), vec![]));
 
                                     if let Some(f) = sql_target.handler.build_filter(
                                         expression, // todo change build_filter signature to take tuple
-                                        &f,
-                                        build_params,
+                                        &f, aux_params,
                                     )? {
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {
@@ -822,7 +920,9 @@ impl SqlBuilder {
                                                                            result.where_params.append(&mut p);
                                                                        }
                                     */
-                                    if let Some((j, p)) = sql_target.handler.build_join(build_params)? {
+                                    if let Some((j, p)) =
+                                        sql_target.handler.build_join(aux_params)?
+                                    {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
                                         result.join_params.extend_from_slice(&p);
@@ -864,39 +964,6 @@ impl SqlBuilder {
                 }
             }
         }
-
-        /* // Build select
-        // Ensure selected subfields are joined
-        for toql_field in &sql_mapper.field_order {
-            if let Some(sql_target) = sql_mapper.fields.get(toql_field.as_str()) {
-                let path: String = toql_field.split('_').rev().skip(1).collect();
-
-                // Fields that are marked `preselect` are selected, if either
-                // their path is in use Double
-                // their path belongs to a join that is always selected (Inner Join)
-                 let join_selected = if path.is_empty() {
-                    false
-                } else {
-                    if let Some(sql_join) = sql_mapper.joins.get(path.as_str()) {
-                        sql_join.join_type == JoinType::Inner && selected_paths.contains(path.as_str())
-                    } else {
-                        false
-                    }
-                };
-
-                if sql_target.options.preselect
-                    && (join_selected || used_paths.contains(&path))
-                    //&& used_paths.contains(&path)
-                    && sql_target.subfields
-                {
-                    for subfield in toql_field.split('_').rev().skip(1) {
-                        let exists= selected_paths.insert(subfield);
-                                    if exists { break;}
-                    }
-                }
-            }
-        } */
-
         // println!("Selected joins from query {:?}", selected_paths);
         Self::build_join_clause(
             &sql_mapper.joins_root,
@@ -907,23 +974,25 @@ impl SqlBuilder {
         );
 
         // Add Auxiliary joins
-          // Add auxiliary joins
-         result.join_clause.push_str( &query.join_stmts.join(" "));
-         result.join_params.extend_from_slice(&query.join_stmt_params);
+        // Add auxiliary joins
+        result.join_clause.push_str(&query.join_stmts.join(" "));
+        result
+            .join_params
+            .extend_from_slice(&query.join_stmt_params);
 
         //println!("Selected joins including inner joins {:?}", selected_paths);
 
         if self.count_query {
             Self::build_count_select_clause(
                 &mut result,
-                build_params,
+                &query.aux_params,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
             )?;
         } else {
             Self::build_ordering(
                 &mut result,
-                build_params,
+                &query.aux_params,
                 &sql_target_data,
                 &sql_mapper.fields,
                 &ordinals,
@@ -931,7 +1000,7 @@ impl SqlBuilder {
             )?;
             Self::build_select_clause(
                 &mut result,
-                build_params,
+                &query.aux_params,
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,
@@ -996,20 +1065,18 @@ impl SqlBuilder {
             .combined_params
             .extend_from_slice(&result.order_params);
 
-       
-
         Ok(result)
     }
 
     pub fn resolve_query_params(
         expression: &str,
-        build_params: &HashMap<String, String>,
+        aux_params: &HashMap<String, String>,
     ) -> Result<(String, Vec<String>), SqlBuilderError> {
         let (sql, params) = Self::extract_query_params(expression);
 
         let mut resolved: Vec<String> = Vec::new();
         for p in params {
-            let v = build_params
+            let v = aux_params
                 .get(&p)
                 .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
             resolved.push(v.to_string());
@@ -1039,5 +1106,23 @@ impl SqlBuilder {
             }
         }
         false
+    }
+
+    fn combine_aux_params<'a>(
+        combined_aux_params: &'a mut HashMap<String, String>,
+        query_aux_params: &'a HashMap<String, String>,
+        sql_target_aux_params: &'a HashMap<String, String>,
+    ) -> &'a HashMap<String, String> {
+        if sql_target_aux_params.is_empty() {
+            query_aux_params
+        } else {
+            for (k, v) in query_aux_params {
+                combined_aux_params.insert(k.clone(), v.clone());
+            }
+            for (k, v) in sql_target_aux_params {
+                combined_aux_params.insert(k.clone(), v.clone());
+            }
+            combined_aux_params
+        }
     }
 }

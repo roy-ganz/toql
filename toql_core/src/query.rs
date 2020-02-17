@@ -553,7 +553,7 @@ pub struct Query {
     /* /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: HashSet<String>, */
-    pub params: HashMap<String, String>, // generic build params
+    pub aux_params: HashMap<String, String>, // generic build params
 
     pub where_predicates: Vec<String>, // Additional where clause
     pub where_predicate_params: Vec<String>, // Query params for additional sql restriction
@@ -561,6 +561,7 @@ pub struct Query {
 
     pub join_stmts: Vec<String>, // Additional joins statements
     pub join_stmt_params: Vec<String>, // Join params for additional sql restriction
+   // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
 }
 
 impl Query {
@@ -570,12 +571,13 @@ impl Query {
             tokens: vec![],
             distinct: false,
             // roles: HashSet::new(),
-            params: HashMap::new(),
+            aux_params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
             select_columns: Vec::new(),
             join_stmts: Vec::new(),
             join_stmt_params: Vec::new(),
+          //  wildcard_scope: None
         }
     }
 
@@ -593,12 +595,13 @@ impl Query {
             tokens: vec![QueryToken::Wildcard(Wildcard::new())],
             distinct: false,
             //roles: HashSet::new(),
-            params: HashMap::new(),
+            aux_params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
             select_columns: Vec::new(),
             join_stmts: Vec::new(),
             join_stmt_params: Vec::new(),
+          //  wildcard_scope: None
         }
     }
 

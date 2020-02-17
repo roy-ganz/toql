@@ -25,10 +25,31 @@ pub(crate) struct GeneratedMysqlLoad<'a> {
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
     merge_field_getter: HashMap<String, TokenStream>,
+    wildcard_scope_code : TokenStream
 }
 
 impl<'a> GeneratedMysqlLoad<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlLoad {
+
+
+        let wildcard_scope_code = if let Some(wildcard) = &toql.wildcard {
+
+                let inserts = wildcard.iter()
+                    .map(|w| quote!(
+                            scopes.insert(#w .to_string());
+                            )
+                        )
+                    .collect::<Vec<_>>();
+
+              quote!(
+                  let mut scopes : std::collections::HashSet<String> = std::collections::HashSet::new();
+                   #(#inserts)*                
+                  let wildcard_scope = toql::sql_builder::WildcardScope::Only(scopes);
+              )
+        } else {
+            quote!( let wildcard_scope = toql::sql_builder::WildcardScope::All; )
+        };
+
         GeneratedMysqlLoad {
             rust_struct: &toql,
             mysql_deserialize_fields: Vec::new(),
@@ -39,6 +60,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
             merge_field_getter: HashMap::new(),
+            wildcard_scope_code
         }
     }
 
@@ -243,7 +265,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
         } else {
             quote!(
                 fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident>,mut entity_keys: & Vec< #struct_key_ident >,
-                query: &toql::query::Query,  cache: &toql::sql_mapper::SqlMapperRegistry)
+                query: &toql::query::Query, 
+                wildcard_scope: &toql::sql_builder::WildcardScope,
+                cache: &toql::sql_mapper::SqlMapperRegistry)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
                     //let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
@@ -278,10 +302,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!()
         } else {
             quote!(
-            self.load_dependencies(&mut entities, &keys, &query, cache)?;
+            self.load_dependencies(&mut entities, &keys, &query, &wildcard_scope, cache)?;
             )
         };
 
+        let wildcard_scope_code = &self.wildcard_scope_code;
         quote!(
 
             impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::load::Load<#struct_ident> for toql::mysql::MySql<'a,T>
@@ -298,8 +323,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
                   //   let conn = self.conn();
                     let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
 
+                    #wildcard_scope_code
+
                     let mut result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
+                    .scope_wildcard(&wildcard_scope)
                     .build(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
                     #optional_add_primary_keys
@@ -339,6 +367,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         toql::load::Page::Uncounted(f, m) =>  {count = false; first = f; max = m},
                     };
 
+                    #wildcard_scope_code
+
                     let mapper = cache.mappers.get( #struct_name)
                             .ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     // load base entities
@@ -347,6 +377,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     let mut result = toql::sql_builder::SqlBuilder::new()
                     #(#ignored_paths)*
+                     .scope_wildcard(&wildcard_scope)
                     .build(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
 
                     #optional_add_primary_keys
@@ -381,6 +412,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     Ok((entities, count_result))
                 }
                 fn build_path(&mut self,path: &str, query: &toql::query::Query,
+                    wildcard_scope: &toql::sql_builder::WildcardScope,
                     cache: &toql::sql_mapper::SqlMapperRegistry
                    )
                 -> Result<toql::sql_builder_result::SqlBuilderResult,toql :: mysql::error:: ToqlMySqlError>
@@ -388,7 +420,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 {
                     let mapper = cache.mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
                     Ok( toql::sql_builder::SqlBuilder::new()
+                        .scope_wildcard(&wildcard_scope)
                         .build_path(path, mapper, &query, self.roles())
+                         
                         .map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?)
                 }
 
@@ -467,7 +501,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         let optional_join_code = if join.contains('<')
                         {
                             quote!(
-                            let ( join_stmt, join_params) = toql::sql_builder::SqlBuilder::resolve_query_params(join_stmt, &query.params)
+                            let ( join_stmt, join_params) = toql::sql_builder::SqlBuilder::resolve_query_params(join_stmt, &query.aux_params)
                                 .map_err(|e| toql::mysql::error::ToqlMySqlError::ToqlError( toql::error::ToqlError::SqlBuilderError(e)))?;
                                 dep_query.join_stmt_params.extend_from_slice(&join_params);
                                 dep_query.join_stmts.push(join_stmt);
@@ -590,7 +624,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
 
 
-                                let mut result =<Self as toql::load::Load<#rust_type_ident>>::build_path(self,#toql_field_name, &dep_query, cache)?;
+                                let mut result =<Self as toql::load::Load<#rust_type_ident>>::build_path(self,#toql_field_name, &dep_query, &wildcard_scope, cache)?;
                                 if result .any_selected() {
 
                                     // primary keys
@@ -613,7 +647,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Key>::Key, <#struct_ident as toql::key::Key>::Key>(entities_stmt)?;
                                     
                                     if !merge_entities.is_empty() {
-                                        self.load_dependencies(&mut merge_entities, &merge_keys, query, cache)?;
+                                        self.load_dependencies(&mut merge_entities, &merge_keys, query, &wildcard_scope, cache)?;
                                     }
                                     toql::merge::merge(&mut entities, &entity_keys, merge_entities, &parent_keys,
                                         |e| { #merge_field_init;},

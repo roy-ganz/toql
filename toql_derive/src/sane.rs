@@ -8,7 +8,7 @@ use crate::heck::SnakeCase;
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 //use crate::error::Result;
 use darling::Result;
@@ -23,7 +23,7 @@ pub struct Struct {
     pub mapped_filter_fields: Vec<MapArg>,
     pub insdel_roles: HashSet<String>,
     pub upd_roles: HashSet<String>,
-    pub params: Vec<ParamArg>,
+    pub wildcard: Option<HashSet<String>>
 }
 
 impl Struct {
@@ -54,7 +54,8 @@ impl Struct {
             mapped_filter_fields,
             insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
-            params: toql.param.clone(),
+            
+            wildcard: toql.wildcard.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
         }
     }
 }
@@ -73,6 +74,7 @@ pub struct RegularField {
     pub count_filter: bool,
     pub handler: Option<Path>,
     pub default_inverse_column: Option<String>,
+    pub aux_params: Vec<ParamArg>
 }
 #[derive(Clone)]
 pub struct JoinField {
@@ -85,6 +87,7 @@ pub struct JoinField {
     pub translated_columns_map_code: TokenStream,
     pub on_sql: Option<String>,
     pub key: bool,
+    pub aux_params: Vec<ParamArg>,
 }
 
 #[derive(Clone)]
@@ -292,6 +295,7 @@ impl Field {
                 translated_columns_map_code,
                 on_sql: field.join.as_ref().unwrap().on_sql.clone(),
                 key: field.key,
+                aux_params :  field.param.clone()
             })
         } else if field.merge.is_some() {
             if field.key {
@@ -388,6 +392,7 @@ impl Field {
                 count_select: field.count_select,
                 count_filter: field.count_filter,
                 handler: field.handler.to_owned(),
+                aux_params :  field.param.clone()
             })
         };
 

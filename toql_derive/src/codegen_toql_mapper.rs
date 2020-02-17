@@ -9,11 +9,14 @@ pub(crate) struct GeneratedToqlMapper<'a> {
     field_mappings: Vec<TokenStream>,
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
+    
 }
 
 impl<'a> GeneratedToqlMapper<'a> {
     pub(crate) fn from_toql(rust_struct: &'a Struct) -> GeneratedToqlMapper {
         let mut field_mappings: Vec<TokenStream> = Vec::new();
+
+
         for mapping in &rust_struct.mapped_filter_fields {
             let toql_field_name = &mapping.field;
             let sql_mapping = &mapping.sql;
@@ -47,13 +50,7 @@ impl<'a> GeneratedToqlMapper<'a> {
 
            
         }
-        for p in &rust_struct.params {
-            let name = &p.name;
-            let value = &p.value;
-            field_mappings.push(quote! {
-                mapper.params.insert(String::from(#name), String::from(#value));
-            });
-        }
+        
 
         GeneratedToqlMapper {
             rust_struct,
@@ -143,6 +140,10 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
                 };
 
+                 let aux_params = join_attrs.aux_params.iter()
+                    .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
+                    .collect::<Vec<TokenStream>>();
+
                 self.field_mappings.push(quote! {
                     #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",
@@ -154,7 +155,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                      #join_type,
                      &aliased_table,
                      #join_predicate,
-                     toql::sql_mapper::JoinOptions::new() #select_ident #ignore_wc_ident #roles_ident );
+                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #select_ident #ignore_wc_ident #roles_ident );
                 });
 
                 if join_attrs.key {
@@ -191,6 +192,10 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
                 };
 
+                let aux_params = regular_attrs.aux_params.iter()
+                    .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
+                    .collect::<Vec<_>>();
+             
                 let sql_mapping = match &regular_attrs.sql_target {
                     SqlTarget::Expression(ref expression) => {
                         quote! {let aliased_column = &format!("({})", #expression .replace("..",&format!("{}.",  mapper.translate_alias(canonical_sql_alias))));}
@@ -205,7 +210,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self.field_mappings.push(quote! {
                                             #sql_mapping
                                             mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
                     }
@@ -213,7 +218,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self.field_mappings.push(quote! {
                                             #sql_mapping
                                             mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
                                         }
                             );
                     }
@@ -244,6 +249,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         // let merge_functions = &self.merge_functions;
 
         let field_mappings = &self.field_mappings;
+       
 
         let builder = quote!(
 
@@ -263,6 +269,8 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     if toql_path.is_empty() {
                         mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
                     }
+                    
+
                     #(#field_mappings)*
                 }
             }

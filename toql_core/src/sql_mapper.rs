@@ -37,11 +37,14 @@
 use crate::alias::AliasFormat;
 use crate::query::FieldFilter;
 use crate::sql_builder::SqlBuilderError;
+use crate::sql_builder::WildcardScope;
 use enquote::unquote;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
+
+
 
 #[derive(Debug)]
 /// Represents all errors from the SQL Builder
@@ -78,17 +81,17 @@ pub(crate) struct SqlTarget {
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool, // Target name has subfields separated by underscore
     pub(crate) expression: String, // Column name or SQL expression
-    pub(crate) sql_query_params: Vec<String>, // Query_params for SQL expressions
+    pub(crate) sql_aux_param_names: Vec<String>, //  Extracted from <aux_param>
 }
 
 impl SqlTarget {
-    pub fn sql_query_param_values(
+    pub fn sql_aux_param_values(
         &self,
-        build_params: &HashMap<String, String>,
+        aux_params: &HashMap<String, String>,
     ) -> Result<Vec<String>, SqlBuilderError> {
-        let mut params: Vec<String> = Vec::with_capacity(self.sql_query_params.len());
-        for p in &self.sql_query_params {
-            let qp = build_params
+        let mut params: Vec<String> = Vec::with_capacity(self.sql_aux_param_names.len());
+        for p in &self.sql_aux_param_names {
+            let qp = aux_params
                 .get(p)
                 .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
             params.push(qp.to_owned());
@@ -117,6 +120,7 @@ pub struct FieldOptions {
     pub(crate) ignore_wildcard: bool, // Ignore field for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) filter_only: bool, // This field cannot be loaded, its only used as a filter
+    pub(crate) aux_params: HashMap<String, String>, // Auxiliary params
 }
 
 impl FieldOptions {
@@ -129,6 +133,7 @@ impl FieldOptions {
             ignore_wildcard: false,
             roles: HashSet::new(),
             filter_only: false,
+            aux_params: HashMap::new()
         }
     }
 
@@ -172,6 +177,13 @@ impl FieldOptions {
         self.filter_only = filter_only;
         self
     }
+     /// Additional build param. This is used by the query builder together with
+     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
+     /// and field handlers.
+    pub fn aux_param(mut self, name: String, value: String) -> Self {
+        self.aux_params.insert(name, value);
+        self
+    }
 }
 
 /// Options for a mapped field.
@@ -180,6 +192,8 @@ pub struct JoinOptions {
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) ignore_wildcard: bool, // Ignore field on this join for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
+    pub(crate) aux_params: HashMap<String, String>, // Additional build params
+    
 }
 
 impl JoinOptions {
@@ -189,6 +203,7 @@ impl JoinOptions {
             preselect: false,
             ignore_wildcard: false,
             roles: HashSet::new(),
+            aux_params: HashMap::new()
         }
     }
 
@@ -211,7 +226,16 @@ impl JoinOptions {
         self.roles = roles;
         self
     }
+
+    /// Additional build param. This is used by the query builder together with
+    /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
+    /// and field handlers.
+    pub fn aux_param(mut self, name: String, value: String) -> Self {
+        self.aux_params.insert(name, value);
+        self
+    }
 }
+
 
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
@@ -436,8 +460,6 @@ impl SqlMapperRegistry {
 pub struct SqlMapper {
     pub aliased_table: String,
     pub alias_format: AliasFormat,       //
-    pub params: HashMap<String, String>, // builds params
-
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>,
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
@@ -500,7 +522,7 @@ impl SqlMapper {
             field_order: Vec::new(),
             joins_root: Vec::new(),
             joins_tree: HashMap::new(),
-            params: HashMap::new(),
+           
             table_index: 0, // will be incremented before use
             alias_format: alias_format,
             alias_translation: HashMap::new(),
@@ -607,10 +629,10 @@ impl SqlMapper {
         // TODO put into function
         let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
         let sql_expression = sql_expression.to_string();
-        let mut sql_query_params = Vec::new();
+        let mut sql_aux_param_names = Vec::new();
         let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
             let name = &e[1];
-            sql_query_params.push(name.to_string());
+            sql_aux_param_names.push(name.to_string());
             "?"
         });
 
@@ -620,7 +642,7 @@ impl SqlMapper {
             subfields: toql_field.find('_').is_some(),
             handler: Arc::new(handler),
             expression: sql_expression.to_string(),
-            sql_query_params: sql_query_params,
+            sql_aux_param_names: sql_aux_param_names,
         };
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);
@@ -690,10 +712,10 @@ impl SqlMapper {
         // If sql_expression contains query params replace them with ?
         let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
         let sql_expression = sql_expression.to_string();
-        let mut sql_query_params = Vec::new();
+        let mut sql_aux_param_names = Vec::new();
         let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
             let name = &e[1];
-            sql_query_params.push(name.to_string());
+            sql_aux_param_names.push(name.to_string());
             "?"
         });
 
@@ -703,7 +725,7 @@ impl SqlMapper {
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
             handler: Arc::clone(&self.handler),
-            sql_query_params: sql_query_params,
+            sql_aux_param_names,
         };
 
         self.field_order.push(toql_field.to_string());
