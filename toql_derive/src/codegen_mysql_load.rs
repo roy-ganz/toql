@@ -86,38 +86,24 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                 self.regular_fields += 1;
 
-                let assignment = if self.mysql_deserialize_fields.is_empty() {
-                    quote!(*i)
-                } else {
-                    quote!({
-                        *i += 1;
-                        *i
-                    })
-                };
-
-                let increment = if self.mysql_deserialize_fields.is_empty() {
-                    quote!()
-                } else {
-                    quote!(*i += 1;)
-                };
-
                 // Check selection for optional Toql fields: Option<Option<..> or Option<..>
                 if field.number_of_options > 0 && field.preselect == false {
                     self.mysql_deserialize_fields.push(quote!(
                     #rust_field_ident : {
-                        #increment
-                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                       
+                        ( if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
                             None
                         } else {
                             row.take_opt( *i).unwrap()
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
-                        }
+                        }, *i += 1).0
                     }
                 ));
                 } else {
                     self.mysql_deserialize_fields.push(quote!(
-                        #rust_field_ident : row.take_opt( #assignment).unwrap()
-                            .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                        #rust_field_ident : (row.take_opt( *i).unwrap()
+                            .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
+                             *i += 1).0
                     ));
                 }
 
@@ -146,22 +132,15 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 let rust_field_name = &field.rust_field_name;
                 let rust_type_ident = &field.rust_type_ident;
                 self.forward_joins
-                    .push(quote!( i = < #rust_type_ident > ::forward_row(i);));
-                let assignment = if self.mysql_deserialize_fields.is_empty() {
-                    quote!(i)
-                } else {
-                    quote!({
-                        *i += 1;
-                        i
-                    })
-                };
-
-                let increment = if self.mysql_deserialize_fields.is_empty() {
-                    quote!()
-                } else {
-                    quote!(*i += 1;)
-                };
-
+                    .push(
+                        
+                        if  field.number_of_options  == 2 {
+                            // Skip discriminator field from selectable left joins (Option<Option<T>>)
+                            quote!( i = < #rust_type_ident > ::forward_row(i) + 1;)
+                        } else {
+                            quote!( i = < #rust_type_ident > ::forward_row(i);)
+                        });
+          
                 // For optional joined fields (left Joins) a discriminator field must be added to check
                 // - for unselected entity (discriminator column is NULL Type)
                 // - for null entity (discriminator column is false) - only left joins
@@ -171,20 +150,21 @@ impl<'a> GeneratedMysqlLoad<'a> {
                      2 =>   //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
                      quote!(
                                 #rust_field_ident : {
-                                       #increment
+                                     
                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                            *i = < #rust_type_ident > ::forward_row(*i); // Added, but unsure, needs testing
+                                           *i += 1; // Step over discriminator field
+                                            *i = < #rust_type_ident > ::forward_row(*i); 
                                         None
                                        }
                                        else if row.take_opt::<bool,_>(*i).unwrap()
                                         .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                         == false {
-                                        //*i += 1; // Step over discriminator field,
+                                        *i += 1;  // Step over discriminator field
                                         *i = < #rust_type_ident > ::forward_row(*i);
 
                                         Some(None)
-                                                                            } else {
-                                        *i += 1;
+                                          } else {
+                                        *i += 1; // Step over discriminator field
                                         Some(Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?))
                                     }
                                 }
@@ -192,23 +172,23 @@ impl<'a> GeneratedMysqlLoad<'a> {
                      1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
                             quote!(
                                 #rust_field_ident : {
-                                     #increment
+                                  
                                      if row.take_opt::<bool,_>(*i).unwrap()
                                       .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                       == false {
                                              *i = < #rust_type_ident > ::forward_row(*i);
                                         None
                                     } else {
-                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , {*i += 1; i} )?)
+                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
                                     }
                                 }
                             ),
                          1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
                                     quote!(
                                     #rust_field_ident : {
-                                        #increment
+                                     
                                         if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                            *i = < #rust_type_ident > ::forward_row(*i) - 1; // No discriminator field
+                                            *i = < #rust_type_ident > ::forward_row(*i); 
                                             None
                                         } else {
                                         Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
@@ -217,7 +197,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 ),
                      _ =>   //    T                                 -> Selected Join -> InnerJoin
                      quote!(
-                        #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , #assignment )?
+                        #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , i )?
                     )
                  }
             );
@@ -257,10 +237,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
         let struct_key_ident = Ident::new(&format!("{}Key", struct_ident), Span::call_site());
         let load_dependencies_from_mysql = if path_loaders.is_empty() {
             quote!(
-               /*  fn load_dependencies(&mut self, mut _entities: &mut Vec< #struct_ident >,
-                _query: &toql::query::Query,  _cache: &toql::sql_mapper::SqlMapperRegistry)
-                -> Result<(), toql::mysql::error::ToqlMySqlError>
-                { Ok(())} */
             )
         } else {
             quote!(
@@ -270,8 +246,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 cache: &toql::sql_mapper::SqlMapperRegistry)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
-                    //let mapper = cache.mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                    //let conn = self.conn();
                     #(#path_loaders)*
                     Ok(())
                 }
@@ -339,7 +313,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params())?;
                     #from_query_result
-                    //let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
 
                     if entities.len() > 1 {
                         return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotUnique));
@@ -358,7 +331,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 page: toql::load::Page)
                 -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql :: mysql::error:: ToqlMySqlError>
                 {
-                 //   let conn = self.conn();
+                 
                     let mut count = false;
                     let mut first = 0;
                     let mut max = 10;
@@ -386,7 +359,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params());
                     let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params())?;
                     #from_query_result
-                    //let mut entities = toql::mysql::row::from_query_result::< #struct_ident >(entities_stmt)?;
+                    
                     let mut count_result = None;
 
                     // Get count values

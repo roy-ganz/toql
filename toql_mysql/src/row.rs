@@ -43,7 +43,7 @@ pub fn from_query_result_with_primary_keys<
         let mut i: usize = 0;
         let mut r = row?;
         entities.push(T::from_row_with_index(&mut r, &mut i)?);
-        i = i + 1;
+        
         pkeys.push(J::from_row_with_index(&mut r, &mut i)?);
     }
 
@@ -65,39 +65,11 @@ pub fn from_query_result_with_merge_keys<
         let mut i: usize = 0;
         let mut r = row?;
         entities.push(T::from_row_with_index(&mut r, &mut i)?);
-        i = i + 1;
+     
         pkeys.push(J::from_row_with_index(&mut r, &mut i)?);
-        i = i + 1;
+     
         keys.push(K::from_row_with_index(&mut r, &mut i)?);
     }
-    /* result
-    .map(|row| {
-        i = 0;
-        let mut r = row?;
-        Ok((T::from_row_with_index(&mut r, &mut i)?,
-        K::from_row_with_index(&mut r, &mut i)?
-       ))
-    })
-    .collect() */
+    
     Ok((entities, pkeys, keys))
 }
-
-/*
-/// Function to convert MySQL query result into Toql struct.
-pub fn from_query_result_with_keys<T: FromResultRow<T>, F: Fn (&mut mysql::Row, &mut usize)->(J,K), J, K >(
-    result: mysql::QueryResult, keys: F
-) -> Result<Vec<(T,(J,K))>>
-
-{
-    let mut i: usize = 0;
-    result
-        .map(|row| {
-            i = 0;
-            let mut r = row?;
-            (T::from_row_with_index(&mut r, &mut i)
-                .and_then(|e| {
-                    Ok((e, keys(&mut r, &mut i)))
-                })  )
-        })
-        .collect()
-} */

@@ -82,7 +82,6 @@ impl<'a> GeneratedToqlMapper<'a> {
                                         let none_condition = <#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
                                                 #default_self_column_code;
                                                 let self_column = #columns_map_code;
-                                                //format!("({}{}{} IS NOT NULL)",canonical_sql_alias, if canonical_sql_alias.is_empty() { "" } else { "." }, self_column)
                                                 format!("({} IS NOT NULL)",  & mapper.translate_aliased_column(canonical_sql_alias, &self_column))
                                         }).collect::<Vec<String>>().join(" AND ");   
                                         mapper.map_field_with_options(
@@ -97,8 +96,6 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .map(|other_column| {
                         #default_self_column_code;
                         let self_column= #columns_map_code;
-
-                        //format!("{}{}{} = {}.{}",canonical_sql_alias , if canonical_sql_alias.is_empty() { "" } else { "." }, self_column, #join_alias, other_column)
                         format!("{} = {}", & mapper.translate_aliased_column(canonical_sql_alias, &self_column),
                         & mapper.translate_aliased_column(&join_alias,other_column))
                     }).collect::<Vec<String>>().join(" AND ")
@@ -110,7 +107,6 @@ impl<'a> GeneratedToqlMapper<'a> {
                     String::from("")
                 };
 
-                //let join_aliased_table = quote!(mapper.translate_aliased_table(sql_join_table_name, join_alias));
                 let join_predicate_format = format!("{{}}{}", on_sql);
                 let join_predicate = quote!(&format!( #join_predicate_format, join_expression));
 
@@ -246,11 +242,8 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let sql_table_name = &self.rust_struct.sql_table_name;
         let sql_table_alias = &self.rust_struct.sql_table_alias;
 
-        // let merge_functions = &self.merge_functions;
-
         let field_mappings = &self.field_mappings;
        
-
         let builder = quote!(
 
             impl toql::sql_mapper::Mapped for #struct_ident {
@@ -274,12 +267,6 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     #(#field_mappings)*
                 }
             }
-
-           /*  impl #struct_ident {
-
-                #(#merge_functions)*
-
-            } */
 
         );
 

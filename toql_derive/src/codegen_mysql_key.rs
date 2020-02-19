@@ -38,18 +38,18 @@ impl<'a> GeneratedMysqlKey<'a> {
                     "{}Key::{}",
                     &self.rust_struct.rust_struct_ident, rust_field_name
                 );
-                let increment = if self.mysql_deserialize_key.is_empty() {
+               /*  let increment = if self.mysql_deserialize_key.is_empty() {
                     quote!(*i)
                 } else {
                     quote!({
                         *i = *i + 1;
                         *i
                     })
-                };
+                }; */
                 self.mysql_deserialize_key.push(quote!(
-                    row.take_opt( #increment).unwrap()
+                    (row.take_opt(*i).unwrap()
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
-                            )?
+                            )?, *i += 1).0
                 ));
                 self.forward_key_columns = self.forward_key_columns + 1;
             }
@@ -62,16 +62,16 @@ impl<'a> GeneratedMysqlKey<'a> {
                 self.mysql_forward_join_key.push(quote!(
                    *i = < #rust_type_ident > ::forward_row(*i);
                 ));
-                let increment = if self.mysql_deserialize_key.is_empty() {
+               /*  let increment = if self.mysql_deserialize_key.is_empty() {
                     quote!(i)
                 } else {
                     quote!({
                         *i = *i + 1;
                         i
                     })
-                };
+                }; */
                 self.mysql_deserialize_key.push(quote!(
-                     << #rust_type_ident as toql :: key :: Key > :: Key >:: from_row_with_index (row, #increment)?
+                     << #rust_type_ident as toql :: key :: Key > :: Key >:: from_row_with_index (row, i /*#increment*/)?
                 ));
             }
             _ => {}

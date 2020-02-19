@@ -8,7 +8,7 @@ use crate::heck::SnakeCase;
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 //use crate::error::Result;
 use darling::Result;
