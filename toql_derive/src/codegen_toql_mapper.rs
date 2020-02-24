@@ -102,13 +102,18 @@ impl<'a> GeneratedToqlMapper<'a> {
                 );
 
                 let on_sql = if let Some(ref sql) = &join_attrs.on_sql {
-                    format!(" AND ({})", sql.replace("..", &format!("{}.", join_alias)))
+                    format!(" AND ({})", sql.replace("...", "{join_alias}.").replace("..", "{alias}."))
                 } else {
                     String::from("")
                 };
 
-                let join_predicate_format = format!("{{}}{}", on_sql);
-                let join_predicate = quote!(&format!( #join_predicate_format, join_expression));
+                
+                // Avoid unused arguments by consuming them with zero length
+                let join_predicate_format = format!("{{join}}{}{{join_alias:.0}}{{alias:.0}}", on_sql);
+                let join_predicate = quote!(&format!( #join_predicate_format, 
+                            join = join_expression, 
+                            join_alias =   &mapper.translated_alias(&join_alias),
+                            alias = &mapper.translated_alias(canonical_sql_alias)));
 
                 let join_type = if field.number_of_options == 0
                     || (field.number_of_options == 1 && field.preselect == false)

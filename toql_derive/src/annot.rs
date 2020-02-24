@@ -45,6 +45,9 @@ pub struct JoinArg {
 
     #[darling(default)]
     pub on_sql: Option<String>,
+    
+    #[darling(default)]
+    pub join_sql: Option<String>
 }
 
 // Attribute on struct field

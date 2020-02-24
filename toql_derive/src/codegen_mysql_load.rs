@@ -483,9 +483,10 @@ impl<'a> GeneratedMysqlLoad<'a> {
                             quote!(dep_query.join_stmts.push(join_stmt.to_string());)
                         };
                        
+                       
 
-                       let aliased_join_statement =  if join.contains("..") {
-                            let formatted_join = join.replace("..", "{alias}.");
+                       let aliased_join_statement =  if join.contains("...") {
+                            let formatted_join = join.replace("...", "{alias}.");
                             quote!( 
                                 let join_stmt = &format!(#formatted_join, alias = &mapper.translated_alias(
                                 &<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias() ));
@@ -493,6 +494,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         } else {
                             quote!( let join_stmt = #join; )
                         };
+                       
                         quote!(
                             #aliased_join_statement
                             #optional_join_code

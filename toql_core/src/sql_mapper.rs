@@ -32,8 +32,6 @@
 
 use crate::alias::AliasFormat;
 
-use crate::sql_builder::SqlBuilderError;
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -80,9 +78,9 @@ pub(crate) struct SqlTarget {
     pub(crate) expression: String, // Column name or SQL expression
     pub(crate) sql_aux_param_names: Vec<String>, //  Extracted from <aux_param>
 }
-
+/* 
 impl SqlTarget {
-    pub fn sql_aux_param_values(
+   /*  pub fn sql_aux_param_values(
         &self,
         aux_params: &HashMap<String, String>,
     ) -> Result<Vec<String>, SqlBuilderError> {
@@ -94,8 +92,8 @@ impl SqlTarget {
             params.push(qp.to_owned());
         }
         Ok(params)
-    }
-}
+    } */
+} */
 
 
 #[derive(Debug)]
@@ -257,6 +255,7 @@ pub(crate) struct Join {
     pub(crate) aliased_table: String, // Table t0
     pub(crate) on_predicate: String,  // ON ..
     pub(crate) options: JoinOptions,
+    pub(crate) sql_aux_param_names: Vec<String> // aux params in ON clause
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 ///
@@ -525,6 +524,14 @@ impl SqlMapper {
         on_predicate: &str,
         options: JoinOptions,
     ) -> &'a mut Self {
+        let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        let on_predicate = on_predicate.to_string();
+        let mut sql_aux_param_names = Vec::new();
+        let on_predicate = query_param_regex.replace(&on_predicate, |e: &regex::Captures| {
+            let name = &e[1];
+            sql_aux_param_names.push(name.to_string());
+            "?"
+        });
         self.joins.insert(
             toql_path.to_string(),
             Join {
@@ -532,6 +539,7 @@ impl SqlMapper {
                 aliased_table: aliased_table.to_string(),
                 on_predicate: on_predicate.to_string(),
                 options,
+                sql_aux_param_names,
             },
         );
 

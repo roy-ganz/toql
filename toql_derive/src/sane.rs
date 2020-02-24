@@ -318,6 +318,9 @@ impl Field {
                 .with_span(&field.ident));
             }
 
+            
+            
+
             let renamed_table = crate::util::rename_or_default(
                 field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
@@ -350,6 +353,32 @@ impl Field {
                     this: m.this.clone(),
                 });
             }
+
+                if let Some (j) =   field.merge.as_ref().unwrap().join_sql.as_ref(){
+                    
+                    // Search for .., ignore ...
+                    let mut n = 0;
+                    let found_self_alias = j.chars().any(|c| { 
+                        if c == '.' {
+                            n += 1;
+                           false
+                        } else {
+                            if n == 2 {
+                                true
+                            } else {
+                                n = 0;
+                                false
+                            }
+                        }
+                    });
+                    if found_self_alias {
+                        return Err(darling::Error::custom(
+                                "Alias `..` not allowed for merged fields. Use `...` to refer to table of merged entities. Change `#[toql(..)]`.".to_string(),
+                            )
+                        .with_span(&field.ident));
+                    }
+                }
+     
 
             FieldKind::Merge(MergeField {
                 sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
