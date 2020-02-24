@@ -23,8 +23,16 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 
+/// A trait to convert any structure into a Query. 
+/// For emxaple implement this for your configuration
+/// and you can do `Query::new().with(config)`
 pub trait QueryWith {
     fn with(&self, query: Query) -> Query;
+}
+
+// An trait to turn entity keys into a query perdicate (used by toql derive)
+pub trait QueryPredicate {
+    fn predicate(self, path: &str) -> Query;
 }
 
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)

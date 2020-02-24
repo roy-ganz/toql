@@ -24,5 +24,7 @@ pub mod query_parser;
 pub mod sql_builder;
 pub mod sql_builder_result;
 pub mod sql_mapper;
+pub mod sql_mapper_registry;
+pub mod field_handler;
 
 pub use log; // Reexport for generated code from Toql derive

@@ -1,6 +1,7 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::Ident;
+use heck::SnakeCase;
 
 use crate::sane::{FieldKind, Struct};
 
@@ -20,10 +21,12 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
         for args in &toql.mapped_filter_fields {
             let rust_struct_visibility = &toql.rust_struct_visibility;
-            let field_ident = Ident::new(&args.field, Span::call_site());
+            
+            let fnc_name= &args.field.to_snake_case();
+            let fnc_ident = Ident::new(fnc_name, Span::call_site());
             let toql_field=  args.field.as_str().trim_start_matches("r#");
             builder_fields.push(quote!(
-                        #rust_struct_visibility fn #field_ident (mut self) -> toql :: query :: Field {
+                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: Field {
                             self . 0 . push_str ( #toql_field ) ;
                             toql :: query :: Field :: from ( self . 0 )
                         }
@@ -68,19 +71,24 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                     ));
                 if regular_attrs.key {
                     self.key_composite_predicates.push(quote! {
-                        .and(toql::query::Field::from(#toql_field).eq( &self . #key_index))
+                        .and(toql::query::Field::from(
+                            format!("{}{}{}", path, if path.is_empty() || path.ends_with("_") {""}else {"_"}, #toql_field)
+                        ).eq( &self . #key_index))
                     });
                 }
             }
             x @ _ => {
+                 let toql_field = &field.toql_field_name;
                 if let FieldKind::Join(join_attrs) = x {
+                   
                     if join_attrs.key {
                         self.key_composite_predicates.push(quote!(
-                            .and(&self. #key_index)
+                            .and( toql::query::QueryPredicate::predicate(&self. #key_index, #toql_field))
+                            //.and(&self. #key_index)
                         ));
                     }
                 }
-                let toql_path = format!("{}_", field.toql_field_name);
+                let toql_path = format!("{}_", toql_field);
 
                 let path_fields_struct =
                     quote!( < #rust_type_ident as toql::query_builder::QueryFields>::FieldsType);
@@ -118,20 +126,28 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
 
         let key_composite_predicates = &self.key_composite_predicates;
 
-        let key_predicate_code = quote!(
+       /*  let key_predicate_code = quote!(
             let query = toql::query::Query::new() #(#key_composite_predicates)*;
             query
-        );
+        ); */
 
         let builder = quote!(
+
+                impl toql::query::QueryPredicate for &#struct_key_ident {
+                    fn predicate(self, path :&str) -> toql::query::Query {
+                        toql::query::Query::new()
+                          #(#key_composite_predicates)*
+                    } 
+                }
+          
                 impl Into<toql::query::Query> for #struct_key_ident {
                     fn into(self) -> toql::query::Query {
-                        #key_predicate_code
+                            toql::query::QueryPredicate::predicate(&self, "")
                     }
                 }
                  impl Into<toql::query::Query> for &#struct_key_ident {
                     fn into(self) -> toql::query::Query {
-                         #key_predicate_code
+                        toql::query::QueryPredicate::predicate(self, "")
                     }
                 }
             impl toql::query_builder::QueryFields for #struct_ident {

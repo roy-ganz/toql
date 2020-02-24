@@ -13,7 +13,7 @@ use toql_core::load::{Load, Page};
 use toql_core::mutate::{Delete, Diff, DuplicateStrategy, Insert, InsertDuplicate, Update};
 use toql_core::query::Query;
 use toql_core::select::Select;
-use toql_core::sql_mapper::SqlMapperRegistry;
+use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
 use core::borrow::Borrow;
 use toql_core::log_sql;

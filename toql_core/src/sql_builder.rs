@@ -69,6 +69,59 @@ pub enum WildcardScope {
     Only(HashSet<String>),
 }
 
+impl WildcardScope {
+    pub fn contains_field(&self, field: &str) -> bool {
+        match self {
+            WildcardScope::All => true,
+            WildcardScope::Only(scopes) => scopes.contains(field),
+        }
+    }
+    pub fn contains_all_fields_from_path(&self, path: &str) -> bool {
+        match self {
+            WildcardScope::All => true,
+            WildcardScope::Only(scopes) => {
+                let mut field = String::from(path);
+                if path.ends_with('_') {
+                    field.push('_');
+                }
+                field.push_str("*");
+                scopes.contains(field.as_str())
+            }
+        }
+    }
+    pub fn contains(&self, field_with_path: &str) -> bool {
+        match self {
+            WildcardScope::All => true,
+            WildcardScope::Only(scopes) => {
+                scopes.contains(field_with_path)
+                    || if !field_with_path.ends_with("*") {
+                        // If field is provided check for all fields
+                        let mut path = field_with_path.trim_end_matches(|c| c != '_').to_string();
+                        path.push_str("*");
+                        scopes.contains(path.as_str())
+                    } else {
+                        false
+                    }
+            }
+        }
+    }
+    pub fn contains_path(&self, path: &str) -> bool {
+        let path = path.trim_end_matches("_"); // Remove optional trailing underscore
+        match self {
+            WildcardScope::All => true,
+            WildcardScope::Only(scopes) => {
+                let mut wildcard_path = path.to_owned();
+                wildcard_path.push_str("_*");
+                // Check if path with wildcard exists or any field with that path
+                scopes.contains(wildcard_path.as_str())
+                    || scopes
+                        .iter()
+                        .any(|s| s.trim_end_matches(|c| c != '_').trim_end_matches("_") == path)
+            }
+        }
+    }
+}
+
 /// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder {
     count_query: bool,               // Build count query
@@ -123,23 +176,25 @@ impl SqlBuilder {
         }
     }
 
-    /// Add path to list of ignore paths.
+    /// Add wildcard scope to the wildcard scopes
     pub fn scope_wildcard(mut self, scope: &WildcardScope) -> Self {
-        // TODO make compatible to other methods and add fields to existing scope
-
-        self.wildcard_scope = scope.clone();
-
-        /*   match self.wildcard_scope {
-            WildcardScope::All => self.wildcard_scope = scope.to_owned(),
-            WildcardScope::Only(only)  => {
-                if let WildcardScope(scope) =
-                 for s in scope {
-                only.insert(s.to_owned());
+        match (&self.wildcard_scope, scope) {
+            (WildcardScope::All, WildcardScope::Only(_)) => self.wildcard_scope = scope.to_owned(),
+            (WildcardScope::Only(_), WildcardScope::All) => {
+                self.wildcard_scope = WildcardScope::All
             }
+            (WildcardScope::Only(old), WildcardScope::Only(new)) => {
+                let mut combined = HashSet::new();
+                old.iter().for_each(|n| {
+                    combined.insert(n.to_owned());
+                });
+                new.iter().for_each(|n| {
+                    combined.insert(n.to_owned());
+                });
+                self.wildcard_scope = WildcardScope::Only(combined)
             }
-
-
-        } */
+            (WildcardScope::All, WildcardScope::All) => {}
+        };
         self
     }
 
@@ -148,14 +203,11 @@ impl SqlBuilder {
         self.ignored_paths.push(path.into());
         self
     }
+    /// Add path to list of selected paths.
     pub fn select_path<T: Into<String>>(mut self, path: T) -> Self {
         self.selected_paths.insert(path.into());
         self
     }
-    /* pub fn for_role<T: Into<String>>(mut self, role: T) -> Self {
-        self.roles.insert(role.into());
-        self
-    } */
     /// TODO
     pub fn with_join<T: Into<String>>(mut self, join: T) -> Self {
         self.joins.insert(join.into());
@@ -173,7 +225,7 @@ impl SqlBuilder {
         self.build(sql_mapper, query, roles)
     }
 
-    // Build normal query for this path
+    /// Build normal query for this path
     pub fn build_path<T: Into<String>>(
         &mut self,
         path: T,
@@ -247,11 +299,11 @@ impl SqlBuilder {
                 // For selected fields there exists target data
                 if sql_target.options.count_select && !sql_target.options.filter_only {
                     let mut combined_aux_params: HashMap<String, String> = HashMap::new();
-                      let aux_params = Self::combine_aux_params(
-                                &mut combined_aux_params,
-                                query_aux_params,
-                                &sql_target.options.aux_params,
-                            );
+                    let aux_params = Self::combine_aux_params(
+                        &mut combined_aux_params,
+                        query_aux_params,
+                        &sql_target.options.aux_params,
+                    );
 
                     let aux_param_values = sql_target.sql_aux_param_values(aux_params)?;
                     if let Some(sql_field) = sql_target.handler.build_select(
@@ -311,11 +363,11 @@ impl SqlBuilder {
 
                 if selected {
                     let mut combined_aux_params: HashMap<String, String> = HashMap::new();
-                       let aux_params = Self::combine_aux_params(
-                                &mut combined_aux_params,
-                                query_aux_params,
-                                &sql_target.options.aux_params,
-                            );
+                    let aux_params = Self::combine_aux_params(
+                        &mut combined_aux_params,
+                        query_aux_params,
+                        &sql_target.options.aux_params,
+                    );
 
                     let params = sql_target.sql_aux_param_values(aux_params)?;
                     if let Some(sql_field) = sql_target
@@ -526,9 +578,6 @@ impl SqlBuilder {
                         if !(wildcard.path.starts_with(&self.subpath)
                             || self.subpath.starts_with(&wildcard.path))
                         {
-                            //if  !self.wildcard.is_empty() && !self.subpath.is_empty() && !wildcard.path.starts_with(&self.subpath) {
-                            // if !wildcard.path.starts_with(&self.subpath) {
-                            //if !self.subpath.starts_with(&wildcard.path) {
                             continue;
                         }
 
@@ -545,7 +594,7 @@ impl SqlBuilder {
                         {
                             continue;
                         }
-                        // Validate path roles
+                        // Ensure user has load roles for path
                         let mut path = wildcard_path;
                         while !path.is_empty() {
                             if let Some(join) = sql_mapper.joins.get(path) {
@@ -557,85 +606,58 @@ impl SqlBuilder {
                             path = path.trim_end_matches(|c| c != '_').trim_end_matches('_');
                         }
 
-                        // println!("Ignored joins for wildcard: {:?}", sql_mapper.joins_ignoring_wildcard);
-                        // println!("Wildcard path {:?}, skipping :{:?}", wildcard_path, sql_mapper.joins_ignoring_wildcard.iter().any(|p| p.starts_with(wildcard_path)));
-
-                        let mut last_validated_path = ("", true); // Path result
-
-                        // test wildcard restrictions
-                        /* let mut selection :Vec<String> = Vec::new();
-                        let fields =  {
-                                 match &self.wildcard_scope {
-                                    WildcardScope::All => &sql_mapper.field_order,
-                                    WildcardScope::Only(scopes) => {
-                                        for s in scopes {
-                                            println!("Scope {}, Subpath {}", s, &self.subpath);
-                                            if !s.starts_with(&self.subpath) {
-                                                continue;
-                                            }
-                                            // remove subpath
-                                            let s = s.trim_start_matches(&self.subpath);
-                                            println!("Trimmed {}", s);
-                                            if s == "*" {
-                                                selection.extend_from_slice(&sql_mapper.field_order);
-                                               // &sql_mapper.field_order
-                                            } else {
-                                                if !sql_mapper.fields.contains_key(s) {
-                                                     println!("Not found in fields {}", s);
-                                                }
-                                                selection.push(s.to_string());
-                                            };
-                                        }
-                                        &selection
-                                    }
-                            }
-                        };
-                        println!("Suggested fields {:?}", &fields); */
-
+                        // Cache vars to speed up validation
+                        let mut last_validated_path = ("", true); 
                         let mut last_validated_scope_wildcard = ("", "", false);
+
                         for (field_name, sql_target) in &sql_mapper.fields {
+                            
+                            if sql_target.options.filter_only {
+                                continue;
+                            }
+
                             let field_path = field_name
                                 .trim_end_matches(|c| c != '_')
                                 .trim_end_matches('_');
 
-                            // println!("Scope: {:?}", &self.wildcard_scope);
-                            // Skip field if not in wildcard restriction
-                            let wildcard_in_scope = match &self.wildcard_scope {
-                                WildcardScope::All => true,
-                                WildcardScope::Only(scopes) => {
-                                    // Restriction valid, if field is added through wildcard or explicit
-                                    println!("Field: {}", field_name);
-                                    // println!("Scope field: {}", &scope_field);
-                                    // println!("Scope wildcard: {}", scope_wildcard);
-
-                                    /*   println!("Sub path: {}", &self.subpath);
-                                     println!("Field path: {}", &field_path);
-                                    */
-                                    if last_validated_scope_wildcard
-                                        == (&self.subpath, &field_path, true)
-                                    {
-                                        true
-                                    } else {
-                                        let scope_wildcard = format!(
-                                            "{}{}{}*",
-                                            &self.subpath,
-                                            &field_path,
-                                            if field_path.is_empty() { "" } else { "_" }
-                                        );
-                                        let scope_field =
-                                            format!("{}{}", &self.subpath, &field_name);
-
-                                        if scopes.contains(&scope_wildcard) {
-                                            last_validated_scope_wildcard =
-                                                (&self.subpath, &field_path, true);
-                                            true
-                                        } else {
-                                            scopes.contains(&scope_field)
-                                            /*  (self.subpath.is_empty() && field_path.is_empty() && scopes.contains("*"))
-                                            // || scopes.contains(&scope_wildcard)
-                                             || scopes.contains(&scope_field) */
-                                        }
+                            // Check if field is in wildcard scope
+                            let wildcard_in_scope = if last_validated_scope_wildcard
+                                == (&self.subpath, &field_path, true)
+                            {
+                                true
+                            } else {
+                                // check path
+                                let mut temp_scope: String;
+                                let path_for_scope_test = if self.subpath.is_empty() {
+                                    field_path
+                                } else {
+                                    temp_scope = self.subpath.clone();
+                                    if !temp_scope.ends_with('_') {
+                                        temp_scope.push('_');
                                     }
+                                    temp_scope.push_str(field_path);
+                                    temp_scope.as_str()
+                                };
+
+                                if self
+                                    .wildcard_scope
+                                    .contains_all_fields_from_path(path_for_scope_test)
+                                {
+                                    last_validated_scope_wildcard =
+                                        (&self.subpath, &field_path, true);
+                                    true
+                                } else {
+                                    let field_for_scope_test = if self.subpath.is_empty() {
+                                        field_name
+                                    } else {
+                                        temp_scope = self.subpath.clone();
+                                        if !temp_scope.ends_with('_') {
+                                            temp_scope.push('_');
+                                        }
+                                        temp_scope.push_str(field_name);
+                                        temp_scope.as_str()
+                                    };
+                                    self.wildcard_scope.contains_field(&field_for_scope_test)
                                 }
                             };
 
@@ -656,7 +678,7 @@ impl SqlBuilder {
                                 continue;
                             }
 
-                            if sql_target.options.ignore_wildcard {
+                            if sql_target.options.skip_wildcard {
                                 continue;
                             }
 
@@ -680,7 +702,7 @@ impl SqlBuilder {
 
                                         //if ignore wildcard, roles missing validated_path = (path, false)
                                         if let Some(join) = sql_mapper.joins.get(path) {
-                                            if join.options.ignore_wildcard {
+                                            if join.options.skip_wildcard {
                                                 last_validated_path = (path, false);
                                                 break;
                                             }
@@ -826,11 +848,11 @@ impl SqlBuilder {
                                     // Combine aux params from query and target
                                     let mut combined_aux_params: HashMap<String, String> =
                                         HashMap::new();
-                                     let aux_params = Self::combine_aux_params(
-                                                &mut combined_aux_params,
-                                                &query.aux_params,
-                                                &sql_target.options.aux_params,
-                                            );
+                                    let aux_params = Self::combine_aux_params(
+                                        &mut combined_aux_params,
+                                        &query.aux_params,
+                                        &sql_target.options.aux_params,
+                                    );
 
                                     let aux_param_values =
                                         sql_target.sql_aux_param_values(aux_params)?;

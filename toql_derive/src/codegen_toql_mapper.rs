@@ -124,7 +124,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!()
                 };
                 let ignore_wc_ident = if field.skip_wildcard {
-                    quote!( .ignore_wildcard(true))
+                    quote!( .skip_wildcard(true))
                 } else {
                     quote!()
                 };
@@ -176,7 +176,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!()
                 };
                 let ignore_wc_ident = if field.skip_wildcard {
-                    quote!( .ignore_wildcard(true))
+                    quote!( .skip_wildcard(true))
                 } else {
                     quote!()
                 };

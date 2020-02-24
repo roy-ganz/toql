@@ -1,5 +1,5 @@
 use crate::query::Query;
-use crate::sql_mapper::SqlMapperRegistry;
+use crate::sql_mapper_registry::SqlMapperRegistry;
 use crate::sql_builder::WildcardScope;
 use std::result::Result;
 
@@ -53,7 +53,7 @@ pub trait Load<T: crate::key::Key> {
         path: &str,
         query: &crate::query::Query,
         wildcard_scope: &WildcardScope,
-        cache: &crate::sql_mapper::SqlMapperRegistry,
+        cache: &crate::sql_mapper_registry::SqlMapperRegistry,
     ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::Error>;
 
     /// Loads all collections for a given struct. This is used by the Toql derive
@@ -64,7 +64,7 @@ pub trait Load<T: crate::key::Key> {
         _entity_keys: &Vec<T::Key>,
         _query: &crate::query::Query,
         _wildcard_scope: &WildcardScope,
-        _cache: &crate::sql_mapper::SqlMapperRegistry,
+        _cache: &crate::sql_mapper_registry::SqlMapperRegistry,
     ) -> Result<(), Self::Error> {
         Ok(())
     }

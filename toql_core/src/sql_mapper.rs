@@ -28,21 +28,18 @@
 //!  - to a single field with [map_handler()](struct.SqlMapper.html#method.map_handler).
 //!  - to all fields with [new_with_handler()](struct.SqlMapper.html#method.new_with_handler).
 //!
-//! ### Caching
-//! If a struct contains merged fields (collections of structs) then the SQL Builder must build multiple SQL queries with different mappers.
-//! To give high level functions all SQL Mappers, they must be put into a cache. This allows to
-//! load the full dependency tree.
-//!
+
 
 use crate::alias::AliasFormat;
-use crate::query::FieldFilter;
+
 use crate::sql_builder::SqlBuilderError;
-use crate::sql_builder::WildcardScope;
-use enquote::unquote;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
+use crate::field_handler::{FieldHandler, BasicFieldHandler};
+
 
 
 
@@ -100,16 +97,6 @@ impl SqlTarget {
     }
 }
 
-/// Handles the standart filters as documented in the guide.
-/// Returns [FilterInvalid](../sql_builder/enum.SqlBuilderError.html) for any attempt to use FN filters.
-#[derive(Debug, Clone)]
-pub struct BasicFieldHandler {}
-
-impl BasicFieldHandler {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 #[derive(Debug)]
 /// Options for a mapped field.
@@ -117,7 +104,7 @@ pub struct FieldOptions {
     pub(crate) preselect: bool, // Always select this field, regardless of query fields
     pub(crate) count_filter: bool, // Filter field on count query
     pub(crate) count_select: bool, // Select field on count query
-    pub(crate) ignore_wildcard: bool, // Ignore field for wildcard selection
+    pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) filter_only: bool, // This field cannot be loaded, its only used as a filter
     pub(crate) aux_params: HashMap<String, String>, // Auxiliary params
@@ -130,7 +117,7 @@ impl FieldOptions {
             preselect: false,
             count_filter: false,
             count_select: false,
-            ignore_wildcard: false,
+            skip_wildcard: false,
             roles: HashSet::new(),
             filter_only: false,
             aux_params: HashMap::new()
@@ -158,8 +145,8 @@ impl FieldOptions {
         self
     }
     /// Field is ignored by the wildcard.
-    pub fn ignore_wildcard(mut self, ignore_wildcard: bool) -> Self {
-        self.ignore_wildcard = ignore_wildcard;
+    pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
+        self.skip_wildcard = skip_wildcard;
         self
     }
     /// The field can only be selected and filtered by queries that have
@@ -190,7 +177,7 @@ impl FieldOptions {
 #[derive(Debug)]
 pub struct JoinOptions {
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
-    pub(crate) ignore_wildcard: bool, // Ignore field on this join for wildcard selection
+    pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, String>, // Additional build params
     
@@ -201,7 +188,7 @@ impl JoinOptions {
     pub fn new() -> Self {
         JoinOptions {
             preselect: false,
-            ignore_wildcard: false,
+            skip_wildcard: false,
             roles: HashSet::new(),
             aux_params: HashMap::new()
         }
@@ -214,8 +201,8 @@ impl JoinOptions {
     }
 
     /// Field is ignored by the wildcard.
-    pub fn ignore_wildcard(mut self, ignore_wildcard: bool) -> Self {
-        self.ignore_wildcard = ignore_wildcard;
+    pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
+        self.skip_wildcard = skip_wildcard;
         self
     }
     /// The field can only be selected and filtered by queries that have
@@ -239,220 +226,6 @@ impl JoinOptions {
 
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
-}
-/// A FieldHandler maps a Toql field onto an SQL.
-/// Use it to
-/// - define your own custom function (through FN)
-/// - map the standart filters differently
-/// - disallow standart filters
-/// - handle fields that do not exist in the struct
-/// - handle fields that match multiple columns (full text index)
-///
-/// ## Example (see full working example in tests)
-/// ``` ignore
-/// use toql::query::FieldFilter;
-/// use toql::sql_mapper::FieldHandler;
-/// use toql::sql_builder::SqlBuilderError;
-/// struct MyHandler {};
-///
-/// impl FieldHandler for MyHandler {
-///     fn build_filter(&self, sql: &str, _filter: &FieldFilter)
-///     ->Result<Option<String>, SqlBuilderError> {
-///        --snip--
-///     }
-///     fn build_param(&self, _filter: &FieldFilter) -> Vec<String> {
-///         --snip--
-///     }
-/// }
-/// let my_handler = MyHandler {};
-/// let mapper = SqlMapper::new_with_handler(my_handler);
-///
-pub trait FieldHandler {
-    /// Return sql and params if you want to select it.
-    fn build_select(
-        &self,
-        select: (String, Vec<String>),
-        _build_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        Ok(Some(select))
-    }
-
-    /// Match filter and return SQL expression.
-    /// Do not insert parameters in the SQL expression, use `?` instead.
-    /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
-    fn build_filter(
-        &self,
-        _select: (String, Vec<String>),
-        _filter: &FieldFilter,
-        build_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError>;
-    /* /// Return the parameters for your `?`
-    fn build_param(
-        &self,
-        _filter: &FieldFilter,
-        _query_params: &HashMap<String, String>,
-    ) -> Vec<String>; */
-    /// Return addition SQL join clause for this field or None
-    fn build_join(
-        &self,
-        _build_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        Ok(None)
-    }
-}
-
-impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sync + 'static) {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "FieldHandler()")
-    }
-}
-
-pub fn sql_param(s: String) -> String {
-    if s.chars().next().unwrap_or(' ') == '\'' {
-        return unquote(&s).expect("Argument invalid"); // Must be valid, because Pest rule
-    }
-    s
-}
-
-impl FieldHandler for BasicFieldHandler {
-    /* fn build_param(
-        &self,
-        filter: &FieldFilter,
-        _query_params: &HashMap<String, String>,
-    ) -> Vec<String> {
-        match filter {
-            FieldFilter::Eq(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Eqn => vec![],
-            FieldFilter::Ne(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Nen => vec![],
-            FieldFilter::Ge(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Gt(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Le(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Lt(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Bw(lower, upper) => {
-                vec![sql_param(lower.clone()), sql_param(upper.clone())]
-            }
-            FieldFilter::Re(criteria) => vec![sql_param(criteria.clone())],
-            //     FieldFilter::Sc(criteria) => vec![criteria.clone()],
-            FieldFilter::In(args) => args.iter().map(|a| sql_param(a.to_string())).collect(),
-            FieldFilter::Out(args) => args.iter().map(|a| sql_param(a.to_string())).collect(), //args.clone(),
-            FieldFilter::Lk(criteria) => vec![sql_param(criteria.clone())],
-            FieldFilter::Fn(_name, _args) => vec![], // must be implemented by user
-        }
-    } */
-
-    fn build_filter(
-        &self,
-        mut select: (String, Vec<String>),
-        filter: &FieldFilter,
-        _build_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        match filter {
-            FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Eqn => Ok(Some((format!("{} IS NULL", select.0), select.1))),
-            FieldFilter::Ne(criteria) => Ok(Some((format!("{} <> ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Nen => Ok(Some((format!("{} IS NOT NULL", select.0), select.1))),
-            FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0), {
-                select.1.push(sql_param(lower.clone()));
-                select.1.push(sql_param(upper.clone()));
-                select.1
-            }))),
-            FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::In(args) => Ok(Some((
-                format!(
-                    "{} IN ({})",
-                    select.0,
-                    std::iter::repeat("?")
-                        .take(args.len())
-                        .collect::<Vec<&str>>()
-                        .join(",")
-                ),
-                {
-                    let a: Vec<String> = args.iter().map(|a| sql_param(a.to_string())).collect();
-                    select.1.extend_from_slice(&a);
-                    select.1
-                },
-            ))),
-            FieldFilter::Out(args) => Ok(Some((
-                format!(
-                    "{} NOT IN ({})",
-                    select.0,
-                    std::iter::repeat("?")
-                        .take(args.len())
-                        .collect::<Vec<&str>>()
-                        .join(",")
-                ),
-                {
-                    let a: Vec<String> = args.iter().map(|a| sql_param(a.to_string())).collect();
-                    select.1.extend_from_slice(&a);
-                    select.1
-                },
-            ))),
-            //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
-            FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
-                select.1
-            }))),
-            FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(name.to_owned())), // Must be implemented by user
-        }
-    }
-}
-
-/// A cache that holds mappers.
-//pub type SqlMapperRegistry = HashMap<String, SqlMapper>;
-
-#[derive(Debug)]
-pub struct SqlMapperRegistry {
-    pub mappers: HashMap<String, SqlMapper>,
-    pub alias_format: AliasFormat, //
-}
-impl SqlMapperRegistry {
-    pub fn new(alias_format: AliasFormat) -> SqlMapperRegistry {
-        SqlMapperRegistry {
-            mappers: HashMap::new(),
-            alias_format,
-        }
-    }
-    pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
-        let m = SqlMapper::from_mapped::<M>(self.alias_format.clone());
-        //m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
-        self.mappers.insert(String::from(M::type_name()), m);
-        M::type_name()
-    }
-    pub fn insert_new_mapper_with_handler<M: Mapped, H>(&mut self, handler: H) -> String
-    where
-        H: 'static + FieldHandler + Send + Sync,
-    {
-        let m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
-        // m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
-        self.mappers.insert(String::from(M::type_name()), m);
-        M::type_name()
-    }
 }
 
 /// Translates Toql fields into columns or SQL expressions.
@@ -496,11 +269,20 @@ pub trait Mapped {
 }
 
 impl SqlMapper {
-    /// Create new mapper for _table_ or _table alias_.
+     /// Create new mapper for _table_ or _table alias_.
     /// Example: `::new("Book")` or `new("Book b")`.
     /// If you use an alias you must map all
     /// SQL columns with the alias too.
-    pub fn new<T>(table: T, alias_format: AliasFormat) -> Self
+     pub fn new<T>(table: T) -> Self
+    where
+        T: Into<String>,
+    {
+        Self::with_alias_format(table, AliasFormat::Canonical)
+    }
+    /// Create new mapper for _table_ or _table alias_.
+    /// The alias format defines how aliases are look like, if
+    /// the Sql Mapper is called to build them.
+    pub fn with_alias_format<T>(table: T, alias_format: AliasFormat) -> Self
     where
         T: Into<String>,
     {
@@ -528,17 +310,21 @@ impl SqlMapper {
             alias_translation: HashMap::new(),
         }
     }
-    pub fn from_mapped<M: Mapped>(alias_format: AliasFormat) -> SqlMapper // Create new SQL Mapper and map entity fields
+    /// Create a new mapper from a struct that implements the Mapped trait.
+    /// The Toql derive does that for every attributed struct.
+    pub fn from_mapped<M: Mapped>() -> SqlMapper 
     {
-        Self::from_mapped_with_alias::<M>(&M::table_alias(), alias_format)
+        Self::from_mapped_with_alias::<M>(&M::table_alias(), AliasFormat::Canonical)
     }
+     /// Create a new mapper from a struct that implements the Mapped trait.
+    /// The alias format defines what the table aliases in Sql look like.
     pub fn from_mapped_with_alias<M: Mapped>(
         sql_alias: &str,
         alias_format: AliasFormat,
     ) -> SqlMapper // Create new SQL Mapper and map entity fields
     {
         let s = format!("{} {}", M::table_name(), sql_alias);
-        let mut m = Self::new(
+        let mut m = Self::with_alias_format(
             if sql_alias.is_empty() {
                 M::table_name()
             } else {
@@ -571,25 +357,7 @@ impl SqlMapper {
         m
     }
 
-    /*  /// Creates and inserts a new mapper into a cache.
-    /// Returns a mutable reference to the created mapper. Use it for configuration.
-    pub fn insert_new_mapper<T: Mapped>(cache: &mut SqlMapperRegistry) -> &mut SqlMapper {
-        T::insert_new_mapper(cache)
-    }
-    /// Creates a new mapper with a custom field handler and insert it into a cache.
-    /// Returns a mutable reference to the created mapper. Use it for configuration.
-     pub fn insert_new_mapper_with_handler<T, H>(cache: &mut SqlMapperRegistry, handler: H) -> &mut SqlMapper
-     where T: Mapped,
-            H: 'static + FieldHandler + Send + Sync // TODO improve lifetime
-     {
-        T::insert_new_mapper_with_handler(cache, handler)
-    }
-    /// Maps all fields from a struct.
-    /// This trait is implemented by the Toql derive for derived structs.
-    pub fn map<T: Mapped>(sql_alias: &str) -> Self {
-        // Mappable must create mapper for top level table
-        T::new_mapper(sql_alias)
-    } */
+    
     /// Maps all fields from a struct as a joined dependency.
     /// Example: To map for a user an `Address` struct that implements `Mapped`
     /// ``` ignore
