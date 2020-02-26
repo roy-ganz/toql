@@ -63,9 +63,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
                         let key_expr = format!("{}.{} = ?", self.sql_table_alias, sql_column);
                         self.select_keys.push(quote!(#key_expr));
                     } else {
-                        return Err(Error::custom(
-                            "SQL expression not allowed for key. Remove `sql` from #[toql(..)]",
-                        ));
+                            return Err(Error::custom(
+                                "SQL expression not allowed for key. Remove `sql` from #[toql(..)]",
+                            ));
                     }
 
                     self.select_keys_params.push(quote! {
@@ -76,20 +76,45 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 }
 
                 match &regular_attrs.sql_target {
-                    SqlTarget::Expression(ref _expression) => {
-                        // TODO
+                    SqlTarget::Expression(ref expression) => {
+                        // Check if sql expression uses aux params.
+                        // Aux params can only be used with load methods (toql query and mapper)
+                        // Sql expressions with aux params must be selectable and will load always NULL
+                        
+                        
+                        if field.number_of_options > 0 && !field.preselect {
+                                self.select_columns.push(String::from("NULL"));
+                                } else {
+                                    return Err(Error::custom(
+                                    "SQL expression cannot be selected. Either make field selectable with `Option<..>` so it can be `None`.",
+                                ));
+                        }
                     }
                     SqlTarget::Column(ref sql_column) => {
                         self.select_columns
                             .push(format!("{{alias}}.{}", sql_column));
                     }
-                };
-            }
+                }
+             }
             FieldKind::Join(ref join_attrs) => {
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
                 let alias = &join_attrs.join_alias;
-                self.select_columns.push(String::from("true"));
+                //self.select_columns.push(String::from("true"));
+
+                // Add discriminatory field for left join
+                 if field.number_of_options > 1
+                    || (field.number_of_options == 1 && field.preselect == true)
+                {
+                    let none_format = format!("{}.{{}} IS NOT NULL", &join_attrs.join_alias);
+                    let none_condition = quote!(<#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
+                                                format!(#none_format,  &other_column)
+                                        }).collect::<Vec<String>>().join(" AND "));
+
+                    self.select_columns.push(String::from("{}"));
+                    self.select_columns_params.push(none_condition);
+                }
+
                 self.select_columns.push(String::from("{}"));
                 self.select_columns_params.push(
                     quote!( <Self as toql::select::Select<#rust_type_ident>>:: columns_sql(#alias)),
@@ -112,6 +137,8 @@ impl<'a> GeneratedMysqlSelect<'a> {
                         });
                     self.merge_self_fields.push(rust_field_name.to_string());
                 }
+
+                
 
                 let join_type = if field.number_of_options == 0
                     || (field.number_of_options == 1 && field.preselect == false)
@@ -203,6 +230,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                            type Error = toql :: mysql::error:: ToqlMySqlError;
 
+                            fn table_alias() -> String {
+                                String::from(#sql_table_alias)
+                            }
 
                            fn columns_sql(alias: &str) -> String {
                                   #columns_sql_code

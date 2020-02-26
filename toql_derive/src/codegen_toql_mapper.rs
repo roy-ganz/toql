@@ -3,6 +3,7 @@ use quote::quote;
 use crate::sane::{FieldKind, SqlTarget, Struct};
 
 use proc_macro2::TokenStream;
+use darling::{Error, Result};
 
 pub(crate) struct GeneratedToqlMapper<'a> {
     rust_struct: &'a Struct,
@@ -60,7 +61,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         }
     }
 
-    pub(crate) fn add_field_mapping(&mut self, field: &crate::sane::Field) -> Result<(), ()> {
+    pub(crate) fn add_field_mapping(&mut self, field: &crate::sane::Field) -> Result<()> {
         let rust_field_name = &field.rust_field_name;
 
         // Joined field

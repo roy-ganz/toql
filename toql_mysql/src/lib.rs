@@ -174,6 +174,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     where
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
         T: Key + 'a,
+        
     {
         let sql = <toql_core::dialect::Generic as Delete<'a, T>>::delete_one_sql(key, &self.roles)?;
 
@@ -361,15 +362,91 @@ impl<C: GenericConnection> MySql<'_, C> {
 
     /// Selects a single struct for a given key.
     /// This will select all base fields and join. Merged fields will be skipped
-    pub fn select_one<T>(&mut self, key: <T as Key>::Key) -> Result<T>
+   /*  pub fn select_one<T>(&mut self, key: <T as Key>::Key) -> Result<T>
     where
         Self: Select<T, Error = ToqlMySqlError>,
-        T: Key,
+        T: Key + crate::row::FromResultRow<T> ,
+        <T as Key>::Key : toql_core::select::SqlPredicate
+    { */
+    pub fn select_one<K>(&mut self, key: K) -> Result<<K as toql_core::key::EntityKey>::Entity>
+    where
+        Self: Select<<K as toql_core::key::EntityKey>::Entity, Error = ToqlMySqlError>,
+        K: toql_core::key::EntityKey + toql_core::select::SqlPredicate,
+        <K as toql_core::key::EntityKey>::Entity: Key + crate::row::FromResultRow<<K as toql_core::key::EntityKey>::Entity>,
     {
-        <Self as Select<T>>::select_one(self, key)
+        use toql_core::select::SqlPredicate;
+        use toql_core::select::Select;
+        use crate::error::ToqlMySqlError;
+        use crate::row::from_query_result;
+        use toql_core::error::ToqlError;
+
+        let conn = self.conn();
+        let (predicate, params) = <K as SqlPredicate>::sql_predicate(&key, &Self::table_alias());
+         let select_stmt = format!(
+            "{} WHERE {} LIMIT 0,2",
+            <Self as Select<<K as toql_core::key::EntityKey>::Entity>>::select_sql(None),
+            predicate
+        );
+        log_sql!(select_stmt, params);
+
+        let entities_stmt = conn.prep_exec(select_stmt, &params)?;
+        let mut entities = from_query_result::<<K as toql_core::key::EntityKey>::Entity>(entities_stmt)?;
+        if entities.len() > 1 {
+            return Err(ToqlMySqlError::ToqlError(
+                ToqlError::NotUnique,
+            ));
+        } else if entities.is_empty() {
+            return Err(ToqlMySqlError::ToqlError(
+                ToqlError::NotFound,
+            ));
+        }
+        Ok(entities.pop().unwrap())
+    
+    }
+    /// Selects a single struct for a given key.
+    /// This will select all base fields and joins. Merged fields will be skipped
+    pub fn select_many<P>(&mut self, predicates: &[P]) -> Result<Vec<P::Entity>>
+    where
+        Self: Select<P::Entity, Error = ToqlMySqlError>,
+        P::Entity: crate::row::FromResultRow<P::Entity> + toql_core::key::Key, 
+        P: toql_core::select::SqlPredicate,
+        
+    {
+        use toql_core::select::SqlPredicate;
+        use toql_core::select::Select;
+        use crate::error::ToqlMySqlError;
+        use crate::row::from_query_result;
+        use toql_core::error::ToqlError;
+
+
+
+        let conn = self.conn();
+
+        let mut predicate = String::new();
+         let mut params = Vec::new();
+
+         for i in predicates {
+             let (pr, pa) = i.sql_predicate(&Self::table_alias());
+             predicate.push_str(&pr);
+             params.extend_from_slice(&pa);
+         }
+
+       // let (predicate, params) = predicate.sql_predicate(&Self::table_alias());
+         let select_stmt = format!(
+            "{} WHERE {}",
+            <Self as Select<P::Entity>>::select_sql(None),
+            predicate
+        );
+        log_sql!(select_stmt, params);
+
+        let entities_stmt = conn.prep_exec(select_stmt, &params)?;
+        let entities = from_query_result::<P::Entity>(entities_stmt)?;
+       
+        Ok(entities)
+    
     }
 
-    /// Selects a single struct for a given key.
+   /*  /// Selects a single struct for a given key.
     /// This will select all base fields and join. Merged fields will be skipped
     pub fn select_many<T>(&mut self, keys: &[<T as Key>::Key]) -> Result<Vec<T>>
     where
@@ -377,15 +454,25 @@ impl<C: GenericConnection> MySql<'_, C> {
         T: Key,
     {
         <Self as Select<T>>::select_many(self, keys)
-    }
+    } */
 
-    /* /// Selects many structs for a given key. (DOENS)
+ /// Selects a single struct for a given key.
     /// This will select all base fields and join. Merged fields will be skipped
-    pub fn select_many<T>( key: &<T as Key<T>>::Key,conn: &mut Conn, first: u64,max: u16) -> Result<Vec<T> >
+   /*  pub fn select_many<T>(&mut self, predicate: T) -> Result<Vec<T>>
+    where
+        Self: Select<T, Error = ToqlMySqlError>,
+        T: Into<toql_core::select::SqlPredicate>,
+    {
+        <Self as Select<T>>::select_many(self, predicate)
+    } */
+
+     /// Selects many structs for a given key. (DOENS)
+    /// This will select all base fields and join. Merged fields will be skipped
+  /*   pub fn select_many<T>( key: &<T as Key<T>>::Key,conn: &mut Conn, first: u64,max: u16) -> Result<Vec<T> >
     where T : select::Select<T> + Key<T>
     {
         T::select_many(key, conn, first, max)
-    } */
+    }  */
 
     /// Load a struct with dependencies for a given Toql query.
     ///

@@ -46,8 +46,11 @@ pub struct JoinArg {
     #[darling(default)]
     pub on_sql: Option<String>,
     
+     #[darling(default)]
+    pub join_sql: Option<String>, 
+
     #[darling(default)]
-    pub join_sql: Option<String>
+    pub discr_sql: Option<String>,
 }
 
 // Attribute on struct field
@@ -314,12 +317,12 @@ impl quote::ToTokens for Toql {
                         mysql_load.add_mysql_deserialize_skip_field(&f);
                         continue;
                     }
-                    let result = toql_mapper.add_field_mapping(&f);
+                    let result = toql_mapper.add_field_mapping(&f)?;
 
                     // Don't build further code for invalid field, process next field
-                    if result.is_err() {
+                   /*  if result.is_err() {
                         continue;
-                    }
+                    } */
 
                     if query_builder_enabled {
                         toql_query_builder.add_field_for_builder(&f);
@@ -341,20 +344,23 @@ impl quote::ToTokens for Toql {
                     #[cfg(feature = "mysqldb")]
                     mysql_key.add_key_deserialize(&f)?;
 
-                    #[cfg(feature = "mysqldb")]
-                    let result = mysql_select.add_select_field(&f);
-                    if result.is_err() {
+                   
+                   /*  if result.is_err() {
                         // tokens.extend(result.err());
                         continue;
-                    }
+                    } */
                 }
 
                 // Generate insert/delete/update functionality
+                // Select is considered part of mutation functionality (Copy)
                 if mut_enabled {
                     toql_delup.add_delup_field(&f);
 
                     #[cfg(feature = "mysqldb")]
                     mysql_insert.add_insert_field(&f);
+
+                    #[cfg(feature = "mysqldb")]
+                    mysql_select.add_select_field(&f)?;
                 }
             }
 

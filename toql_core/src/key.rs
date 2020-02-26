@@ -8,6 +8,7 @@
 
 use std::borrow::Borrow;
 
+
 /// Trait to define key type of a Toql entity.
 pub trait Key {
     /// Type of key. Composite keys are tuples.
@@ -186,3 +187,19 @@ pub fn predicate_sql<K :Key>(keys: &[K::Key], sql_alias: Option<&str>) -> (Strin
 
 
  */
+
+
+
+/// Trait to provide a partial key type of a Toql entity.
+/// Only entities with composite keys can have a partial key.
+/// Only the select_many function makes use of it (to select a merged collection from an entity).
+pub trait PartialKey {
+       type Key: Eq + std::hash::Hash;
+}
+
+
+/// Trait to provide the entity type for a key. This is only used
+/// for ergonomics of the api.
+pub trait EntityKey {
+       type Entity;
+} 
