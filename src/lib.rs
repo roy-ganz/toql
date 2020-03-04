@@ -50,6 +50,7 @@ pub use toql_core::alias;
 pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::key;
+pub use toql_core::sql_predicate;
 pub use toql_core::load;
 pub use toql_core::merge;
 pub use toql_core::mutate;

@@ -71,7 +71,7 @@ impl<'a> GeneratedMysqlKey<'a> {
                     })
                 }; */
                 self.mysql_deserialize_key.push(quote!(
-                     << #rust_type_ident as toql :: key :: Key > :: Key >:: from_row_with_index (row, i /*#increment*/)?
+                     << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i /*#increment*/)?
                 ));
             }
             _ => {}

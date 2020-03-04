@@ -81,14 +81,13 @@ impl<'a> GeneratedMysqlSelect<'a> {
                         // Aux params can only be used with load methods (toql query and mapper)
                         // Sql expressions with aux params must be selectable and will load always NULL
                         
-                        
                         if field.number_of_options > 0 && !field.preselect {
                                 self.select_columns.push(String::from("NULL"));
                                 } else {
                                     return Err(Error::custom(
-                                    "SQL expression cannot be selected. Either make field selectable with `Option<..>` so it can be `None`.",
-                                ));
-                        }
+                                    "SQL expression cannot be selected. Either make field selectable with `Option<..>` so it can be `None` or skip selection by adding the attribute `#[toql(skip_select)]` to the struct",
+                                ).with_span(&rust_type_ident));
+                        }      
                     }
                     SqlTarget::Column(ref sql_column) => {
                         self.select_columns
@@ -107,7 +106,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     || (field.number_of_options == 1 && field.preselect == true)
                 {
                     let none_format = format!("{}.{{}} IS NOT NULL", &join_attrs.join_alias);
-                    let none_condition = quote!(<#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
+                    let none_condition = quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
                                                 format!(#none_format,  &other_column)
                                         }).collect::<Vec<String>>().join(" AND "));
 
@@ -124,7 +123,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     let key_index = syn::Index::from(self.select_keys.len());
                     let aliased_column_format = format!("{}.{{}} = ?", &self.sql_table_alias);
                     self.select_keys.push(quote!( {
-                        <#rust_type_ident as toql::key::Key>::columns().iter()
+                        <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
                         .map(|other_column|{
                             #default_self_column_code;
                             let self_column = #columns_map_code;
@@ -133,7 +132,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     }
                     ));
                     self.select_keys_params.push(  quote! {
-                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params( &key. #key_index));
+                            params.extend_from_slice( &toql::key::Key::params( &key. #key_index));
                         });
                     self.merge_self_fields.push(rust_field_name.to_string());
                 }
@@ -164,7 +163,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     {
 
 
-                      <#rust_type_ident as toql::key::Key>::columns().iter()
+                      <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
 
                         .map(|other_column| {
                             #default_self_column_code;
@@ -249,12 +248,13 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                            }
 
 
-                            fn select_one(&mut self, key: <#struct_ident as toql::key::Key>::Key)
+                            fn select_one(&mut self, key: <#struct_ident as toql::key::Keyed>::Key)
                             -> Result<#struct_ident, toql :: mysql::error:: ToqlMySqlError>
                             {
                               let conn = self.conn();
 
-                               let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( &[key], Some(#sql_table_alias));
+                               //let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( &[key], Some(#sql_table_alias));
+                               let (predicate, params) =  <<#struct_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_predicate(&key, #sql_table_alias);
                                let select_stmt = format!(
                                    "{} WHERE {} LIMIT 0,2",
                                    <Self as toql::select::Select<#struct_ident>>::select_sql(None),
@@ -274,10 +274,12 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
 
                                Ok(entities.pop().unwrap())
                             }
-                             fn select_many(&mut self, keys: &[<#struct_ident as toql::key::Key>::Key]) -> Result<Vec<#struct_ident>, Self::Error>{
+                             fn select_many(&mut self, keys: &[<#struct_ident as toql::key::Keyed>::Key]) -> Result<Vec<#struct_ident>, Self::Error>{
 
                                    let conn = self.conn();
-                                   let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( keys, Some(#sql_table_alias));
+                                   
+                                   //let (predicate, params) = toql::key::predicate_sql::<#struct_ident,_>( keys, Some(#sql_table_alias));
+                                   let (predicate, params) = <<#struct_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_any_predicate(keys, #sql_table_alias);
 
                                     let select_stmt = format!(
                                    "{} WHERE {}",

@@ -256,7 +256,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!()
         } else {
             quote!(
-                 <#struct_ident as toql::key::Key>::columns().iter().for_each(|c|{
+                 <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|c|{
                     result.push_select(&mapper.aliased_column(&<#struct_ident as toql::sql_mapper::Mapped>::table_alias(),&c))
                 });
             )
@@ -516,7 +516,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                          quote!(
                             if cfg!(debug_assertions) {
                             for c in &[ #(#self_keys),* ] {
-                                if !<#struct_ident as toql::key::Key>::columns().contains(&c.to_string()) {
+
+                                if ! <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().contains(&c.to_string()) {
                                 let t = <#struct_ident as toql::sql_mapper::Mapped>::table_name();
                                 let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
                                 let e2 = toql::error::ToqlError::SqlMapperError(e);
@@ -549,7 +550,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                       } else {
                                         String::from(c)
                                     };
-                                if !<#rust_type_ident as toql::key::Key>::columns().contains(&unaliased_column) {
+                                if !<#rust_type_ident as toql::key::Keyed>::columns().contains(&unaliased_column) {
                                 let t = <#rust_type_ident as toql::sql_mapper::Mapped>::table_name();
                                 let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, unaliased_column);
                                 let e2 = toql::error::ToqlError::SqlMapperError(e);
@@ -571,8 +572,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     #optional_self_column_validation
 
-                    let default_inverse_columns= <#struct_ident as toql::key::Key>::default_inverse_columns();
-                     let inverse_columns = <#struct_ident as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+                    let default_inverse_columns= <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::default_inverse_columns();
+                     let inverse_columns = <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
 
                         let inverse_column = match c.as_str() {
                                 #(#inverse_column_translation)*
@@ -591,7 +592,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                    // #predicate_builder
                     let (predicate, params) =
-                            toql::key::predicate_from_columns_sql::<#struct_ident,_>(entity_keys, &inverse_columns);
+                            toql::key::predicate_from_columns_sql::<< #struct_ident as toql::key::Keyed>::Key,_>(entity_keys, &inverse_columns);
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
 
@@ -605,7 +606,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 if result .any_selected() {
 
                                     // primary keys
-                                     <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|c|{
+                                     <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|c|{
                                         result.push_select(&mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::Mapped>::table_alias(),&c))
                                     });
 
@@ -621,7 +622,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                                     toql::log_sql!(result.to_sql(), result.params());
                                     let entities_stmt = self.conn().prep_exec(result.to_sql(), result.params())?;
-                                    let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Key>::Key, <#struct_ident as toql::key::Key>::Key>(entities_stmt)?;
+                                    let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Keyed>::Key, <#struct_ident as toql::key::Keyed>::Key>(entities_stmt)?;
                                     
                                     if !merge_entities.is_empty() {
                                         self.load_dependencies(&mut merge_entities, &merge_keys, query, &wildcard_scope, registry)?;

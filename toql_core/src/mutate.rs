@@ -30,13 +30,13 @@
 //!
 
 use crate::error::ToqlError;
-use crate::key::Key;
+use crate::key::Keyed;
 use core::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::result::Result;
 
 /// Trait for delete functions (They work with entity keys).
-pub trait Delete<'a, T: crate::key::Key + 'a> {
+pub trait Delete<'a, T: crate::key::Keyed + 'a> {
     type Error;
     /// Delete one structs, returns tuple with SQL statement and SQL params or error.
     fn delete_one_sql(
@@ -44,7 +44,7 @@ pub trait Delete<'a, T: crate::key::Key + 'a> {
         roles: &HashSet<String>,
     ) -> Result<(String, Vec<String>), Self::Error>
     where
-        T: crate::key::Key + 'a,
+        T: crate::key::Keyed + 'a,
     {
         Ok(Self::delete_many_sql(&[key], roles)?.unwrap())
     }
@@ -171,7 +171,7 @@ pub fn collection_delta_sql<'a, T, I, U, D, E>(
     E,
 >
 where
-    T: 'a + Key,
+    T: 'a + Keyed,
     I: Insert<'a, T>,
     U: Diff<'a, T>,
     D: Delete<'a, T>,
@@ -198,7 +198,7 @@ pub fn collections_delta<'a, T, E>(
     collections: &[(&'a [T], &'a [T])],
 ) -> Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<T::Key>), E>
 where
-    T: 'a + Key,
+    T: 'a + Keyed,
     E: std::convert::From<ToqlError>,
 {
     let mut diff: Vec<(&'a T, &'a T)> = Vec::new(); // Vector with entities to diff
@@ -209,13 +209,13 @@ where
         let mut previous_index: HashMap<T::Key, &T> = HashMap::new();
         for previous in *previous_coll {
             // Build up index
-            let k = Key::get_key(previous)?;
+            let k = Keyed::try_get_key(previous)?;
             previous_index.insert(k, previous);
         }
 
         for current in *current_coll {
-            if previous_index.contains_key(&Key::get_key(current)?) {
-                let previous = previous_index.remove(&Key::get_key(current)?).unwrap();
+            if previous_index.contains_key(&Keyed::try_get_key(current)?) {
+                let previous = previous_index.remove(&Keyed::try_get_key(current)?).unwrap();
                 diff.push((previous, current));
             } else {
                 insert.push(current);
@@ -223,7 +223,7 @@ where
         }
 
         for (_k, v) in previous_index {
-            delete.push(Key::get_key(v)?);
+            delete.push(Keyed::try_get_key(v)?);
         }
     }
 

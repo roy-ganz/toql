@@ -105,7 +105,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                 let default_self_column_code = &join_attrs.default_self_column_code;
 
                 self.insert_columns_code.push(quote!(
-                     for other_column in <#rust_type_ident as toql::key::Key>::columns() {
+                     for other_column in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
                             #default_self_column_code;
                             let self_column = #columns_map_code;
                         columns.push(self_column.to_owned());
@@ -117,16 +117,16 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                 2 => { // Option<Option<T>>
                                         quote!(
                                             if let Some(field) = &entity. #rust_field_ident {
-                                                 <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
+                                                 <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
                                                 params.extend_from_slice(
                                                    & field.as_ref()
-                                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(| |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
                                                             .map(|c| String::from("NULL"))
                                                             .collect::<Vec<_>>())},
-                                                   | some| {Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(&some)?))})?
+                                                   | some| {Ok(toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(&some)?))})?
                                                );
                                             } else {
-                                                <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("DEFAULT, "));
+                                                <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("DEFAULT, "));
                                             }
 
                                         )
@@ -134,13 +134,13 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                 1 if field.preselect => { // #[toql(preselect)] Option<T> 
                                 // TODO Option wrapping
                                     quote!(
-                                         <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
+                                         <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
                                          params.extend_from_slice(
                                                    &entity
                                                     . #rust_field_ident .as_ref()
                                                    .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
                                                     .map(|_| String::from("NULL")).collect::<Vec<_>>())},
-                                                   | some| { Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))})?
+                                                   | some| { Ok(toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(some)?))})?
                                                 );
                                            )
                                 },
@@ -148,19 +148,19 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                 1 if !field.preselect => { // Option<T> selectable 
                                     quote!(
                                         if let Some(field) = &entity. #rust_field_ident {
-                                            <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
+                                            <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
                                              params.extend_from_slice(
-                                                &<#rust_type_ident as toql::key::Key>::params(
-                                                            &<#rust_type_ident as toql::key::Key>::get_key(field)?));
+                                                &toql::key::Key::params(
+                                                            &<#rust_type_ident as toql::key::Keyed>::try_get_key(field)?));
                                         } else {
-                                              <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("DEFAULT, "));
+                                              <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("DEFAULT, "));
                                         }
                                     )
                                 },
                                 _ => { // T
                                     quote!(
-                                        <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
-                                        params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
+                                        <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
+                                        params.extend_from_slice(&toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(&entity. #rust_field_ident)?));
                                    )
                                 }
                             }

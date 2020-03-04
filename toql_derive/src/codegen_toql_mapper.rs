@@ -80,7 +80,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                 {
                     self.field_mappings.push(
                                     quote!(
-                                        let none_condition = <#rust_type_ident as toql::key::Key>::columns().iter().map(|other_column|{
+                                        let none_condition = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
                                                 #default_self_column_code;
                                                 let self_column = #columns_map_code;
                                                 format!("({} IS NOT NULL)",  & mapper.translate_aliased_column(canonical_sql_alias, &self_column))
@@ -93,7 +93,7 @@ impl<'a> GeneratedToqlMapper<'a> {
 
                 let join_expression_builder = quote!(
                   let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias); // use Toql field name to build join alias (prevents underscore in name)
-                  let join_expression = <#rust_type_ident as toql::key::Key>::columns().iter()
+                  let join_expression = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
                     .map(|other_column| {
                         #default_self_column_code;
                         let self_column= #columns_map_code;

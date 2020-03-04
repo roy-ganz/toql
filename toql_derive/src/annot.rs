@@ -236,7 +236,9 @@ pub struct Toql {
     #[darling(default)]
     pub skip_mut: bool,
     #[darling(default)]
-    pub skip_query: bool,
+    pub skip_load: bool,
+    #[darling(default)]
+    pub skip_select: bool,
     #[darling(default)]
     pub skip_query_builder: bool,
     #[darling(default)]
@@ -284,7 +286,8 @@ impl quote::ToTokens for Toql {
             columns: _,
             alias: _,
             skip_mut,
-            skip_query,
+            skip_load,
+            skip_select,
             skip_query_builder,
             serde_key: _,
             map_filter: _,
@@ -294,9 +297,7 @@ impl quote::ToTokens for Toql {
             ref data,
         } = *self;
 
-        let mut_enabled = !skip_mut;
-        let query_enabled = !skip_query;
-        let query_builder_enabled = !skip_query_builder;
+       
 
         let fields = data
             .as_ref()
@@ -311,20 +312,20 @@ impl quote::ToTokens for Toql {
                 toql_key.add_key_field(&f)?;
 
                 // Generate query functionality
-                if query_enabled {
+                if !skip_load {
                     if field.skip {
                         #[cfg(feature = "mysqldb")]
                         mysql_load.add_mysql_deserialize_skip_field(&f);
                         continue;
                     }
-                    let result = toql_mapper.add_field_mapping(&f)?;
+                    toql_mapper.add_field_mapping(&f)?;
 
                     // Don't build further code for invalid field, process next field
                    /*  if result.is_err() {
                         continue;
                     } */
 
-                    if query_builder_enabled {
+                    if !skip_query_builder {
                         toql_query_builder.add_field_for_builder(&f);
                     }
 
@@ -353,12 +354,15 @@ impl quote::ToTokens for Toql {
 
                 // Generate insert/delete/update functionality
                 // Select is considered part of mutation functionality (Copy)
-                if mut_enabled {
+                if !skip_mut {
                     toql_delup.add_delup_field(&f);
 
                     #[cfg(feature = "mysqldb")]
                     mysql_insert.add_insert_field(&f);
 
+                 
+                }
+                if !skip_select {
                     #[cfg(feature = "mysqldb")]
                     mysql_select.add_select_field(&f)?;
                 }
@@ -388,11 +392,11 @@ impl quote::ToTokens for Toql {
                 // Produce compiler tokens
                 tokens.extend(quote!(#toql_key));
 
-                if query_builder_enabled {
+                if !skip_query_builder {
                     tokens.extend(quote!(#toql_query_builder));
                 }
 
-                if query_enabled {
+                if !skip_load {
                     tokens.extend(quote!(#toql_mapper));
 
                     #[cfg(feature = "mysqldb")]
@@ -401,15 +405,20 @@ impl quote::ToTokens for Toql {
                     #[cfg(feature = "mysqldb")]
                     tokens.extend(quote!(#mysql_key));
 
-                    #[cfg(feature = "mysqldb")]
-                    tokens.extend(quote!(#mysql_select));
+                   
                 }
 
-                if mut_enabled {
+                if !skip_mut {
                     tokens.extend(quote!(#toql_delup));
 
                     #[cfg(feature = "mysqldb")]
                     tokens.extend(quote!(#mysql_insert));
+                  
+                }
+
+                if !skip_select {
+                    #[cfg(feature = "mysqldb")]
+                    tokens.extend(quote!(#mysql_select));
                 }
             }
         }

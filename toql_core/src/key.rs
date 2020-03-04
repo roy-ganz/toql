@@ -10,51 +10,29 @@ use std::borrow::Borrow;
 
 
 /// Trait to define key type of a Toql entity.
-pub trait Key {
+pub trait Keyed {
     /// Type of key. Composite keys are tuples.
-    type Key: Eq + std::hash::Hash;
+    type Key: Eq + std::hash::Hash + crate::key::Key;
 
     /// Return value of the key for a given entity.
-    fn get_key(&self) -> crate::error::Result<Self::Key>;
+    fn try_get_key(&self) -> crate::error::Result<Self::Key>;
 
     /// Sets the key on a given entity.
-    fn set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
+    fn try_set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
 
-    /// Return primary key columns for a given entity.
-    fn columns() -> Vec<String>;
-
-    /// Return foreign key columns that match the primary keys for a given entity.
-    /// This is only needed to merge entities.
-    /// The names are calculated and do not necessarily match
-    /// the actual foreign keys on the other table.
-    /// The translation rules are (for snake case column format):
-    /// 
-    /// | Type          | Guessing rule             | Example      |
-    /// | --------------|---------------------------|---------------|
-    /// | Normal fields |  tablename + normal field | `id` -> `user_id`, `access_code` -> `user_access_code` |
-    /// | Joins         |  *No change* | `language_id` -> `language_id` |
-    /// 
-    /// If the automatic generated names are not correct, the user is required to correct them by attributing
-    /// the relevant field with 
-    ///  
-    /// `#[toql( merge( columns( self = "id", other = "user_code")))]`
-    /// 
-    fn default_inverse_columns() -> Vec<String>;
-
-    /// Return key values as params. Useful to loop across a composite key.
-    fn params(key: &Self::Key) -> Vec<String>;
+   
 }
 
-pub fn keys<K: Key>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
+pub fn keys<K: Keyed>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
     let mut keys = Vec::with_capacity(entities.len());
     for e in entities {
-        keys.push(e.get_key()?);
+        keys.push(e.try_get_key()?);
     }
     Ok(keys)
 }
 
 fn predicate_from_columns_with_alias_sql<K: Key, T, U>(
-    keys: &[K::Key],
+    keys: &[K],
     columns: &[T],
     sql_alias: Option<U>,
 ) -> (String, Vec<String>)
@@ -115,7 +93,7 @@ where
 }
 
 pub fn predicate_from_columns_sql<K: Key, T>(
-    keys: &[K::Key],
+    keys: &[K],
     aliased_columns: &[T],
 ) -> (String, Vec<String>)
 where
@@ -124,7 +102,7 @@ where
     predicate_from_columns_with_alias_sql::<K, T, &str>(keys, aliased_columns, None)
 }
 
-pub fn predicate_sql<K: Key, U>(keys: &[K::Key], sql_alias: Option<U>) -> (String, Vec<String>)
+pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> (String, Vec<String>)
 where
     U: Borrow<str>,
 {
@@ -200,6 +178,65 @@ pub trait PartialKey {
 
 /// Trait to provide the entity type for a key. This is only used
 /// for ergonomics of the api.
-pub trait EntityKey {
-       type Entity;
-} 
+pub trait Key {
+    type Entity;
+
+        /// Return primary key columns for a given entity.
+    fn columns() -> Vec<String>;
+
+    /// Return foreign key columns that match the primary keys for a given entity.
+    /// This is only needed to merge entities.
+    /// The names are calculated and do not necessarily match
+    /// the actual foreign keys on the other table.
+    /// The translation rules are (for snake case column format):
+    /// 
+    /// | Type          | Guessing rule             | Example      |
+    /// | --------------|---------------------------|---------------|
+    /// | Normal fields |  tablename + normal field | `id` -> `user_id`, `access_code` -> `user_access_code` |
+    /// | Joins         |  *No change* | `language_id` -> `language_id` |
+    /// 
+    /// If the automatic generated names are not correct, the user is required to correct them by attributing
+    /// the relevant field with 
+    ///  
+    /// `#[toql( merge( columns( self = "id", other = "user_code")))]`
+    /// 
+    fn default_inverse_columns() -> Vec<String>;
+
+    /// Return key values as params. Useful to loop across a composite key.
+    fn params(&self) -> Vec<String>;
+  
+}
+/* 
+pub fn default_inverse_predicate<K>(key: K, alias: &str) -> (String, Vec<String>)
+where K:Key
+{
+        let mut predicate= String::from("(");
+        
+        for c in Key::default_inverse_columns() {
+            predicate.push_str(alias);
+            predicate.push('.');
+            predicate.push_str(&c);
+            predicate.push_str(" = ? AND ");
+        }
+    predicate.pop();
+    predicate.pop();
+    predicate.pop();
+    predicate.pop();
+    predicate.push(')');
+    (predicate, k.params())
+
+} */
+
+pub fn params<K>( keys: &[K]) -> Vec<String>
+where K: Key
+{
+    let mut params = Vec::new();
+    for k in keys {
+        params.extend_from_slice(&k.params());
+    }
+    params
+}
+
+
+
+

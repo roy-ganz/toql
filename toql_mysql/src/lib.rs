@@ -8,7 +8,7 @@ use mysql::prelude::GenericConnection;
 
 use toql_core::mutate::collection_delta_sql;
 
-use toql_core::key::Key;
+use toql_core::key::Keyed;
 use toql_core::load::{Load, Page};
 use toql_core::mutate::{Delete, Diff, DuplicateStrategy, Insert, InsertDuplicate, Update};
 use toql_core::query::Query;
@@ -170,10 +170,10 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_one<'a, T>(&mut self, key: <T as Key>::Key) -> Result<u64>
+    pub fn delete_one<'a, T>(&mut self, key: <T as Keyed>::Key) -> Result<u64>
     where
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
-        T: Key + 'a,
+        T: Keyed + 'a,
         
     {
         let sql = <toql_core::dialect::Generic as Delete<'a, T>>::delete_one_sql(key, &self.roles)?;
@@ -185,9 +185,9 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_many<'a, T>(&mut self, keys: &[<T as Key>::Key]) -> Result<u64>
+    pub fn delete_many<'a, T>(&mut self, keys: &[<T as Keyed>::Key]) -> Result<u64>
     where
-        T: Key + 'a,
+        T: Keyed + 'a,
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
     {
         let sql =
@@ -337,7 +337,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     where
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
         Self: Diff<'a, T, Error = ToqlMySqlError> + Insert<'a, T, Error = ToqlMySqlError>,
-        T: Key + 'a + Borrow<T>,
+        T: Keyed + 'a + Borrow<T>,
     {
         let (insert_sql, diff_sql, delete_sql) =
             collection_delta_sql::<T, Self, Self, toql_core::dialect::Generic, ToqlMySqlError>(
@@ -366,15 +366,15 @@ impl<C: GenericConnection> MySql<'_, C> {
     where
         Self: Select<T, Error = ToqlMySqlError>,
         T: Key + crate::row::FromResultRow<T> ,
-        <T as Key>::Key : toql_core::select::SqlPredicate
+        <T as Key>::Key : toql_core::sql_predicate::SqlPredicate
     { */
-    pub fn select_one<K>(&mut self, key: K) -> Result<<K as toql_core::key::EntityKey>::Entity>
+    pub fn select_one<K>(&mut self, key: K) -> Result<<K as toql_core::key::Key>::Entity>
     where
-        Self: Select<<K as toql_core::key::EntityKey>::Entity, Error = ToqlMySqlError>,
-        K: toql_core::key::EntityKey + toql_core::select::SqlPredicate,
-        <K as toql_core::key::EntityKey>::Entity: Key + crate::row::FromResultRow<<K as toql_core::key::EntityKey>::Entity>,
+        Self: Select<<K as toql_core::key::Key>::Entity, Error = ToqlMySqlError>,
+        K: toql_core::key::Key + toql_core::sql_predicate::SqlPredicate,
+        <K as toql_core::key::Key>::Entity: Keyed + crate::row::FromResultRow<<K as toql_core::key::Key>::Entity>,
     {
-        use toql_core::select::SqlPredicate;
+        use toql_core::sql_predicate::SqlPredicate;
         use toql_core::select::Select;
         use crate::error::ToqlMySqlError;
         use crate::row::from_query_result;
@@ -384,13 +384,13 @@ impl<C: GenericConnection> MySql<'_, C> {
         let (predicate, params) = <K as SqlPredicate>::sql_predicate(&key, &Self::table_alias());
          let select_stmt = format!(
             "{} WHERE {} LIMIT 0,2",
-            <Self as Select<<K as toql_core::key::EntityKey>::Entity>>::select_sql(None),
+            <Self as Select<<K as toql_core::key::Key>::Entity>>::select_sql(None),
             predicate
         );
         log_sql!(select_stmt, params);
 
         let entities_stmt = conn.prep_exec(select_stmt, &params)?;
-        let mut entities = from_query_result::<<K as toql_core::key::EntityKey>::Entity>(entities_stmt)?;
+        let mut entities = from_query_result::<<K as toql_core::key::Key>::Entity>(entities_stmt)?;
         if entities.len() > 1 {
             return Err(ToqlMySqlError::ToqlError(
                 ToqlError::NotUnique,
@@ -408,11 +408,11 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn select_many<P>(&mut self, predicates: &[P]) -> Result<Vec<P::Entity>>
     where
         Self: Select<P::Entity, Error = ToqlMySqlError>,
-        P::Entity: crate::row::FromResultRow<P::Entity> + toql_core::key::Key, 
-        P: toql_core::select::SqlPredicate,
+        P::Entity: crate::row::FromResultRow<P::Entity> + toql_core::key::Keyed, 
+        P: toql_core::sql_predicate::SqlPredicate,
         
     {
-        use toql_core::select::SqlPredicate;
+        use toql_core::sql_predicate::SqlPredicate;
         use toql_core::select::Select;
         use crate::error::ToqlMySqlError;
         use crate::row::from_query_result;
@@ -461,7 +461,7 @@ impl<C: GenericConnection> MySql<'_, C> {
    /*  pub fn select_many<T>(&mut self, predicate: T) -> Result<Vec<T>>
     where
         Self: Select<T, Error = ToqlMySqlError>,
-        T: Into<toql_core::select::SqlPredicate>,
+        T: Into<toql_core::sql_predicate::SqlPredicate>,
     {
         <Self as Select<T>>::select_many(self, predicate)
     } */
@@ -480,7 +480,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn load_one<T>(&mut self, query: &Query, mappers: &SqlMapperRegistry) -> Result<T>
     where
         Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Key,
+        T: toql_core::key::Keyed,
     {
         <Self as Load<T>>::load_one(self, query, mappers)
     }
@@ -498,7 +498,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
         Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Key,
+        T: toql_core::key::Keyed,
     {
         <Self as Load<T>>::load_many(self, query, mappers, page)
     }

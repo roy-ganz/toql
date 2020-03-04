@@ -25,7 +25,7 @@ pub enum Page {
 
 /// Trait to load entities from database.
 /// This is implemented for each struct in each SQL dialect. E.g. `impl Load<User> for MySql<..>`
-pub trait Load<T: crate::key::Key> {
+pub trait Load<T: crate::key::Keyed> {
     type Error;
     /// Load a struct with dependencies for a given Toql query.
     ///

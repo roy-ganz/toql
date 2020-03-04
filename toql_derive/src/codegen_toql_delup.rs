@@ -85,7 +85,8 @@ impl<'a> GeneratedToqlDelup<'a> {
                     self.key_params_code
                                 .push(
                                         quote!(
-                                            params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(  &<#rust_type_ident as toql::key::Key>::get_key( &entity . #rust_field_ident #unwrap )?));
+                                            //params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(  &<#rust_type_ident as toql::key::Keyed>::try_get_key( &entity . #rust_field_ident #unwrap )?));
+                                            params.extend_from_slice( &toql::key::Key::params(&<#rust_type_ident as toql::key::Keyed>::try_get_key( &entity . #rust_field_ident #unwrap )?));
                                         )
                                     );
                 }
@@ -189,7 +190,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                 let default_self_column_code = &join_attrs.default_self_column_code;
 
                 let add_columns_to_update_stmt = quote!(
-                     for other_column in <#rust_type_ident as toql::key::Key>::columns() {
+                     for other_column in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
                         #default_self_column_code;
                         let self_column = #columns_map_code;
                         update_stmt.push_str(&format!("{}.{} = ?, ",alias, self_column));
@@ -205,9 +206,9 @@ impl<'a> GeneratedToqlDelup<'a> {
                                         .as_ref()
                                         .unwrap()
                                         .as_ref()
-                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
                                     .map(|_| String::from("NULL")).collect::<Vec<_>>())},
-                                        | some| { Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?)) })?
+                                        | some| { Ok(toql::key::Key::params(&<#rust_type_ident as toql::key::Keyed>::try_get_key(some)?)) })?
 
                                     );
                         )
@@ -218,25 +219,25 @@ impl<'a> GeneratedToqlDelup<'a> {
                             params.extend_from_slice(
                                    &entity
                                     . #rust_field_ident .as_ref()
-                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
                                     .map(|_| String::from("NULL")).collect::<Vec<_>>())},
                                    | some| {
-                                       Ok(<#rust_type_ident as toql::key::Key>::params( &<#rust_type_ident as toql::key::Key>::get_key(some)?))
+                                       Ok(toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(some)?))
                                        })?);
                         )
                     }
                     1 if !field.preselect => {
                         // Option<T>
                         quote!(
-                             params.extend_from_slice( &<#rust_type_ident as toql::key::Key>::params(
-                                        &<#rust_type_ident as toql::key::Key>::get_key(entity. #rust_field_ident .as_ref().unwrap())?));
+                             params.extend_from_slice( &toql::key::Key::params(
+                                        &<#rust_type_ident as toql::key::Keyed>::try_get_key(entity. #rust_field_ident .as_ref().unwrap())?));
                         )
                     }
                     _ => {
                         // T
                         quote!(
-                                           params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(
-                                               &<#rust_type_ident as toql::key::Key>::get_key(&entity. #rust_field_ident)?));
+                                           params.extend_from_slice(&toql::key::Key::params(
+                                               &<#rust_type_ident as toql::key::Keyed>::try_get_key(&entity. #rust_field_ident)?));
 
 
                         )
@@ -299,12 +300,12 @@ impl<'a> GeneratedToqlDelup<'a> {
                                                         .as_ref() .unwrap()
                                                         .as_ref()
                                                         .map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
-                                                                    Ok(Some(toql::key::Key::get_key(e)?))
+                                                                    Ok(Some(toql::key::Keyed::try_get_key(e)?))
                                                         })?
                                             !=  outdated. #rust_field_ident
                                             .as_ref() .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
                                             .as_ref().map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
-                                                                Ok(Some(toql::key::Key::get_key(e)? ))
+                                                                Ok(Some(toql::key::Keyed::try_get_key(e)? ))
                                             })?
                                             {
                                                 #add_columns_to_update_stmt
@@ -319,12 +320,12 @@ impl<'a> GeneratedToqlDelup<'a> {
                                                 if  entity. #rust_field_ident
                                                         .as_ref()
                                                         .map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
-                                                                    Ok(Some(toql::key::Key::get_key(e)?))
+                                                                    Ok(Some(toql::key::Keyed::try_get_key(e)?))
                                                         })?
                                                     !=  outdated. #rust_field_ident
                                                         .as_ref()
                                                         .map_or::<Result<_,toql::error::ToqlError>,_>(Ok(None), |e| {
-                                                                    Ok(Some(toql::key::Key::get_key(e)? ))
+                                                                    Ok(Some(toql::key::Keyed::try_get_key(e)? ))
                                                     })?
                                                 {
                                                     #add_columns_to_update_stmt
@@ -337,8 +338,8 @@ impl<'a> GeneratedToqlDelup<'a> {
                                     quote!(
                                          #role_assert {
                                             if entity. #rust_field_ident .is_some()
-                                            && toql::key::Key::get_key(entity .  #rust_field_ident.as_ref() .unwrap())?
-                                             !=  toql::key::Key::get_key(outdated .  #rust_field_ident.as_ref()
+                                            && toql::key::Keyed::try_get_key(entity .  #rust_field_ident.as_ref() .unwrap())?
+                                             !=  toql::key::Keyed::try_get_key(outdated .  #rust_field_ident.as_ref()
                                              .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?
                                               )?
                                             {
@@ -352,8 +353,8 @@ impl<'a> GeneratedToqlDelup<'a> {
 
                                     quote!(
                                         #role_assert {
-                                        if toql::key::Key::get_key(&outdated. #rust_field_ident)?
-                                            !=  toql::key::Key::get_key(&entity. #rust_field_ident)? {
+                                        if toql::key::Keyed::try_get_key(&outdated. #rust_field_ident)?
+                                            !=  toql::key::Keyed::try_get_key(&entity. #rust_field_ident)? {
                                             #add_columns_to_update_stmt
                                             #set_params_code
                                          }
@@ -455,16 +456,19 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     type Error = toql::error::ToqlError;
 
-                    fn delete_many_sql(keys: &[<#struct_ident as toql::key::Key>::Key],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    fn delete_many_sql(keys: &[<#struct_ident as toql::key::Keyed>::Key],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
                             #ins_role_test
 
                             let alias= "t";
                             let mut delete_stmt =format!(#delete_many_statement, alias = alias);
+                            let (pr, params) = <<#struct_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_any_predicate(keys, alias);
+                            delete_stmt.push_str(&pr);
+                            
 
-                            let mut params :Vec<String>= Vec::new();
+                            //let mut params :Vec<String>= Vec::new();
 
-                            let mut first = true;
+                            /* let mut first = true;
 
 
 
@@ -484,8 +488,8 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                                 delete_stmt.push_str(&key_comparison);
 
                                    delete_stmt.push(')');
-                                   params.extend_from_slice(&<#struct_ident as toql::key::Key>::params(&key));
-                            }
+                                   params.extend_from_slice(&key.params());
+                            } */
                             if params.is_empty() {
                                 return Ok(None);
                             }

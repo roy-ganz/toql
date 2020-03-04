@@ -105,21 +105,21 @@ impl<'a> GeneratedToqlKey<'a> {
                 }
                 let default_self_column_code = &join_attrs.default_self_column_code;
                // let key_index = syn::Index::from(self.key_types.len());
-                self.key_types.push(quote!( <#rust_type_ident as toql::key::Key>::Key));
-                self.partial_key_types.push(quote!(#rust_field_ident : Option<<#rust_type_ident as toql::key::Key>::Key>));
+                self.key_types.push(quote!( <#rust_type_ident as toql::key::Keyed>::Key));
+                self.partial_key_types.push(quote!(#rust_field_ident : Option<<#rust_type_ident as toql::key::Keyed>::Key>));
 
                 // sql Prediate trait
                  let join_alias = &join_attrs.join_alias;
                 self.partial_key_sql_predicates.push( quote!(
                     if let Some(v) = &self.#rust_field_ident {
-                    let (pr, pa) = <<#rust_type_ident as toql::key::Key>::Key as toql::select::SqlPredicate>::sql_predicate(&v, #join_alias);
+                    let (pr, pa) = <<#rust_type_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_predicate(&v, #join_alias);
                     predicate.push_str( &pr);
                     predicate.push_str(" AND ");
                     params.extend_from_slice(&pa);
                 } 
                 ));
                   self.key_sql_predicates.push( quote!(
-                    let (pr, pa) = <<#rust_type_ident as toql::key::Key>::Key as toql::select::SqlPredicate>::sql_predicate(&self. #key_index, #join_alias);
+                    let (pr, pa) = <<#rust_type_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_predicate(&self. #key_index, #join_alias);
                     predicate.push_str( &pr);
                     params.extend_from_slice(&pa);
                 ));
@@ -128,7 +128,7 @@ impl<'a> GeneratedToqlKey<'a> {
                 let columns_map_code = &join_attrs.columns_map_code;
                 self.key_columns_code.push(quote!(
 
-                <#rust_type_ident as toql::key::Key>::columns().iter().for_each(|other_column| {
+                <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|other_column| {
                     #default_self_column_code;
                     let column = #columns_map_code;
                     columns.push(column.to_string());
@@ -137,35 +137,36 @@ impl<'a> GeneratedToqlKey<'a> {
 
                 self.key_inverse_columns_code.push( quote!(
 
-                        <#rust_type_ident as toql::key::Key>::default_inverse_columns().iter().for_each(|other_column| {
+                        <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::default_inverse_columns().iter().for_each(|other_column| {
                             #default_self_column_code;
                             let column = #columns_map_code;
                             columns.push(column.to_string());
                         });
                         ));
 
-                self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(& key. #key_index));));
+                //self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(& key. #key_index));));
+                self.key_params_code.push( quote!( params.extend_from_slice(&toql::key::Key::params(& key. #key_index)); ));
 
                 // Select key predicate
                 if field.number_of_options > 0 {
                     self.key_fields.push( quote!(
-                                < #rust_type_ident as toql::key::Key>::get_key(
+                                < #rust_type_ident as toql::key::Keyed>::try_get_key(
                                     self. #rust_field_ident .as_ref()
                                         .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))?
                                     )?
                             ));
 
                     self.key_setters.push( quote!(
-                                        < #rust_type_ident as toql::key::Key>::set_key(self. #rust_field_ident .as_mut()
+                                        < #rust_type_ident as toql::key::Keyed>::try_set_key(self. #rust_field_ident .as_mut()
                                             .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))? , key . #key_index )?;
                             ));
                 } else {
                     self.key_fields.push(quote!(
-                        < #rust_type_ident as toql::key::Key>::get_key(  &self. #rust_field_ident )?
+                        < #rust_type_ident as toql::key::Keyed>::try_get_key(  &self. #rust_field_ident )?
                     ));
 
                     self.key_setters.push( quote!(
-                                    < #rust_type_ident as toql::key::Key>::set_key(&mut self. #rust_field_ident,key . #key_index)?;
+                                    < #rust_type_ident as toql::key::Keyed>::try_set_key(&mut self. #rust_field_ident,key . #key_index)?;
                             ));
                 }
             }
@@ -236,13 +237,13 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
                
 
-                impl toql::select::SqlPredicate  for #struct_key_ident {
+                impl toql::sql_predicate::SqlPredicate  for #struct_key_ident {
 
                     type Entity = #rust_stuct_ident;
 
                 fn sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
-                    let predicate = String::new();
-                    let params: Vec<String> = Vec::new();
+                    let mut predicate = String::new();
+                    let mut params: Vec<String> = Vec::new();
 
                     #(#partial_key_sql_predicates)*
 
@@ -267,11 +268,48 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         #[derive(Debug, Eq, PartialEq, Hash #serde, Clone)]
            #vis struct #struct_key_ident ( #key_type_code);
 
-            impl toql::key::EntityKey  for #struct_key_ident {
+            impl toql::key::Key  for #struct_key_ident {
                     type Entity = #rust_stuct_ident;
+
+                    fn columns() ->Vec<String> {
+                     let mut columns: Vec<String>= Vec::new();
+
+                        #(#key_columns_code)*
+                        columns
+                    }
+                    fn default_inverse_columns() ->Vec<String> {
+                        let mut columns: Vec<String>= Vec::new();
+
+                        #(#key_inverse_columns_code)*
+                        columns
+                    }
+                    fn params(&self) ->Vec<String> {
+                        let mut params: Vec<String>= Vec::new();
+                        let key = self; // TODO cleanup
+
+                        #(#key_params_code)*
+                        params
+                    }
+
+                   /*  fn sql_predicate(&seld, alias:&str) -> (String, Vec<String>) {
+                        let predicate = String::new();
+                        let params: Vec<String> = Vec::new();
+
+                        #(#partial_key_sql_predicates)*
+
+                        if !predicate.is_empty() {
+                            predicate.pop();
+                            predicate.pop();
+                            predicate.pop();
+                            predicate.pop();
+                        }
+                    
+                        (predicate, params)
+
+                    } */
                 }
 
-             impl toql::select::SqlPredicate  for #struct_key_ident {
+             impl toql::sql_predicate::SqlPredicate  for #struct_key_ident {
                  type Entity = #rust_stuct_ident;
 
                 fn sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
@@ -291,41 +329,26 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                 }
              }
 
-            impl toql::key::Key for #rust_stuct_ident {
+           
+
+            impl toql::key::Keyed for #rust_stuct_ident {
                 type Key = #struct_key_ident;
 
-                fn get_key(&self) -> toql::error::Result<Self::Key> {
+                fn try_get_key(&self) -> toql::error::Result<Self::Key> {
                    Ok(  #struct_key_ident (#key_getter) )
                 }
-                fn set_key(&mut self, key: Self::Key) -> toql::error::Result<()> {
+                fn try_set_key(&mut self, key: Self::Key) -> toql::error::Result<()> {
                   #( #key_setters)*
                   Ok(())
                 }
-                fn columns() ->Vec<String> {
-                     let mut columns: Vec<String>= Vec::new();
-
-                    #(#key_columns_code)*
-                    columns
-                }
-                 fn default_inverse_columns() ->Vec<String> {
-                     let mut columns: Vec<String>= Vec::new();
-
-                    #(#key_inverse_columns_code)*
-                    columns
-                }
-                fn params(key: &Self::Key) ->Vec<String> {
-                     let mut params: Vec<String>= Vec::new();
-
-                    #(#key_params_code)*
-                    params
-                }
+                
             }
 
             impl std::convert::TryFrom<#rust_stuct_ident> for #struct_key_ident
             {
                 type Error = toql::error::ToqlError;
                 fn try_from(entity: #rust_stuct_ident) -> toql::error::Result<Self> {
-                    <#rust_stuct_ident as toql::key::Key>::get_key(&entity)
+                    <#rust_stuct_ident as toql::key::Keyed>::try_get_key(&entity)
                 }
             }
 
@@ -341,7 +364,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             // Impl to support HashSets
             impl std::hash::Hash for #rust_stuct_ident {
                 fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-                    <#rust_stuct_ident as toql::key::Key>::get_key(self).ok().hash(state);
+                    <#rust_stuct_ident as toql::key::Keyed>::try_get_key(self).ok().hash(state);
                 }
             }
 

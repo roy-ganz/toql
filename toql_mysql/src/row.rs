@@ -31,7 +31,7 @@ pub fn from_row<T: FromResultRow<T>>(mut row: mysql::Row) -> Result<T> {
 
 /// Function to convert MySQL query result into Toql struct.
 pub fn from_query_result_with_primary_keys<
-    T: FromResultRow<T> + toql_core::key::Key,
+    T: FromResultRow<T>,
     J: FromResultRow<J>,
 >(
     result: mysql::QueryResult,
@@ -51,7 +51,7 @@ pub fn from_query_result_with_primary_keys<
 }
 /// Function to convert MySQL query result into Toql struct.
 pub fn from_query_result_with_merge_keys<
-    T: FromResultRow<T> + toql_core::key::Key,
+    T: FromResultRow<T>,
     J: FromResultRow<J>,
     K: FromResultRow<K>,
 >(
