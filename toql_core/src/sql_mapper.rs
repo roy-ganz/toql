@@ -37,6 +37,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 use crate::field_handler::{FieldHandler, BasicFieldHandler};
+use crate::join_handler::{JoinHandler, DefaultJoinHandler};
 
 
 
@@ -178,7 +179,8 @@ pub struct JoinOptions {
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, String>, // Additional build params
-    
+    pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>> // Optional join handler
+        
 }
 
 impl JoinOptions {
@@ -188,7 +190,8 @@ impl JoinOptions {
             preselect: false,
             skip_wildcard: false,
             roles: HashSet::new(),
-            aux_params: HashMap::new()
+            aux_params: HashMap::new(),
+            join_handler:None
         }
     }
 
@@ -231,7 +234,7 @@ trait MapperFilter {
 pub struct SqlMapper {
     pub aliased_table: String,
     pub alias_format: AliasFormat,       //
-    pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>,
+    pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>,
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
     pub(crate) joins: HashMap<String, Join>,
@@ -255,7 +258,7 @@ pub(crate) struct Join {
     pub(crate) aliased_table: String, // Table t0
     pub(crate) on_predicate: String,  // ON ..
     pub(crate) options: JoinOptions,
-    pub(crate) sql_aux_param_names: Vec<String> // aux params in ON clause
+    pub(crate) sql_aux_param_names: Vec<String>, // aux params in ON clause
 }
 /// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
 ///
@@ -296,7 +299,7 @@ impl SqlMapper {
         H: 'static + FieldHandler + Send + Sync, // TODO improve lifetime
     {
         SqlMapper {
-            handler: Arc::new(handler),
+            field_handler: Arc::new(handler),
             aliased_table: aliased_table.into(),
             joins: HashMap::new(),
             fields: HashMap::new(),
@@ -491,7 +494,7 @@ impl SqlMapper {
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
-            handler: Arc::clone(&self.handler),
+            handler: Arc::clone(&self.field_handler),
             sql_aux_param_names,
         };
 
@@ -583,6 +586,9 @@ impl SqlMapper {
         j.on_predicate = on_predicate.to_string();
         self
     }
+
+  
+
     /// Translates a canonical sql alias into a shorter alias
     pub fn translate_alias(&mut self, canonical_alias: &str) -> String {
         use std::collections::hash_map::Entry;

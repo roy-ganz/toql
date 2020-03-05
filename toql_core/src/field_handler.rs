@@ -32,11 +32,16 @@ use std::collections::HashMap;
  use crate::sql_builder::SqlBuilderError;
 
 pub trait FieldHandler {
+    
+    /// Context parameters allow to share information between different handlers
+    
+
     /// Return sql and params if you want to select it.
     fn build_select(
         &self,
         select: (String, Vec<String>),
         _aux_params: &HashMap<String, String>,
+         _context: &mut HashMap<String, String>
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         Ok(Some(select))
     }
@@ -46,19 +51,15 @@ pub trait FieldHandler {
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
     fn build_filter(
         &self,
-        _select: (String, Vec<String>),
-        _filter: &FieldFilter,
+        select: (String, Vec<String>),
+        filter: &FieldFilter,
         aux_params: &HashMap<String, String>,
+        context: &mut HashMap<String, String>
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError>;
    
-    /// Return customized SQL join clause for this field or None
-    fn build_join(
-        &self,
-        _aux_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        Ok(None)
-    }
+    
 }
+
 
 impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sync + 'static) {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -79,7 +80,8 @@ impl FieldHandler for BasicFieldHandler {
         &self,
         mut select: (String, Vec<String>),
         filter: &FieldFilter,
-        _build_params: &HashMap<String, String>,
+        _aux_params: &HashMap<String, String>,
+        context: &mut HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {

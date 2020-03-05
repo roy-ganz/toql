@@ -247,6 +247,7 @@ impl SqlBuilder {
     fn build_ordering(
         result: &mut SqlBuilderResult,
         query_aux_params: &HashMap<String, String>,
+        handler_context: &mut HashMap<String, String>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &HashSet<u8>,
@@ -272,6 +273,7 @@ impl SqlBuilder {
                             if let Some(s) = sql_target.handler.build_select(
                                 (sql_target.expression.to_owned(), aux_param_values),
                                 aux_params,
+                                handler_context
                             )? {
                                 result.order_clause.push_str(&s.0);
                                 result.order_params.extend_from_slice(&s.1);
@@ -290,6 +292,7 @@ impl SqlBuilder {
     fn build_count_select_clause(
         result: &mut SqlBuilderResult,
         query_aux_params: &HashMap<String, String>,
+        handler_context: &mut HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
     ) -> Result<(), SqlBuilderError> {
@@ -309,6 +312,7 @@ impl SqlBuilder {
                     if let Some(sql_field) = sql_target.handler.build_select(
                         (sql_target.expression.to_owned(), aux_param_values),
                         aux_params,
+                        handler_context
                     )? {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
@@ -331,6 +335,7 @@ impl SqlBuilder {
     fn build_select_clause(
         result: &mut SqlBuilderResult,
         query_aux_params: &HashMap<String, String>,
+        handler_context: &mut HashMap<String, String>,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
@@ -372,7 +377,7 @@ impl SqlBuilder {
                     let params =  Self::aux_param_values(&sql_target.sql_aux_param_names, aux_params)?;
                     if let Some(sql_field) = sql_target
                         .handler
-                        .build_select((sql_target.expression.to_owned(), params), aux_params)?
+                        .build_select((sql_target.expression.to_owned(), params), aux_params, handler_context)?
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
@@ -406,6 +411,7 @@ impl SqlBuilder {
         selected_paths: &mut HashSet<String>,
         sql_joins: &HashMap<String, Join>,
         aux_params: &HashMap<String, String>,
+        handler_context: &mut HashMap<String, String>,
         result: &mut SqlBuilderResult,
     ) -> Result<(), SqlBuilderError> {
         fn build_join_start(join: &Join) -> String {
@@ -416,17 +422,18 @@ impl SqlBuilder {
             result.push_str(&join.aliased_table);
             result
         }
-        fn build_join_end(join: &Join) -> String {
+        /* fn build_join_end(join: &Join) -> String {
             let mut result = String::from(") ON (");
             result.push_str(&join.on_predicate);
             result.push_str(") ");
             result
-        }
+        } */
         fn build_joins(
             joins: &Vec<String>,
             selected_paths: &mut HashSet<String>,
             sql_joins: &HashMap<String, Join>,
             aux_params: &HashMap<String, String>,
+            handler_context: &mut HashMap<String, String>,
             result: &mut SqlBuilderResult,
             join_tree: &HashMap<String, Vec<String>>,
         ) -> Result<(), SqlBuilderError>{
@@ -455,9 +462,13 @@ impl SqlBuilder {
                             result.join_clause.push_str(build_join_start(&t).as_str());
                             result.join_clause.push(' ');
                             // Ressolve nested joins
-                            resolve_nested(&join, selected_paths, sql_joins, aux_params, result, join_tree);
+                            resolve_nested(&join, selected_paths, sql_joins, aux_params,handler_context, result, join_tree)?;
                             result.join_clause.pop(); // remove last whitespace
-                            result.join_clause.push_str(build_join_end(&t).as_str());
+
+                           result.join_clause.push_str(") ON (");
+                            
+            
+                          
                             
                              // Combine aux params from query and local join params
                              let mut combined_aux_params: HashMap<String, String> =
@@ -469,7 +480,22 @@ impl SqlBuilder {
                                     );
                                                        
                             let params = SqlBuilder::aux_param_values(&join_data.sql_aux_param_names, &temp_aux_params)?;
-                            result.join_params.extend_from_slice(&params);
+                            match &t.options.join_handler{
+                                Some(h) => {
+                                    let (on, pa) = h.build_on_predicate((t.on_predicate.to_owned(),params), aux_params, &handler_context)?;
+                                    result.join_clause.push_str(&on);
+                                    result.join_clause.push_str(") ");
+                                    result.join_params.extend_from_slice(&pa);
+                                }
+                                None => {
+                                    result.join_clause.push_str(&t.on_predicate);
+                                    result.join_clause.push_str(") ");
+                                    result.join_params.extend_from_slice(&params);
+                                }
+                            }; 
+                                
+                            
+                            
                         }
                     }
                 }
@@ -481,19 +507,20 @@ impl SqlBuilder {
             selected_paths: &mut HashSet<String>,
             sql_joins: &HashMap<String, Join>,
             aux_params: &HashMap<String, String>,
+            mut handler_context: &mut HashMap<String, String>,
             result: &mut SqlBuilderResult,
             join_tree: &HashMap<String, Vec<String>>,
         ) -> Result<(), SqlBuilderError>{
             if join_tree.contains_key(path) {
                 let joins = join_tree.get(path).unwrap();
-                build_joins(&joins, selected_paths, sql_joins, aux_params, result, join_tree)?;
+                build_joins(&joins, selected_paths, sql_joins, aux_params,&mut handler_context, result, join_tree)?;
             }
             Ok(())
         }
 
         //println!("Selected joins {:?}", selected_paths);
         // Process top level joins
-        build_joins(join_root, selected_paths, sql_joins, aux_params, result, join_tree)?;
+        build_joins(join_root, selected_paths, sql_joins, aux_params, handler_context, result, join_tree)?;
 
         // Process all fields with subpaths from the query
         /*for (k, v) in sql_join_data  {
@@ -544,6 +571,8 @@ impl SqlBuilder {
 
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
         let mut selected_paths: HashSet<String> = HashSet::new();
+
+        let mut handler_context : HashMap<String, String> = HashMap::new();
 
         let mut result = SqlBuilderResult {
             aliased_table: sql_mapper.aliased_table.clone(),
@@ -683,7 +712,7 @@ impl SqlBuilder {
                                 //   println!("Skipped {:?}", field_name);
                                 continue;
                             } else {
-                                println!("Included {:?}", field_name);
+                               // println!("Included {:?}", field_name);
                             }
 
                             // Skip field if it doesn't belong to wildcard path
@@ -880,12 +909,13 @@ impl SqlBuilder {
                                         .build_select(
                                             (sql_target.expression.to_owned(), aux_param_values),
                                             aux_params,
+                                            &mut handler_context
                                         )?
                                         .unwrap_or(("null".to_string(), vec![]));
 
                                     if let Some(f) = sql_target.handler.build_filter(
                                         expression, 
-                                        &f, aux_params,
+                                        &f, aux_params, &mut handler_context
                                     )? {
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {
@@ -952,15 +982,15 @@ impl SqlBuilder {
                                         }
                                     }
 
-                                   // TODO Test correct aux_params provided
+                                    // TODO Test correct aux_params provided
                                    // Sql Target aux params, join aux params?
-                                    if let Some((j, p)) =
+                                   /*  if let Some((j, p)) =
                                         sql_target.handler.build_join(aux_params)?
                                     {
                                         result.join_clause.push_str(&j);
                                         result.join_clause.push_str(" ");
                                         result.join_params.extend_from_slice(&p);
-                                    }
+                                    }  */
                                 }
                                 if let Some(o) = &query_field.order {
                                     let num = match o {
@@ -1005,6 +1035,7 @@ impl SqlBuilder {
             &mut selected_paths,
             &sql_mapper.joins,
             &query.aux_params,
+            &mut handler_context,
             &mut result,
         )?;
 
@@ -1021,6 +1052,7 @@ impl SqlBuilder {
             Self::build_count_select_clause(
                 &mut result,
                 &query.aux_params,
+                &mut handler_context,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
             )?;
@@ -1028,6 +1060,7 @@ impl SqlBuilder {
             Self::build_ordering(
                 &mut result,
                 &query.aux_params,
+                &mut handler_context,
                 &sql_target_data,
                 &sql_mapper.fields,
                 &ordinals,
@@ -1036,6 +1069,7 @@ impl SqlBuilder {
             Self::build_select_clause(
                 &mut result,
                 &query.aux_params,
+                &mut handler_context,
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,

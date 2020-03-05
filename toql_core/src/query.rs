@@ -650,9 +650,20 @@ impl Query {
         self.tokens.append(&mut query.tokens);
         self
     }
+
+    /// Modifiy the query with an additional stuct.
     pub fn with(self, query_with: impl QueryWith) -> Self {
         query_with.with(self)
     }
+
+    /// Convenence method to add aux params
+    pub fn aux_params<T>(mut self, name: T, value: T) -> Self 
+    where T: Into<String>
+    {
+       self.aux_params.insert(name.into(), value.into());
+       self
+    }
+
     /// Check if query contains path
     /// Example: Path is 'user_address'
     /// Valid query paths are 'user_*', 'user_address_*', 'user_address_country_*,'user_address_id'
