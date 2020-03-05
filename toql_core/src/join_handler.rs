@@ -9,7 +9,6 @@ pub trait JoinHandler {
         &self,
          on_predicate: (String, Vec<String>),
         _aux_params: &HashMap<String, String>,
-        _context: &HashMap<String, String>,
     ) -> Result<(String, Vec<String>), crate::sql_builder::SqlBuilderError> {
         Ok(on_predicate)
     }

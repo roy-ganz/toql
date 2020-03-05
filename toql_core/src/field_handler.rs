@@ -41,7 +41,6 @@ pub trait FieldHandler {
         &self,
         select: (String, Vec<String>),
         _aux_params: &HashMap<String, String>,
-         _context: &mut HashMap<String, String>
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         Ok(Some(select))
     }
@@ -54,7 +53,6 @@ pub trait FieldHandler {
         select: (String, Vec<String>),
         filter: &FieldFilter,
         aux_params: &HashMap<String, String>,
-        context: &mut HashMap<String, String>
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError>;
    
     
@@ -81,7 +79,6 @@ impl FieldHandler for BasicFieldHandler {
         mut select: (String, Vec<String>),
         filter: &FieldFilter,
         _aux_params: &HashMap<String, String>,
-        context: &mut HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
