@@ -36,6 +36,52 @@ pub trait QueryPredicate {
 }
 
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
+pub trait PredicateArg {
+    fn to_args(self) -> Vec<String>;
+}
+impl PredicateArg for String {
+    fn to_args (self) -> Vec<String> {
+        vec![self]
+    }
+}   
+impl PredicateArg for &str {
+    fn to_args (self) -> Vec<String> {
+        vec![self.to_owned()]
+    }
+} 
+impl PredicateArg for &[&str] {
+    fn to_args (self) -> Vec<String> {
+        let mut args = Vec::new();
+        for a in self {
+            args.push(a.to_string());
+        }
+        args
+    }
+}  
+
+
+macro_rules! impl_num_predicate_arg {
+    ($($mty:ty),+) => {
+        $(
+            impl PredicateArg for $mty {
+                 fn to_args(self) -> Vec<String> {
+                    vec![self.to_string()]
+                 }
+            }
+            impl<'a> PredicateArg for &'a $mty {
+                 fn to_args(self) -> Vec<String> {
+                    vec![self.to_string()]
+                 }
+            }
+        )+
+    }
+}
+
+impl_num_predicate_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+
+
+
+/// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
 pub trait FilterArg {
     fn to_sql(&self) -> String;
 }
@@ -471,6 +517,87 @@ impl ToString for FieldFilter {
     }
 }
 
+// A Toql predicate provides additional filtering. 
+/// A field can be created from a field name and filtered, sorted with its methods.
+/// However the Toql derive creates fields structs for a derived struct, so instead of
+/// ``` ignore
+///  
+///  let f = Predicate::from("search").is(["what"]);
+/// ```
+/// its easier and recommended to write
+/// ``` ignore
+///  let f = User::predicates().search(&["what"]);
+/// ```
+#[derive(Clone, Debug)]
+pub struct Predicate {
+    pub(crate) concatenation: Concatenation,
+    pub(crate) name: String,
+    pub(crate) args: Vec<String>,
+}
+
+
+impl Predicate {
+    /// Create a field for the given name.
+    pub fn from<T>(name: T) -> Self
+    where
+        T: Into<String>,
+    {
+        let name = name.into();
+        #[cfg(debug)]
+        {
+            // Ensure name does not end with wildcard
+            if name.ends_with("*") {
+                panic!("Fieldname {:?} must not end with wildcard.", name);
+            }
+        }
+
+        Predicate {
+            concatenation: Concatenation::And,
+            name: name.into(),
+            args: Vec::new(),
+          
+        }
+    }
+
+    /// Set arguments
+    pub fn is(mut self, arg: impl PredicateArg) -> Self{
+        self.args = arg.to_args();
+        self
+    }
+
+}
+
+impl ToString for Predicate {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        s.push('@');
+        
+        s.push_str(&self.name);
+        s.push(' ');
+
+        for a in &self.args {
+            s.push_str (&a);
+            s.push(' ');
+        }
+    
+        s.pop();
+        s
+    }
+}
+
+impl From<&str> for Predicate {
+    fn from(s: &str) -> Predicate {
+        Predicate::from(s)
+    }
+}
+
+impl Into<QueryToken> for Predicate {
+    fn into(self) -> QueryToken {
+        QueryToken::Predicate(self)
+    }
+}
+
+
 #[derive(Clone, Debug)]
 pub(crate) enum FieldOrder {
     Asc(u8),
@@ -483,6 +610,7 @@ pub(crate) enum QueryToken {
     RightBracket,
     Wildcard(Wildcard),
     Field(Field),
+    Predicate(Predicate)
 }
 
 impl From<&str> for QueryToken {
@@ -503,9 +631,8 @@ impl ToString for QueryToken {
                 Concatenation::And => String::from("("),
                 Concatenation::Or => String::from("("),
             },
-            QueryToken::Field(
-                field, /*Field {concatenation, name, hidden, order, filter, aggregation}*/
-            ) => field.to_string(),
+            QueryToken::Field(field) => field.to_string(),
+             QueryToken::Predicate(predicate) => predicate.to_string(),
             QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
         };
         s
@@ -763,6 +890,14 @@ impl From<Field> for Query {
     fn from(field: Field) -> Query {
         let mut q = Query::new();
         q.tokens.push(QueryToken::Field(field));
+        q
+    }
+}
+
+impl From<Predicate> for Query {
+    fn from(predicate: Predicate) -> Query {
+        let mut q = Query::new();
+        q.tokens.push(QueryToken::Predicate(predicate));
         q
     }
 }

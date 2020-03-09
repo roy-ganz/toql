@@ -27,5 +27,6 @@ pub mod sql_mapper;
 pub mod sql_mapper_registry;
 pub mod field_handler;
 pub mod join_handler;
+pub mod predicate_handler;
 pub mod sql_predicate;
 pub use log; // Reexport for generated code from Toql derive

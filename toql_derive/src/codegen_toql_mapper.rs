@@ -17,8 +17,9 @@ impl<'a> GeneratedToqlMapper<'a> {
     pub(crate) fn from_toql(rust_struct: &'a Struct) -> GeneratedToqlMapper {
         let mut field_mappings: Vec<TokenStream> = Vec::new();
 
+        
 
-        for mapping in &rust_struct.mapped_filter_fields {
+        for mapping in &rust_struct.mapped_predicates {
             let toql_field_name = &mapping.field;
             let sql_mapping = &mapping.sql;
             let sql_expr = if sql_mapping.contains(".."){
@@ -28,23 +29,29 @@ impl<'a> GeneratedToqlMapper<'a> {
                 quote!(#sql_mapping)
             };
 
+            let on_params :Vec<TokenStream>= mapping.on_param.iter().map(|p| {
+                let index = &p.index;
+                let name = &p.name;
+                quote!(.on_param( #index, String::from(#name)))
+            }).collect::<Vec<_>>();
+
             match &mapping.handler {
                 Some(handler) => {
                     field_mappings.push(quote! {
-                                mapper.map_handler_with_options(
+                                mapper.map_predicate_handler_with_options(
                                     &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                     #sql_expr ,
                                     #handler (), 
-                                    toql::sql_mapper::FieldOptions::new().filter_only(true));
+                                    toql::sql_mapper::PredicateOptions::new()  #(#on_params)* );
                             });
                 }
                 None => {
                     field_mappings.push(quote! {
-                                mapper.map_field_with_options(
+                                mapper.map_predicate_with_options(
                                     &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                 #sql_expr,
-                                toql::sql_mapper::FieldOptions::new()
-                                .filter_only(true));
+                                toql::sql_mapper::PredicateOptions::new() #(#on_params)*
+                              );
                             });
                 }
             }

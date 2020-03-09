@@ -16,6 +16,7 @@
 use crate::error::ToqlError;
 use crate::query::Concatenation;
 use crate::query::Field;
+use crate::query::Predicate;
 use crate::query::FieldFilter;
 use crate::query::FieldOrder;
 use crate::query::Query;
@@ -58,7 +59,7 @@ impl QueryParser {
                         aggregation: false,
                         filter: None,
                     }));
-                }
+                },
                 Rule::sort => {
                     let token = query.tokens.last_mut();
                     if let Some(t) = token {
@@ -145,8 +146,31 @@ impl QueryParser {
                             }
                         }
                     }
-                }
-
+                },
+                 Rule::predicate_clause => {
+                    query.tokens.push(QueryToken::Predicate(Predicate {
+                        concatenation: con.clone(),
+                        name: "missing".to_string(),
+                        args: Vec::new(),
+                    }));
+                },
+                 Rule::predicate_name =>  {
+                    let token = query.tokens.last_mut();
+                    if let Some(t) = token {
+                        if let QueryToken::Predicate(ref mut predicate) = t {
+                              predicate.name = span.as_str().trim_start_matches("@").to_string();
+                        }
+                    }
+                },
+                Rule::predicate_arg =>  {
+                    let token = query.tokens.last_mut();
+                    if let Some(t) = token {
+                        if let QueryToken::Predicate(ref mut predicate) = t {
+                              let iter = span.as_str().split_whitespace();
+                                predicate.args = iter.map(String::from).collect();
+                        }
+                    }
+                },
                 Rule::wildcard => {
                     query.tokens.push(QueryToken::Wildcard(Wildcard {
                         concatenation: con.clone(),

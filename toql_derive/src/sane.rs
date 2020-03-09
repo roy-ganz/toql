@@ -1,7 +1,8 @@
+use crate::annot::OnParamArg;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
-use crate::annot::{MapArg, ParamArg};
+use crate::annot::{PredicateArg, ParamArg};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
@@ -20,7 +21,7 @@ pub struct Struct {
     pub sql_table_alias: String,
     pub rust_struct_visibility: Visibility,
     pub serde_key: bool,
-    pub mapped_filter_fields: Vec<MapArg>,
+    pub mapped_predicates: Vec<PredicateArg>,
     pub insdel_roles: HashSet<String>,
     pub upd_roles: HashSet<String>,
     pub wildcard: Option<HashSet<String>>
@@ -30,13 +31,14 @@ impl Struct {
     pub fn create(toql: &Toql) -> Self {
         let renamed_table = crate::util::rename_or_default(&toql.ident.to_string(), &toql.tables);
 
-        let mapped_filter_fields: Vec<MapArg> = toql
-            .map_filter
+        let mapped_predicates: Vec<PredicateArg> = toql
+            .predicate
             .iter()
-            .map(|a| MapArg {
+            .map(|a| PredicateArg {
                 field: a.field.to_mixed_case(),
                 sql: a.sql.clone(),
                 handler: a.handler.clone(),
+                on_param: a.on_param.clone(),
             })
             .collect::<Vec<_>>();
 
@@ -51,7 +53,7 @@ impl Struct {
                 .to_mixed_case(),
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
-            mapped_filter_fields,
+            mapped_predicates,
             insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
             
@@ -74,7 +76,8 @@ pub struct RegularField {
     pub count_filter: bool,
     pub handler: Option<Path>,
     pub default_inverse_column: Option<String>,
-    pub aux_params: Vec<ParamArg>
+    pub aux_params: Vec<ParamArg>,
+    pub on_params: Vec<OnParamArg>
 }
 #[derive(Clone)]
 pub struct JoinField {
@@ -143,6 +146,7 @@ pub struct Field {
     pub preselect: bool,
     pub kind: FieldKind,
     pub skip_mut: bool,
+    
 }
 
 #[derive(Clone)]
@@ -421,7 +425,11 @@ impl Field {
                 count_select: field.count_select,
                 count_filter: field.count_filter,
                 handler: field.handler.to_owned(),
-                aux_params :  field.param.clone()
+                aux_params :  field.param.clone(),
+                on_params:  field.on_param.clone()
+
+                
+                
             })
         };
 

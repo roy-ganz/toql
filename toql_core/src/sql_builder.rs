@@ -38,7 +38,7 @@ use crate::query::assert_roles;
 use crate::query::Concatenation;
 use crate::query::FieldOrder;
 use crate::query::Query;
-use crate::query::QueryToken;
+use crate::query::{FieldFilter, QueryToken};
 use crate::sql_builder_result::SqlBuilderResult;
 use crate::sql_mapper::Join;
 use crate::sql_mapper::JoinType;
@@ -137,6 +137,8 @@ pub struct SqlBuilder {
 pub enum SqlBuilderError {
     /// The field is not mapped to a column or SQL expression. Contains the field name.
     FieldMissing(String),
+     /// The field is not mapped to a column or SQL expression. Contains the field name.
+    PredicateMissing(String),
     /// The field requires a role that the query does not have. Contains the role.
     RoleRequired(String),
     /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
@@ -145,12 +147,15 @@ pub enum SqlBuilderError {
     QueryParamMissing(String),
     /// The query parameter that is required by the query expression is wrong. Contains the parameter and the details.
     QueryParamInvalid(String, String),
+    /// A predicate requires more arguments, than the toql query provided, contains the predicate.
+    PredicateArgumentMissing(String),
 }
 
 impl fmt::Display for SqlBuilderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             SqlBuilderError::FieldMissing(ref s) => write!(f, "field `{}` is missing", s),
+            SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
             SqlBuilderError::QueryParamMissing(ref s) => {
@@ -158,6 +163,9 @@ impl fmt::Display for SqlBuilderError {
             }
             SqlBuilderError::QueryParamInvalid(ref s, ref d) => {
                 write!(f, "query parameter `{}` is invalid: {} ", s, d)
+            },
+            SqlBuilderError::PredicateArgumentMissing(ref s) => {
+                write!(f, "predicate `{}` requires more arguments. ", s)
             }
         }
     }
@@ -297,7 +305,7 @@ impl SqlBuilder {
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
-                if sql_target.options.count_select && !sql_target.options.filter_only {
+                if sql_target.options.count_select {
                     let mut combined_aux_params: HashMap<String, String> = HashMap::new();
                     let aux_params = Self::combine_aux_params(
                         &mut combined_aux_params,
@@ -344,9 +352,7 @@ impl SqlBuilder {
         for toql_field in field_order {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // Skip fields that must not appear in select statement
-                if sql_target.options.filter_only {
-                    continue;
-                }
+                
 
                 let path: &str = toql_field
                     .trim_end_matches(|c| c != '_')
@@ -651,9 +657,7 @@ impl SqlBuilder {
 
                         for (field_name, sql_target) in &sql_mapper.fields {
                             
-                            if sql_target.options.filter_only {
-                                continue;
-                            }
+                          
 
                             let field_path = field_name
                                 .trim_end_matches(|c| c != '_')
@@ -973,6 +977,13 @@ impl SqlBuilder {
                                         }
                                     }
 
+                                // Add Parameters for on clauses
+                                if let FieldFilter::Eq(a) | FieldFilter::Ne(a) = f {
+                                    for n in &sql_target.options.on_params {
+                                        on_params.insert(n.to_string(), a.to_string());
+                                    }
+                                }
+                                
                                     // TODO Test correct aux_params provided
                                    // Sql Target aux params, join aux params?
                                    /*  if let Some((j, p)) =
@@ -1005,7 +1016,69 @@ impl SqlBuilder {
                                 }
                             }
                         }
-                    }
+                    },
+                     QueryToken::Predicate(query_predicate) => {
+                         
+                          
+
+                         match sql_mapper.predicates.get(&query_predicate.name) {
+                            Some(predicate) => {
+
+                                if self.count_query == true && !predicate.options.count_filter {
+                                    continue;
+                                }
+
+                                fn predicate_param_values(aux_param_names: &Vec<String>, aux_params: &HashMap<String, String>, predicate_args: &Vec<String>, predicate_name:&str ) -> Result<Vec<String>, SqlBuilderError>{
+                                      let mut params: Vec<String> = Vec::with_capacity(aux_param_names.len());
+                                      let mut i = 0usize;
+                                    for p in aux_param_names {
+                                       let value =  if p == "?" {
+                                            (predicate_args.get(i).ok_or(SqlBuilderError::PredicateArgumentMissing(predicate_name.to_string())),
+                                            i = i + 1).0
+                                        } else {
+                                        aux_params
+                                            .get(p)
+                                            .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))
+                                        }?;
+                                        params.push(value.to_owned());
+                                    };
+                                    Ok(params)
+                                }
+
+                                
+                                
+                                 let mut combined_aux_params: HashMap<String, String> =
+                                        HashMap::new();
+                                    let aux_params = Self::combine_aux_params(
+                                        &mut combined_aux_params,
+                                        &query.aux_params,
+                                        &predicate.options.aux_params,
+                                    );
+
+                                let args = predicate_param_values(&predicate.sql_aux_param_names, &aux_params,  &query_predicate.args,&query_predicate.name )?;
+                                if let Some((expr, args)) = predicate.handler.build_predicate(( predicate.expression.to_owned(), args), aux_params)? {
+
+                                    if ! result.where_clause.is_empty() {
+                                        result.where_clause.push_str(" AND ");
+                                    }
+                                    result.where_clause.push_str(&expr);
+                                    result.where_params.extend_from_slice(&args);
+                                }
+
+                                // Add Parameters for on clauses
+                                for (i,n) in &predicate.options.on_params {
+                                    let a = query_predicate.args.get(*i as usize).ok_or(SqlBuilderError::PredicateArgumentMissing(query_predicate.name.to_string()))?;
+                                    on_params.insert(n.to_string(), a.to_string());
+                                }
+
+                            },
+                            None => {
+                                 return Err(SqlBuilderError::PredicateMissing(
+                                        query_predicate.name.clone(),
+                                    ));
+                            }
+                         }
+                     }
                 }
             }
         }
@@ -1019,13 +1092,25 @@ impl SqlBuilder {
                 }
             }
         }
+
+        
+        let mut combined_on_params: HashMap<String, String>= HashMap::new();
+        let on_params = if on_params.is_empty() {
+            &query.aux_params
+        } else {
+            Self::combine_aux_params(
+                                        &mut combined_on_params,
+                                        &query.aux_params,
+                                        &on_params,
+                                    )
+        };
         // println!("Selected joins from query {:?}", selected_paths);
         Self::build_join_clause(
             &sql_mapper.joins_root,
             &sql_mapper.joins_tree,
             &mut selected_paths,
             &sql_mapper.joins,
-            &query.aux_params,
+            &on_params,
             &mut result,
         )?;
 

@@ -19,16 +19,16 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
         let mut builder_fields : Vec<TokenStream> = Vec::new();
 
-        for args in &toql.mapped_filter_fields {
+        for args in &toql.mapped_predicates {
             let rust_struct_visibility = &toql.rust_struct_visibility;
             
             let fnc_name= &args.field.to_snake_case();
             let fnc_ident = Ident::new(fnc_name, Span::call_site());
             let toql_field=  args.field.as_str().trim_start_matches("r#");
             builder_fields.push(quote!(
-                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: Field {
+                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: Predicate {
                             self . 0 . push_str ( #toql_field ) ;
-                            toql :: query :: Field :: from ( self . 0 )
+                            toql :: query :: Predicate :: from ( self . 0 )
                         }
                     ));
 
@@ -153,6 +153,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
             impl toql::query_builder::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;
 
+                //fn predicates ( ) -> #builder_predicates_struct { #builder_predicates_struct :: new ( ) }
                 fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
                 fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
             }

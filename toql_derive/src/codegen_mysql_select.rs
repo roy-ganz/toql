@@ -99,7 +99,24 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
                 let alias = &join_attrs.join_alias;
-                //self.select_columns.push(String::from("true"));
+                
+
+                // Don't select join, if on clause has on_handler or uses parameters <..> 
+                /* if let Some(s) = &join_attrs.on_sql {
+                    let regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+                    if regex.is_match(s) {
+                         if field.number_of_options > 1
+                            || (field.number_of_options == 1 && field.preselect == true)
+                        {
+
+
+                        }
+
+                } */
+
+                //if join_attrs. TODO Skip for on_handler 
+                
+            
 
                 // Add discriminatory field for left join
                  if field.number_of_options > 1

@@ -28,7 +28,10 @@ wildcard = { wildcard_path? ~ "*" }
 aggregation = @{"!"}
 field = { sort? ~ hidden? ~ field_path }
 field_clause = { field ~ aggregation? ~ field_filter?}
-clause = { field_clause | ( lpar ~ expr ~ rpar) } 
+predicate_arg =  { value+}
+predicate_name = { "@" ~ name}
+predicate_clause = { predicate_name ~ predicate_arg?}
+clause = { field_clause | predicate_clause |( lpar ~ expr ~ rpar) } 
 concat = { "," | ";" }
 
 lpar = @{"("}

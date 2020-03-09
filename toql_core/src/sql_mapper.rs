@@ -30,6 +30,7 @@
 //!
 
 
+use crate::predicate_handler::{PredicateHandler, DefaultPredicateHandler};
 use crate::alias::AliasFormat;
 
 use std::collections::HashMap;
@@ -105,8 +106,8 @@ pub struct FieldOptions {
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
-    pub(crate) filter_only: bool, // This field cannot be loaded, its only used as a filter
     pub(crate) aux_params: HashMap<String, String>, // Auxiliary params
+    pub(crate) on_params: Vec<String>,  // Identity params for on clauses
 }
 
 impl FieldOptions {
@@ -118,8 +119,8 @@ impl FieldOptions {
             count_select: false,
             skip_wildcard: false,
             roles: HashSet::new(),
-            filter_only: false,
-            aux_params: HashMap::new()
+            aux_params: HashMap::new(),
+            on_params: Vec::new()
         }
     }
 
@@ -157,12 +158,7 @@ impl FieldOptions {
         self
     }
 
-    /// The field can only be used to filter query results.
-    /// It is ommitted in the select statement and cannot be deserialized
-    pub fn filter_only(mut self, filter_only: bool) -> Self {
-        self.filter_only = filter_only;
-        self
-    }
+    
      /// Additional build param. This is used by the query builder together with
      /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
      /// and field handlers.
@@ -224,6 +220,41 @@ impl JoinOptions {
     }
 }
 
+#[derive(Debug)]
+pub struct PredicateOptions {
+     pub(crate) aux_params: HashMap<String, String>,
+     pub(crate) on_params: Vec<(u8,String)>,  // Argument params for on clauses (index, name)
+     pub(crate) count_filter: bool
+}
+
+impl PredicateOptions {
+
+    pub fn new() -> Self {
+        PredicateOptions { aux_params: HashMap::new(), on_params: Vec::new(), count_filter: true}
+    }
+
+ /// Additional build param. This is used by the query builder together with
+     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
+     /// and field handlers.
+    pub fn aux_param(mut self, name: String, value: String) -> Self {
+        self.aux_params.insert(name, value);
+        self
+    }
+
+    /// Additional build param. This is used by the query builder together with
+     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
+     /// and field handlers.
+    pub fn on_param(mut self, index: u8, name: String) -> Self {
+        self.on_params.push((index, name));
+        self
+    }
+    /// By default predicates are considered when creating a count query.
+    /// However the predicate can be ignored by setting the count filter to false
+    pub fn count_filter(mut self, count_filter: bool) -> Self {
+        self.count_filter = count_filter;
+        self
+    }
+}
 
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
@@ -234,9 +265,11 @@ trait MapperFilter {
 pub struct SqlMapper {
     pub aliased_table: String,
     pub alias_format: AliasFormat,       //
-    pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>,
+    pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>, // Default field handler
+    pub(crate) predicate_handler: Arc<dyn PredicateHandler + Send + Sync>, // Default predicate handler
     pub(crate) field_order: Vec<String>,
     pub(crate) fields: HashMap<String, SqlTarget>,
+    pub(crate) predicates: HashMap<String, Predicate>,
     pub(crate) joins: HashMap<String, Join>,
     pub(crate) joins_root: Vec<String>, // Top joins
     pub(crate) joins_tree: HashMap<String, Vec<String>>, // Subjoins
@@ -251,6 +284,17 @@ pub enum JoinType {
     Left,
     Inner,
 }
+
+#[derive(Debug)]
+pub(crate) struct Predicate {
+    pub(crate) expression: String,
+    pub(crate) handler: Arc<dyn PredicateHandler + Send + Sync>, // Handler to create clauses
+    pub(crate) sql_aux_param_names: Vec<String>, // aux params in predicate statement or ? in correct order
+    pub(crate) options: PredicateOptions,
+    
+}
+
+
 
 #[derive(Debug)]
 pub(crate) struct Join {
@@ -300,13 +344,15 @@ impl SqlMapper {
     {
         SqlMapper {
             field_handler: Arc::new(handler),
+            predicate_handler: Arc::new(DefaultPredicateHandler::new()),
             aliased_table: aliased_table.into(),
             joins: HashMap::new(),
             fields: HashMap::new(),
             field_order: Vec::new(),
+            predicates: HashMap::new(),
             joins_root: Vec::new(),
             joins_tree: HashMap::new(),
-           
+            
             table_index: 0, // will be incremented before use
             alias_format: alias_format,
             alias_translation: HashMap::new(),
@@ -530,7 +576,7 @@ impl SqlMapper {
         let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
         let on_predicate = on_predicate.to_string();
         let mut sql_aux_param_names = Vec::new();
-        let on_predicate = query_param_regex.replace(&on_predicate, |e: &regex::Captures| {
+        let on_predicate = query_param_regex.replace_all(&on_predicate, |e: &regex::Captures| {
             let name = &e[1];
             sql_aux_param_names.push(name.to_string());
             "?"
@@ -587,6 +633,46 @@ impl SqlMapper {
         self
     }
 
+    pub fn map_predicate_handler<H>(&mut self, name: &str, sql_expression :&str, handler: H) 
+      where  H: 'static + PredicateHandler + Send + Sync,
+    {
+
+       self.map_predicate_handler_with_options(name, sql_expression, handler, PredicateOptions::new())
+
+    }
+    pub fn map_predicate(&mut self, name: &str, sql_expression :&str) {
+         
+        self.map_predicate_with_options(name, sql_expression, PredicateOptions::new());
+    }
+    pub fn map_predicate_handler_with_options<H>(&mut self, name: &str, sql_expression :&str, handler: H, options: PredicateOptions) 
+      where  H: 'static + PredicateHandler + Send + Sync,
+    {
+
+       let (expression, sql_aux_param_names) = Self::predicate_argument_names(sql_expression);
+                
+        let predicate = Predicate {
+            expression,
+            sql_aux_param_names,
+            handler:  Arc::new(handler),
+            options,
+        };
+        self.predicates.insert(name.to_string(), predicate);
+
+    }
+    pub fn map_predicate_with_options(&mut self, name: &str, sql_expression :&str, options: PredicateOptions) {
+         
+        let (expression, sql_aux_param_names) = Self::predicate_argument_names(sql_expression);
+                
+        let predicate = Predicate {
+            expression,
+            sql_aux_param_names,
+            handler: self.predicate_handler.clone(),
+            options,
+        };
+        self.predicates.insert(name.to_string(), predicate);
+        
+
+    }
   
 
     /// Translates a canonical sql alias into a shorter alias
@@ -687,4 +773,26 @@ impl SqlMapper {
         });
         Ok(sql.to_string())
     }
+
+    /// Extract aux parameter names and arguments from predicate expression 
+    /// Example: `SELECT 1 WHERE <a> and ? and <b>` yields  the tuple 
+    /// ("SELECT 1 WHERE ? and ? and ?" , ["a", "?", "b"] )
+    fn predicate_argument_names(sql_expression: &str) -> (String, Vec<String>) {
+                lazy_static! {
+                    static ref REGEX: regex::Regex = regex::Regex::new(r"<([\w_]+)>|\?").unwrap();
+                }
+                let mut sql_aux_param_names :Vec<String> = Vec::new();
+                
+                for cap in REGEX.captures_iter(sql_expression) {
+                    if cap[0] == *"?" {
+                        sql_aux_param_names.push("?".to_owned());
+                    } else {
+                        sql_aux_param_names.push(cap[1].to_owned());
+                    }
+                }
+
+                let replaced_sql_expression = REGEX.replace_all(sql_expression, "?");
+
+                ( replaced_sql_expression.to_owned().to_string(), sql_aux_param_names)
+         }
 }

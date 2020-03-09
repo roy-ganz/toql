@@ -49,9 +49,10 @@ pub struct JoinArg {
      #[darling(default)]
     pub join_sql: Option<String>, 
 
-    #[darling(default)]
-    pub discr_sql: Option<String>,
+    //#[darling(default)]
+    //pub discr_sql: Option<String>,
 }
+
 
 // Attribute on struct field
 #[derive(Debug, FromField)]
@@ -61,6 +62,7 @@ pub struct ToqlField {
     pub ty: syn::Type,
     #[darling(default)]
     pub join: Option<JoinArg>,
+     
     #[darling(default)]
     pub column: Option<String>,
     #[darling(default)]
@@ -95,6 +97,10 @@ pub struct ToqlField {
     pub handler: Option<Path>,
     #[darling(multiple)]
     pub param: Vec<ParamArg>,
+
+    #[darling(multiple)]
+    pub on_param: Vec<OnParamArg>,
+            
 }
 
 impl ToqlField {
@@ -204,14 +210,27 @@ pub enum RenameCase {
     MixedCase,
 }
 #[derive(FromMeta, Clone, Debug)]
-pub struct MapArg {
+pub struct PredicateArg {
     pub field: String,
     pub sql: String,
 
     #[darling(default)]
     pub handler: Option<Path>,
+
+    #[darling(multiple)]
+    pub on_param: Vec<PredicateOnParamArg>,
 }
 
+#[derive(FromMeta, Clone, Debug)]
+pub struct OnParamArg {
+    pub name: String,
+}
+#[derive(FromMeta, Clone, Debug)]
+pub struct PredicateOnParamArg {
+    pub name: String,
+    #[darling(default)]
+    pub index: u8,
+}
 #[derive(FromMeta, Clone, Debug)]
 pub struct ParamArg {
     pub name: String,
@@ -244,7 +263,7 @@ pub struct Toql {
     #[darling(default)]
     pub serde_key: bool,
     #[darling(multiple)]
-    pub map_filter: Vec<MapArg>,
+    pub predicate: Vec<PredicateArg>,
     #[darling(multiple)]
     pub insdel_role: Vec<String>,
     #[darling(multiple)]
@@ -290,7 +309,7 @@ impl quote::ToTokens for Toql {
             skip_select,
             skip_query_builder,
             serde_key: _,
-            map_filter: _,
+            predicate: _,
             insdel_role: _,
             upd_role: _,
             wildcard:_,

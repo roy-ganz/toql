@@ -68,6 +68,7 @@ pub use toql_core::sql_mapper;
 pub use toql_core::sql_mapper_registry;
 pub use toql_core::field_handler;
 pub use toql_core::join_handler;
+pub use toql_core::predicate_handler;
 
 pub use toql_derive as derive;
 
