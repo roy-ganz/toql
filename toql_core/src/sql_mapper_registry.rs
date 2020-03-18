@@ -25,8 +25,10 @@ impl SqlMapperRegistry {
         }
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
+      let now = std::time::Instant::now();
         let m = SqlMapper::from_mapped_with_alias::<M>(&M::table_alias(), self.alias_format.clone());
         self.mappers.insert(String::from(M::type_name()), m);
+         println!("Mapped `{}` in {}ms",  M::type_name(), now.elapsed().as_millis());
         M::type_name()
     }
     pub fn insert_new_mapper_with_handler<M: Mapped, H>(&mut self, handler: H) -> String

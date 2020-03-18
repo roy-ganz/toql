@@ -1,4 +1,5 @@
 
+
 use std::collections::HashMap;
  use crate::sql_builder::SqlBuilderError;
 
@@ -40,7 +41,11 @@ impl PredicateHandler for DefaultPredicateHandler {
         predicate: (String, Vec<String>),
         _aux_params: &HashMap<String, String>,
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        Ok(Some((format!("EXISTS ({})", predicate.0), predicate.1)))
+        let mut sql_params= Vec::new();
+        for p in predicate.1 {
+            sql_params.push(p);
+        }
+        Ok(Some((format!("({})", predicate.0),sql_params)))
     }
    
 

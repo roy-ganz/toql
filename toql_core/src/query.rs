@@ -153,6 +153,15 @@ impl<T: Into<Query> + Clone> Into<Query> for &Vec<T> {
         query
     }
 } 
+impl<T: Into<Query> + Clone> Into<Query> for &[T] {
+    fn into(self) -> Query {
+        let mut query = Query::new();
+        for key in self {
+            query = query.or(key.clone());
+        }
+        query
+    }
+} 
 
 impl FilterArg for bool {
     fn to_sql(&self) -> String {

@@ -14,6 +14,8 @@ use toql_core::mutate::{Delete, Diff, DuplicateStrategy, Insert, InsertDuplicate
 use toql_core::query::Query;
 use toql_core::select::Select;
 use toql_core::sql_mapper_registry::SqlMapperRegistry;
+ use toql_core::sql_mapper::SqlMapper;
+
 
 use core::borrow::Borrow;
 use toql_core::log_sql;
@@ -371,17 +373,17 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn select_one<K>(&mut self, key: K) -> Result<<K as toql_core::key::Key>::Entity>
     where
         Self: Select<<K as toql_core::key::Key>::Entity, Error = ToqlMySqlError>,
-        K: toql_core::key::Key + toql_core::sql_predicate::SqlPredicate,
+        K: toql_core::key::Key ,
         <K as toql_core::key::Key>::Entity: Keyed + crate::row::FromResultRow<<K as toql_core::key::Key>::Entity>,
     {
-        use toql_core::sql_predicate::SqlPredicate;
+        
         use toql_core::select::Select;
         use crate::error::ToqlMySqlError;
         use crate::row::from_query_result;
         use toql_core::error::ToqlError;
 
         let conn = self.conn();
-        let (predicate, params) = <K as SqlPredicate>::sql_predicate(&key, &Self::table_alias());
+        let (predicate, params) = toql_core::key::sql_predicate(&[key], &Self::table_alias());
          let select_stmt = format!(
             "{} WHERE {} LIMIT 0,2",
             <Self as Select<<K as toql_core::key::Key>::Entity>>::select_sql(None),
@@ -405,11 +407,10 @@ impl<C: GenericConnection> MySql<'_, C> {
     }
     /// Selects a single struct for a given key.
     /// This will select all base fields and joins. Merged fields will be skipped
-    pub fn select_many<P>(&mut self, predicates: &[P]) -> Result<Vec<P::Entity>>
+    pub fn select_many<T>(&mut self, predicate: (String, Vec<String>)) -> Result<Vec<T>>
     where
-        Self: Select<P::Entity, Error = ToqlMySqlError>,
-        P::Entity: crate::row::FromResultRow<P::Entity> + toql_core::key::Keyed, 
-        P: toql_core::sql_predicate::SqlPredicate,
+        Self: Select<T, Error = ToqlMySqlError>,
+        T: crate::row::FromResultRow<T> + toql_core::key::Keyed, 
         
     {
         use toql_core::sql_predicate::SqlPredicate;
@@ -420,31 +421,30 @@ impl<C: GenericConnection> MySql<'_, C> {
 
 
 
+
         let conn = self.conn();
 
-        let mut predicate = String::new();
-         let mut params = Vec::new();
+        let (stmt, params) = predicate;
+         
 
-         for i in predicates {
-             let (pr, pa) = i.sql_predicate(&Self::table_alias());
-             predicate.push_str(&pr);
-             params.extend_from_slice(&pa);
-         }
-
+        
        // let (predicate, params) = predicate.sql_predicate(&Self::table_alias());
          let select_stmt = format!(
             "{} WHERE {}",
-            <Self as Select<P::Entity>>::select_sql(None),
-            predicate
+            <Self as Select<T>>::select_sql(None),
+            stmt
         );
+        println!("{}", select_stmt);
         log_sql!(select_stmt, params);
 
         let entities_stmt = conn.prep_exec(select_stmt, &params)?;
-        let entities = from_query_result::<P::Entity>(entities_stmt)?;
+        let entities = from_query_result::<T>(entities_stmt)?;
        
         Ok(entities)
     
     }
+
+    
 
    /*  /// Selects a single struct for a given key.
     /// This will select all base fields and join. Merged fields will be skipped
@@ -474,15 +474,37 @@ impl<C: GenericConnection> MySql<'_, C> {
         T::select_many(key, conn, first, max)
     }  */
 
-    /// Load a struct with dependencies for a given Toql query.
+
+     /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn load_one<T>(&mut self, query: &Query, mappers: &SqlMapperRegistry) -> Result<T>
+    pub fn count<T>(&mut self, query: &Query, mapper: &SqlMapper) -> Result<u64>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
     {
-        <Self as Load<T>>::load_one(self, query, mappers)
+        
+         let mut result = toql_core::sql_builder::SqlBuilder::new()
+                    .build(mapper, &query, self.roles()).map_err(|e|toql_core::error::ToqlError::SqlBuilderError(e))?;
+         let (stmt, params) = (result.count_stmt(), result.count_params());           
+         log_sql!(stmt, params);       
+         let result = self.conn.prep_exec(&stmt, &params)?;
+
+        let count = result.into_iter().next().unwrap().unwrap().get(0).unwrap();
+
+       Ok(count)
+    }
+
+
+    /// Load a struct with dependencies for a given Toql query.
+    ///
+    /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
+    pub fn load_one<T>(&mut self, query: &Query, registry: &SqlMapperRegistry) -> Result<T>
+    where
+        Self: Load<T, Error = ToqlMySqlError>,
+        T: toql_core::key::Keyed,
+    {
+        <Self as Load<T>>::load_one(self, query, registry)
     }
 
     /// Load a vector of structs with dependencies for a given Toql query.
@@ -493,36 +515,80 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn load_many<T>(
         &mut self,
         query: &Query,
-        mappers: &SqlMapperRegistry,
+        registry: &SqlMapperRegistry,
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
     {
-        <Self as Load<T>>::load_many(self, query, mappers, page)
+        <Self as Load<T>>::load_many(self, query, registry, page)
     }
 }
 
 /// Helper function to convert result from SQlBuilder into SQL (MySql dialect).
 pub fn sql_from_query_result(
     result: &SqlBuilderResult,
-    hint: &str,
+    modifier: &str,
     offset: u64,
     max: u16,
 ) -> String {
-    let mut s = String::from("SELECT ");
+
+    let mut extra = String::from("LIMIT ");
+    extra.push_str(&offset.to_string());
+    extra.push(',');
+    extra.push_str(&max.to_string());
+
+    result.query_stmt(modifier, &extra)
+    /* let mut s = String::from("SELECT ");
 
     if !hint.is_empty() {
         s.push_str(hint);
         s.push(' ');
     }
-
+    s.push_str(&result.select_clause);
     result.sql_body(&mut s);
     s.push_str(" LIMIT ");
     s.push_str(&offset.to_string());
     s.push(',');
     s.push_str(&max.to_string());
 
-    s
+    s */
 }
+
+
+
+pub fn insert_order_clause<K>(keys: &[K], alias:& str) -> String
+where K: toql_core::key::Key
+{
+	
+	
+    if keys.is_empty() {
+    	return String::new();
+	}
+    let mut clause = String::new();
+	for col in K::columns() {
+	    	
+    	clause.push_str("FIELD(");
+    	clause.push_str(alias);
+    	clause.push('.');
+    	clause.push_str( &col);
+        clause.push_str(", ");
+    	
+     	for k in keys {
+        	for a  in k.params() {
+            	clause.push_str(&a);
+            	clause.push_str(", ");
+            }
+            clause.pop();
+            clause.pop();
+	    }
+        clause.push_str("), ")
+    }
+	
+	clause.pop();
+	clause.pop();
+
+    clause
+}
+

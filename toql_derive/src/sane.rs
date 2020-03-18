@@ -1,4 +1,5 @@
 use crate::annot::OnParamArg;
+use crate::annot::Pair;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
@@ -35,7 +36,7 @@ impl Struct {
             .predicate
             .iter()
             .map(|a| PredicateArg {
-                field: a.field.to_mixed_case(),
+                name: a.name.to_mixed_case(),
                 sql: a.sql.clone(),
                 handler: a.handler.clone(),
                 on_param: a.on_param.clone(),
@@ -91,6 +92,7 @@ pub struct JoinField {
     pub on_sql: Option<String>,
     pub key: bool,
     pub aux_params: Vec<ParamArg>,
+    pub columns: Vec<Pair>
 }
 
 #[derive(Clone)]
@@ -299,7 +301,8 @@ impl Field {
                 translated_columns_map_code,
                 on_sql: field.join.as_ref().unwrap().on_sql.clone(),
                 key: field.key,
-                aux_params :  field.param.clone()
+                aux_params :  field.param.clone(),
+                columns: field.join.as_ref().unwrap().columns.clone()
             })
         } else if field.merge.is_some() {
             if field.key {

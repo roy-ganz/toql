@@ -6,7 +6,10 @@
 //! 
 
 
+use std::collections::HashSet;
+use std::collections::HashMap;
 use std::borrow::Borrow;
+
 
 
 /// Trait to define key type of a Toql entity.
@@ -40,6 +43,7 @@ where
     T: Borrow<str>,
     U: Borrow<str>,
 {
+    
     let mut params: Vec<String> = Vec::new();
     let mut predicate = String::new();
 
@@ -89,6 +93,7 @@ where
         predicate.pop();
         predicate.push(')');
     }
+    
     (predicate, params)
 }
 
@@ -204,8 +209,84 @@ pub trait Key {
 
     /// Return key values as params. Useful to loop across a composite key.
     fn params(&self) -> Vec<String>;
-  
+
+     
 }
+
+ 
+
+    /// Returns SQL predicate for collection. 
+    /// This may be overridded for simple primary keys that are build with IN(..)
+    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> (String, Vec<String>) 
+    where K: crate::key::Key, Q: 'a + Borrow<K>
+    {
+        let mut predicate = String::new();
+         let mut params = Vec::new();
+
+         for k in keys {
+            K::columns().iter().zip(k.borrow().params()).for_each(|(col, par)| {
+             predicate.push_str(alias);
+             predicate.push('.');
+           
+             predicate.push_str(&col);
+             predicate.push_str("= ? AND ");
+             params.push(par);
+            });
+            predicate.pop();
+            predicate.pop();
+            predicate.pop();
+            predicate.pop();
+            predicate.pop();
+            
+            predicate.push_str(" OR ")
+         }
+
+         predicate.pop();
+         predicate.pop();
+         predicate.pop();
+         predicate.pop();
+
+         (predicate, params)
+     }
+
+     pub fn sql_expression<'a, K, Q>(keys: &[Q], sql:&str) -> (String, Vec<String>) 
+    where K: crate::key::Key, Q: 'a + Borrow<K>
+    {
+         let mut predicate = String::new();
+         let mut params = Vec::new();
+
+         
+
+          for k in keys {
+              // TODO check number of params equal ? in sql
+              predicate.push_str(sql);
+              predicate.push_str(" OR ");
+              params.extend_from_slice(&k.borrow().params());
+          }
+
+         predicate.pop();
+         predicate.pop();
+         predicate.pop();
+         predicate.pop();
+
+         (predicate, params)
+
+    }
+
+
+
+pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64> 
+ where 
+{
+    	
+	let mut translation = HashMap::new();
+	for k in keys {
+    	translation.insert( *k, id);
+    	id += 1;
+	}
+	translation
+}
+
 /* 
 pub fn default_inverse_predicate<K>(key: K, alias: &str) -> (String, Vec<String>)
 where K:Key
@@ -226,6 +307,8 @@ where K:Key
     (predicate, k.params())
 
 } */
+
+
 
 pub fn params<K>( keys: &[K]) -> Vec<String>
 where K: Key

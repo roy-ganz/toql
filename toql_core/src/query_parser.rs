@@ -44,6 +44,15 @@ impl QueryParser {
         let mut query = Query::new();
         let mut con = Concatenation::And;
 
+
+        fn unquote(quoted: &str) -> String{
+            if quoted.starts_with("'") {
+                quoted.trim_matches('\'').replace("''", "'")
+            } else {
+                quoted.to_string()
+            }
+        }
+
         for pair in pairs.flatten().into_iter() {
             let span = pair.clone().as_span();
             //   println!("Rule:    {:?}", pair.as_rule());
@@ -114,26 +123,26 @@ impl QueryParser {
                             let op = iter.next();
 
                             field.filter = match op.unwrap().to_uppercase().as_str() {
-                                "EQ" => Some(FieldFilter::Eq(iter.next().unwrap().to_string())),
+                                "EQ" => Some(FieldFilter::Eq(unquote(iter.next().unwrap()))),
                                 "EQN" => Some(FieldFilter::Eqn),
-                                "NE" => Some(FieldFilter::Ne(iter.next().unwrap().to_string())),
+                                "NE" => Some(FieldFilter::Ne(unquote(iter.next().unwrap()))),
                                 "NEN" => Some(FieldFilter::Nen),
-                                "GT" => Some(FieldFilter::Gt(iter.next().unwrap().to_string())),
-                                "GE" => Some(FieldFilter::Ge(iter.next().unwrap().to_string())),
-                                "LT" => Some(FieldFilter::Lt(iter.next().unwrap().to_string())),
-                                "LE" => Some(FieldFilter::Le(iter.next().unwrap().to_string())),
-                                "LK" => Some(FieldFilter::Lk(iter.next().unwrap().to_string())),
-                                "IN" => Some(FieldFilter::In(iter.map(String::from).collect())),
-                                "OUT" => Some(FieldFilter::Out(iter.map(String::from).collect())),
+                                "GT" => Some(FieldFilter::Gt(unquote(iter.next().unwrap()))),
+                                "GE" => Some(FieldFilter::Ge(unquote(iter.next().unwrap()))),
+                                "LT" => Some(FieldFilter::Lt(unquote(iter.next().unwrap()))),
+                                "LE" => Some(FieldFilter::Le(unquote(iter.next().unwrap()))),
+                                "LK" => Some(FieldFilter::Lk(unquote(iter.next().unwrap()))),
+                                "IN" => Some(FieldFilter::In(iter.map(unquote).collect())),
+                                "OUT" => Some(FieldFilter::Out(iter.map(unquote).collect())),
                                 "BW" => Some(FieldFilter::Bw(
-                                    iter.next().unwrap().to_string(),
-                                    iter.next().unwrap().to_string(),
+                                    unquote(iter.next().unwrap()),
+                                    unquote(iter.next().unwrap()),
                                 )),
-                                "RE" => Some(FieldFilter::Re(iter.next().unwrap().to_string())),
+                                "RE" => Some(FieldFilter::Re(unquote(iter.next().unwrap()))),
                                 //     "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
                                 "FN" => Some(FieldFilter::Fn(
-                                    iter.next().unwrap().to_string(),
-                                    iter.map(String::from).collect(),
+                                    unquote(iter.next().unwrap()),
+                                    iter.map(unquote).collect(),
                                 )),
                                 _ => {
                                     return Err(ToqlError::QueryParserError(Error::new_from_span(
@@ -167,7 +176,7 @@ impl QueryParser {
                     if let Some(t) = token {
                         if let QueryToken::Predicate(ref mut predicate) = t {
                               let iter = span.as_str().split_whitespace();
-                                predicate.args = iter.map(String::from).collect();
+                                predicate.args = iter.map(unquote).collect();
                         }
                     }
                 },

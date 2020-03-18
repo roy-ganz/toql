@@ -22,9 +22,9 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
         for args in &toql.mapped_predicates {
             let rust_struct_visibility = &toql.rust_struct_visibility;
             
-            let fnc_name= &args.field.to_snake_case();
+            let fnc_name= &args.name.to_snake_case();
             let fnc_ident = Ident::new(fnc_name, Span::call_site());
-            let toql_field=  args.field.as_str().trim_start_matches("r#");
+            let toql_field=  args.name.as_str().trim_start_matches("r#");
             builder_fields.push(quote!(
                         #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: Predicate {
                             self . 0 . push_str ( #toql_field ) ;

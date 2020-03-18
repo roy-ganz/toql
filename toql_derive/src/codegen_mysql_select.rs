@@ -122,9 +122,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
                  if field.number_of_options > 1
                     || (field.number_of_options == 1 && field.preselect == true)
                 {
-                    let none_format = format!("{}.{{}} IS NOT NULL", &join_attrs.join_alias);
+                    let none_format = format!("{{}}_{}.{{}} IS NOT NULL", &join_attrs.join_alias);
                     let none_condition = quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
-                                                format!(#none_format,  &other_column)
+                                                format!(#none_format, canonical_alias, &other_column)
                                         }).collect::<Vec<String>>().join(" AND "));
 
                     self.select_columns.push(String::from("{}"));
@@ -132,8 +132,9 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 }
 
                 self.select_columns.push(String::from("{}"));
+                let alias_format= format!("{{}}_{}", alias);
                 self.select_columns_params.push(
-                    quote!( <Self as toql::select::Select<#rust_type_ident>>:: columns_sql(#alias)),
+                    quote!( <Self as toql::select::Select<#rust_type_ident>>:: columns_sql(&format!(#alias_format, canonical_alias))),
                 );
 
                 if join_attrs.key {
@@ -165,38 +166,48 @@ impl<'a> GeneratedMysqlSelect<'a> {
                 };
 
                 self.select_joins.push(format!(
-                    "{}JOIN {} {} {{}}ON ({{}}{{}})",
+                    "{}JOIN {} {{}}_{} {{}}ON ({{}}{{}})",
                     join_type, join_attrs.sql_join_table_name, &join_attrs.join_alias
                 ));
-
+            let alias_format= format!("{{}}_{}",rust_field_name);
+            self.select_joins_params.push(quote!(canonical_alias));
                 self.select_joins_params
-                    .push(quote!(<Self as toql::select::Select<#rust_type_ident>> :: joins_sql()));
+                    .push(quote!(<Self as toql::select::Select<#rust_type_ident>> :: joins_sql(&format!(#alias_format, canonical_alias))));
 
                 let select_join_params_format = format!(
-                    "{}.{{}} = {}.{{}}",
-                    &self.sql_table_alias, join_attrs.join_alias
+                    "{{alias}}.{{}} = {{alias}}_{}.{{}}",
+                     join_attrs.join_alias
                 );
-                self.select_joins_params.push(quote!(
+               
+              
+                self.select_joins_params.push(
+                    
+                    if !join_attrs.columns.is_empty() {
+                        let columns= &join_attrs.columns;
+                        let col_format = &join_attrs.columns.iter().map(|p| { 
+                            format!("{{alias}}.{} = {{alias}}_{}.{}", &p.this, &join_attrs.join_alias, &p.other)
+                        }).collect::<Vec<String>>().join(" AND ");
+
+                          quote!(  &format!(#col_format, alias = canonical_alias))
+                   } else {
+                    quote!(
                     {
-
-
-                      <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
-
+                     <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
                         .map(|other_column| {
                             #default_self_column_code;
-                            let self_column= #columns_map_code;
-
-                        format!(#select_join_params_format, self_column, other_column)
+                        format!(#select_join_params_format, default_self_column, other_column, alias = canonical_alias)
                         }).collect::<Vec<String>>().join(" AND ")
+                    })
                     }
-                ));
+                );
                 self.select_joins_params
                     .push(if let Some(ref sql) = &join_attrs.on_sql {
-                        let on_sql = format!(
+                        let on_sql_format = format!(
                             " AND ({})",
-                            sql.replace("..", &format!("{}.", join_attrs.join_alias))
+                            sql.replace("...", &format!("{{alias}}_{}.", join_attrs.join_alias))
+                            .replace("..","{alias}.")
                         );
-                        quote!( #on_sql)
+                        quote!( &format!(#on_sql_format, alias = canonical_alias))
                     } else {
                         quote!("")
                     });
@@ -231,9 +242,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
         );
 
         let columns_sql_code = if select_columns_params.is_empty() {
-            quote!(format!(#select_columns, alias=alias))
+            quote!(format!(#select_columns, alias= canonical_alias))
         } else {
-            quote!(format!(#select_columns, #(#select_columns_params),*, alias = alias))
+            quote!(format!(#select_columns, #(#select_columns_params),*, alias = canonical_alias))
         };
         let joins_sql_code = if select_joins_params.is_empty() {
             quote!( String::from(#select_joins))
@@ -250,17 +261,17 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                                 String::from(#sql_table_alias)
                             }
 
-                           fn columns_sql(alias: &str) -> String {
+                           fn columns_sql(canonical_alias: &str) -> String {
                                   #columns_sql_code
 
                            }
-                           fn joins_sql() -> String {
+                           fn joins_sql(canonical_alias:&str) -> String {
                                    #joins_sql_code
                            }
                            fn select_sql(join: Option<&str>) -> String {
                                    format!( #select_statement,
                                    <Self as  toql::select::Select<#struct_ident>>::columns_sql(#sql_table_alias),
-                                   <Self as  toql::select::Select<#struct_ident>>::joins_sql(),
+                                   <Self as  toql::select::Select<#struct_ident>>::joins_sql(#sql_table_alias),
                                    join.unwrap_or(""))
                            }
 

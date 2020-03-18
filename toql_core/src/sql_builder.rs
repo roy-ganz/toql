@@ -81,7 +81,7 @@ impl WildcardScope {
             WildcardScope::All => true,
             WildcardScope::Only(scopes) => {
                 let mut field = String::from(path);
-                if path.ends_with('_') {
+                if !path.is_empty() && !path.ends_with('_') {
                     field.push('_');
                 }
                 field.push_str("*");
@@ -700,15 +700,16 @@ impl SqlBuilder {
                                         temp_scope.push_str(field_name);
                                         temp_scope.as_str()
                                     };
+                                    //println!("Test {} in {:?}", field_for_scope_test, self.wildcard_scope);
                                     self.wildcard_scope.contains_field(&field_for_scope_test)
                                 }
                             };
 
                             if !wildcard_in_scope {
-                                //   println!("Skipped {:?}", field_name);
+                                 //  println!("Skipped {:?}", field_name);
                                 continue;
                             } else {
-                               // println!("Included {:?}", field_name);
+                                //println!("Included {:?}", field_name);
                             }
 
                             // Skip field if it doesn't belong to wildcard path
@@ -1019,6 +1020,11 @@ impl SqlBuilder {
                     },
                      QueryToken::Predicate(query_predicate) => {
                          
+                         // Predicates work only on base entity
+                        if !self.subpath.is_empty()
+                        {
+                            continue;
+                        }
                           
 
                          match sql_mapper.predicates.get(&query_predicate.name) {
@@ -1058,18 +1064,43 @@ impl SqlBuilder {
                                 let args = predicate_param_values(&predicate.sql_aux_param_names, &aux_params,  &query_predicate.args,&query_predicate.name )?;
                                 if let Some((expr, args)) = predicate.handler.build_predicate(( predicate.expression.to_owned(), args), aux_params)? {
 
-                                    if ! result.where_clause.is_empty() {
-                                        result.where_clause.push_str(" AND ");
+                                   if need_where_concatenation == true {
+                                        if pending_where_parens > 0 {
+                                            SqlBuilderResult::push_concatenation(
+                                                &mut result.where_clause,
+                                                &pending_where_parens_concatenation,
+                                            );
+                                        } else {
+                                            SqlBuilderResult::push_concatenation(
+                                                &mut result.where_clause,
+                                                &Some(query_predicate.concatenation.clone()), // IMPROVE
+                                            );
+                                        }
                                     }
-                                    result.where_clause.push_str(&expr);
+                                    SqlBuilderResult::push_pending_parens(
+                                        &mut result.where_clause,
+                                        &pending_where_parens,
+                                    );
+                                    SqlBuilderResult::push_filter(
+                                        &mut result.where_clause,
+                                        &expr,
+                                    );
+                                   
                                     result.where_params.extend_from_slice(&args);
+                                    
+                                    pending_where_parens = 0;
+                                    need_where_concatenation = true;
                                 }
 
-                                // Add Parameters for on clauses
+                                // Add On Parameters for on clauses 
                                 for (i,n) in &predicate.options.on_params {
                                     let a = query_predicate.args.get(*i as usize).ok_or(SqlBuilderError::PredicateArgumentMissing(query_predicate.name.to_string()))?;
                                     on_params.insert(n.to_string(), a.to_string());
                                 }
+
+                                
+                            
+
 
                             },
                             None => {

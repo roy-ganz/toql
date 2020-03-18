@@ -20,7 +20,7 @@ impl<'a> GeneratedToqlMapper<'a> {
         
 
         for mapping in &rust_struct.mapped_predicates {
-            let toql_field_name = &mapping.field;
+            let toql_field_name = &mapping.name;
             let sql_mapping = &mapping.sql;
             let sql_expr = if sql_mapping.contains(".."){
                 let sql_mapping = sql_mapping.replace("..", "{alias}."); 
@@ -80,27 +80,49 @@ impl<'a> GeneratedToqlMapper<'a> {
                 let toql_field_name = &field.toql_field_name;
                 let join_alias = &join_attrs.join_alias;
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
+                
+
+               // self.field_mappings.push(quote!( )); // use Toql field name to build join alias (prevents underscore in name)))
 
                 // Add discriminator field for LEFT joins
-                if field.number_of_options > 1
+               let left_join_discriminator = if field.number_of_options > 1
                     || (field.number_of_options == 1 && field.preselect == true)
                 {
-                    self.field_mappings.push(
+                 
                                     quote!(
+                                        let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias);
                                         let none_condition = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
-                                                #default_self_column_code;
-                                                let self_column = #columns_map_code;
-                                                format!("({} IS NOT NULL)",  & mapper.translate_aliased_column(canonical_sql_alias, &self_column))
+                                                
+                                              //  #default_self_column_code;
+                                              //  let self_column = #columns_map_code;
+                                                format!("({} IS NOT NULL)",  & mapper.translate_aliased_column(&join_alias, &other_column))
                                         }).collect::<Vec<String>>().join(" AND ");   
                                         mapper.map_field_with_options(
                                         &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::FieldOptions::new().preselect(true));
                                 )
-                                );
-                }
+                 
+                } else {
+                    quote!()
+                };
+
+                // If no columns are provided, use default
+                let col_array = if join_attrs.columns.is_empty() {
+                    quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns())
+                } else {
+                     let other_columns: Vec<String> = join_attrs.columns
+                        .iter()
+                        .map(|column| String::from(column.other.as_str()))
+                        .collect::<Vec<_>>();
+                        quote!( [ #(String::from(#other_columns)),* ])
+                };
 
                 let join_expression_builder = quote!(
-                  let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias); // use Toql field name to build join alias (prevents underscore in name)
-                  let join_expression = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                    
+                  let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias);
+
+                  #left_join_discriminator
+                  //let join_expression = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                  let join_expression =  #col_array .iter()
                     .map(|other_column| {
                         #default_self_column_code;
                         let self_column= #columns_map_code;

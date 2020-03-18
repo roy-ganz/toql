@@ -64,13 +64,13 @@ impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sy
         write!(f, "FieldHandler()")
     }
 }
-
+/* 
 pub fn sql_param(s: String) -> String {
     if s.chars().next().unwrap_or(' ') == '\'' {
         return unquote(&s).expect("Argument invalid"); // Must be valid, because Pest rule
     }
     s
-}
+} */
 
 impl FieldHandler for BasicFieldHandler {
    
@@ -82,38 +82,38 @@ impl FieldHandler for BasicFieldHandler {
     ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Eqn => Ok(Some((format!("{} IS NULL", select.0), select.1))),
             FieldFilter::Ne(criteria) => Ok(Some((format!("{} <> ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Nen => Ok(Some((format!("{} IS NOT NULL", select.0), select.1))),
             FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0), {
-                select.1.push(sql_param(lower.clone()));
-                select.1.push(sql_param(upper.clone()));
+                select.1.push(lower.clone());
+                select.1.push(upper.clone());
                 select.1
             }))),
             FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::In(args) => Ok(Some((
@@ -126,7 +126,7 @@ impl FieldHandler for BasicFieldHandler {
                         .join(",")
                 ),
                 {
-                    let a: Vec<String> = args.iter().map(|a| sql_param(a.to_string())).collect();
+                    let a: Vec<String> = args.iter( ).map(|a| a.to_string()).collect();
                     select.1.extend_from_slice(&a);
                     select.1
                 },
@@ -141,14 +141,14 @@ impl FieldHandler for BasicFieldHandler {
                         .join(",")
                 ),
                 {
-                    let a: Vec<String> = args.iter().map(|a| sql_param(a.to_string())).collect();
+                    let a: Vec<String> = args.iter().map(|a| a.to_string()).collect();
                     select.1.extend_from_slice(&a);
                     select.1
                 },
             ))),
             //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
             FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", select.0), {
-                select.1.push(sql_param(criteria.clone()));
+                select.1.push(criteria.clone());
                 select.1
             }))),
             FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(name.to_owned())), // Must be implemented by user

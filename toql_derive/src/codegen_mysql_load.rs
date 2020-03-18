@@ -246,6 +246,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 registry: &toql::sql_mapper_registry::SqlMapperRegistry)
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
+                    if entities.is_empty() {
+                        return Ok(());
+                    }
                     #(#path_loaders)*
                     Ok(())
                 }
@@ -306,12 +309,12 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     #optional_add_primary_keys
 
-                    toql::log_sql!(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params());
+                    toql::log_sql!(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.query_params());
 
 
 
 
-                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.params())?;
+                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.query_params())?;
                     #from_query_result
 
                     if entities.len() > 1 {
@@ -356,8 +359,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     #optional_add_primary_keys
 
 
-                    toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params());
-                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.params())?;
+                    toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.query_params());
+                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.query_params())?;
                     #from_query_result
                     
                     let mut count_result = None;
@@ -371,8 +374,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         let result = toql::sql_builder::SqlBuilder::new()
                         #(#ignored_paths)*
                         .build_count(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
-                        toql::log_sql!(toql::mysql::sql_from_query_result( &result, "SQL_CALC_FOUND_ROWS", 0, 0), result.params());
-                        self.conn().prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), result.params())?; // Don't select any rows
+                        toql::log_sql!(toql::mysql::sql_from_query_result( &result, "SQL_CALC_FOUND_ROWS", 0, 0), result.query_params());
+                        self.conn().prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), result.query_params())?; // Don't select any rows
 
                         toql::log_sql!("SELECT FOUND_ROWS();");
                         let r = self.conn().query("SELECT FOUND_ROWS();")?;
@@ -620,8 +623,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     // foreign keys
 
 
-                                    toql::log_sql!(result.to_sql(), result.params());
-                                    let entities_stmt = self.conn().prep_exec(result.to_sql(), result.params())?;
+                                    toql::log_sql!(result.query_stmt("", ""), result.query_params());
+                                    let entities_stmt = self.conn().prep_exec(result.query_stmt("", ""), result.query_params())?;
                                     let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Keyed>::Key, <#struct_ident as toql::key::Keyed>::Key>(entities_stmt)?;
                                     
                                     if !merge_entities.is_empty() {

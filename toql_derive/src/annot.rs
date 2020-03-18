@@ -211,7 +211,7 @@ pub enum RenameCase {
 }
 #[derive(FromMeta, Clone, Debug)]
 pub struct PredicateArg {
-    pub field: String,
+    pub name: String,
     pub sql: String,
 
     #[darling(default)]

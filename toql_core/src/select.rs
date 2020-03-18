@@ -10,11 +10,11 @@ pub trait Select<T: Keyed> {
 
     /// SQL fragment to select columns
     /// (internal use)
-    fn columns_sql(alias: &str) -> String;
+    fn columns_sql(canonical_alias: &str) -> String;
 
     /// SQL fragment to select columns
     /// (internal use)
-    fn joins_sql() -> String;
+    fn joins_sql(canonical_alias: &str) -> String;
 
     /// SQL statement to select columns
     fn select_sql(join: Option<&str>) -> String;

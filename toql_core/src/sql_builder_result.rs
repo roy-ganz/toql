@@ -44,11 +44,8 @@ impl SqlBuilderResult {
     }  
     
 
-    pub fn sql_body(&self, s: &mut String) {
-        if self.distinct {
-            s.push_str("DISTINCT ");
-        }
-        s.push_str(&self.select_clause);
+    fn sql_body(&self, s: &mut String) {
+       
         s.push_str(" FROM ");
         s.push_str(&self.aliased_table);
         if !self.join_clause.is_empty() {
@@ -68,15 +65,53 @@ impl SqlBuilderResult {
             s.push_str(&self.order_clause);
         }
     }
+  
 
-    /// Returns simple SQL.
-    pub fn to_sql(&self) -> String {
+ /// Returns count SQL statement.
+    pub fn count_stmt(&self) -> String {
         let mut s = String::from("SELECT ");
+           if self.distinct {
+            s.push_str("COUNT(DISTINCT *)");
+        } else {
+            s.push_str("COUNT(*)");
+        }
         self.sql_body(&mut s);
         s
     }
+
+    /// Returns simple SQL.
+    pub fn query_stmt(&self, modifier:&str, extra:&str) -> String {
+        let mut s = String::from("SELECT ");
+         if self.distinct {
+            s.push_str("DISTINCT ");
+        }
+        if !modifier.is_empty() {
+            s.push_str(modifier);
+            s.push(' ');
+        }
+        s.push_str(&self.select_clause);
+        self.sql_body(&mut s);
+        if !extra.is_empty() {
+              s.push(' ');
+            s.push_str(extra);
+        }
+        
+        s
+    }
+    
+    pub fn count_params(&self) -> &Vec<String> {
+        &self.combined_params // TODO
+
+        /* if self.where_params.is_empty() {
+            &self.having_params
+        } else if self.having_params.is_empty() {
+            &self.where_params
+        } else {
+            &self.combined_params
+        } */
+    }
     /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
-    pub fn params(&self) -> &Vec<String> {
+    pub fn query_params(&self) -> &Vec<String> {
         &self.combined_params
 
         /* if self.where_params.is_empty() {
