@@ -169,7 +169,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                         self.update_set_code.push(quote!(
                            #role_assert {
                             update_stmt.push_str( &format!(#set_statement, alias));
-                            params.push( entity . #rust_field_ident #unwrap_null .to_string() .to_owned());
+                            params.push( entity . #rust_field_ident .as_ref() #unwrap_null .to_string() .to_owned());
                            }
                         ));
                     }
@@ -180,7 +180,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                         if outdated.  #rust_field_ident != entity. #rust_field_ident
                         {
                                 update_stmt.push_str( &format!(#set_statement, alias));
-                                 params.push( entity . #rust_field_ident #unwrap_null .to_string() .to_owned());
+                                 params.push( entity . #rust_field_ident .as_ref() #unwrap_null .to_string() .to_owned());
 
                         }
                        }

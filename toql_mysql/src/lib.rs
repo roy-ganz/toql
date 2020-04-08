@@ -6,6 +6,7 @@
 
 use mysql::prelude::GenericConnection;
 
+use toql_core::sql_stmt::SqlArg;
 use toql_core::mutate::collection_delta_sql;
 
 use toql_core::key::Keyed;
@@ -24,6 +25,7 @@ use toql_core::log_sql;
 use toql_core::sql_builder_result::SqlBuilderResult;
 
 use std::collections::HashSet;
+use mysql::Value;
 
 //pub mod diff;
 //pub mod insert;
@@ -31,29 +33,36 @@ pub mod row;
 //pub mod select;
 pub use mysql; // Reexport for derive produced code
 
+pub mod sql_arg;
+
 pub mod error;
 use crate::error::Result;
 use crate::error::ToqlMySqlError;
+use toql_core::sql_stmt::SqlStmt;
 
-fn execute_update_delete_sql<C>(statement: (String, Vec<String>), conn: &mut C) -> Result<u64>
+use crate::sql_arg::{value_from, values_from};
+
+fn execute_update_delete_sql<C>(statement: SqlStmt, conn: &mut C) -> Result<u64>
 where
     C: GenericConnection,
 {
     let (update_stmt, params) = statement;
     log_sql!(update_stmt, params);
     let mut stmt = conn.prepare(&update_stmt)?;
-    let res = stmt.execute(params)?;
+    let res = stmt.execute( values_from(params))?;
     Ok(res.affected_rows())
 }
 
-fn execute_insert_sql<C>(statement: (String, Vec<String>), conn: &mut C) -> Result<u64>
+fn execute_insert_sql<C>(statement: SqlStmt, conn: &mut C) -> Result<u64>
 where
     C: GenericConnection,
 {
     let (insert_stmt, params) = statement;
     log_sql!(insert_stmt, params);
+
+    
     let mut stmt = conn.prepare(&insert_stmt)?;
-    let res = stmt.execute(params)?;
+    let res = stmt.execute(values_from(params))?;
     Ok(res.last_insert_id())
 }
 
@@ -188,7 +197,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_many<'a, T>(&mut self, predicate: (String, Vec<String>)) -> Result<u64>
+    pub fn delete_many<'a, T>(&mut self, predicate: SqlStmt) -> Result<u64>
     where
         T: Keyed + 'a,
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
@@ -312,7 +321,7 @@ impl<C: GenericConnection> MySql<'_, C> {
         Ok(if let Some((update_stmt, params)) = sql_stmts {
             log_sql!(update_stmt, params);
             let mut stmt = self.conn.prepare(&update_stmt)?;
-            let res = stmt.execute(params)?;
+            let res = stmt.execute(values_from(params))?;
             res.affected_rows()
         } else {
             0
@@ -352,7 +361,7 @@ impl<C: GenericConnection> MySql<'_, C> {
         let mut affected = (0, 0, 0);
 
         if let Some(insert_sql) = insert_sql {
-            affected.0 += execute_update_delete_sql(insert_sql, self.conn)?;
+            affected.0 += execute_insert_sql(insert_sql, self.conn)?;
         }
         if let Some(diff_sql) = diff_sql {
             affected.1 += execute_update_delete_sql(diff_sql, self.conn)?;
@@ -393,7 +402,7 @@ impl<C: GenericConnection> MySql<'_, C> {
         );
         log_sql!(select_stmt, params);
 
-        let entities_stmt = conn.prep_exec(select_stmt, &params)?;
+        let entities_stmt = conn.prep_exec(select_stmt, values_from(params))?;
         let mut entities = from_query_result::<<K as toql_core::key::Key>::Entity>(entities_stmt)?;
         if entities.len() > 1 {
             return Err(ToqlMySqlError::ToqlError(
@@ -559,7 +568,7 @@ pub fn sql_from_query_result(
 }
 
 
-
+/* 
 pub fn insert_order_clause<K>(keys: &[K], alias:& str) -> String
 where K: toql_core::key::Key
 {
@@ -593,4 +602,4 @@ where K: toql_core::key::Key
 
     clause
 }
-
+ */

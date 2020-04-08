@@ -36,6 +36,8 @@ use std::collections::{HashMap, HashSet};
 use std::result::Result;
 use crate::sql_mapper::Mapped;
 
+use crate::sql_stmt::SqlStmt;
+
 
 /// Trait for delete functions (They work with entity keys).
 pub trait Delete<'a, T: crate::key::Keyed + 'a> {
@@ -44,7 +46,7 @@ pub trait Delete<'a, T: crate::key::Keyed + 'a> {
     fn delete_one_sql(
         key: T::Key,
         roles: &HashSet<String>,
-    ) -> Result<(String, Vec<String>), Self::Error>
+    ) -> Result<SqlStmt, Self::Error>
     where
         T: crate::key::Keyed + crate::sql_mapper::Mapped +  'a,
     {
@@ -52,9 +54,9 @@ pub trait Delete<'a, T: crate::key::Keyed + 'a> {
     }
     /// Delete many structs, returns tuple with SQL statement and SQL params or error.
     fn delete_many_sql(
-        predicate: (String, Vec<String>),
+        predicate: SqlStmt,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
+    ) -> Result<Option<SqlStmt>, Self::Error>;
 }
 
 /// Trait for update. They work with entities
@@ -63,14 +65,14 @@ pub trait Update<'a, T: 'a> {
     fn update_one_sql<Q: Borrow<T>>(
         entity: Q,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::Error> {
+    ) -> Result<Option<SqlStmt>, Self::Error> {
         Self::update_many_sql(&[entity], roles)
     }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
     fn update_many_sql<Q: Borrow<T>>(
         entities: &[Q],
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
+    ) -> Result<Option<SqlStmt>, Self::Error>;
 }
 
 /// Trait for update. They work with entities
@@ -84,7 +86,7 @@ pub trait Diff<'a, T: 'a> {
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-    ) -> Result<Vec<(String, Vec<String>)>, Self::Error> {
+    ) -> Result<Vec<SqlStmt>, Self::Error> {
         Ok(Self::full_diff_many_sql(&[(outdated, updated)], roles)?.unwrap())
     }
 
@@ -94,7 +96,7 @@ pub trait Diff<'a, T: 'a> {
     fn full_diff_many_sql<Q: Borrow<T>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-    ) -> Result<Option<Vec<(String, Vec<String>)>>, Self::Error>;
+    ) -> Result<Option<Vec<SqlStmt>>, Self::Error>;
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
@@ -103,7 +105,7 @@ pub trait Diff<'a, T: 'a> {
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::Error> {
+    ) -> Result<Option<SqlStmt>, Self::Error> {
         Self::diff_many_sql(&[(outdated, updated)], roles)
     }
 
@@ -113,7 +115,7 @@ pub trait Diff<'a, T: 'a> {
     fn diff_many_sql<Q: Borrow<T>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
+    ) -> Result<Option<SqlStmt>, Self::Error>;
 }
 
 /// Defines a strategy to resolve the conflict, when the record to insert already exists.
@@ -137,7 +139,7 @@ pub trait Insert<'a, T: 'a> {
         entity: Q,
         strategy: DuplicateStrategy,
         roles: &HashSet<String>,
-    ) -> Result<(String, Vec<String>), Self::Error> {
+    ) -> Result<SqlStmt, Self::Error> {
         Ok(Self::insert_many_sql(&[entity], strategy, roles)?.unwrap())
     }
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
@@ -145,7 +147,7 @@ pub trait Insert<'a, T: 'a> {
         entities: &[Q],
         strategy: DuplicateStrategy,
         roles: &HashSet<String>,
-    ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
+    ) -> Result<Option<SqlStmt>, Self::Error>;
 }
 
 /// Marker Trait for insert. They work with entities.
@@ -166,9 +168,9 @@ pub fn collection_delta_sql<'a, T, I, U, D, E>(
     roles: &HashSet<String>,
 ) -> Result<
     (
-        Option<(String, Vec<String>)>,
-        Option<(String, Vec<String>)>,
-        Option<(String, Vec<String>)>,
+        Option<SqlStmt>,
+        Option<SqlStmt>,
+        Option<SqlStmt>,
     ),
     E,
 >

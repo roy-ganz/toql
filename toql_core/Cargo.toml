@@ -16,5 +16,5 @@ log= "0.4"
 regex="1.3"
 lazy_static = "1.4"
 enquote="1"
-
+chrono = "^0.4"
 

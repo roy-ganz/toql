@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::borrow::Borrow;
 
-
+use crate::sql_stmt::{SqlStmt, SqlArg};
 
 /// Trait to define key type of a Toql entity.
 pub trait Keyed {
@@ -68,13 +68,13 @@ fn predicate_from_columns_with_alias_sql<K: Key, T, U>(
     keys: &[K],
     columns: &[T],
     sql_alias: Option<U>,
-) -> (String, Vec<String>)
+) -> SqlStmt
 where
     T: Borrow<str>,
     U: Borrow<str>,
 {
     
-    let mut params: Vec<String> = Vec::new();
+    let mut params: Vec<SqlArg> = Vec::new();
     let mut predicate = String::new();
 
     if columns.len() == 1 {
@@ -130,14 +130,14 @@ where
 pub fn predicate_from_columns_sql<K: Key, T>(
     keys: &[K],
     aliased_columns: &[T],
-) -> (String, Vec<String>)
+) -> SqlStmt
 where
     T: Borrow<str>,
 {
     predicate_from_columns_with_alias_sql::<K, T, &str>(keys, aliased_columns, None)
 }
 
-pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> (String, Vec<String>)
+pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> SqlStmt
 where
     U: Borrow<str>,
 {
@@ -238,21 +238,21 @@ pub trait Key {
     fn default_inverse_columns() -> Vec<String>;
 
     /// Return key values as params. Useful to loop across a composite key.
-    fn params(&self) -> Vec<String>;
+    fn params(&self) -> Vec<SqlArg>;
 
      
 }
 
 pub trait ToSqlPredicate{
 
-    fn to_sql_predicate(&self, alias: &str) -> (String, Vec<String>);
-    fn build_sql_predicate(&self, aliased_predicate: &str) -> (String, Vec<String>);
+    fn to_sql_predicate(&self, alias: &str) ->SqlStmt;
+    fn build_sql_predicate(&self, aliased_predicate: &str) -> SqlStmt;
 }
 
 impl<T> ToSqlPredicate for T 
 where T: Key
 {
-    fn to_sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
+    fn to_sql_predicate(&self, alias: &str) -> SqlStmt {
          let mut predicate = String::new();
          let mut params = Vec::new();
 
@@ -272,7 +272,7 @@ where T: Key
 
             (predicate, params)
     }
-     fn build_sql_predicate(&self, aliased_predicate: &str) -> (String, Vec<String>) {
+     fn build_sql_predicate(&self, aliased_predicate: &str) -> SqlStmt {
 
             // todo in debug check number of ? corresponds to params
             if cfg!(debug_assertions) {
@@ -288,7 +288,7 @@ where T: Key
 impl<T> ToSqlPredicate for &[T]
 where T: ToSqlPredicate {
 
-    fn to_sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
+    fn to_sql_predicate(&self, alias: &str) -> SqlStmt {
 
     let mut predicate = String::new();
          let mut params = Vec::new();
@@ -308,7 +308,7 @@ where T: ToSqlPredicate {
         (predicate, params)
 
     }
-     fn build_sql_predicate(&self, aliased_predicate: &str) -> (String, Vec<String>) {
+     fn build_sql_predicate(&self, aliased_predicate: &str) -> SqlStmt {
 
         let mut predicate = String::new();
         let mut params = Vec::new();
@@ -338,7 +338,7 @@ where T: ToSqlPredicate {
 
     /// Returns SQL predicate for collection. 
     /// This may be overridded for simple primary keys that are build with IN(..)
-    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> (String, Vec<String>) 
+    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> SqlStmt 
     where K: crate::key::Key, Q: 'a + Borrow<K>
     {
         let mut predicate = String::new();
@@ -351,7 +351,7 @@ where T: ToSqlPredicate {
            
              predicate.push_str(&col);
              predicate.push_str("= ? AND ");
-             params.push(par);
+             params.push(SqlArg::from(par));
             });
             predicate.pop();
             predicate.pop();
@@ -370,7 +370,7 @@ where T: ToSqlPredicate {
          (predicate, params)
      }
 
-     pub fn sql_expression<'a, K, Q>(keys: &[Q], sql:&str) -> (String, Vec<String>) 
+     pub fn sql_expression<'a, K, Q>(keys: &[Q], sql:&str) -> SqlStmt
     where K: crate::key::Key, Q: 'a + Borrow<K>
     {
          let mut predicate = String::new();
@@ -431,7 +431,7 @@ where K:Key
 
 
 
-pub fn params<K>( keys: &[K]) -> Vec<String>
+pub fn params<K>( keys: &[K]) -> Vec<SqlArg>
 where K: Key
 {
     let mut params = Vec::new();
