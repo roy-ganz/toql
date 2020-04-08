@@ -11,6 +11,7 @@ use syn::Ident;
 pub(crate) struct GeneratedToqlDelup<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
+    table_alias :String,
 
     key_params_code: Vec<TokenStream>,
     key_columns_code: Vec<TokenStream>,
@@ -28,6 +29,7 @@ impl<'a> GeneratedToqlDelup<'a> {
         GeneratedToqlDelup {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
+            table_alias : toql.sql_table_alias.to_owned(),
 
             key_columns_code: Vec::new(),
             key_params_code: Vec::new(),
@@ -421,6 +423,8 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
         // Generate modules if there are keys available
         let mods = {
+            let canonical_alias = &self.table_alias;
+
             let delete_many_statement = format!(
                 "DELETE {{alias}} FROM {} {{alias}} WHERE ",
                 self.sql_table_name
@@ -456,40 +460,15 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     type Error = toql::error::ToqlError;
 
-                    fn delete_many_sql(keys: &[<#struct_ident as toql::key::Keyed>::Key],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    fn delete_many_sql(aliased_predicate: (String, Vec<String>),roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
                         {
                             #ins_role_test
 
-                            let alias= "t";
+                            let alias= #canonical_alias;
                             let mut delete_stmt =format!(#delete_many_statement, alias = alias);
-                            let (pr, params) = <<#struct_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_any_predicate(keys, alias);
+                            let (pr, params) = aliased_predicate;
                             delete_stmt.push_str(&pr);
-                            
-
-                            //let mut params :Vec<String>= Vec::new();
-
-                            /* let mut first = true;
-
-
-
-                              let key_comparison = <#struct_ident as toql::key::Key>::columns().iter()
-                                .map(|key| format!("{}.{} = ?", alias, key))
-                                .collect::<Vec<String>>()
-                                .join(" AND ");
-
-                            for key in keys {
-                                    if first {
-                                        first = false;
-                                    }else {
-                                       delete_stmt.push_str(" OR ");
-                                    }
-                                   delete_stmt.push('(');
-
-                                delete_stmt.push_str(&key_comparison);
-
-                                   delete_stmt.push(')');
-                                   params.extend_from_slice(&key.params());
-                            } */
+                          
                             if params.is_empty() {
                                 return Ok(None);
                             }

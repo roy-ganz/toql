@@ -22,9 +22,39 @@ pub trait Keyed {
 
     /// Sets the key on a given entity.
     fn try_set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
-
    
 }
+
+
+/// Trait to define key type of a Toql entity.
+pub trait KeyedSlice<K> 
+where K: Keyed
+{
+     /// Return value of the key for a given entity.
+    fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>>;
+     
+}
+
+impl<K> KeyedSlice<K> for &[K] 
+where K:Keyed
+{
+     /// Return value of the key for a given entity.
+    fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
+        let mut keys = Vec::new();
+
+        for k in *self {
+            keys.push(k.try_get_key()?);
+
+        }
+
+        Ok(keys)
+    }
+
+}
+
+
+
+
 
 pub fn keys<K: Keyed>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
     let mut keys = Vec::with_capacity(entities.len());
@@ -212,6 +242,97 @@ pub trait Key {
 
      
 }
+
+pub trait ToSqlPredicate{
+
+    fn to_sql_predicate(&self, alias: &str) -> (String, Vec<String>);
+    fn build_sql_predicate(&self, aliased_predicate: &str) -> (String, Vec<String>);
+}
+
+impl<T> ToSqlPredicate for T 
+where T: Key
+{
+    fn to_sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
+         let mut predicate = String::new();
+         let mut params = Vec::new();
+
+         Self::columns().iter().zip(self.params()).for_each(|(col, par)| {
+             predicate.push_str(alias);
+             predicate.push('.');
+           
+             predicate.push_str(&col);
+             predicate.push_str("= ? AND ");
+             params.push(par);
+            });
+            predicate.pop();
+            predicate.pop();
+            predicate.pop();
+            predicate.pop();
+            predicate.pop();
+
+            (predicate, params)
+    }
+     fn build_sql_predicate(&self, aliased_predicate: &str) -> (String, Vec<String>) {
+
+            // todo in debug check number of ? corresponds to params
+            if cfg!(debug_assertions) {
+                let expect = aliased_predicate.matches('?').count(); 
+                if expect != self.params().len() {
+                    panic!("Predicate `{}` does not have {} placeholders.",  aliased_predicate, expect);
+                }
+            }
+            (aliased_predicate.to_string(), self.params())
+     }
+}
+
+impl<T> ToSqlPredicate for &[T]
+where T: ToSqlPredicate {
+
+    fn to_sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
+
+    let mut predicate = String::new();
+         let mut params = Vec::new();
+
+        for p in *self {
+            let (pr, pa) = p.to_sql_predicate(alias);
+            predicate.push_str(&pr);
+            params.extend_from_slice(&pa);
+            predicate.push_str(" OR ")
+        }
+        // Remove final " OR "
+        predicate.pop();
+        predicate.pop();
+        predicate.pop();
+        predicate.pop();
+
+        (predicate, params)
+
+    }
+     fn build_sql_predicate(&self, aliased_predicate: &str) -> (String, Vec<String>) {
+
+        let mut predicate = String::new();
+        let mut params = Vec::new();
+
+           for p in *self {
+              let (pr, pa) = p.build_sql_predicate(aliased_predicate);
+              predicate.push_str(&pr);
+              predicate.push_str(" OR ");
+              params.extend_from_slice(&pa);
+          }
+        // Remove final " OR "
+         predicate.pop();
+         predicate.pop();
+         predicate.pop();
+         predicate.pop();
+
+         (predicate, params)
+     }
+}
+
+
+
+
+
 
  
 

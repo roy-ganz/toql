@@ -16,6 +16,7 @@ use toql_core::select::Select;
 use toql_core::sql_mapper_registry::SqlMapperRegistry;
  use toql_core::sql_mapper::SqlMapper;
 
+use toql_core::sql_mapper::Mapped;
 
 use core::borrow::Borrow;
 use toql_core::log_sql;
@@ -137,8 +138,8 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns the last generated id.
     pub fn insert_dup_one<'a, T>(&mut self, entity: &T, strategy: DuplicateStrategy) -> Result<u64>
     where
-        T: 'a,
-        Self: Insert<'a, T, Error = ToqlMySqlError> + InsertDuplicate,
+        T: 'a + InsertDuplicate,
+        Self: Insert<'a, T, Error = ToqlMySqlError>,
     {
         let sql = <Self as Insert<'a, T>>::insert_one_sql(entity, strategy, &self.roles)?;
 
@@ -149,14 +150,14 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id
-    pub fn insert_dup_many<'a, T: 'a, I, Q>(
+    pub fn insert_dup_many<'a, T: 'a,  Q>(
         &mut self,
         entities: &[Q],
         strategy: DuplicateStrategy,
     ) -> Result<u64>
-    where
-        Self: Insert<'a, T, Error = ToqlMySqlError> + InsertDuplicate,
-        I: 'a,
+    where T: InsertDuplicate,
+        Self: Insert<'a, T, Error = ToqlMySqlError> ,
+        //I: 'a,
         Q: Borrow<T>,
     {
         let sql = <Self as Insert<'a, T>>::insert_many_sql(&entities, strategy, &self.roles)?;
@@ -175,7 +176,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn delete_one<'a, T>(&mut self, key: <T as Keyed>::Key) -> Result<u64>
     where
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
-        T: Keyed + 'a,
+        T: Keyed + toql_core::sql_mapper::Mapped + 'a,
         
     {
         let sql = <toql_core::dialect::Generic as Delete<'a, T>>::delete_one_sql(key, &self.roles)?;
@@ -187,13 +188,14 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_many<'a, T>(&mut self, keys: &[<T as Keyed>::Key]) -> Result<u64>
+    pub fn delete_many<'a, T>(&mut self, predicate: (String, Vec<String>)) -> Result<u64>
     where
         T: Keyed + 'a,
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
     {
+
         let sql =
-            <toql_core::dialect::Generic as Delete<'a, T>>::delete_many_sql(&keys, &self.roles)?;
+            <toql_core::dialect::Generic as Delete<'a, T>>::delete_many_sql(predicate, &self.roles)?;
 
         Ok(if let Some(sql) = sql {
             execute_update_delete_sql(sql, self.conn)?
@@ -339,7 +341,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     where
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
         Self: Diff<'a, T, Error = ToqlMySqlError> + Insert<'a, T, Error = ToqlMySqlError>,
-        T: Keyed + 'a + Borrow<T>,
+        T: Keyed + Mapped + 'a + Borrow<T>,
     {
         let (insert_sql, diff_sql, delete_sql) =
             collection_delta_sql::<T, Self, Self, toql_core::dialect::Generic, ToqlMySqlError>(

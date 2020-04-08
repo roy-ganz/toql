@@ -34,6 +34,8 @@ use crate::key::Keyed;
 use core::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::result::Result;
+use crate::sql_mapper::Mapped;
+
 
 /// Trait for delete functions (They work with entity keys).
 pub trait Delete<'a, T: crate::key::Keyed + 'a> {
@@ -44,13 +46,13 @@ pub trait Delete<'a, T: crate::key::Keyed + 'a> {
         roles: &HashSet<String>,
     ) -> Result<(String, Vec<String>), Self::Error>
     where
-        T: crate::key::Keyed + 'a,
+        T: crate::key::Keyed + crate::sql_mapper::Mapped +  'a,
     {
-        Ok(Self::delete_many_sql(&[key], roles)?.unwrap())
+        Ok(Self::delete_many_sql(crate::key::sql_predicate(&[key], &<T as  crate::sql_mapper::Mapped>::table_alias()), roles)?.unwrap())
     }
     /// Delete many structs, returns tuple with SQL statement and SQL params or error.
     fn delete_many_sql(
-        keys: &[T::Key],
+        predicate: (String, Vec<String>),
         roles: &HashSet<String>,
     ) -> Result<Option<(String, Vec<String>)>, Self::Error>;
 }
@@ -171,7 +173,7 @@ pub fn collection_delta_sql<'a, T, I, U, D, E>(
     E,
 >
 where
-    T: 'a + Keyed,
+    T: 'a + Keyed + Mapped,
     I: Insert<'a, T>,
     U: Diff<'a, T>,
     D: Delete<'a, T>,
@@ -190,7 +192,7 @@ where
 
     let insert_sql = <I as Insert<T>>::insert_many_sql(&insert, DuplicateStrategy::Fail, roles)?;
     let diff_sql = <U as Diff<T>>::diff_many_sql(&diff, roles)?;
-    let delete_sql = <D as Delete<T>>::delete_many_sql(&delete, roles)?;
+    let delete_sql = <D as Delete<T>>::delete_many_sql( crate::key::sql_predicate(&delete, &<T as Mapped>::table_alias()) , roles)?;
     Ok((insert_sql, diff_sql, delete_sql))
 }
 

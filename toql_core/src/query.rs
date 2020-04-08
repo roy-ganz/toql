@@ -88,30 +88,33 @@ pub trait FilterArg {
 
 impl FilterArg for &str {
     fn to_sql(&self) -> String {
-        let mut s = String::from("'");
+         self.to_string()
+        /* let mut s = String::from("'");
         // TODO escape for sql
         s.push_str(*self);
         s.push('\'');
-        s
+        s */
     }
 }
 // TODO combine with above
 impl FilterArg for String {
     fn to_sql(&self) -> String {
-        let mut s = String::from("'");
+         self.to_string()
+      /*   let mut s = String::from("'");
         // TODO escape for sql
         s.push_str(self);
         s.push('\'');
-        s
+        s */
     }
 }
 impl FilterArg for &String {
     fn to_sql(&self) -> String {
-        let mut s = String::from("'");
+        self.to_string()
+       /*  let mut s = String::from("'");
         // TODO escape for sql
         s.push_str(self.as_str());
         s.push('\'');
-        s
+        s */
     }
 }
 
@@ -357,12 +360,11 @@ impl Field {
         self.filter = Some(FieldFilter::Re(criteria.to_sql()));
         self
     }
-    /*   pub fn sc<T>(mut self, criteria: impl FilterArg<T>) -> Self {
-        self.filter = Some(FieldFilter::Sc(criteria.to_sql()));
-        self
-    } */
+   
     /// Filter records with _inside_ predicate.
-    pub fn ins(mut self, criteria: Vec<impl FilterArg>) -> Self {
+    pub fn ins<T, I>(mut self, criteria: I) -> Self
+    where T: FilterArg, I :IntoIterator<Item = T>
+     {
         self.filter = Some(FieldFilter::In(
             criteria.into_iter().map(|c| c.to_sql()).collect(),
         ));
@@ -793,7 +795,7 @@ impl Query {
     }
 
     /// Convenence method to add aux params
-    pub fn aux_params<T>(mut self, name: T, value: T) -> Self 
+    pub fn aux_param<T>(mut self, name: T, value: T) -> Self 
     where T: Into<String>
     {
        self.aux_params.insert(name.into(), value.into());
