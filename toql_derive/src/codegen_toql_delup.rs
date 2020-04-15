@@ -48,6 +48,8 @@ impl<'a> GeneratedToqlDelup<'a> {
         let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
 
+    
+
         // Handle key predicate and parameters
         match &field.kind {
             FieldKind::Regular(regular_attrs) => {
@@ -59,12 +61,12 @@ impl<'a> GeneratedToqlDelup<'a> {
                 if regular_attrs.key {
                     if field.number_of_options > 0 {
                         self.key_params_code.push( quote!(
-                        params.push(entity. #rust_field_ident. as_ref()
-                        .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?.to_string().to_owned() );
-                    ));
+                        params.push( toql::sql::SqlArg::from(entity. #rust_field_ident. as_ref()
+                        .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))?) );
+                        ));
                     } else {
                         self.key_params_code.push(
-                            quote!(params.push(entity. #rust_field_ident.to_string().to_owned()); ),
+                            quote!(params.push( toql::sql::SqlArg::from(entity. #rust_field_ident .to_owned()));)
                         );
                     }
 
@@ -124,11 +126,11 @@ impl<'a> GeneratedToqlDelup<'a> {
                 // Selectable fields
                 // Option<T>, <Option<Option<T>>
                 if field.number_of_options > 0 && !field.preselect {
-                    let unwrap_null = if 2 == field.number_of_options {
+                    /* let unwrap_null = if 2 == field.number_of_options {
                         quote!(.as_ref().map_or(String::from("NULL"), |x| x.to_string()))
                     } else {
                         quote!()
-                    };
+                    }; */
 
                     // update statement
                     // Doesn't update primary key
@@ -137,7 +139,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                             #role_assert {
                                 if  entity. #rust_field_ident .is_some() {
                                     update_stmt.push_str( &format!(#set_statement, alias));
-                                    params.push(entity . #rust_field_ident .as_ref().unwrap() #unwrap_null .to_string() .to_owned());
+                                    params.push( toql::sql::SqlArg::from(entity . #rust_field_ident.as_ref().unwrap()));
                                 }
                             }
                         ));
@@ -150,7 +152,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                                 .ok_or(toql::error::ToqlError::ValueMissing(String::from(#rust_field_name)))? != entity. #rust_field_ident .as_ref().unwrap()
                             {
                                     update_stmt.push_str( &format!(#set_statement, alias));
-                                    params.push(entity . #rust_field_ident .as_ref().unwrap() #unwrap_null .to_string() .to_owned());
+                                    params.push( toql::sql::SqlArg::from(entity . #rust_field_ident.as_ref().unwrap())); 
                             }
                        }
                     ));
@@ -158,18 +160,18 @@ impl<'a> GeneratedToqlDelup<'a> {
                 // Not selectable fields
                 // T, Option<T> (nullable column)
                 else {
-                    let unwrap_null = if 1 == field.number_of_options {
+                    /* let unwrap_null = if 1 == field.number_of_options {
                         quote!(.map_or(String::from("NULL"), |x| x.to_string()))
                     } else {
                         quote!()
-                    };
+                    }; */
 
                     //update statement
                     if !regular_attrs.key {
                         self.update_set_code.push(quote!(
                            #role_assert {
                             update_stmt.push_str( &format!(#set_statement, alias));
-                            params.push( entity . #rust_field_ident .as_ref() #unwrap_null .to_string() .to_owned());
+                            params.push(  toql::sql::SqlArg::from(&entity . #rust_field_ident )); 
                            }
                         ));
                     }
@@ -180,7 +182,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                         if outdated.  #rust_field_ident != entity. #rust_field_ident
                         {
                                 update_stmt.push_str( &format!(#set_statement, alias));
-                                 params.push( entity . #rust_field_ident .as_ref() #unwrap_null .to_string() .to_owned());
+                                 params.push(  toql::sql::SqlArg::from(&entity . #rust_field_ident)); 
 
                         }
                        }
@@ -208,8 +210,8 @@ impl<'a> GeneratedToqlDelup<'a> {
                                         .as_ref()
                                         .unwrap()
                                         .as_ref()
-                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
-                                    .map(|_| String::from("NULL")).collect::<Vec<_>>())},
+                                   .map_or_else::<Result<Vec<toql::sql::SqlArg>,toql::error::ToqlError>,_,_>(|  |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                                    .map(|_|  toql::sql::SqlArg::Null()).collect::<Vec<_>>())},
                                         | some| { Ok(toql::key::Key::params(&<#rust_type_ident as toql::key::Keyed>::try_get_key(some)?)) })?
 
                                     );
@@ -221,8 +223,8 @@ impl<'a> GeneratedToqlDelup<'a> {
                             params.extend_from_slice(
                                    &entity
                                     . #rust_field_ident .as_ref()
-                                   .map_or_else::<Result<Vec<String>,toql::error::ToqlError>,_,_>(|  |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
-                                    .map(|_| String::from("NULL")).collect::<Vec<_>>())},
+                                   .map_or_else::<Result<Vec<toql::sql::SqlArg>,toql::error::ToqlError>,_,_>(|  |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                                    .map(|_|  toql::sql::SqlArg::Null()).collect::<Vec<_>>())},
                                    | some| {
                                        Ok(toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(some)?))
                                        })?);
@@ -460,7 +462,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     type Error = toql::error::ToqlError;
 
-                    fn delete_many_sql(aliased_predicate: (String, Vec<String>),roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    fn delete_many_sql(aliased_predicate: toql::sql::Sql ,roles: &std::collections::HashSet<String>) -> toql::error::Result<Option< toql::sql::Sql>>
                         {
                             #ins_role_test
 
@@ -482,11 +484,11 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     type Error = toql::error::ToqlError;
 
-                    fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option<(String, Vec<String>)>>
+                    fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option< toql::sql::Sql>>
                     {
                         #upd_role_test
 
-                        let mut params: Vec<String> = Vec::new();
+                        let mut params: Vec<toql::sql::SqlArg> = Vec::new();
                         let mut update_stmt = String::from("UPDATE ");
                         let mut first = true;
                         let mut keys: Vec<String> = Vec::new();
@@ -550,12 +552,12 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                     type Error = toql::mysql::error::ToqlMySqlError;
 
                     fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
-                    -> Result<Option<(String, Vec<String>)>, toql :: mysql::error:: ToqlMySqlError>
+                    -> Result<Option< toql::sql::Sql>, toql :: mysql::error:: ToqlMySqlError>
 
                     {
                         #upd_role_test
 
-                        let mut params: Vec<String> = Vec::new();
+                        let mut params: Vec<toql::sql::SqlArg> = Vec::new();
                         let mut keys: Vec<String> = Vec::new();
                         let mut update_stmt = String::from("UPDATE ");
                         let mut first = true;
@@ -620,12 +622,12 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     }
                     fn full_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
-                    -> Result<Option<Vec<(String,Vec<String>)>>, toql :: mysql::error:: ToqlMySqlError>
+                    -> Result<Option<Vec<toql::sql::Sql>>, toql :: mysql::error:: ToqlMySqlError>
                     {
 
                         #upd_role_test
 
-                        let mut sql: Vec<(String, Vec<String>)> = Vec::new();
+                        let mut sql: Vec< toql::sql::Sql> = Vec::new();
 
                         let update = <Self as  toql::mutate::Diff<#struct_ident>>::diff_many_sql(entities, roles)?;
                         if update.is_some() {

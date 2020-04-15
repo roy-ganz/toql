@@ -39,6 +39,7 @@ use std::fmt;
 use std::sync::Arc;
 use crate::field_handler::{FieldHandler, BasicFieldHandler};
 use crate::join_handler::{JoinHandler, DefaultJoinHandler};
+use crate::sql::SqlArg;
 
 
 
@@ -98,7 +99,7 @@ impl SqlTarget {
 } */
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Options for a mapped field.
 pub struct FieldOptions {
     pub(crate) preselect: bool, // Always select this field, regardless of query fields
@@ -106,7 +107,7 @@ pub struct FieldOptions {
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
-    pub(crate) aux_params: HashMap<String, String>, // Auxiliary params
+    pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
     pub(crate) on_params: Vec<String>,  // Identity params for on clauses
 }
 
@@ -162,8 +163,10 @@ impl FieldOptions {
      /// Additional build param. This is used by the query builder together with
      /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
      /// and field handlers.
-    pub fn aux_param(mut self, name: String, value: String) -> Self {
-        self.aux_params.insert(name, value);
+    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
+    where S: Into<String>, T: Into<SqlArg>
+    {
+        self.aux_params.insert(name.into(), value.into());
         self
     }
 }
@@ -174,7 +177,7 @@ pub struct JoinOptions {
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
-    pub(crate) aux_params: HashMap<String, String>, // Additional build params
+    pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>> // Optional join handler
         
 }
@@ -214,15 +217,17 @@ impl JoinOptions {
     /// Additional build param. This is used by the query builder together with
     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
     /// and field handlers.
-    pub fn aux_param(mut self, name: String, value: String) -> Self {
-        self.aux_params.insert(name, value);
+    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
+    where S: Into<String>, T:Into<SqlArg>
+    {
+        self.aux_params.insert(name.into(), value.into());
         self
     }
 }
 
 #[derive(Debug)]
 pub struct PredicateOptions {
-     pub(crate) aux_params: HashMap<String, String>,
+     pub(crate) aux_params: HashMap<String, SqlArg>,
      pub(crate) on_params: Vec<(u8,String)>,  // Argument params for on clauses (index, name)
      pub(crate) count_filter: bool
 }
@@ -230,14 +235,16 @@ pub struct PredicateOptions {
 impl PredicateOptions {
 
     pub fn new() -> Self {
-        PredicateOptions { aux_params: HashMap::new(), on_params: Vec::new(), count_filter: true}
+        PredicateOptions { aux_params: HashMap::new(), on_params: Vec::new(), count_filter: false}
     }
 
  /// Additional build param. This is used by the query builder together with
      /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
      /// and field handlers.
-    pub fn aux_param(mut self, name: String, value: String) -> Self {
-        self.aux_params.insert(name, value);
+    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
+    where S: Into<String>, T:Into<SqlArg>
+    {
+        self.aux_params.insert(name.into(), value.into());
         self
     }
 
@@ -513,6 +520,22 @@ impl SqlMapper {
         sql_target.options = options;
         self
     }
+    
+     pub fn get_options(&self, toql_field: &str) -> Option<FieldOptions> {
+        match self.fields.get(toql_field) {
+            Some(f) => Some(f.options.clone()),
+            None => None
+        }
+    }
+
+    pub fn set_options(&mut self, toql_field: &str, options: FieldOptions )  {
+        let f =  self.fields.get_mut(toql_field).expect(&format!(
+            "Cannot alter \"{}\": Field is not mapped.",
+            toql_field
+        )); 
+        f.options = options;
+    } 
+
     /// Adds a new field - or updates an existing field - to the mapper.
     pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_field: &str) -> &'a mut Self {
         self.map_field_with_options(toql_field, sql_field, FieldOptions::new())

@@ -73,6 +73,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
         ));
     }
 
+
     pub(crate) fn add_mysql_deserialize(&mut self, field: &crate::sane::Field) {
         // Regular fields
         let rust_field_name = &field.rust_field_name;
@@ -80,140 +81,153 @@ impl<'a> GeneratedMysqlLoad<'a> {
             "{}::{}",
             &self.rust_struct.rust_struct_ident, rust_field_name
         );
-        match &field.kind {
-            FieldKind::Regular(ref regular_attrs) => {
-                let rust_field_ident = &field.rust_field_ident;
 
-                self.regular_fields += 1;
+        if field.skip_query {
+             let rust_field_ident = &field.rust_field_ident;
+             self.mysql_deserialize_fields.push( match field.number_of_options {
+                    0 => quote!( #rust_field_ident :  Default::default()),
+                    _ => quote!( #rust_field_ident : None)
+                });
 
-                // Check selection for optional Toql fields: Option<Option<..> or Option<..>
-                if field.number_of_options > 0 && field.preselect == false {
-                    self.mysql_deserialize_fields.push(quote!(
-                    #rust_field_ident : {
-                       
-                        ( if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                            None
-                        } else {
-                            row.take_opt( *i).unwrap()
-                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
-                        }, *i += 1).0
-                    }
-                ));
-                } else {
-                    self.mysql_deserialize_fields.push(quote!(
-                        #rust_field_ident : (row.take_opt( *i).unwrap()
-                            .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
-                             *i += 1).0
-                    ));
-                }
+        }else {
+            match &field.kind {
+                FieldKind::Regular(ref regular_attrs) => {
+                    let rust_field_ident = &field.rust_field_ident;
 
-                if regular_attrs.key {
-                    self.key_field_names.push(rust_field_name.to_string());
+                    
 
-                    // Merge field getter for non null columns
-                    match field.number_of_options {
-                        0 => {
-                            self.merge_field_getter.insert(
-                                rust_field_name.to_string(),
-                                quote!(entity. #rust_field_ident. to_string()),
-                            );
-                        }
-                        1 if !field.preselect => {
-                            self.merge_field_getter.insert(rust_field_name.to_string(),
-                            quote!(entity. #rust_field_ident .as_ref()
-                                .ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?.to_string()));
-                        }
-                        _ => {}
-                    };
-                }
-            }
-            FieldKind::Join(join_attrs) => {
-                let rust_field_ident = &field.rust_field_ident;
-                let rust_field_name = &field.rust_field_name;
-                let rust_type_ident = &field.rust_type_ident;
-                self.forward_joins
-                    .push(
+
+                    self.regular_fields += 1;
+
+                    // Check selection for optional Toql fields: Option<Option<..> or Option<..>
+                    if field.number_of_options > 0 && field.preselect == false {
+                        self.mysql_deserialize_fields.push(quote!(
+                        #rust_field_ident : {
                         
-                        if  field.number_of_options  == 2 {
-                            // Skip discriminator field from selectable left joins (Option<Option<T>>)
-                            quote!( i = < #rust_type_ident > ::forward_row(i) + 1;)
-                        } else {
-                            quote!( i = < #rust_type_ident > ::forward_row(i);)
-                        });
-          
-                // For optional joined fields (left Joins) a discriminator field must be added to check
-                // - for unselected entity (discriminator column is NULL Type)
-                // - for null entity (discriminator column is false) - only left joins
+                            ( if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                None
+                            } else {
+                                row.take_opt( *i).unwrap()
+                                    .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                            }, *i += 1).0
+                        }
+                    ));
+                    } else {
+                        self.mysql_deserialize_fields.push(quote!(
+                            #rust_field_ident : (row.take_opt( *i).unwrap()
+                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
+                                *i += 1).0
+                        ));
+                    }
 
-                self.mysql_deserialize_fields.push(
-                 match   field.number_of_options {
-                     2 =>   //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
-                     quote!(
-                                #rust_field_ident : {
-                                     
-                                       if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                           *i += 1; // Step over discriminator field
-                                            *i = < #rust_type_ident > ::forward_row(*i); 
-                                        None
-                                       }
-                                       else if row.take_opt::<bool,_>(*i).unwrap()
+                    if regular_attrs.key {
+                        self.key_field_names.push(rust_field_name.to_string());
+
+                        // Merge field getter for non null columns
+                        match field.number_of_options {
+                            0 => {
+                                self.merge_field_getter.insert(
+                                    rust_field_name.to_string(),
+                                    quote!(entity. #rust_field_ident. to_string()),
+                                );
+                            }
+                            1 if !field.preselect => {
+                                self.merge_field_getter.insert(rust_field_name.to_string(),
+                                quote!(entity. #rust_field_ident .as_ref()
+                                    .ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?.to_string()));
+                            }
+                            _ => {}
+                        };
+                    }
+                }
+                FieldKind::Join(join_attrs) => {
+                    let rust_field_ident = &field.rust_field_ident;
+                    let rust_field_name = &field.rust_field_name;
+                    let rust_type_ident = &field.rust_type_ident;
+                    self.forward_joins
+                        .push(
+                            
+                            if  field.number_of_options  == 2 {
+                                // Skip discriminator field from selectable left joins (Option<Option<T>>)
+                                quote!( i = < #rust_type_ident > ::forward_row(i) + 1;)
+                            } else {
+                                quote!( i = < #rust_type_ident > ::forward_row(i);)
+                            });
+            
+                    // For optional joined fields (left Joins) a discriminator field must be added to check
+                    // - for unselected entity (discriminator column is NULL Type)
+                    // - for null entity (discriminator column is false) - only left joins
+
+                    self.mysql_deserialize_fields.push(
+                    match   field.number_of_options {
+                        2 =>   //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
+                        quote!(
+                                    #rust_field_ident : {
+                                        
+                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                            *i += 1; // Step over discriminator field
+                                                *i = < #rust_type_ident > ::forward_row(*i); 
+                                            None
+                                        }
+                                        else if row.take_opt::<bool,_>(*i).unwrap()
+                                            .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                                            == false {
+                                            *i += 1;  // Step over discriminator field
+                                            *i = < #rust_type_ident > ::forward_row(*i);
+
+                                            Some(None)
+                                            } else {
+                                            *i += 1; // Step over discriminator field
+                                            Some(Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?))
+                                        }
+                                    }
+                            ),
+                        1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
+                                quote!(
+                                    #rust_field_ident : {
+                                    
+                                        if row.take_opt::<bool,_>(*i).unwrap()
                                         .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                         == false {
-                                        *i += 1;  // Step over discriminator field
-                                        *i = < #rust_type_ident > ::forward_row(*i);
-
-                                        Some(None)
-                                          } else {
-                                        *i += 1; // Step over discriminator field
-                                        Some(Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?))
-                                    }
-                                }
-                        ),
-                     1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
-                            quote!(
-                                #rust_field_ident : {
-                                  
-                                     if row.take_opt::<bool,_>(*i).unwrap()
-                                      .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
-                                      == false {
-                                             *i = < #rust_type_ident > ::forward_row(*i);
-                                        None
-                                    } else {
-                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
-                                    }
-                                }
-                            ),
-                         1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
-                                    quote!(
-                                    #rust_field_ident : {
-                                     
-                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                            *i = < #rust_type_ident > ::forward_row(*i); 
+                                                *i = < #rust_type_ident > ::forward_row(*i);
                                             None
                                         } else {
-                                        Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
+                                            Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
                                         }
                                     }
                                 ),
-                     _ =>   //    T                                 -> Selected Join -> InnerJoin
-                     quote!(
-                        #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , i )?
-                    )
-                 }
-            );
+                            1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
+                                        quote!(
+                                        #rust_field_ident : {
+                                        
+                                            if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                                *i = < #rust_type_ident > ::forward_row(*i); 
+                                                None
+                                            } else {
+                                            Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
+                                            }
+                                        }
+                                    ),
+                        _ =>   //    T                                 -> Selected Join -> InnerJoin
+                        quote!(
+                            #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , i )?
+                        )
+                    }
+                );
 
-                if join_attrs.key {
-                    self.key_field_names.push(rust_field_name.to_string());
+                    if join_attrs.key {
+                        self.key_field_names.push(rust_field_name.to_string());
+                    }
                 }
-            }
-            FieldKind::Merge(_merge_attrs) => {
-                let rust_field_ident = &field.rust_field_ident;
-                self.mysql_deserialize_fields
-                    .push(if field.number_of_options > 0 {
-                        quote!( #rust_field_ident : None)
-                    } else {
-                        quote!( #rust_field_ident : Vec::new())
-                    });
+                FieldKind::Merge(_merge_attrs) => {
+                    let rust_field_ident = &field.rust_field_ident;
+                    self.mysql_deserialize_fields
+                        .push(if field.number_of_options > 0 {
+                            quote!( #rust_field_ident : None)
+                        } else {
+                            quote!( #rust_field_ident : Vec::new())
+                        });
+                }
             }
         }
     }
@@ -313,8 +327,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
 
 
-
-                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), result.query_params())?;
+                    let args = toql::mysql::sql_arg::values_from_ref(result.query_params());
+                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, "", 0, 2), args)?;
                     #from_query_result
 
                     if entities.len() > 1 {
@@ -360,7 +374,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
 
                     toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.query_params());
-                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), result.query_params())?;
+                    let args = toql::mysql::sql_arg::values_from_ref(result.query_params());
+                    let entities_stmt = self.conn().prep_exec(toql::mysql::sql_from_query_result( &result, &hint, first, max), args)?;
                     #from_query_result
                     
                     let mut count_result = None;
@@ -375,7 +390,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         #(#ignored_paths)*
                         .build_count(mapper, &query, self.roles()).map_err(|e|toql::error::ToqlError::SqlBuilderError(e))?;
                         toql::log_sql!(toql::mysql::sql_from_query_result( &result, "SQL_CALC_FOUND_ROWS", 0, 0), result.query_params());
-                        self.conn().prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), result.query_params())?; // Don't select any rows
+                        let args = toql::mysql::sql_arg::values_from_ref(result.query_params());
+                        self.conn().prep_exec(toql::mysql::sql_from_query_result( &result,"SQL_CALC_FOUND_ROWS", 0, 0), args)?; // Don't select any rows
 
                         toql::log_sql!("SELECT FOUND_ROWS();");
                         let r = self.conn().query("SELECT FOUND_ROWS();")?;
@@ -624,7 +640,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
 
                                     toql::log_sql!(result.query_stmt("", ""), result.query_params());
-                                    let entities_stmt = self.conn().prep_exec(result.query_stmt("", ""), result.query_params())?;
+                                    let args = toql::mysql::sql_arg::values_from_ref(result.query_params());
+                                    let entities_stmt = self.conn().prep_exec(result.query_stmt("", ""), args)?;
                                     let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Keyed>::Key, <#struct_ident as toql::key::Keyed>::Key>(entities_stmt)?;
                                     
                                     if !merge_entities.is_empty() {

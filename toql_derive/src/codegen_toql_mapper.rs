@@ -10,6 +10,7 @@ pub(crate) struct GeneratedToqlMapper<'a> {
     field_mappings: Vec<TokenStream>,
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
+    count_filter_code: TokenStream
     
 }
 
@@ -35,6 +36,12 @@ impl<'a> GeneratedToqlMapper<'a> {
                 quote!(.on_param( #index, String::from(#name)))
             }).collect::<Vec<_>>();
 
+        let countfilter_ident = if mapping.count_filter {
+                    quote!( .count_filter(true))
+                } else {
+                    quote!()
+                };
+
             match &mapping.handler {
                 Some(handler) => {
                     field_mappings.push(quote! {
@@ -42,7 +49,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                     &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                     #sql_expr ,
                                     #handler (), 
-                                    toql::sql_mapper::PredicateOptions::new()  #(#on_params)* );
+                                    toql::sql_mapper::PredicateOptions::new()  #(#on_params)* #countfilter_ident );
                             });
                 }
                 None => {
@@ -50,7 +57,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                 mapper.map_predicate_with_options(
                                     &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                                 #sql_expr,
-                                toql::sql_mapper::PredicateOptions::new() #(#on_params)*
+                                toql::sql_mapper::PredicateOptions::new() #(#on_params)* #countfilter_ident
                               );
                             });
                 }
@@ -59,12 +66,25 @@ impl<'a> GeneratedToqlMapper<'a> {
            
         }
         
+        let count_filter_code = 
+          if let Some(count_filter) = &rust_struct.count_filter {
+
+              quote!(
+                   for field in &[ #(#count_filter),*] {
+                        let options = mapper.get_options(field).expect(&format!("Field {} not mapped. Skipped count filter.", &field));
+                        mapper.set_options(field, options.count_filter(true));
+                    }
+              )
+        } else {
+            quote!( )
+        }; 
 
         GeneratedToqlMapper {
             rust_struct,
             field_mappings,
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
+            count_filter_code
         }
     }
 
@@ -278,6 +298,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
         let sql_table_alias = &self.rust_struct.sql_table_alias;
 
         let field_mappings = &self.field_mappings;
+        let count_filter_code = &self.count_filter_code;
        
         let builder = quote!(
 
@@ -300,6 +321,8 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     
 
                     #(#field_mappings)*
+
+                    #count_filter_code
                 }
             }
 

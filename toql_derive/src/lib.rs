@@ -65,7 +65,7 @@ mod codegen_mysql_insert;
 
 mod sane;
 mod util;
-
+/* 
 #[proc_macro_derive(ToqlFilterArg)]
 pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
@@ -86,7 +86,31 @@ pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
     };
     log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
     TokenStream::from(gen)
+} */
+
+#[proc_macro_derive(ToqlSqlArg)]
+pub fn toql_sql_arg_derive(input: TokenStream) -> TokenStream {
+    let _ = env_logger::try_init(); // Avoid multiple init
+    let ast = parse_macro_input!(input as DeriveInput);
+    //let gen = impl_filter_arg_derive(&ast);
+    let name = &ast.ident;
+    let gen = quote! {
+                    impl From<#name> for toql::sql::SqlArg {
+                        fn from(t: #name) -> Self {
+                            toql::sql::SqlArg::Str(t.to_string())
+                        }
+                    }
+                     impl From<&#name> for toql::sql::SqlArg {
+                        fn from(t: &#name) -> Self {
+                            toql::sql::SqlArg::Str(t.to_owned().to_string())
+                        }
+                    }
+    };
+    log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
+    TokenStream::from(gen)
 }
+
+
 
 /* fn impl_filter_arg_derive(ast: &syn::DeriveInput) ->TokenStream {
     let name = &ast.ident;

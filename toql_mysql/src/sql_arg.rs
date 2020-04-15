@@ -1,6 +1,12 @@
 
 use mysql::Value;
-use toql_core::sql_stmt::SqlArg;
+use toql_core::sql::SqlArg;
+
+pub fn values_from_ref(args :&[SqlArg]) -> Vec<Value> {
+
+  args.into_iter().map(|a| value_from(a.to_owned())).collect::<Vec<_>>()
+
+}
 
 pub fn values_from(args :Vec<SqlArg>) -> Vec<Value> {
 

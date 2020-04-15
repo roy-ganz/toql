@@ -10,7 +10,7 @@ pub mod key;
 pub mod load;
 pub mod mutate;
 pub mod select;
-pub mod sql_stmt;
+pub mod sql;
 
 #[macro_use]
 pub mod log_helper;

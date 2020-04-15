@@ -13,14 +13,19 @@ inner = @{ char* }
 // Like SQL strings 'Tim''s dog'
 string = ${  "'" ~ ( "''" | (!"'" ~ ANY) )* ~  "'" }
 
-number = @{
+num_u64 = @{ASCII_DIGIT+}
+num_i64 = @{ "-" ~ ASCII_DIGIT+}
+
+
+num_f64 = @{
     "-"?
     ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
-    ~ ("." ~ ASCII_DIGIT*)?
+    ~ ("." ~ ASCII_DIGIT*)
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
-value= { number | string  }
-field_filter = { (("FN" ~ name) | name) ~ value+}
+value= { num_i64 | num_u64 | num_f64 | string  }
+filter_name= {name}
+field_filter = { filter_name ~ value+}
 sort = @{ ("+" | "-") ~ASCII_DIGIT* }
 name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
 field_path = @{ name ~ ("_" ~ name)* }
@@ -32,7 +37,7 @@ aggregation = @{"!"}
 field = { sort? ~ hidden? ~ field_path }
 field_clause = { field ~ aggregation? ~ field_filter?}
 predicate_arg =  { value+}
-predicate_name = { "@" ~ name}
+predicate_name = { "@" ~ field_path}
 predicate_clause = { predicate_name ~ predicate_arg?}
 clause = { field_clause | predicate_clause |( lpar ~ expr ~ rpar) } 
 concat = { "," | ";" }

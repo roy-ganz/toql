@@ -37,9 +37,9 @@ pub trait QueryPredicate {
 
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
 pub trait PredicateArg {
-    fn to_args(self) -> Vec<String>;
+    fn to_args(self) -> Vec<SqlArg>;
 }
-impl PredicateArg for String {
+/* impl PredicateArg for String {
     fn to_args (self) -> Vec<String> {
         vec![self]
     }
@@ -57,8 +57,8 @@ impl PredicateArg for &[&str] {
         }
         args
     }
-}  
-
+}   */
+/* 
 
 macro_rules! impl_num_predicate_arg {
     ($($mty:ty),+) => {
@@ -75,9 +75,9 @@ macro_rules! impl_num_predicate_arg {
             }
         )+
     }
-}
+} */
 
-impl_num_predicate_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+//impl_num_predicate_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
 
 
@@ -306,8 +306,8 @@ impl Field {
         self
     }
     /// Filter records with _equal_ predicate.
-    pub fn eq(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Eq(criteria.to_sql()));
+    pub fn eq(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Eq(criteria.into()));
         self
     }
     /// Filter records with _equal null_ predicate.
@@ -316,8 +316,8 @@ impl Field {
         self
     }
     /// Filter records with _not equal_ predicate.
-    pub fn ne(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Ne(criteria.to_sql()));
+    pub fn ne(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Ne(criteria.into()));
         self
     }
     /// Filter records with _not equal null_ predicate.
@@ -326,67 +326,69 @@ impl Field {
         self
     }
     /// Filter records with greater that_ predicate.
-    pub fn gt(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Gt(criteria.to_sql()));
+    pub fn gt(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Gt(criteria.into()));
         self
     }
     /// Filter records with greater or equal_ predicate.
-    pub fn ge(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Ge(criteria.to_sql()));
+    pub fn ge(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Ge(criteria.into()));
         self
     }
     /// Filter records with lesser than_ predicate.
-    pub fn lt(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Lt(criteria.to_sql()));
+    pub fn lt(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Lt(criteria.into()));
         self
     }
     /// Filter records with lesser or equal_ predicate.
-    pub fn le(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Le(criteria.to_sql()));
+    pub fn le(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Le(criteria.into()));
         self
     }
     /// Filter records with _between_ predicate. This is inclusive, so `x bw 3 6` is the same as `x ge 3, x le 6`
-    pub fn bw(mut self, lower: impl FilterArg, upper: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Bw(lower.to_sql(), upper.to_sql()));
+    pub fn bw(mut self, lower: impl Into<SqlArg>, upper: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Bw(lower.into(), upper.into()));
         self
     }
     /// Filter records with _like_ predicate.
-    pub fn lk(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Lk(criteria.to_sql()));
+    pub fn lk(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Lk(criteria.into()));
         self
     }
     /// Filter records with _regex_ predicate.
-    pub fn re(mut self, criteria: impl FilterArg) -> Self {
-        self.filter = Some(FieldFilter::Re(criteria.to_sql()));
+    pub fn re(mut self, criteria: impl Into<SqlArg>) -> Self {
+        self.filter = Some(FieldFilter::Re(criteria.into()));
         self
     }
    
     /// Filter records with _inside_ predicate.
     pub fn ins<T, I>(mut self, criteria: I) -> Self
-    where T: FilterArg, I :IntoIterator<Item = T>
+    where T: Into<SqlArg>, I :IntoIterator<Item = T>
      {
         self.filter = Some(FieldFilter::In(
-            criteria.into_iter().map(|c| c.to_sql()).collect(),
+            criteria.into_iter().map(|c| c.into()).collect(),
         ));
         self
     }
     /// Filter records with _outside_ predicate.
-    pub fn out(mut self, criteria: Vec<impl FilterArg>) -> Self {
+    pub fn out<T,I>(mut self, criteria: I) -> Self 
+     where T: Into<SqlArg>, I :IntoIterator<Item = T>
+    {
         self.filter = Some(FieldFilter::Out(
-            criteria.into_iter().map(|c| c.to_sql()).collect(),
+            criteria.into_iter().map(|c| c.into()).collect(),
         ));
         self
     }
     /// Filter records with custom function.
     /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
     /// See _custom handler test_ for an example.
-    pub fn fnc<U>(mut self, name: U, args: Vec<impl FilterArg>) -> Self
+    pub fn fnc<U, T, I>(mut self, name: U, args: I) -> Self
     where
-        U: Into<String>,
+        U: Into<String>, T: Into<SqlArg>, I :IntoIterator<Item = T>
     {
         self.filter = Some(FieldFilter::Fn(
             name.into(),
-            args.into_iter().map(|c| c.to_sql()).collect(),
+            args.into_iter().map(|c| c.into()).collect(),
         ));
         self
     }
@@ -444,21 +446,21 @@ impl Into<QueryToken> for Field {
 /// to provide custom functions through the _Fn_ filter or implement a alternative mapping to SQL.
 #[derive(Clone, Debug)]
 pub enum FieldFilter {
-    Eq(String),
+    Eq(SqlArg),
     Eqn,
-    Ne(String),
+    Ne(SqlArg),
     Nen,
-    Gt(String),
-    Ge(String),
-    Lt(String),
-    Le(String),
-    Lk(String),
-    Bw(String, String), // Lower, upper limit
-    In(Vec<String>),
-    Out(Vec<String>),
-    Re(String),
+    Gt(SqlArg),
+    Ge(SqlArg),
+    Lt(SqlArg),
+    Le(SqlArg),
+    Lk(SqlArg),
+    Bw(SqlArg, SqlArg), // Lower, upper limit
+    In(Vec<SqlArg>),
+    Out(Vec<SqlArg>),
+    Re(SqlArg),
     //  Sc(String),
-    Fn(String, Vec<String>), // Function name, args
+    Fn(String, Vec<SqlArg>), // Function name, args
 }
 
 impl ToString for FieldFilter {
@@ -467,61 +469,61 @@ impl ToString for FieldFilter {
         match self {
             FieldFilter::Eq(ref arg) => {
                 s.push_str("EQ ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Eqn => {
                 s.push_str("EQN");
             }
             FieldFilter::Ne(ref arg) => {
                 s.push_str("NE ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Nen => {
                 s.push_str("NEN");
             }
             FieldFilter::Gt(ref arg) => {
                 s.push_str("GT ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Ge(ref arg) => {
                 s.push_str("GE ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Lt(ref arg) => {
                 s.push_str("LT ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Le(ref arg) => {
                 s.push_str("LE ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Lk(ref arg) => {
                 s.push_str("LK ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Re(ref arg) => {
                 s.push_str("RE ");
-                s.push_str(arg);
+                s.push_str(&arg.to_string());
             }
             FieldFilter::Bw(ref lower, ref upper) => {
                 s.push_str("BW ");
-                s.push_str(lower);
+                s.push_str(&lower.to_string());
                 s.push(' ');
-                s.push_str(upper);
+                s.push_str(&upper.to_string());
             }
             FieldFilter::In(ref args) => {
                 s.push_str("IN ");
-                s.push_str(&args.join(" "))
+                s.push_str(&args.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(" "))
             }
             FieldFilter::Out(ref args) => {
                 s.push_str("OUT ");
-                s.push_str(&args.join(" "))
+                s.push_str(&args.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(" "))
             }
             FieldFilter::Fn(ref name, ref args) => {
                 s.push_str("FN ");
                 s.push_str(name);
                 s.push(' ');
-                s.push_str(&args.join(" "))
+                s.push_str(&args.iter().map(|a|a.to_string()).collect::<Vec<_>>().join(" "))
             }
         }
         s
@@ -543,7 +545,7 @@ impl ToString for FieldFilter {
 pub struct Predicate {
     pub(crate) concatenation: Concatenation,
     pub(crate) name: String,
-    pub(crate) args: Vec<String>,
+    pub(crate) args: Vec<SqlArg>,
 }
 
 
@@ -570,12 +572,23 @@ impl Predicate {
         }
     }
 
-    /// Set arguments
-    pub fn is(mut self, arg: impl PredicateArg) -> Self{
-        self.args = arg.to_args();
+    /// Add Argument to predicate
+    pub fn is(mut self, arg: impl Into<SqlArg>) -> Self{
+        //self.args = arg.to_args();
+        self.args.push(arg.into());
         self
     }
-
+   /*   pub fn are<'a, T : 'a >(mut self, args: &'a[T]) -> Self
+     where &'a T : Into<SqlArg>
+     {
+         
+         for a in args {
+             self.args.push(a.into());
+         }
+        
+        self
+    }
+ */
 }
 
 impl ToString for Predicate {
@@ -587,7 +600,7 @@ impl ToString for Predicate {
         s.push(' ');
 
         for a in &self.args {
-            s.push_str (&a);
+            s.push_str (&a.to_string());
             s.push(' ');
         }
     
@@ -691,6 +704,8 @@ impl ToString for QueryToken {
 /// To modify q query with a custom struct see [QueryWith](struct.QueryWith.html)
 /// 
 /// 
+/// 
+use crate::sql::SqlArg;
 #[derive(Clone, Debug)]
 pub struct Query {
     pub(crate) tokens: Vec<QueryToken>,
@@ -699,14 +714,14 @@ pub struct Query {
     /* /// Roles a query has to access fields.
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: HashSet<String>, */
-    pub aux_params: HashMap<String, String>, // generic build params
+    pub aux_params: HashMap<String, SqlArg>, // generic build params
 
     pub where_predicates: Vec<String>, // Additional where clause
-    pub where_predicate_params: Vec<String>, // Query params for additional sql restriction
+    pub where_predicate_params: Vec<SqlArg>, // Query params for additional sql restriction
     pub select_columns: Vec<String>,   // Additional select columns
 
     pub join_stmts: Vec<String>, // Additional joins statements
-    pub join_stmt_params: Vec<String>, // Join params for additional sql restriction
+    pub join_stmt_params: Vec<SqlArg>, // Join params for additional sql restriction
    // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
 }
 
@@ -795,8 +810,8 @@ impl Query {
     }
 
     /// Convenence method to add aux params
-    pub fn aux_param<T>(mut self, name: T, value: T) -> Self 
-    where T: Into<String>
+    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
+    where T: Into<SqlArg>, S: Into<String>
     {
        self.aux_params.insert(name.into(), value.into());
        self

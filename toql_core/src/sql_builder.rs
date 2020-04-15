@@ -49,6 +49,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 
+use crate::sql::{Sql, SqlArg};
+
 struct SqlTargetData {
     selected: bool, // Target is selected
     used: bool,     // Target is either selected or filtered
@@ -254,7 +256,7 @@ impl SqlBuilder {
 
     fn build_ordering(
         result: &mut SqlBuilderResult,
-        query_aux_params: &HashMap<String, String>,
+        query_aux_params: &HashMap<String, SqlArg>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
         ordinals: &HashSet<u8>,
@@ -270,7 +272,7 @@ impl SqlBuilder {
                     };
                     if let Some(_sql_target_data) = sql_target_data.get(toql_field.as_str()) {
                         if let Some(sql_target) = sql_targets.get(toql_field) {
-                            let mut combined_aux_params: HashMap<String, String> = HashMap::new();
+                            let mut combined_aux_params: HashMap<String, SqlArg> = HashMap::new();
                             let aux_params = Self::combine_aux_params(
                                 &mut combined_aux_params,
                                 query_aux_params,
@@ -297,7 +299,7 @@ impl SqlBuilder {
 
     fn build_count_select_clause(
         result: &mut SqlBuilderResult,
-        query_aux_params: &HashMap<String, String>,
+        query_aux_params: &HashMap<String, SqlArg>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
     ) -> Result<(), SqlBuilderError> {
@@ -306,7 +308,7 @@ impl SqlBuilder {
             if let Some(sql_target) = sql_targets.get(toql_field) {
                 // For selected fields there exists target data
                 if sql_target.options.count_select {
-                    let mut combined_aux_params: HashMap<String, String> = HashMap::new();
+                    let mut combined_aux_params: HashMap<String, SqlArg> = HashMap::new();
                     let aux_params = Self::combine_aux_params(
                         &mut combined_aux_params,
                         query_aux_params,
@@ -338,7 +340,7 @@ impl SqlBuilder {
 
     fn build_select_clause(
         result: &mut SqlBuilderResult,
-        query_aux_params: &HashMap<String, String>,
+        query_aux_params: &HashMap<String, SqlArg>,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<&str, SqlTargetData>,
         field_order: &Vec<String>,
@@ -368,7 +370,7 @@ impl SqlBuilder {
                         .map_or(false, |d| d.selected);
 
                 if selected {
-                    let mut combined_aux_params: HashMap<String, String> = HashMap::new();
+                    let mut combined_aux_params: HashMap<String, SqlArg> = HashMap::new();
                     let aux_params = Self::combine_aux_params(
                         &mut combined_aux_params,
                         query_aux_params,
@@ -411,7 +413,7 @@ impl SqlBuilder {
         join_tree: &HashMap<String, Vec<String>>,
         selected_paths: &mut HashSet<String>,
         sql_joins: &HashMap<String, Join>,
-        aux_params: &HashMap<String, String>,
+        aux_params: &HashMap<String, SqlArg>,
         result: &mut SqlBuilderResult,
     ) -> Result<(), SqlBuilderError> {
         fn build_join_start(join: &Join) -> String {
@@ -432,7 +434,7 @@ impl SqlBuilder {
             joins: &Vec<String>,
             selected_paths: &mut HashSet<String>,
             sql_joins: &HashMap<String, Join>,
-            aux_params: &HashMap<String, String>,
+            aux_params: &HashMap<String, SqlArg>,
             result: &mut SqlBuilderResult,
             join_tree: &HashMap<String, Vec<String>>,
         ) -> Result<(), SqlBuilderError>{
@@ -470,7 +472,7 @@ impl SqlBuilder {
                           
                             
                              // Combine aux params from query and local join params
-                             let mut combined_aux_params: HashMap<String, String> =
+                             let mut combined_aux_params: HashMap<String, SqlArg> =
                                         HashMap::new();
                                     let temp_aux_params = SqlBuilder::combine_aux_params(
                                         &mut combined_aux_params,
@@ -505,7 +507,7 @@ impl SqlBuilder {
             path: &str,
             selected_paths: &mut HashSet<String>,
             sql_joins: &HashMap<String, Join>,
-            aux_params: &HashMap<String, String>,
+            aux_params: &HashMap<String, SqlArg>,
             result: &mut SqlBuilderResult,
             join_tree: &HashMap<String, Vec<String>>,
         ) -> Result<(), SqlBuilderError>{
@@ -570,7 +572,7 @@ impl SqlBuilder {
         let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
         let mut selected_paths: HashSet<String> = HashSet::new();
 
-        let mut on_params : HashMap<String, String> = HashMap::new(); // 
+        let mut on_params : HashMap<String, SqlArg> = HashMap::new(); // 
 
         let mut result = SqlBuilderResult {
             aliased_table: sql_mapper.aliased_table.clone(),
@@ -890,7 +892,7 @@ impl SqlBuilder {
 
                                 if let Some(f) = &query_field.filter {
                                     // Combine aux params from query and target
-                                    let mut combined_aux_params: HashMap<String, String> =
+                                    let mut combined_aux_params: HashMap<String, SqlArg> =
                                         HashMap::new();
                                     let aux_params = Self::combine_aux_params(
                                         &mut combined_aux_params,
@@ -981,7 +983,7 @@ impl SqlBuilder {
                                 // Add Parameters for on clauses
                                 if let FieldFilter::Eq(a) | FieldFilter::Ne(a) = f {
                                     for n in &sql_target.options.on_params {
-                                        on_params.insert(n.to_string(), a.to_string());
+                                        on_params.insert(n.to_string(), a.to_owned());
                                     }
                                 }
                                 
@@ -1034,8 +1036,8 @@ impl SqlBuilder {
                                     continue;
                                 }
 
-                                fn predicate_param_values(aux_param_names: &Vec<String>, aux_params: &HashMap<String, String>, predicate_args: &Vec<String>, predicate_name:&str ) -> Result<Vec<String>, SqlBuilderError>{
-                                      let mut params: Vec<String> = Vec::with_capacity(aux_param_names.len());
+                                fn predicate_param_values(aux_param_names: &Vec<String>, aux_params: &HashMap<String, SqlArg>, predicate_args: &Vec<SqlArg>, predicate_name:&str ) -> Result<Vec<SqlArg>, SqlBuilderError>{
+                                      let mut params: Vec<SqlArg> = Vec::with_capacity(aux_param_names.len());
                                       let mut i = 0usize;
                                     for p in aux_param_names {
                                        let value =  if p == "?" {
@@ -1053,7 +1055,7 @@ impl SqlBuilder {
 
                                 
                                 
-                                 let mut combined_aux_params: HashMap<String, String> =
+                                 let mut combined_aux_params: HashMap<String, SqlArg> =
                                         HashMap::new();
                                     let aux_params = Self::combine_aux_params(
                                         &mut combined_aux_params,
@@ -1095,7 +1097,7 @@ impl SqlBuilder {
                                 // Add On Parameters for on clauses 
                                 for (i,n) in &predicate.options.on_params {
                                     let a = query_predicate.args.get(*i as usize).ok_or(SqlBuilderError::PredicateArgumentMissing(query_predicate.name.to_string()))?;
-                                    on_params.insert(n.to_string(), a.to_string());
+                                    on_params.insert(n.to_string(), a.to_owned());
                                 }
 
                                 
@@ -1125,7 +1127,7 @@ impl SqlBuilder {
         }
 
         
-        let mut combined_on_params: HashMap<String, String>= HashMap::new();
+        let mut combined_on_params: HashMap<String, SqlArg>= HashMap::new();
         let on_params = if on_params.is_empty() {
             &query.aux_params
         } else {
@@ -1243,9 +1245,9 @@ impl SqlBuilder {
 
     pub fn aux_param_values(
         aux_param_names: &Vec<String>,
-        aux_params: &HashMap<String, String>,
-    ) -> Result<Vec<String>, SqlBuilderError> {
-        let mut params: Vec<String> = Vec::with_capacity(aux_param_names.len());
+        aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Vec<SqlArg>, SqlBuilderError> {
+        let mut params: Vec<SqlArg> = Vec::with_capacity(aux_param_names.len());
         for p in aux_param_names {
             let qp = aux_params
                 .get(p)
@@ -1257,16 +1259,16 @@ impl SqlBuilder {
 
     pub fn resolve_query_params(
         expression: &str,
-        aux_params: &HashMap<String, String>,
-    ) -> Result<(String, Vec<String>), SqlBuilderError> {
+        aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Sql, SqlBuilderError> {
         let (sql, params) = Self::extract_query_params(expression);
 
-        let mut resolved: Vec<String> = Vec::new();
+        let mut resolved: Vec<SqlArg> = Vec::new();
         for p in params {
             let v = aux_params
                 .get(&p)
                 .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
-            resolved.push(v.to_string());
+            resolved.push(v.to_owned());
         }
 
         Ok((sql, resolved))
@@ -1296,10 +1298,10 @@ impl SqlBuilder {
     }
 
     fn combine_aux_params<'a>(
-        combined_aux_params: &'a mut HashMap<String, String>,
-        query_aux_params: &'a HashMap<String, String>,
-        sql_target_aux_params: &'a HashMap<String, String>,
-    ) -> &'a HashMap<String, String> {
+        combined_aux_params: &'a mut HashMap<String, SqlArg>,
+        query_aux_params: &'a HashMap<String, SqlArg>,
+        sql_target_aux_params: &'a HashMap<String, SqlArg>,
+    ) -> &'a HashMap<String, SqlArg> {
         if sql_target_aux_params.is_empty() {
             query_aux_params
         } else {

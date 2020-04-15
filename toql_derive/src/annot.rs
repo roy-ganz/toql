@@ -70,6 +70,8 @@ pub struct ToqlField {
     #[darling(default)]
     pub skip_mut: bool,
     #[darling(default)]
+    pub skip_query: bool,
+    #[darling(default)]
     pub count_filter: bool,
     #[darling(default)]
     pub count_select: bool,
@@ -219,6 +221,9 @@ pub struct PredicateArg {
 
     #[darling(multiple)]
     pub on_param: Vec<PredicateOnParamArg>,
+
+    #[darling(default)]
+    pub count_filter: bool
 }
 
 #[derive(FromMeta, Clone, Debug)]
@@ -271,6 +276,10 @@ pub struct Toql {
    
     #[darling(default)]
     pub wildcard: Option<String>,
+
+    #[darling(default)]
+    pub count_filter: Option<String>,
+
     pub data: darling::ast::Data<(), ToqlField>,
 }
 
@@ -313,6 +322,7 @@ impl quote::ToTokens for Toql {
             insdel_role: _,
             upd_role: _,
             wildcard:_,
+            count_filter:_,
             ref data,
         } = *self;
 

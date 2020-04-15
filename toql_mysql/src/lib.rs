@@ -6,7 +6,7 @@
 
 use mysql::prelude::GenericConnection;
 
-use toql_core::sql_stmt::SqlArg;
+
 use toql_core::mutate::collection_delta_sql;
 
 use toql_core::key::Keyed;
@@ -25,7 +25,7 @@ use toql_core::log_sql;
 use toql_core::sql_builder_result::SqlBuilderResult;
 
 use std::collections::HashSet;
-use mysql::Value;
+
 
 //pub mod diff;
 //pub mod insert;
@@ -38,11 +38,11 @@ pub mod sql_arg;
 pub mod error;
 use crate::error::Result;
 use crate::error::ToqlMySqlError;
-use toql_core::sql_stmt::SqlStmt;
+use toql_core::sql::Sql;
 
-use crate::sql_arg::{value_from, values_from};
+use crate::sql_arg::{values_from, values_from_ref};
 
-fn execute_update_delete_sql<C>(statement: SqlStmt, conn: &mut C) -> Result<u64>
+fn execute_update_delete_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
 where
     C: GenericConnection,
 {
@@ -53,7 +53,7 @@ where
     Ok(res.affected_rows())
 }
 
-fn execute_insert_sql<C>(statement: SqlStmt, conn: &mut C) -> Result<u64>
+fn execute_insert_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
 where
     C: GenericConnection,
 {
@@ -197,7 +197,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_many<'a, T>(&mut self, predicate: SqlStmt) -> Result<u64>
+    pub fn delete_many<'a, T>(&mut self, predicate: Sql) -> Result<u64>
     where
         T: Keyed + 'a,
         toql_core::dialect::Generic: Delete<'a, T, Error = toql_core::error::ToqlError>,
@@ -418,7 +418,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     }
     /// Selects a single struct for a given key.
     /// This will select all base fields and joins. Merged fields will be skipped
-    pub fn select_many<T>(&mut self, predicate: (String, Vec<String>)) -> Result<Vec<T>>
+    pub fn select_many<T>(&mut self, predicate: Sql) -> Result<Vec<T>>
     where
         Self: Select<T, Error = ToqlMySqlError>,
         T: crate::row::FromResultRow<T> + toql_core::key::Keyed, 
@@ -448,7 +448,7 @@ impl<C: GenericConnection> MySql<'_, C> {
         println!("{}", select_stmt);
         log_sql!(select_stmt, params);
 
-        let entities_stmt = conn.prep_exec(select_stmt, &params)?;
+        let entities_stmt = conn.prep_exec(select_stmt, values_from_ref(&params))?;
         let entities = from_query_result::<T>(entities_stmt)?;
        
         Ok(entities)
@@ -499,7 +499,7 @@ impl<C: GenericConnection> MySql<'_, C> {
                     .build(mapper, &query, self.roles()).map_err(|e|toql_core::error::ToqlError::SqlBuilderError(e))?;
          let (stmt, params) = (result.count_stmt(), result.count_params());           
          log_sql!(stmt, params);       
-         let result = self.conn.prep_exec(&stmt, &params)?;
+         let result = self.conn.prep_exec(&stmt, values_from_ref(params))?;
 
         let count = result.into_iter().next().unwrap().unwrap().get(0).unwrap();
 

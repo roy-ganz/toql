@@ -28,8 +28,10 @@
 
 use std::collections::HashMap;
  use crate::query::FieldFilter;
- use enquote::unquote;
+ 
  use crate::sql_builder::SqlBuilderError;
+
+use crate::sql::{Sql, SqlArg};
 
 pub trait FieldHandler {
     
@@ -39,9 +41,9 @@ pub trait FieldHandler {
     /// Return sql and params if you want to select it.
     fn build_select(
         &self,
-        select: (String, Vec<String>),
-        _aux_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
+        select: Sql,
+        _aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
         Ok(Some(select))
     }
 
@@ -50,10 +52,10 @@ pub trait FieldHandler {
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
     fn build_filter(
         &self,
-        select: (String, Vec<String>),
+        select: Sql,
         filter: &FieldFilter,
-        aux_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError>;
+        aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError>;
    
     
 }
@@ -76,10 +78,10 @@ impl FieldHandler for BasicFieldHandler {
    
     fn build_filter(
         &self,
-        mut select: (String, Vec<String>),
+        mut select: Sql,
         filter: &FieldFilter,
-        _aux_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
+        _aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
                 select.1.push(criteria.clone());
@@ -126,8 +128,8 @@ impl FieldHandler for BasicFieldHandler {
                         .join(",")
                 ),
                 {
-                    let a: Vec<String> = args.iter( ).map(|a| a.to_string()).collect();
-                    select.1.extend_from_slice(&a);
+                   // let a: Vec<SqlArg> = args.iter( ).collect();
+                    select.1.extend_from_slice(&args);
                     select.1
                 },
             ))),
@@ -141,8 +143,8 @@ impl FieldHandler for BasicFieldHandler {
                         .join(",")
                 ),
                 {
-                    let a: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-                    select.1.extend_from_slice(&a);
+                    //let a: Vec<SqlArg> = args.iter().collect::<Vec<_>>();
+                    select.1.extend_from_slice(&args);
                     select.1
                 },
             ))),

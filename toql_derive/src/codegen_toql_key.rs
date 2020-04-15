@@ -60,12 +60,12 @@ impl<'a> GeneratedToqlKey<'a> {
                     self.partial_key_sql_predicates.push( quote!(
                         if let Some(v) = &self.#rust_field_ident {
                             predicate.push_str( &format!(#column_format, alias));
-                            params.push(v.to_string());
+                            params.push(toql::sql::SqlArg::from(v));
                         }
                     ));
                      self.key_sql_predicates.push( quote!(
                             predicate.push_str( &format!(#column_format, alias));
-                            params.push( self. #key_index .to_string());
+                            params.push( toql::sql::SqlArg::from(&self. #key_index));
                     ));
 
                 } else {
@@ -97,7 +97,7 @@ impl<'a> GeneratedToqlKey<'a> {
                 let key_index = syn::Index::from(self.key_fields.len() - 1);
 
                 self.key_params_code
-                    .push(quote!(params.push(key . #key_index .to_owned().to_string()); ));
+                    .push(quote!(params.push(toql::sql::SqlArg::from(&key . #key_index)); ));
             }
             FieldKind::Join(ref join_attrs) => {
                 if !join_attrs.key {
@@ -241,9 +241,9 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
                     type Entity = #rust_stuct_ident;
 
-                fn sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
+                fn sql_predicate(&self, alias: &str) ->  toql::sql::Sql {
                     let mut predicate = String::new();
-                    let mut params: Vec<String> = Vec::new();
+                    let mut params: Vec<toql::sql::SqlArg> = Vec::new();
 
                     #(#partial_key_sql_predicates)*
 
@@ -283,8 +283,8 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                         #(#key_inverse_columns_code)*
                         columns
                     }
-                    fn params(&self) ->Vec<String> {
-                        let mut params: Vec<String>= Vec::new();
+                    fn params(&self) ->Vec<toql::sql::SqlArg> {
+                        let mut params: Vec<toql::sql::SqlArg>= Vec::new();
                         let key = self; // TODO cleanup
 
                         #(#key_params_code)*
@@ -312,9 +312,9 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
              impl toql::sql_predicate::SqlPredicate  for #struct_key_ident {
                  type Entity = #rust_stuct_ident;
 
-                fn sql_predicate(&self, alias: &str) -> (String, Vec<String>) {
+                fn sql_predicate(&self, alias: &str) -> toql::sql::Sql {
                     let mut predicate = String::new();
-                    let mut params: Vec<String> = Vec::new();
+                    let mut params: Vec<toql::sql::SqlArg> = Vec::new();
 
                     #(#key_sql_predicates)*
 

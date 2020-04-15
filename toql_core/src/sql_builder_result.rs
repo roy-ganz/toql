@@ -2,6 +2,7 @@
 //! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
 use crate::query::Concatenation;
+use crate::sql::SqlArg;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 pub struct SqlBuilderResult {
@@ -13,12 +14,12 @@ pub struct SqlBuilderResult {
     pub(crate) where_clause: String,
     pub(crate) order_clause: String,
     pub(crate) having_clause: String,
-    pub(crate) select_params: Vec<String>,
-    pub(crate) where_params: Vec<String>,
-    pub(crate) having_params: Vec<String>,
-    pub(crate) order_params: Vec<String>,
-    pub(crate) join_params: Vec<String>, // Not sure if needed
-    pub(crate) combined_params: Vec<String>,
+    pub(crate) select_params: Vec<SqlArg>,
+    pub(crate) where_params: Vec<SqlArg>,
+    pub(crate) having_params: Vec<SqlArg>,
+    pub(crate) order_params: Vec<SqlArg>,
+    pub(crate) join_params: Vec<SqlArg>, // Not sure if needed
+    pub(crate) combined_params: Vec<SqlArg>,
     
 }
 
@@ -99,7 +100,7 @@ impl SqlBuilderResult {
         s
     }
     
-    pub fn count_params(&self) -> &Vec<String> {
+    pub fn count_params(&self) -> &Vec<SqlArg> {
         &self.combined_params // TODO
 
         /* if self.where_params.is_empty() {
@@ -111,7 +112,7 @@ impl SqlBuilderResult {
         } */
     }
     /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
-    pub fn query_params(&self) -> &Vec<String> {
+    pub fn query_params(&self) -> &Vec<SqlArg> {
         &self.combined_params
 
         /* if self.where_params.is_empty() {

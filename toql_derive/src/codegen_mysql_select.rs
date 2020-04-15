@@ -55,6 +55,11 @@ impl<'a> GeneratedMysqlSelect<'a> {
         let rust_type_ident = &field.rust_type_ident;
         let rust_field_name = &field.rust_field_name;
 
+
+        if field.skip_query {
+         return Ok(());   
+        }
+
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 if regular_attrs.key {
@@ -69,7 +74,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                     }
 
                     self.select_keys_params.push(quote! {
-                        params.push( key . #key_index .to_string());
+                        params.push(  toql::sql::SqlArg::from(key . #key_index ));
                     });
 
                     self.merge_self_fields.push(rust_field_name.to_string());
@@ -82,7 +87,7 @@ impl<'a> GeneratedMysqlSelect<'a> {
                         // Sql expressions with aux params must be selectable and will load always NULL
                         
                         if field.number_of_options > 0 && !field.preselect {
-                                self.select_columns.push(String::from("NULL"));
+                                self.select_columns.push( "NULL".to_string());
                                 } else {
                                     return Err(Error::custom(
                                     "SQL expression cannot be selected. Either make field selectable with `Option<..>` so it can be `None` or skip selection by adding the attribute `#[toql(skip_select)]` to the struct",
@@ -290,7 +295,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                                );
 
                                toql::log_sql!(select_stmt, params);
-
+                                let params = toql::mysql::sql_arg::values_from(params);
                                let entities_stmt = conn.prep_exec(select_stmt, &params)?;
                                let mut entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
 
@@ -316,6 +321,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlSelect<'a> {
                                );
 
                                toql::log_sql!(select_stmt, params);
+                               let params = toql::mysql::sql_arg::values_from(params);
                                let entities_stmt = conn.prep_exec(select_stmt, &params)?;
                                let entities = toql::mysql::row::from_query_result::< #struct_ident>(entities_stmt)?;
                                Ok(entities)

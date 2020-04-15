@@ -11,6 +11,14 @@
 //! 
 
 
+
+pub trait Aliased {
+
+    fn canonical_alias() -> String;
+
+}
+
+
 /// Represents the table alias format
 #[derive(Clone, Debug)]
 pub enum AliasFormat {

@@ -1,15 +1,16 @@
 
 
 use std::{ collections::HashMap};
+use crate::sql::{Sql, SqlArg};
 
 pub trait JoinHandler {
    
     /// Return customized SQL on predicate
     fn build_on_predicate(
         &self,
-         on_predicate: (String, Vec<String>),
-        _aux_params: &HashMap<String, String>,
-    ) -> Result<(String, Vec<String>), crate::sql_builder::SqlBuilderError> {
+         on_predicate: Sql,
+        _aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Sql, crate::sql_builder::SqlBuilderError> {
         Ok(on_predicate)
     }
 

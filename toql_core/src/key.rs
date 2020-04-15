@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::borrow::Borrow;
 
-use crate::sql_stmt::{SqlStmt, SqlArg};
+use crate::sql::{Sql, SqlArg};
 
 /// Trait to define key type of a Toql entity.
 pub trait Keyed {
@@ -68,7 +68,7 @@ fn predicate_from_columns_with_alias_sql<K: Key, T, U>(
     keys: &[K],
     columns: &[T],
     sql_alias: Option<U>,
-) -> SqlStmt
+) -> Sql
 where
     T: Borrow<str>,
     U: Borrow<str>,
@@ -130,14 +130,14 @@ where
 pub fn predicate_from_columns_sql<K: Key, T>(
     keys: &[K],
     aliased_columns: &[T],
-) -> SqlStmt
+) -> Sql
 where
     T: Borrow<str>,
 {
     predicate_from_columns_with_alias_sql::<K, T, &str>(keys, aliased_columns, None)
 }
 
-pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> SqlStmt
+pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> Sql
 where
     U: Borrow<str>,
 {
@@ -245,14 +245,14 @@ pub trait Key {
 
 pub trait ToSqlPredicate{
 
-    fn to_sql_predicate(&self, alias: &str) ->SqlStmt;
-    fn build_sql_predicate(&self, aliased_predicate: &str) -> SqlStmt;
+    fn to_sql_predicate(&self, alias: &str) ->Sql;
+    fn build_sql_predicate(&self, aliased_predicate: &str) -> Sql;
 }
 
 impl<T> ToSqlPredicate for T 
 where T: Key
 {
-    fn to_sql_predicate(&self, alias: &str) -> SqlStmt {
+    fn to_sql_predicate(&self, alias: &str) -> Sql {
          let mut predicate = String::new();
          let mut params = Vec::new();
 
@@ -272,7 +272,7 @@ where T: Key
 
             (predicate, params)
     }
-     fn build_sql_predicate(&self, aliased_predicate: &str) -> SqlStmt {
+     fn build_sql_predicate(&self, aliased_predicate: &str) -> Sql {
 
             // todo in debug check number of ? corresponds to params
             if cfg!(debug_assertions) {
@@ -288,7 +288,7 @@ where T: Key
 impl<T> ToSqlPredicate for &[T]
 where T: ToSqlPredicate {
 
-    fn to_sql_predicate(&self, alias: &str) -> SqlStmt {
+    fn to_sql_predicate(&self, alias: &str) -> Sql {
 
     let mut predicate = String::new();
          let mut params = Vec::new();
@@ -308,7 +308,7 @@ where T: ToSqlPredicate {
         (predicate, params)
 
     }
-     fn build_sql_predicate(&self, aliased_predicate: &str) -> SqlStmt {
+     fn build_sql_predicate(&self, aliased_predicate: &str) -> Sql {
 
         let mut predicate = String::new();
         let mut params = Vec::new();
@@ -338,7 +338,7 @@ where T: ToSqlPredicate {
 
     /// Returns SQL predicate for collection. 
     /// This may be overridded for simple primary keys that are build with IN(..)
-    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> SqlStmt 
+    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> Sql 
     where K: crate::key::Key, Q: 'a + Borrow<K>
     {
         let mut predicate = String::new();
@@ -370,7 +370,7 @@ where T: ToSqlPredicate {
          (predicate, params)
      }
 
-     pub fn sql_expression<'a, K, Q>(keys: &[Q], sql:&str) -> SqlStmt
+     pub fn sql_expression<'a, K, Q>(keys: &[Q], sql:&str) -> Sql
     where K: crate::key::Key, Q: 'a + Borrow<K>
     {
          let mut predicate = String::new();

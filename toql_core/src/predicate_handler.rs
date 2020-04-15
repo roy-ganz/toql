@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
  use crate::sql_builder::SqlBuilderError;
+use crate::sql::{Sql, SqlArg};
 
 pub trait PredicateHandler {
     
@@ -11,9 +12,9 @@ pub trait PredicateHandler {
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
     fn build_predicate(
         &self,
-        expression: (String, Vec<String>),
-        aux_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, SqlBuilderError>;
+        expression: Sql,
+        aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Option<Sql>, SqlBuilderError>;
    
     
 }
@@ -38,14 +39,11 @@ impl PredicateHandler for DefaultPredicateHandler {
 
  fn build_predicate(
         &self,
-        predicate: (String, Vec<String>),
-        _aux_params: &HashMap<String, String>,
-    ) -> Result<Option<(String, Vec<String>)>, crate::sql_builder::SqlBuilderError> {
-        let mut sql_params= Vec::new();
-        for p in predicate.1 {
-            sql_params.push(p);
-        }
-        Ok(Some((format!("({})", predicate.0),sql_params)))
+        predicate: Sql,
+        _aux_params: &HashMap<String, SqlArg>,
+    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
+       // Wrap in parens
+        Ok(Some((format!("({})", predicate.0),predicate.1)))
     }
    
 

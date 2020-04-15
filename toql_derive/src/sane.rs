@@ -25,7 +25,8 @@ pub struct Struct {
     pub mapped_predicates: Vec<PredicateArg>,
     pub insdel_roles: HashSet<String>,
     pub upd_roles: HashSet<String>,
-    pub wildcard: Option<HashSet<String>>
+    pub wildcard: Option<HashSet<String>>,
+    pub count_filter: Option<HashSet<String>>
 }
 
 impl Struct {
@@ -40,6 +41,7 @@ impl Struct {
                 sql: a.sql.clone(),
                 handler: a.handler.clone(),
                 on_param: a.on_param.clone(),
+                count_filter: a.count_filter.clone()
             })
             .collect::<Vec<_>>();
 
@@ -57,8 +59,8 @@ impl Struct {
             mapped_predicates,
             insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
-            
-            wildcard: toql.wildcard.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
+            wildcard: toql.wildcard.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
+            count_filter: toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
         }
     }
 }
@@ -148,6 +150,7 @@ pub struct Field {
     pub preselect: bool,
     pub kind: FieldKind,
     pub skip_mut: bool,
+    pub skip_query: bool,
     
 }
 
@@ -444,6 +447,7 @@ impl Field {
             toql_field_name,
             number_of_options,
             skip_mut: field.skip_mut,
+            skip_query: field.skip_query,
             skip_wildcard: field.skip_wildcard,
             load_roles: field
                 .load_role
