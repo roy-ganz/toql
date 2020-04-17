@@ -68,12 +68,14 @@ impl<'a> GeneratedToqlMapper<'a> {
         
         let count_filter_code = 
           if let Some(count_filter) = &rust_struct.count_filter {
-
+              // Only map count filter on top entity
               quote!(
-                   for field in &[ #(#count_filter),*] {
-                        let options = mapper.get_options(field).expect(&format!("Field {} not mapped. Skipped count filter.", &field));
-                        mapper.set_options(field, options.count_filter(true));
-                    }
+                  if roql_path.is_empty() {
+                    for field in &[ #(#count_filter),*] {
+                            let options = mapper.get_options(field).expect(&format!("Field {} not mapped. Skipped count filter.", &field));
+                            mapper.set_options(field, options.count_filter(true));
+                        }
+                  }
               )
         } else {
             quote!( )

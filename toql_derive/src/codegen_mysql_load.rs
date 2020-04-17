@@ -66,11 +66,10 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
     pub(crate) fn add_mysql_deserialize_skip_field(&mut self, field: &crate::sane::Field) {
         let rust_field_ident = &field.rust_field_ident;
-        let rust_type_ident = &field.rust_type_ident;
 
-        self.mysql_deserialize_fields.push(quote!(
-             #rust_field_ident : #rust_type_ident :: default()
-        ));
+        self.mysql_deserialize_fields.push( quote!( #rust_field_ident : Default::default()));
+              
+              
     }
 
 
@@ -84,10 +83,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
         if field.skip_query {
              let rust_field_ident = &field.rust_field_ident;
-             self.mysql_deserialize_fields.push( match field.number_of_options {
-                    0 => quote!( #rust_field_ident :  Default::default()),
-                    _ => quote!( #rust_field_ident : None)
-                });
+             self.mysql_deserialize_fields.push(  quote!( #rust_field_ident : Default::default()));
 
         }else {
             match &field.kind {
