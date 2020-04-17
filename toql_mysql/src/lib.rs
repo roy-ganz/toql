@@ -40,6 +40,7 @@ use crate::error::Result;
 use crate::error::ToqlMySqlError;
 use toql_core::sql::Sql;
 
+
 use crate::sql_arg::{values_from, values_from_ref};
 
 fn execute_update_delete_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
@@ -69,24 +70,26 @@ where
 pub struct MySql<'a, C: GenericConnection> {
     conn: &'a mut C,
     roles: HashSet<String>,
+    registry: &'a SqlMapperRegistry
 }
 
 impl<C: GenericConnection> MySql<'_, C> {
     /// Create connection wrapper from MySql connection or transaction.
     ///
     /// Use the connection wrapper to access all Toql functionality.
-    pub fn from<'a>(conn: &'a mut C) -> MySql<'a, C> {
+    pub fn from<'a>(conn: &'a mut C, registry: &'a SqlMapperRegistry) -> MySql<'a, C> {
         MySql {
             conn,
             roles: HashSet::new(),
+            registry
         }
     }
 
     /// Create connection wrapper from MySql connection or transaction and roles.
     ///
     /// Use the connection wrapper to access all Toql functionality.
-    pub fn with_roles<'a>(conn: &'a mut C, roles: HashSet<String>) -> MySql<'a, C> {
-        MySql { conn, roles }
+    pub fn with_roles<'a>(conn: &'a mut C, registry: &'a SqlMapperRegistry, roles: HashSet<String>) -> MySql<'a, C> {
+        MySql { conn, registry,roles }
     }
 
     /// Set roles
@@ -100,6 +103,10 @@ impl<C: GenericConnection> MySql<'_, C> {
 
     pub fn conn(&mut self) -> &'_ mut C {
         self.conn
+    }
+
+    pub fn registry(& self) -> &SqlMapperRegistry {
+        &self.registry
     }
     pub fn roles(&self) -> &HashSet<String> {
         &self.roles
@@ -489,14 +496,16 @@ impl<C: GenericConnection> MySql<'_, C> {
      /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn count<T>(&mut self, query: &Query, mapper: &SqlMapper) -> Result<u64>
+    pub fn count<T>(&mut self, query: &Query) -> Result<u64>
     where
         Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Keyed,
+        T: toql_core::key::Keyed + toql_core::sql_mapper::Mapped,
     {
-        
+        use toql_core::error::ToqlError;
+
+         let mapper = self.registry.mappers.get( &<T as Mapped>::type_name() ).ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
          let mut result = toql_core::sql_builder::SqlBuilder::new()
-                    .build(mapper, &query, self.roles()).map_err(|e|toql_core::error::ToqlError::SqlBuilderError(e))?;
+                    .build(mapper, &query, self.roles()).map_err(|e| ToqlError::SqlBuilderError(e))?;
          let (stmt, params) = (result.count_stmt(), result.count_params());           
          log_sql!(stmt, params);       
          let result = self.conn.prep_exec(&stmt, values_from_ref(params))?;
@@ -510,12 +519,13 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn load_one<T>(&mut self, query: &Query, registry: &SqlMapperRegistry) -> Result<T>
+    pub fn load_one<T>(&mut self, query: &Query) -> Result<T>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
     {
-        <Self as Load<T>>::load_one(self, query, registry)
+        
+        <Self as Load<T>>::load_one(self, query)
     }
 
     /// Load a vector of structs with dependencies for a given Toql query.
@@ -526,14 +536,30 @@ impl<C: GenericConnection> MySql<'_, C> {
     pub fn load_many<T>(
         &mut self,
         query: &Query,
-        registry: &SqlMapperRegistry,
+    ) -> Result<Vec<T>>
+    where
+        Self: Load<T, Error = ToqlMySqlError>,
+        T: toql_core::key::Keyed,
+    {
+        let (r, _) =<Self as Load<T>>::load_many(self, query,None)?;
+        Ok(r)
+    }
+
+    /// Load a vector of structs with dependencies for a given Toql query.
+    ///
+    /// Returns a tuple with the structs and an optional tuple of count values.
+    /// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
+    /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
+    pub fn load_page<T>(
+        &mut self,
+        query: &Query,
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
     {
-        <Self as Load<T>>::load_many(self, query, registry, page)
+        <Self as Load<T>>::load_many(self, query, Some(page))
     }
 }
 
@@ -541,14 +567,19 @@ impl<C: GenericConnection> MySql<'_, C> {
 pub fn sql_from_query_result(
     result: &SqlBuilderResult,
     modifier: &str,
-    offset: u64,
-    max: u16,
+    page: Option<(u64,u16)>
 ) -> String {
 
-    let mut extra = String::from("LIMIT ");
-    extra.push_str(&offset.to_string());
-    extra.push(',');
-    extra.push_str(&max.to_string());
+
+    let extra = match page {
+        Some((offset, max)) => { 
+            let mut e = String::from("LIMIT ");
+        e.push_str(&offset.to_string());
+        e.push(',');
+        e.push_str(&max.to_string()); e},
+        None => String::from("")
+    }
+    ;
 
     result.query_stmt(modifier, &extra)
     /* let mut s = String::from("SELECT ");

@@ -33,7 +33,7 @@ pub trait Load<T: crate::key::Keyed> {
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    fn load_one(&mut self, query: &Query, mappers: &SqlMapperRegistry) -> Result<T, Self::Error>;
+    fn load_one(&mut self, query: &Query) -> Result<T, Self::Error>;
 
     /// Load a vector of structs with dependencies for a given Toql query.
     ///
@@ -41,8 +41,7 @@ pub trait Load<T: crate::key::Keyed> {
     fn load_many(
         &mut self,
         query: &Query,
-        mappers: &SqlMapperRegistry,
-        page: Page,
+        page: Option<Page>,
     ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::Error>;
 
     /// Build SQL for a toql path. This is used by the Toql derive to load a collection (merged entities). 
@@ -53,7 +52,6 @@ pub trait Load<T: crate::key::Keyed> {
         path: &str,
         query: &crate::query::Query,
         wildcard_scope: &WildcardScope,
-        cache: &crate::sql_mapper_registry::SqlMapperRegistry,
     ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::Error>;
 
     /// Loads all collections for a given struct. This is used by the Toql derive
@@ -63,8 +61,7 @@ pub trait Load<T: crate::key::Keyed> {
         _entities: &mut Vec<T>,
         _entity_keys: &Vec<T::Key>,
         _query: &crate::query::Query,
-        _wildcard_scope: &WildcardScope,
-        _cache: &crate::sql_mapper_registry::SqlMapperRegistry,
+        _wildcard_scope: &WildcardScope
     ) -> Result<(), Self::Error> {
         Ok(())
     }
