@@ -5,12 +5,12 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 
  use proc_macro2::{TokenStream, Span};
-use toql_parser::PestQueryParser;
+use toql_query_parser::PestQueryParser;
 use heck::SnakeCase;
 
 use pest::Parser;
 
-use toql_parser::Rule;
+use toql_query_parser::Rule;
 
 #[derive(Debug)]
 enum TokenType {
@@ -183,7 +183,7 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
         Ok(output_stream)
     }
 
-    fn evaluate_pair(pairs: &mut pest::iterators::FlatPairs<toql_parser::Rule>, struct_type: &Ident, query_args: &mut syn::punctuated::Iter<'_, syn::Expr>) ->std::result::Result<TokenStream, TokenStream> {
+    fn evaluate_pair(pairs: &mut pest::iterators::FlatPairs<toql_query_parser::Rule>, struct_type: &Ident, query_args: &mut syn::punctuated::Iter<'_, syn::Expr>) ->std::result::Result<TokenStream, TokenStream> {
     //fn evaluate_pair(pairs: &pest::iterators::Pair<'_, toql_parser::Rule>) ->TokenStream2 {
 
             

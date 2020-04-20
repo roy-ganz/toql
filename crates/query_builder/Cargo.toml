@@ -27,6 +27,6 @@ env_logger="0.6"
 
 pest= "2.0"
 
-toql_parser = { version = "0.1", path = "../toql_parser" }
+toql_query_parser = { version = "0.1", path = "../query_parser" }
 
 
