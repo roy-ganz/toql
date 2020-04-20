@@ -1,0 +1,56 @@
+/* char =  { !("'") ~ ANY }
+string = @{ char* }
+num_value =  { ASCII_DIGIT+ }
+text_value =  { "'" ~ string ~ "'" }
+value= { num_value | text_value  }  */
+/*char = {
+    !("'" | "\\") ~ ANY
+    | "\\" ~ ("'" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+inner = @{ char* }
+*/
+// Like SQL strings 'Tim''s dog'
+string = ${  "'" ~ ( "''" | (!"'" ~ ANY) )* ~  "'" }
+
+num_u64 = @{ASCII_DIGIT+}
+num_i64 = @{ "-" ~ ASCII_DIGIT+}
+
+
+num_f64 = @{
+    "-"?
+    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+    ~ ("." ~ ASCII_DIGIT*)
+    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+num_placeholder = @{"?"} // for use in query macro
+
+value= { num_i64 | num_u64 | num_f64 | string | num_placeholder }
+filter_name= {name}
+field_filter = { filter_name ~ value+}
+sort = @{ ("+" | "-") ~ASCII_DIGIT* }
+name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
+field_path = @{ name ~ ("_" ~ name)* }
+hidden = @{"."}
+wildcard_path= {field_path ~ "_"}
+wildcard = { wildcard_path? ~ "*" }
+
+aggregation = @{"!"}
+field = { sort? ~ hidden? ~ field_path }
+field_clause = { field ~ aggregation? ~ field_filter?}
+predicate_arg =  { value+}
+predicate_name = { "@" ~ field_path}
+predicate_clause = { predicate_name ~ predicate_arg?}
+query_placeholder = @{"{}"} // for use in query macro
+clause = { field_clause | predicate_clause | query_placeholder |( lpar ~ expr ~ rpar) } 
+concat = { "," | ";" }
+
+lpar = @{"("}
+rpar = @{")"}
+
+
+expr = { (wildcard | clause ) ~ (concat ~ (wildcard | clause))*}
+query = { SOI ~ expr? ~ EOI }
+
+WHITESPACE = _{ " " }
+

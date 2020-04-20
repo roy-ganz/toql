@@ -179,7 +179,7 @@ impl FilterArg for &bool {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) enum Concatenation {
+pub enum Concatenation {
     And,
     Or,
 }
@@ -392,6 +392,16 @@ impl Field {
         ));
         self
     }
+
+    /// Filter records with custom function.
+    /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
+    /// See _custom handler test_ for an example.
+    pub fn concatenate(mut self, concatenation: Concatenation) -> Self
+    {
+        self.concatenation = concatenation;
+        self
+    }
+
 }
 
 impl ToString for Field {

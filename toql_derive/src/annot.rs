@@ -1,7 +1,7 @@
 use crate::codegen_toql_delup::GeneratedToqlDelup;
 use crate::codegen_toql_key::GeneratedToqlKey;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
-use crate::codegen_toql_query_builder::GeneratedToqlQueryBuilder;
+use crate::codegen_toql_query_fields::GeneratedToqlQueryFields;
 
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_load::GeneratedMysqlLoad;
@@ -289,7 +289,7 @@ impl quote::ToTokens for Toql {
 
         let rust_struct = crate::sane::Struct::create(&self);
         let mut toql_mapper = GeneratedToqlMapper::from_toql(&rust_struct);
-        let mut toql_query_builder = GeneratedToqlQueryBuilder::from_toql(&rust_struct);
+        let mut toql_query_fields = GeneratedToqlQueryFields::from_toql(&rust_struct);
         let mut toql_delup = GeneratedToqlDelup::from_toql(&rust_struct);
         let mut toql_key = GeneratedToqlKey::from_toql(&rust_struct);
 
@@ -355,7 +355,7 @@ impl quote::ToTokens for Toql {
                     } */
 
                     if !skip_query_builder {
-                        toql_query_builder.add_field_for_builder(&f);
+                        toql_query_fields.add_field_for_builder(&f);
                     }
 
                     if field.merge.is_some() {
@@ -422,7 +422,7 @@ impl quote::ToTokens for Toql {
                 tokens.extend(quote!(#toql_key));
 
                 if !skip_query_builder {
-                    tokens.extend(quote!(#toql_query_builder));
+                    tokens.extend(quote!(#toql_query_fields));
                 }
 
                 if !skip_load {

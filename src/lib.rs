@@ -61,7 +61,7 @@ pub use toql_core::select;
 pub use toql_core::log_sql; // Export macro
 pub use toql_core::ok_or_fail; // Export macro
 
-pub use toql_core::query_builder;
+pub use toql_core::query_fields;
 pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
 pub use toql_core::sql_builder_result;
@@ -72,6 +72,7 @@ pub use toql_core::join_handler;
 pub use toql_core::predicate_handler;
 
 pub use toql_derive as derive;
+pub use toql_query_builder as query_builder;
 
 pub use toql_core::log; // Reexport for derive
 

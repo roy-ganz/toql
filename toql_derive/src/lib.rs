@@ -49,7 +49,7 @@ mod annot;
 mod codegen_toql_delup;
 mod codegen_toql_key;
 mod codegen_toql_mapper;
-mod codegen_toql_query_builder;
+mod codegen_toql_query_fields;
 
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_load;
@@ -65,6 +65,30 @@ mod codegen_mysql_insert;
 
 mod sane;
 mod util;
+
+/* 
+
+#[proc_macro]
+pub fn query(input: TokenStream) -> TokenStream {
+
+     let _ = env_logger::try_init(); // Avoid multiple init
+     eprintln!("{:?}", input);
+
+    let ast = parse_macro_input!(input as query_builder::QueryBuilder);
+
+    eprintln!("{:?}", ast);
+
+  let gen = quote!( 
+      pub fn hello() 
+   { 
+       println!("hello");
+   }
+   );
+   
+   log::debug!("Source code for `{}`:\n{}", "query", gen.to_string());
+   TokenStream::from(gen)
+} */
+
 /* 
 #[proc_macro_derive(ToqlFilterArg)]
 pub fn filter_arg_derive(input: TokenStream) -> TokenStream {

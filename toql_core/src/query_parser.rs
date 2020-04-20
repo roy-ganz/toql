@@ -48,13 +48,11 @@ struct TokenInfo {
     token_type: TokenType,
     args :Vec<SqlArg>,
     hidden : bool,
-     order :Option<FieldOrder>,
-         filter: Option<String>,
-         aggregation :bool,
-         name: String,
-         concatenation: Concatenation
-         
-
+    order :Option<FieldOrder>,
+    filter: Option<String>,
+    aggregation :bool,
+    name: String,
+    concatenation: Concatenation
 }
 
 impl TokenInfo {
@@ -110,7 +108,7 @@ impl TokenInfo {
                    match filtername {
                     "" => Ok(None),
                     "EQ" => Ok(Some(FieldFilter::Eq(self.args.pop().ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?))),
-                     "EQN" => Ok(Some(FieldFilter::Eqn)),
+                    "EQN" => Ok(Some(FieldFilter::Eqn)),
                     "NE" => Ok(Some(FieldFilter::Ne(self.args.pop().ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?))),
                     "NEN" => Ok(Some(FieldFilter::Nen)),
                     "GT" => Ok(Some(FieldFilter::Gt(self.args.pop().ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?))),
@@ -148,17 +146,6 @@ impl QueryParser {
         
         let mut token_info = TokenInfo::new();
         
-      
-
-
-       /*  fn unquote(quoted: &str) -> String{
-            if quoted.starts_with("'") {
-                quoted.trim_matches('\'').replace("''", "'")
-            } else {
-                quoted.to_string()
-            }
-        } */
-
         for pair in pairs.flatten().into_iter() {
             let span = pair.clone().as_span();
             //   println!("Rule:    {:?}", pair.as_rule());
@@ -167,14 +154,6 @@ impl QueryParser {
             match pair.as_rule() {
                 Rule::field_clause => {
                      token_info.token_type = TokenType::Field;
-                   /*  query.tokens.push(QueryToken::Field(Field {
-                        concatenation: con.clone(),
-                        name: "missing".to_string(),
-                        hidden: false,
-                        order: None,
-                        aggregation: false,
-                        filter: None,
-                    })); */
                 },
                 Rule::sort => {
                         let p = span.as_str()[1..].parse::<u8>().unwrap_or(1);
@@ -183,118 +162,26 @@ impl QueryParser {
                             } else {
                                  token_info.order = Some(FieldOrder::Desc(p));
                             }
-
-                    /* let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Field(ref mut field) = t {
-                            let p = span.as_str()[1..].parse::<u8>().unwrap_or(1);
-                            if let Some('+') = span.as_str().chars().next() {
-                                order = Some(FieldOrder::Asc(p));
-                            } else {
-                                order = Some(FieldOrder::Desc(p));
-                            }
-                           /*  if let Some('+') = span.as_str().chars().next() {
-                                field.order = Some(FieldOrder::Asc(p));
-                            } else {
-                                field.order = Some(FieldOrder::Desc(p));
-                            } */
-                        }
-                    } */
                 }
                 Rule::hidden => {
                     token_info.hidden = true;
-                   /*  let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Field(ref mut field) = t {
-                            //field.hidden = true;
-                            hidden = true;
-                        }
-                    } */
                 }
                 Rule::aggregation => {
                     token_info.aggregation = true;
-                    /* let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Field(ref mut field) = t {
-                           // field.aggregation = true;
-                            aggregation = true;
-                        }
-                    } */
                 }
                 
                 Rule::field_path => {
                      
                      token_info.name = span.as_str().to_string();
-                    //let token = query.tokens.last_mut();
-                    //if let Some(t) = token {
-                        
-                        /* if let QueryToken::Field(ref mut field) = t {
-                            field.name = span.as_str().to_string();
-                           
-                        } */
-                  //  }
                 },
                  Rule::wildcard => {
                     token_info.token_type = TokenType::Wildcard;
-                      
-                    /* let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Wildcard(ref mut wildcard) = t {
-                            wildcard.path = span.as_str().to_string();
-                        }
-                    } */
                 }
                 Rule::wildcard_path => {
                       token_info.name = span.as_str().to_string();
-                    /* let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Wildcard(ref mut wildcard) = t {
-                            wildcard.path = span.as_str().to_string();
-                        }
-                    } */
                 }
                 Rule::filter_name => {
                     token_info.filter =  Some(span.as_str().to_string());
-                   /*  let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Field(ref mut field) = t {
-                            let mut iter = span.as_str().split_whitespace();
-                            let op = iter.next();
-
-                          
-
-                            /* field.filter = match op.unwrap().to_uppercase().as_str() {
-                                "EQ" => Some(FieldFilter::Eq(args.pop().unwrap())),
-                                "EQN" => Some(FieldFilter::Eqn),
-                                "NE" => Some(FieldFilter::Ne(args.pop().unwrap())),
-                                "NEN" => Some(FieldFilter::Nen),
-                                "GT" => Some(FieldFilter::Gt(args.pop().unwrap())),
-                                "GE" => Some(FieldFilter::Ge(args.pop().unwrap())),
-                                "LT" => Some(FieldFilter::Lt(args.pop().unwrap())),
-                                "LE" => Some(FieldFilter::Le(args.pop().unwrap())),
-                                "LK" => Some(FieldFilter::Lk(args.pop().unwrap())),
-                                "IN" => Some(FieldFilter::In(args.drain(..).collect())),
-                                "OUT" => Some(FieldFilter::Out(args.drain(..).collect())),
-                                "BW" => {let last = args.pop().unwrap(); 
-                                    Some(FieldFilter::Bw(  args.pop().unwrap(),last))
-                                },
-                                "RE" => Some(FieldFilter::Re(args.pop().unwrap())),
-                                //     "SC" => Some(FieldFilter::Sc(iter.next().unwrap().to_string())),
-                                "FN" => Some(FieldFilter::Fn(
-                                   iter.next().unwrap().to_uppercase(),
-                                    args.drain(..).collect())),
-                                _ => {
-                                    return Err(ToqlError::QueryParserError(Error::new_from_span(
-                                        CustomError {
-                                            message: "Invalid filter Function".to_string(),
-                                        },
-                                        span,
-                                    )))
-                                }
-                            } */
-                        }
-                    }
-                    args.clear(); // All arguments consumed, clear vec to make sure */
                 },
                 Rule::num_u64 => {
                     let v = span.as_str().parse::<u64>().unwrap_or(0); // should not be invalid, todo check range
@@ -314,39 +201,10 @@ impl QueryParser {
                 }
                  Rule::predicate_clause => {
                      token_info.token_type= TokenType::Predicate;
-
-                  /*   query.tokens.push(QueryToken::Predicate(Predicate {
-                        concatenation: con.clone(),
-                        name: "missing".to_string(),
-                        args: Vec::new(),
-                    })); */
                 },
                  Rule::predicate_name =>  {
                      token_info.name = span.as_str().trim_start_matches("@").to_string();
-                  /*   let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Predicate(ref mut predicate) = t {
-                              predicate.name = span.as_str().trim_start_matches("@").to_string();
-                        }
-                    } */
                 },
-              /*   Rule::predicate_arg =>  {
-                    /* 
-                    let token = query.tokens.last_mut();
-                    if let Some(t) = token {
-                        if let QueryToken::Predicate(ref mut predicate) = t {
-                              
-                                predicate.args = args.drain(..).collect::<Vec<SqlArg>>();
-                        }
-                    } */
-                }, */
-                /* Rule::wildcard => {
-                    
-                    query.tokens.push(QueryToken::Wildcard(Wildcard {
-                        concatenation: con.clone(),
-                        path: String::from(""),
-                    }));
-                } */
                 Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);
                 }
@@ -372,12 +230,6 @@ impl QueryParser {
                         Concatenation::Or
                     };
 
-
-                 /*    if let Some(',') = span.as_str().chars().next() {
-                        con = Concatenation::And;
-                    } else {
-                        con = Concatenation::Or;
-                    } */
                 }
 
                 _ => {}

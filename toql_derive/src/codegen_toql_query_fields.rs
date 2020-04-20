@@ -5,7 +5,7 @@ use heck::SnakeCase;
 
 use crate::sane::{FieldKind, Struct};
 
-pub(crate) struct GeneratedToqlQueryBuilder<'a> {
+pub(crate) struct GeneratedToqlQueryFields<'a> {
     rust_struct: &'a Struct,
     rust_struct_visibility: &'a syn::Visibility,
     builder_fields_struct: Ident,
@@ -14,8 +14,8 @@ pub(crate) struct GeneratedToqlQueryBuilder<'a> {
     key_composite_predicates: Vec<TokenStream>,
 }
 
-impl<'a> GeneratedToqlQueryBuilder<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlQueryBuilder {
+impl<'a> GeneratedToqlQueryFields<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlQueryFields {
 
         let mut builder_fields : Vec<TokenStream> = Vec::new();
 
@@ -34,7 +34,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
 
         }
 
-        GeneratedToqlQueryBuilder {
+        GeneratedToqlQueryFields {
             rust_struct: &toql,
             rust_struct_visibility: &toql.rust_struct_visibility,
 
@@ -94,7 +94,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
                 let toql_path = format!("{}_", toql_field);
 
                 let path_fields_struct =
-                    quote!( < #rust_type_ident as toql::query_builder::QueryFields>::FieldsType);
+                    quote!( < #rust_type_ident as toql::query_fields::QueryFields>::FieldsType);
 
                 self.builder_fields.push(quote!(
                                 #rust_struct_visibility fn #rust_field_ident (mut self) -> #path_fields_struct {
@@ -107,7 +107,7 @@ impl<'a> GeneratedToqlQueryBuilder<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
+impl<'a> quote::ToTokens for GeneratedToqlQueryFields<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let rust_struct_visibility = self.rust_struct_visibility;
         let builder_fields_struct = &self.builder_fields_struct;
@@ -153,7 +153,7 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryBuilder<'a> {
                         toql::query::QueryPredicate::predicate(self, "")
                     }
                 }
-            impl toql::query_builder::QueryFields for #struct_ident {
+            impl toql::query_fields::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;
 
                 //fn predicates ( ) -> #builder_predicates_struct { #builder_predicates_struct :: new ( ) }

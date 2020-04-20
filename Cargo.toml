@@ -13,6 +13,8 @@ repository = "https://github.com/roy-ganz/toql"
 toql_core = { path = "toql_core", version = "0.1" }
 toql_mysql = { path = "toql_mysql", version = "0.1", optional = true }
 toql_derive = { path = "toql_derive", version = "0.1" }
+toql_query_builder = { path = "toql_query_builder", version = "0.1" }
+toql_parser = { path = "toql_parser", version = "0.1" }
 
 log = "0.4"
 
@@ -20,7 +22,9 @@ log = "0.4"
 members =  [
     "toql_core",
     "toql_mysql",
-    "toql_derive"
+    "toql_derive",
+    "toql_query_builder",
+    "toql_parser"
 ]
 
 [features]

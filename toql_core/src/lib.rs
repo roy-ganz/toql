@@ -20,7 +20,7 @@ extern crate lazy_static;
 
 pub mod merge;
 pub mod query;
-pub mod query_builder;
+pub mod query_fields;
 pub mod query_parser;
 pub mod sql_builder;
 pub mod sql_builder_result;
