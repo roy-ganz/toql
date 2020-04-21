@@ -11,7 +11,7 @@ repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 toql_core = { version="0.1", path="../core"}
-mysql = ">=15"
+mysql = ">=15, <=17"
 log= "0.4"
 
 

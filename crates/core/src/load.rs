@@ -52,7 +52,8 @@ pub trait Load<T: crate::key::Keyed> {
         path: &str,
         query: &crate::query::Query<T>,
         wildcard_scope: &WildcardScope,
-    ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::Error>;
+        additional_columns: &[String]
+    ) -> Result<Option<crate::sql::Sql>, Self::Error>;
 
     /// Loads all collections for a given struct. This is used by the Toql derive
     /// and issues as many select statements as there merged entities.

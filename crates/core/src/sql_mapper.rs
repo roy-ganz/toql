@@ -105,6 +105,7 @@ pub struct FieldOptions {
     pub(crate) preselect: bool, // Always select this field, regardless of query fields
     pub(crate) count_filter: bool, // Filter field on count query
     pub(crate) count_select: bool, // Select field on count query
+    pub(crate) mut_select: bool, // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
@@ -118,6 +119,7 @@ impl FieldOptions {
             preselect: false,
             count_filter: false,
             count_select: false,
+            mut_select: false,
             skip_wildcard: false,
             roles: HashSet::new(),
             aux_params: HashMap::new(),

@@ -67,6 +67,12 @@ impl SqlBuilderResult {
         }
     }
   
+/// Returns delete SQL statement.
+    pub fn delete_stmt(&self) -> String {
+        let mut s = String::from("DELETE ");
+        self.sql_body(&mut s);
+        s
+    }
 
  /// Returns count SQL statement.
     pub fn count_stmt(&self) -> String {
@@ -76,7 +82,9 @@ impl SqlBuilderResult {
         } else {
             s.push_str("COUNT(*)");
         }
+       
         self.sql_body(&mut s);
+       
         s
     }
 

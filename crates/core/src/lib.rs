@@ -11,6 +11,7 @@ pub mod load;
 pub mod mutate;
 pub mod select;
 pub mod sql;
+pub mod key_query;
 
 #[macro_use]
 pub mod log_helper;
