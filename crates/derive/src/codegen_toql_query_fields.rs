@@ -136,20 +136,20 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryFields<'a> {
 
         let builder = quote!(
 
-                impl toql::query::QueryPredicate for &#struct_key_ident {
-                    fn predicate(self, path :&str) -> toql::query::Query {
+                impl toql::query::QueryPredicate<#struct_ident> for &#struct_key_ident {
+                    fn predicate(self, path :&str) -> toql::query::Query<#struct_ident> {
                         toql::query::Query::new()
                           #(#key_composite_predicates)*
                     } 
                 }
           
-                impl Into<toql::query::Query> for #struct_key_ident {
-                    fn into(self) -> toql::query::Query {
+                impl Into<toql::query::Query<#struct_ident>> for #struct_key_ident {
+                    fn into(self) -> toql::query::Query<#struct_ident> {
                             toql::query::QueryPredicate::predicate(&self, "")
                     }
                 }
-                 impl Into<toql::query::Query> for &#struct_key_ident {
-                    fn into(self) -> toql::query::Query {
+                 impl Into<toql::query::Query<#struct_ident>> for &#struct_key_ident {
+                    fn into(self) -> toql::query::Query<#struct_ident> {
                         toql::query::QueryPredicate::predicate(self, "")
                     }
                 }

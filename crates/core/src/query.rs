@@ -27,18 +27,19 @@ use std::fmt;
 /// For emxaple implement this for your configuration
 /// and you can do `Query::new().with(config)`
 pub trait QueryWith {
-    fn with(&self, query: Query) -> Query;
+    fn with<T>(&self, query: Query<T>) -> Query<T>;
 }
 
 // An trait to turn entity keys into a query perdicate (used by toql derive)
-pub trait QueryPredicate {
-    fn predicate(self, path: &str) -> Query;
+pub trait QueryPredicate<T> {
+    fn predicate(self, path: &str) -> Query<T>;
 }
 
 /// A trait to convert a simple datatype into a filter argument. Used by builder functions. Not very interesting ;)
 pub trait PredicateArg {
     fn to_args(self) -> Vec<SqlArg>;
 }
+
 /* impl PredicateArg for String {
     fn to_args (self) -> Vec<String> {
         vec![self]
@@ -137,9 +138,9 @@ macro_rules! impl_num_filter_arg {
 
 impl_num_filter_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
- impl<T: Into<Query>> Into<Query> for Vec<T> {
-    fn into(self) -> Query {
-        let mut query = Query::new();
+ impl<U, T: Into<Query<U>>> Into<Query<U>> for Vec<T> {
+    fn into(self) -> Query<U> {
+        let mut query = Query::<U>::new();
         for key in self {
             query = query.or(key);
         }
@@ -147,18 +148,18 @@ impl_num_filter_arg!(usize, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f3
     }
 }
 
-impl<T: Into<Query> + Clone> Into<Query> for &Vec<T> {
-    fn into(self) -> Query {
-        let mut query = Query::new();
+impl<U,T: Into<Query<U>> + Clone> Into<Query<U>> for &Vec<T> {
+    fn into(self) -> Query<U> {
+        let mut query = Query::<U>::new();
         for key in self {
             query = query.or(key.clone());
         }
         query
     }
 } 
-impl<T: Into<Query> + Clone> Into<Query> for &[T] {
-    fn into(self) -> Query {
-        let mut query = Query::new();
+impl<U,T: Into<Query<U>> + Clone> Into<Query<U>> for &[T] {
+    fn into(self) -> Query<U> {
+        let mut query = Query::<U>::new();
         for key in self {
             query = query.or(key.clone());
         }
@@ -717,7 +718,7 @@ impl ToString for QueryToken {
 /// 
 use crate::sql::SqlArg;
 #[derive(Clone, Debug)]
-pub struct Query {
+pub struct Query<M> {
     pub(crate) tokens: Vec<QueryToken>,
     /// Select DISTINCT
     pub distinct: bool,
@@ -733,12 +734,13 @@ pub struct Query {
     pub join_stmts: Vec<String>, // Additional joins statements
     pub join_stmt_params: Vec<SqlArg>, // Join params for additional sql restriction
    // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
+   pub type_marker: std::marker::PhantomData<M>
 }
 
-impl Query {
+impl<M> Query<M> {
     /// Create a new empty query.
     pub fn new() -> Self {
-        Query {
+        Query::<M> {
             tokens: vec![],
             distinct: false,
             // roles: HashSet::new(),
@@ -748,6 +750,7 @@ impl Query {
             select_columns: Vec::new(),
             join_stmts: Vec::new(),
             join_stmt_params: Vec::new(),
+            type_marker: std::marker::PhantomData
           //  wildcard_scope: None
         }
     }
@@ -755,14 +758,30 @@ impl Query {
     /// Create a new query from another query.
     pub fn from<T>(query: T) -> Self
     where
-        T: Into<Query>,
+        T: Into<Query<M>>,
     {
         query.into()
     }
 
+     /// Create a new query from another query.
+    pub fn clone_for_type<T>(&self) -> Query::<T>
+    {
+       Query::<T> {
+            tokens: self.tokens.clone(),
+            distinct: self.distinct.clone(),
+            aux_params: self.aux_params.clone(),
+            where_predicates: self.where_predicates.clone(),
+            where_predicate_params: self.where_predicate_params.clone(),
+            select_columns: self.select_columns.clone(),
+            join_stmts: self.join_stmts.clone(),
+            join_stmt_params: self.join_stmt_params.clone(),
+            type_marker: std::marker::PhantomData
+       }
+    }
+
     /// Create a new query that select all top fields.
     pub fn wildcard() -> Self {
-        Query {
+        Query::<M> {
             tokens: vec![QueryToken::Wildcard(Wildcard::new())],
             distinct: false,
             //roles: HashSet::new(),
@@ -772,6 +791,7 @@ impl Query {
             select_columns: Vec::new(),
             join_stmts: Vec::new(),
             join_stmt_params: Vec::new(),
+            type_marker: std::marker::PhantomData
           //  wildcard_scope: None
         }
     }
@@ -789,7 +809,7 @@ impl Query {
     /// Concatenate field or query with AND.
     pub fn and<T>(mut self, query: T) -> Self
     where
-        T: Into<Query>,
+        T: Into<Query<M>>,
     {
         // All tokens are by default concatenated with AND
         self.tokens.append(&mut query.into().tokens);
@@ -798,7 +818,7 @@ impl Query {
     /// Concatenate field or query with OR.
     pub fn or<T>(mut self, query: T) -> Self
     where
-        T: Into<Query>,
+        T: Into<Query<M>>,
     {
         // Change first token of query to concatenate with OR
         let mut query = query.into();
@@ -820,8 +840,8 @@ impl Query {
     }
 
     /// Convenence method to add aux params
-    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
-    where T: Into<SqlArg>, S: Into<String>
+    pub fn aux_param<S, A>(mut self, name: S, value: A) -> Self 
+    where A: Into<SqlArg>, S: Into<String>
     {
        self.aux_params.insert(name.into(), value.into());
        self
@@ -878,7 +898,7 @@ pub fn assert_roles(
 }
 
 // Doc: Display  implements automatically .to_string()
-impl fmt::Display for Query {
+impl<M> fmt::Display for Query<M> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fn get_concatenation(c: &Concatenation) -> char {
             match c {
@@ -924,32 +944,32 @@ impl fmt::Display for Query {
     }
 }
 
-impl From<Field> for Query {
-    fn from(field: Field) -> Query {
+impl<M> From<Field> for Query<M> {
+    fn from(field: Field) -> Query<M> {
         let mut q = Query::new();
         q.tokens.push(QueryToken::Field(field));
         q
     }
 }
 
-impl From<Predicate> for Query {
-    fn from(predicate: Predicate) -> Query {
+impl<M> From<Predicate> for Query<M> {
+    fn from(predicate: Predicate) -> Query<M> {
         let mut q = Query::new();
         q.tokens.push(QueryToken::Predicate(predicate));
         q
     }
 }
 
-impl From<Wildcard> for Query {
-    fn from(wildcard: Wildcard) -> Query {
+impl<M> From<Wildcard> for Query<M> {
+    fn from(wildcard: Wildcard) -> Query<M> {
         let mut q = Query::new();
         q.tokens.push(QueryToken::Wildcard(wildcard));
         q
     }
 }
 
-impl From<&str> for Query {
-    fn from(string: &str) -> Query {
+impl<M> From<&str> for Query<M> {
+    fn from(string: &str) -> Query<M> {
         let mut q = Query::new();
         q.tokens.push(if string.ends_with("*") {
             QueryToken::Wildcard(Wildcard::from(string))

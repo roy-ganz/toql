@@ -496,7 +496,7 @@ impl<C: GenericConnection> MySql<'_, C> {
      /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn count<T>(&mut self, query: &Query) -> Result<u64>
+    pub fn count<T>(&mut self, query: &Query<T>) -> Result<u64>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed + toql_core::sql_mapper::Mapped,
@@ -519,7 +519,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn load_one<T>(&mut self, query: &Query) -> Result<T>
+    pub fn load_one<T>(&mut self, query: &Query<T>) -> Result<T>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
@@ -535,7 +535,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
     pub fn load_many<T>(
         &mut self,
-        query: &Query,
+        query: &Query<T>,
     ) -> Result<Vec<T>>
     where
         Self: Load<T, Error = ToqlMySqlError>,
@@ -552,7 +552,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
     pub fn load_page<T>(
         &mut self,
-        query: &Query,
+        query: &Query<T>,
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where

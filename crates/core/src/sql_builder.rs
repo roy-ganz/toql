@@ -225,10 +225,10 @@ impl SqlBuilder {
     }
 
     /// Build query for total count.
-    pub fn build_count(
+    pub fn build_count<M>(
         &mut self,
         sql_mapper: &SqlMapper,
-        query: &Query,
+        query: &Query<M>,
         roles: &HashSet<String>,
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.count_query = true;
@@ -236,11 +236,11 @@ impl SqlBuilder {
     }
 
     /// Build normal query for this path
-    pub fn build_path<T: Into<String>>(
+    pub fn build_path<M, T: Into<String>>(
         &mut self,
         path: T,
         sql_mapper: &SqlMapper,
-        query: &Query,
+        query: &Query<M>,
         roles: &HashSet<String>,
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         self.subpath = {
@@ -553,10 +553,10 @@ impl SqlBuilder {
     }
 
     /// Build normal query.
-    pub fn build(
+    pub fn build<M>(
         &mut self,
         sql_mapper: &SqlMapper,
-        query: &Query,
+        query: &Query<M>,
         roles: &HashSet<String>,
     ) -> Result<SqlBuilderResult, SqlBuilderError> {
         let mut ordinals: HashSet<u8> = HashSet::new();

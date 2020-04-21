@@ -33,14 +33,14 @@ pub trait Load<T: crate::key::Keyed> {
     /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     ///
     /// Returns a struct or a [ToqlError](../toql_core/error/enum.ToqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    fn load_one(&mut self, query: &Query) -> Result<T, Self::Error>;
+    fn load_one(&mut self, query: &Query<T>) -> Result<T, Self::Error>;
 
     /// Load a vector of structs with dependencies for a given Toql query.
     ///
     /// Returns a tuple with the structs and an optional tuple of count values.
     fn load_many(
         &mut self,
-        query: &Query,
+        query: &Query<T>,
         page: Option<Page>,
     ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::Error>;
 
@@ -50,7 +50,7 @@ pub trait Load<T: crate::key::Keyed> {
     fn build_path(
         &mut self,
         path: &str,
-        query: &crate::query::Query,
+        query: &crate::query::Query<T>,
         wildcard_scope: &WildcardScope,
     ) -> Result<crate::sql_builder_result::SqlBuilderResult, Self::Error>;
 
@@ -60,7 +60,7 @@ pub trait Load<T: crate::key::Keyed> {
         &mut self,
         _entities: &mut Vec<T>,
         _entity_keys: &Vec<T::Key>,
-        _query: &crate::query::Query,
+        _query: &crate::query::Query<T>,
         _wildcard_scope: &WildcardScope
     ) -> Result<(), Self::Error> {
         Ok(())

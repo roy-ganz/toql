@@ -52,13 +52,13 @@ pub fn query(input: TokenStream) -> TokenStream {
     // eprintln!("{:?}", input);
 
     let ast = parse_macro_input!(input as query_builder::QueryBuilder);
-
+     
    
     
 
-    let gen2 = query_builder::parse(&ast.query, ast.ident, &mut ast.arguments.iter());
+    let gen = query_builder::parse(&ast.query, ast.ident, &mut ast.arguments.iter());
 
-   // eprintln!("{}", gen2.to_string());
+   
 
   /* let gen = quote!( 
       pub fn hello() 
@@ -67,8 +67,8 @@ pub fn query(input: TokenStream) -> TokenStream {
    }
    );
     */
-    match gen2 {
-        Ok(o) => { log::debug!("Source code for `{}`:\n{}", ast.query.value(), o.to_string());
+    match gen {
+        Ok(o) => {  log::debug!("Source code for `{}`:\n{}", ast.query.value(), o.to_string());
    TokenStream::from(o)},
         Err(e) => { log::debug!("Source code for `{}`:\n{}", ast.query.value(), e.to_string());
    TokenStream::from(e)}

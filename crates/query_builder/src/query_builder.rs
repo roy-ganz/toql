@@ -40,6 +40,8 @@ impl Parse for QueryBuilder {
                 let lookahead = input.lookahead1();
                 if lookahead.peek(Token![,]) {
                     eprintln!("Expecting");
+                   input.parse::<Token![,]>()?; // skip , 
+                    
                 input.parse_terminated(Expr::parse)?
                 } else {
                      eprintln!("No args");
@@ -105,7 +107,7 @@ impl FieldInfo {
                             }, 
                              TokenType::Query => {
                                    let query = &self.args.get(0);
-                                    Some(quote!(toql::query::Query::from(#query)))
+                                    Some(quote!(toql::query::Query::<#struct_type>::from(#query)))
                             }, 
                             TokenType::Predicate =>{
                                    let name = &self.name;
@@ -200,9 +202,9 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                         
                       let content = evaluate_pair(pairs, struct_type, query_args)?;
                        output_stream.extend( if field_info.concat == Concatenation::And {
-                          quote!( .and_parentized(toql::query::Query::new() #content))
+                          quote!( .and_parentized(toql::query::Query::<#struct_type>::new() #content))
                       } else {
-                            quote!( .or_parentized(toql::query::Query::new() #content))
+                            quote!( .or_parentized(toql::query::Query::<#struct_type>::new() #content))
                       });
                       
                 },
