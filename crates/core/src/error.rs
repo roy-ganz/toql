@@ -2,7 +2,7 @@
 //!
 //! ToqlError represents all library errors and wraps errors from the Pest parser and the optional database crate.
 //!
-use crate::query_parser::Rule;
+use toql_query_parser::Rule;
 use crate::sql_builder::SqlBuilderError;
 use crate::sql_mapper::SqlMapperError;
 use std::fmt;

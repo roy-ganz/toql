@@ -24,14 +24,15 @@ use crate::query::Query;
 use crate::query::QueryToken;
 use crate::query::Wildcard;
 use crate::sql::SqlArg;
+use toql_query_parser::PestQueryParser;
+
 use pest::error::Error;
 use pest::error::ErrorVariant::CustomError;
 use pest::Parser;
 
 
-#[derive(Parser)]
-#[grammar = "toql.pest"]
-struct PestQueryParser;
+
+use toql_query_parser::Rule;
 
 /// The query parser.
 /// It contains only a single static method to turn a string into a Query struct.
