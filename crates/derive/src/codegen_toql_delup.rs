@@ -391,10 +391,12 @@ impl<'a> GeneratedToqlDelup<'a> {
                              let entity = bentity.borrow();
                             #optional_if {
                                  let (insert_sql, diff_sql, delete_sql) =
-                                        toql::mutate::collection_delta_sql::<#rust_type_ident,Self, Self, toql::dialect::Generic, toql::mysql::error::ToqlMySqlError>(
+                                        toql::mutate::collection_delta_sql::<#rust_type_ident>(
                                      outdated. #rust_field_ident .as_ref() #optional_ok_or,
                                     entity.#rust_field_ident .as_ref() #optional_unwrap,
-                                    roles )?;
+                                    roles,
+                                    &sql_mapper
+                                     )?;
 
                                   if let Some( s) = insert_sql {
                                         sql.push(s);
@@ -458,7 +460,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
             quote! {
 
-                impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::dialect::Generic {
+                /* impl<'a> toql::mutate::Delete<'a, #struct_ident> for toql::dialect::Generic {
 
                     type Error = toql::error::ToqlError;
 
@@ -479,10 +481,10 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                      }
 
 
-                }
-                impl<'a> toql::mutate::Update<'a, #struct_ident> for toql::dialect::Generic {
+                } */
+                impl toql::mutate::UpdateSql for #struct_ident {
 
-                    type Error = toql::error::ToqlError;
+                  
 
                     fn update_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q],roles: &std::collections::HashSet<String>) -> toql::error::Result<Option< toql::sql::Sql>>
                     {
@@ -547,12 +549,13 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     }
                 }
-                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Diff<'_,#struct_ident>  for toql::mysql::MySql<'a,T>
+                impl toql::mutate::DiffSql for #struct_ident
                 {
-                    type Error = toql::mysql::error::ToqlMySqlError;
+                   
 
-                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
-                    -> Result<Option< toql::sql::Sql>, toql :: mysql::error:: ToqlMySqlError>
+                    fn diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],
+                    roles: &std::collections::HashSet<String>)
+                    -> Result<Option< toql::sql::Sql>, toql :: error:: ToqlError>
 
                     {
                         #upd_role_test
@@ -621,15 +624,16 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                         Ok(Some((update_stmt, params)))
 
                     }
-                    fn full_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],roles: &std::collections::HashSet<String>)
-                    -> Result<Option<Vec<toql::sql::Sql>>, toql :: mysql::error:: ToqlMySqlError>
+                    fn full_diff_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[(Q, Q)],
+                            roles: &std::collections::HashSet<String>, sql_mapper: &toql::sql_mapper::SqlMapper)
+                    -> Result<Option<Vec<toql::sql::Sql>>, toql :: error:: ToqlError>
                     {
 
                         #upd_role_test
 
                         let mut sql: Vec< toql::sql::Sql> = Vec::new();
 
-                        let update = <Self as  toql::mutate::Diff<#struct_ident>>::diff_many_sql(entities, roles)?;
+                        let update = <Self as  toql::mutate::DiffSql>::diff_many_sql(entities, roles)?;
                         if update.is_some() {
                             sql.push(update.unwrap());
                         }

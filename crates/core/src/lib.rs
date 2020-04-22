@@ -11,7 +11,7 @@ pub mod load;
 pub mod mutate;
 pub mod select;
 pub mod sql;
-pub mod key_query;
+pub mod to_query;
 
 #[macro_use]
 pub mod log_helper;
@@ -30,5 +30,5 @@ pub mod sql_mapper_registry;
 pub mod field_handler;
 pub mod join_handler;
 pub mod predicate_handler;
-pub mod sql_predicate;
+
 pub use log; // Reexport for generated code from Toql derive

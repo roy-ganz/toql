@@ -28,6 +28,7 @@ impl<'a> GeneratedMysqlKey<'a> {
     ) -> darling::error::Result<()> {
         let rust_type_ident = &field.rust_type_ident;
         let rust_field_name = &field.rust_field_name;
+        let rust_field_ident = &field.rust_field_ident;
 
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
@@ -47,7 +48,7 @@ impl<'a> GeneratedMysqlKey<'a> {
                     })
                 }; */
                 self.mysql_deserialize_key.push(quote!(
-                    (row.take_opt(*i).unwrap()
+                    #rust_field_ident: (row.take_opt(*i).unwrap()
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
                             )?, *i += 1).0
                 ));
@@ -71,7 +72,7 @@ impl<'a> GeneratedMysqlKey<'a> {
                     })
                 }; */
                 self.mysql_deserialize_key.push(quote!(
-                     << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i /*#increment*/)?
+                    #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i /*#increment*/)?
                 ));
             }
             _ => {}
@@ -105,10 +106,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlKey<'a> {
             fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize)
                 -> toql :: mysql :: error:: Result < #struct_key_ident> {
 
-                Ok ( #struct_key_ident(
+                Ok ( #struct_key_ident{
                     #(#mysql_deserialize_key),*
-
-                ))
+                })
             }
             }
 

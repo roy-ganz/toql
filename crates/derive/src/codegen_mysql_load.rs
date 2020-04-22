@@ -271,7 +271,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
         } else {
             quote!(
                  <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|c|{
-                    &mapper.aliased_column(&<#struct_ident as toql::sql_mapper::Mapped>::table_alias(),&c)
+                    mapper.aliased_column(&<#struct_ident as toql::sql_mapper::Mapped>::table_alias(),&c)
                     }).collect::<Vec<_>>()
                  
             )
@@ -381,13 +381,12 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     // Get count values
                     if count {
-                        toql::log_sql!("SELECT FOUND_ROWS();");
-                        let r = self.conn().query("SELECT FOUND_ROWS();")?;
-
-                        
-
-                        let total_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
-
+                             let total_count = {
+                            toql::log_sql!("SELECT FOUND_ROWS();");
+                            let r = self.conn().query("SELECT FOUND_ROWS();")?;
+                            r.into_iter().next().unwrap().unwrap().get(0).unwrap()
+                         };
+                    let filtered_count = {
                         let mapper = self.registry() // Get new mapper because slef is mut borrowed by self.conn()
                                 .mappers
                                 .get( #struct_name)
@@ -401,9 +400,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         toql::log_sql!( sql.0, sql.1);
                         
                         let args = toql::mysql::sql_arg::values_from_ref(&sql.1);
-                        self.conn().prep_exec( sql.0, args)?;
-                       
-                        let filtered_count = r.into_iter().next().unwrap().unwrap().get(0).unwrap();
+                        let r = self.conn().prep_exec( sql.0, args)?;
+                        r.into_iter().next().unwrap().unwrap().get(0).unwrap()
+                    };
                         count_result = Some((total_count ,filtered_count))
                     }
 

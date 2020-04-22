@@ -796,7 +796,7 @@ impl<M> Query<M> {
         }
     }
 
-    /// Wrap query with parentheses.
+   /*  /// Wrap query with parentheses.
     pub fn parenthesize(mut self) -> Self {
         if self.tokens.is_empty() {
             return self;
@@ -805,7 +805,7 @@ impl<M> Query<M> {
             .insert(0, QueryToken::LeftBracket(Concatenation::And));
         self.tokens.push(QueryToken::RightBracket);
         self
-    }
+    } */
     /// Concatenate field or query with AND.
     pub fn and<T>(mut self, query: T) -> Self
     where
@@ -815,22 +815,45 @@ impl<M> Query<M> {
         self.tokens.append(&mut query.into().tokens);
         self
     }
+    /// Concatenate field or query with AND.
+    pub fn and_parentized<T>(mut self, query: T) -> Self
+    where
+        T: Into<Query<M>>,
+    {
+        // All tokens are b
+        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::And));
+        self.tokens.append(&mut query.into().tokens);
+        self.tokens.push(QueryToken::RightBracket);
+        self
+    }
+
     /// Concatenate field or query with OR.
     pub fn or<T>(mut self, query: T) -> Self
     where
         T: Into<Query<M>>,
     {
         // Change first token of query to concatenate with OR
-        let mut query = query.into();
+       /*  let mut query = query.into();
         if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
             *c = Concatenation::Or;
         } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
             field.concatenation = Concatenation::Or;
         } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
             wildcard.concatenation = Concatenation::Or;
-        }
+        } */
 
-        self.tokens.append(&mut query.tokens);
+        self.tokens.append(&mut query.into().tokens);
+        self
+    }
+     /// Concatenate field or query with AND.
+    pub fn or_parentized<T>(mut self, query: T) -> Self
+    where
+        T: Into<Query<M>>,
+    {
+        // All tokens are b
+        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::And));
+        self.tokens.append(&mut query.into().tokens);
+        self.tokens.push(QueryToken::RightBracket);
         self
     }
 

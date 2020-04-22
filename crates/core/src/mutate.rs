@@ -34,12 +34,14 @@ use crate::key::Keyed;
 use core::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::result::Result;
-use crate::sql_mapper::Mapped;
+use crate::sql_mapper::{Mapped, SqlMapper};
+
 
 use crate::sql::Sql;
 
 
-/// Trait for delete functions (They work with entity keys).
+
+/* /// Trait for delete functions (They work with entity keys).
 pub trait Delete<'a, T: crate::key::Keyed + 'a> {
     type Error;
     /// Delete one structs, returns tuple with SQL statement and SQL params or error.
@@ -57,65 +59,67 @@ pub trait Delete<'a, T: crate::key::Keyed + 'a> {
         predicate: Sql,
         roles: &HashSet<String>,
     ) -> Result<Option<Sql>, Self::Error>;
-}
+} */
 
 /// Trait for update. They work with entities
-pub trait Update<'a, T: 'a> {
-    type Error;
-    fn update_one_sql<Q: Borrow<T>>(
-        entity: Q,
+pub trait UpdateSql {
+    
+    fn update_one_sql(
+        &self,
         roles: &HashSet<String>,
-    ) -> Result<Option<Sql>, Self::Error> {
-        Self::update_many_sql(&[entity], roles)
+    ) -> Result<Option<Sql>, ToqlError> {
+        Self::update_many_sql(&[self], roles)
     }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
-    fn update_many_sql<Q: Borrow<T>>(
+    fn update_many_sql<Q: Borrow<Self>>(
         entities: &[Q],
         roles: &HashSet<String>,
-    ) -> Result<Option<Sql>, Self::Error>;
+    ) -> Result<Option<Sql>, ToqlError>;
 }
 
 /// Trait for update. They work with entities
-pub trait Diff<'a, T: 'a> {
-    type Error;
+pub trait DiffSql {
+   
     /// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
     /// Because merged structs are also considered, the returned SQL statements, can be insert, update and delete statements.
-    fn full_diff_one_sql<Q: Borrow<T>>(
+    fn full_diff_one_sql<Q: Borrow<Self>>(
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-    ) -> Result<Vec<Sql>, Self::Error> {
-        Ok(Self::full_diff_many_sql(&[(outdated, updated)], roles)?.unwrap())
+        sql_mapper: &SqlMapper
+    ) -> Result<Vec<Sql>, ToqlError> {
+        Ok(Self::full_diff_many_sql(&[(outdated, updated)], roles, sql_mapper)?.unwrap())
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuples with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn full_diff_many_sql<Q: Borrow<T>>(
+    fn full_diff_many_sql<Q: Borrow<Self>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-    ) -> Result<Option<Vec<Sql>>, Self::Error>;
+        sql_mapper: &SqlMapper
+    ) -> Result<Option<Vec<Sql>>,ToqlError>;
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup`  or set selectable fields to None in updated entity.
-    fn diff_one_sql<Q: Borrow<T>>(
+    fn diff_one_sql<Q: Borrow<Self>>(
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-    ) -> Result<Option<Sql>, Self::Error> {
+    ) -> Result<Option<Sql>, ToqlError> {
         Self::diff_many_sql(&[(outdated, updated)], roles)
     }
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
     /// To exclude any other fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
-    fn diff_many_sql<Q: Borrow<T>>(
+    fn diff_many_sql<Q: Borrow<Self>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-    ) -> Result<Option<Sql>, Self::Error>;
+    ) -> Result<Option<Sql>, ToqlError>;
 }
 
 /// Defines a strategy to resolve the conflict, when the record to insert already exists.
@@ -131,23 +135,27 @@ pub enum DuplicateStrategy {
 /// Trait for insert. They work with entities.
 /// This trait is implemented if keys of an entity are inserted too. This is typically the case for association tables.
 /// Conflicts can happed if the keys already exist. A strategy must be provided to tell how to resolve the conflict.
-pub trait Insert<'a, T: 'a> {
-    type Error;
+pub trait InsertSql {
+    
 
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
-    fn insert_one_sql<Q: Borrow<T>>(
-        entity: Q,
-        strategy: DuplicateStrategy,
+    fn insert_one_sql(
+       &self,
+        //strategy: DuplicateStrategy,
         roles: &HashSet<String>,
-    ) -> Result<Sql, Self::Error> {
-        Ok(Self::insert_many_sql(&[entity], strategy, roles)?.unwrap())
+        modifier: &str,
+        extra: &str,
+    ) -> Result<Sql, ToqlError> {
+        Ok(Self::insert_many_sql(&[self], roles, modifier, extra)?.unwrap())
     }
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
-    fn insert_many_sql<Q: Borrow<T>>(
+    fn insert_many_sql<Q: Borrow<Self>>(
         entities: &[Q],
-        strategy: DuplicateStrategy,
+       // strategy: DuplicateStrategy,
         roles: &HashSet<String>,
-    ) -> Result<Option<Sql>, Self::Error>;
+        modifier: &str,
+        extra: &str,
+    ) -> Result<Option<Sql>, ToqlError>;
 }
 
 /// Marker Trait for insert. They work with entities.
@@ -162,48 +170,50 @@ pub trait InsertDuplicate {}
 ///
 /// Returns three tuples for insert / update / delete, each containing the SQL statement and parameters.
 
-pub fn collection_delta_sql<'a, T, I, U, D, E>(
+pub fn collection_delta_sql<'a, T>(
     outdated: &'a [T],
     updated: &'a [T],
     roles: &HashSet<String>,
+    sql_mapper: &crate::sql_mapper::SqlMapper
 ) -> Result<
     (
         Option<Sql>,
         Option<Sql>,
         Option<Sql>,
     ),
-    E,
+    ToqlError,
 >
 where
-    T: 'a + Keyed + Mapped,
-    I: Insert<'a, T>,
-    U: Diff<'a, T>,
-    D: Delete<'a, T>,
-    E: std::convert::From<<U as Diff<'a, T>>::Error>
-        + std::convert::From<<I as Insert<'a, T>>::Error>
-        + std::convert::From<<D as Delete<'a, T>>::Error>
-        + std::convert::From<ToqlError>,
+    T: 'a + Keyed + Mapped + InsertSql + UpdateSql + DiffSql,
+    <T as Keyed>::Key: crate::to_query::ToQuery<T>
 {
+    use  crate::sql_builder::SqlBuilder;
+   
     let mut insert: Vec<&T> = Vec::new();
     let mut diff: Vec<(&'a T, &'a T)> = Vec::new();
     let mut delete: Vec<T::Key> = Vec::new();
-    let (mut ins, mut di, mut de) = collections_delta::<T, E>(&vec![(outdated, updated)])?;
+    let (mut ins, mut di, mut de) = collections_delta::<T>(&vec![(outdated, updated)])?;
     insert.append(&mut ins);
     diff.append(&mut di);
     delete.append(&mut de);
 
-    let insert_sql = <I as Insert<T>>::insert_many_sql(&insert, DuplicateStrategy::Fail, roles)?;
-    let diff_sql = <U as Diff<T>>::diff_many_sql(&diff, roles)?;
-    let delete_sql = <D as Delete<T>>::delete_many_sql( crate::key::sql_predicate(&delete, &<T as Mapped>::table_alias()) , roles)?;
+    let insert_sql = <T as InsertSql>::insert_many_sql(insert.as_slice(), roles, "", "")?;
+    let diff_sql = <T as DiffSql>::diff_many_sql(&diff, roles)?;
+
+     
+
+     let delete_sql = if delete.is_empty() {None } else {
+         Some(SqlBuilder::new().build_delete_sql(sql_mapper, &crate::to_query::ToQuery::slice_to_query(&delete), roles)?)
+     };
+
     Ok((insert_sql, diff_sql, delete_sql))
 }
 
-pub fn collections_delta<'a, T, E>(
+pub fn collections_delta<'a, T>(
     collections: &[(&'a [T], &'a [T])],
-) -> Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<T::Key>), E>
+) -> Result<(Vec<&'a T>, Vec<(&'a T, &'a T)>, Vec<T::Key>), ToqlError>
 where
     T: 'a + Keyed,
-    E: std::convert::From<ToqlError>,
 {
     let mut diff: Vec<(&'a T, &'a T)> = Vec::new(); // Vector with entities to diff
     let mut insert: Vec<&'a T> = Vec::new(); // Vector with entities to insert

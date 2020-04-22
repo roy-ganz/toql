@@ -178,8 +178,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
         let insert_values_code = &self.insert_values_code;
 
         let mods = {
-            let insert_statement =
-                format!("INSERT {{}}INTO {} ({{}}) VALUES ", self.sql_table_name);
+            let insert_statement = format!("INSERT {{}}{{}}INTO {} ({{}}) VALUES ", self.sql_table_name);
             let insert_columns_code = &self.insert_columns_code;
 
             let role_test = if self.insdel_roles.is_empty() {
@@ -202,12 +201,12 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
             quote! {
                 #optional_insert_duplicate_impl
 
-                impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::mutate::Insert<'_, #struct_ident> for toql::mysql::MySql<'a,T> {
+                impl toql::mutate::InsertSql for #struct_ident {
 
-                    type Error = toql::mysql::error::ToqlMySqlError;
-
-                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], strategy: toql::mutate::DuplicateStrategy, roles: &std::collections::HashSet<String>)
-                     -> Result<Option< toql::sql::Sql>, toql :: mysql::error:: ToqlMySqlError>
+                     fn insert_many_sql<Q : std::borrow::Borrow<#struct_ident>>(entities: &[Q], 
+                        roles: &std::collections::HashSet<String>,
+                        modifier: &str, extra: &str)
+                     -> Result<Option< toql::sql::Sql>, toql :: error:: ToqlError>
                      {
                             #role_test
 
@@ -218,17 +217,13 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                             let mut params :Vec<toql::sql::SqlArg>= Vec::new();
                             let mut columns :Vec<String>= Vec::new();
 
-                             let ignore = if let toql::mutate::DuplicateStrategy::Skip = strategy {
-                                "IGNORE "
-                            } else {
-                                ""
-                            };
+                             
 
 
                             #(#insert_columns_code)*
 
-                            let mut insert_stmt = format!( #insert_statement, ignore, columns.join(", "));
-
+                           
+                            let mut insert_stmt = format!( #insert_statement, modifier, if modifier.is_empty(){""}else {" "}, columns.join(", "));
 
 
                             for bentity in entities {
@@ -241,8 +236,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                             }
                             insert_stmt.pop(); // remove ', '
                             insert_stmt.pop();
-                            if  let toql::mutate::DuplicateStrategy::Update = strategy {
-                                insert_stmt.push_str(" ON DUPLICATE UPDATE");
+                            if !extra.is_empty() {
+                                insert_stmt.push(' ');
+                                insert_stmt.push_str(extra);
                             };
                             Ok(Some((insert_stmt, params)))
                     }

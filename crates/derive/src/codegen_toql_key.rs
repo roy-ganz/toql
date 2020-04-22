@@ -10,10 +10,20 @@ pub(crate) struct GeneratedToqlKey<'a> {
     key_types: Vec<TokenStream>,
     key_fields: Vec<TokenStream>,
     key_setters: Vec<TokenStream>,
-    key_sql_predicates: Vec<TokenStream>,
-    partial_key_types: Vec<TokenStream>,
-    partial_key_sql_predicates: Vec<TokenStream>,
+    key_getters: Vec<TokenStream>,
+   // key_sql_predicates: Vec<TokenStream>,
+   /*  partial_key_types: Vec<TokenStream>,
+    partial_key_sql_predicates: Vec<TokenStream>, */
     serde_key: bool,
+    key_field_declarations: Vec<TokenStream>,
+    
+    toql_eq_predicates: Vec<TokenStream>,
+    toql_eq_foreign_predicates: Vec<TokenStream>,
+    toql_in_predicate: Option<TokenStream>,
+
+    key_constr_code:Vec<TokenStream>,
+    
+    
 }
 
 impl<'a> GeneratedToqlKey<'a> {
@@ -26,10 +36,20 @@ impl<'a> GeneratedToqlKey<'a> {
             key_types: Vec::new(),
             key_fields: Vec::new(),
             key_setters: Vec::new(),
-            key_sql_predicates: Vec::new(),
-            partial_key_types: Vec::new(),
-            partial_key_sql_predicates: Vec::new(),
+            key_getters: Vec::new(),
+
+            key_field_declarations: Vec::new(),
+          //  key_sql_predicates: Vec::new(),
+         /*    partial_key_types: Vec::new(),
+            partial_key_sql_predicates: Vec::new(), */
             serde_key: toql.serde_key,
+
+            toql_eq_predicates: Vec::new(),
+            toql_eq_foreign_predicates: Vec::new(),
+            toql_in_predicate: None,
+
+            key_constr_code: Vec::new(),
+          
         }
     }
 
@@ -38,8 +58,9 @@ impl<'a> GeneratedToqlKey<'a> {
         let rust_type_name = &field.rust_type_name;
         let rust_field_ident = &field.rust_field_ident;
         let rust_field_name = &field.rust_field_name;
-        let key_index = syn::Index::from(self.key_fields.len());
-
+      //  let key_index = syn::Index::from(self.key_fields.len());
+        let toql_field_name = &field.toql_field_name;
+        
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 if !regular_attrs.key {
@@ -55,9 +76,16 @@ impl<'a> GeneratedToqlKey<'a> {
                             .push(quote!( columns.push( String::from(#inverse_column)); ));
                     }
 
+                    self.toql_eq_predicates.push( quote!(.and(toql::query::Field::from(#toql_field_name).eq(&t. #rust_field_ident))));
+                    self.toql_eq_foreign_predicates.push( quote!(.and( toql::query::Field::from(format!("{}_{}",toql_path ,#toql_field_name)).eq(&t.#rust_field_ident))));
+
+                    self.key_constr_code.push(quote!(#rust_field_ident));
+                    
+                    self.key_field_declarations.push(quote!( pub #rust_field_ident: #rust_type_ident));
+
                     // sql predicate trait 
-                    let column_format = format!("{{}}.{} = ? AND ", column);
-                    self.partial_key_sql_predicates.push( quote!(
+                   // let column_format = format!("{{}}.{} = ? AND ", column);
+                    /* self.partial_key_sql_predicates.push( quote!(
                         if let Some(v) = &self.#rust_field_ident {
                             predicate.push_str( &format!(#column_format, alias));
                             params.push(toql::sql::SqlArg::from(v));
@@ -65,39 +93,47 @@ impl<'a> GeneratedToqlKey<'a> {
                     ));
                      self.key_sql_predicates.push( quote!(
                             predicate.push_str( &format!(#column_format, alias));
-                            params.push( toql::sql::SqlArg::from(&self. #key_index));
-                    ));
+                            params.push( toql::sql::SqlArg::from(&self. #rust_field_ident));
+                    )); */
 
                 } else {
                     // TODO Raise error
                 }
 
                 self.key_types.push(quote!( #rust_type_ident));
-                self.partial_key_types.push(quote!(#rust_field_ident : Option<#rust_type_ident>));
+              //  self.partial_key_types.push(quote!(#rust_field_ident : Option<#rust_type_ident>));
 
                 
 
                 if field.number_of_options > 0 {
-                    let value = quote!(self. #rust_field_ident .as_ref() .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_type_name)))? .to_owned());
+                    let value = quote!(self. #rust_field_ident .as_ref() 
+                                .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_type_name)))? 
+                                .to_owned());
                     self.key_fields.push(value);
+                    self.key_getters.push(quote!(#rust_field_ident : self. #rust_field_ident .as_ref() 
+                                .ok_or(toql::error::ToqlError::ValueMissing( String::from(# rust_type_name)))? 
+                                .to_owned()));
 
-                    let index = syn::Index::from(self.key_types.len() - 1);
+                  //  let index = syn::Index::from(self.key_types.len() - 1);
                     self.key_setters
-                        .push(quote!(self. #rust_field_ident = Some( key . #index  ); ))
+                        .push(quote!(self. #rust_field_ident = Some( key . #rust_field_ident  ) ))
                 } else {
                     self.key_fields
                         .push(quote!(self. #rust_field_ident .to_owned()));
 
-                    let index = syn::Index::from(self.key_types.len() - 1);
+                        self.key_getters.push(quote!(#rust_field_ident : self. #rust_field_ident .to_owned()));
+
+                   // let index = syn::Index::from(self.key_types.len() - 1);
 
                     self.key_setters
-                        .push(quote!(self. #rust_field_ident = key . #index;))
+                        .push(quote!(self. #rust_field_ident = key . #rust_field_ident))
                 }
 
-                let key_index = syn::Index::from(self.key_fields.len() - 1);
+                
+               // let key_index = syn::Index::from(self.key_fields.len() - 1);
 
                 self.key_params_code
-                    .push(quote!(params.push(toql::sql::SqlArg::from(&key . #key_index)); ));
+                    .push(quote!(params.push(toql::sql::SqlArg::from(&key . #rust_field_ident)); ));
             }
             FieldKind::Join(ref join_attrs) => {
                 if !join_attrs.key {
@@ -106,11 +142,21 @@ impl<'a> GeneratedToqlKey<'a> {
                 let default_self_column_code = &join_attrs.default_self_column_code;
                // let key_index = syn::Index::from(self.key_types.len());
                 self.key_types.push(quote!( <#rust_type_ident as toql::key::Keyed>::Key));
-                self.partial_key_types.push(quote!(#rust_field_ident : Option<<#rust_type_ident as toql::key::Keyed>::Key>));
+
+                let toql_name = &field.toql_field_name;
+                self.toql_eq_predicates.push(quote!(.and(toql::to_query::ToForeignQuery::to_foreign_query::<_>(&t. #rust_field_ident, #toql_name))));
+                self.toql_eq_foreign_predicates.push(quote!(.and(toql::to_query::ToForeignQuery::to_foreign_query::<_>(&t. #rust_field_ident, #toql_name))));
+               
+                let index = syn::Index::from(self.key_constr_code.len());
+                self.key_constr_code.push(quote!(#rust_field_ident));
+              
+              self.key_field_declarations.push(quote!( pub #rust_field_ident: <#rust_type_ident as toql::key::Keyed>::Key));
+ 
+              //  self.partial_key_types.push(quote!(#rust_field_ident : Option<<#rust_type_ident as toql::key::Keyed>::Key>));
 
                 // sql Prediate trait
-                 let join_alias = &join_attrs.join_alias;
-                self.partial_key_sql_predicates.push( quote!(
+               //  let join_alias = &join_attrs.join_alias;
+               /*  self.partial_key_sql_predicates.push( quote!(
                     if let Some(v) = &self.#rust_field_ident {
                     let (pr, pa) = <<#rust_type_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_predicate(&v, #join_alias);
                     predicate.push_str( &pr);
@@ -119,11 +165,11 @@ impl<'a> GeneratedToqlKey<'a> {
                 } 
                 ));
                   self.key_sql_predicates.push( quote!(
-                    let (pr, pa) = <<#rust_type_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_predicate(&self. #key_index, #join_alias);
+                    let (pr, pa) = <<#rust_type_ident as toql::key::Keyed>::Key as toql::sql_predicate::SqlPredicate>::sql_predicate(&self. #rust_field_ident, #join_alias);
                     predicate.push_str( &pr);
                     params.extend_from_slice(&pa);
                 ));
-
+ */
 
                 let columns_map_code = &join_attrs.columns_map_code;
                 self.key_columns_code.push(quote!(
@@ -145,7 +191,7 @@ impl<'a> GeneratedToqlKey<'a> {
                         ));
 
                 //self.key_params_code.push( quote!( params.extend_from_slice(&<#rust_type_ident as toql::key::Key>::params(& key. #key_index));));
-                self.key_params_code.push( quote!( params.extend_from_slice(&toql::key::Key::params(& key. #key_index)); ));
+                self.key_params_code.push( quote!( params.extend_from_slice(&toql::key::Key::params(& key. #rust_field_ident)); ));
 
                 // Select key predicate
                 if field.number_of_options > 0 {
@@ -155,18 +201,27 @@ impl<'a> GeneratedToqlKey<'a> {
                                         .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))?
                                     )?
                             ));
+                    self.key_getters.push( quote!(#rust_field_ident :
+                                < #rust_type_ident as toql::key::Keyed>::try_get_key(
+                                    self. #rust_field_ident .as_ref()
+                                        .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))?
+                                    )?
+                            ));
 
                     self.key_setters.push( quote!(
                                         < #rust_type_ident as toql::key::Keyed>::try_set_key(self. #rust_field_ident .as_mut()
-                                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))? , key . #key_index )?;
+                                            .ok_or(toql::error::ToqlError::ValueMissing( String::from(#rust_field_name)))? , key . #rust_field_ident )?
                             ));
                 } else {
                     self.key_fields.push(quote!(
                         < #rust_type_ident as toql::key::Keyed>::try_get_key(  &self. #rust_field_ident )?
                     ));
+                    self.key_getters.push(quote!(#rust_field_ident :
+                        < #rust_type_ident as toql::key::Keyed>::try_get_key(  &self. #rust_field_ident )?
+                    ));
 
                     self.key_setters.push( quote!(
-                                    < #rust_type_ident as toql::key::Keyed>::try_set_key(&mut self. #rust_field_ident,key . #key_index)?;
+                                    < #rust_type_ident as toql::key::Keyed>::try_set_key(&mut self. #rust_field_ident,key . #rust_field_ident)?
                             ));
                 }
             }
@@ -190,14 +245,15 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         let key_inverse_columns_code = &self.key_inverse_columns_code;
         let key_params_code = &self.key_params_code;
 
-        let partial_key_types = &self.partial_key_types;
+       // let partial_key_types = &self.partial_key_types;
         let key_types = &self.key_types;
 
         let key_type_code = quote!(  #(pub #key_types),* );
 
         let key_fields = &self.key_fields;
 
-        let key_getter = quote!( #(#key_fields  ),* );
+        //let key_getter = quote!( #(#key_fields  ),* );
+        let key_getters = &self.key_getters;
         let key_setters = &self.key_setters;
 
         // Single type or tuple
@@ -206,7 +262,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         } else {
             quote!( ( #( #key_types),*) )
         };
-        let key_index_code = if self.key_types.len() == 1 {
+       /*  let key_index_code = if self.key_types.len() == 1 {
             quote!(key)
         } else {
             let key_codes = key_types
@@ -218,16 +274,18 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                 })
                 .collect::<Vec<_>>();
             quote!(  #( #key_codes),* )
-        };
+        }; */
 
         let serde = if self.serde_key {
             quote!( ,Deserialize, Serialize)
         } else {
             quote!()
         };
-        let key_sql_predicates = &self.key_sql_predicates;
 
-        let partial_key = if key_types.len() > 1 {
+        let key_field_declarations = &self.key_field_declarations;
+        //let key_sql_predicates = &self.key_sql_predicates;
+
+       /*  let partial_key = if key_types.len() > 1 {
             let struct_key_ident = Ident::new(&format!("{}PartialKey", &rust_stuct_ident), Span::call_site());
             let partial_key_sql_predicates = &self.partial_key_sql_predicates;
             quote!(
@@ -261,12 +319,25 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
         } else {
             quote!()
-        };
+        }; */
+        
+    let key_constr_code =  if self.key_constr_code.len() == 1 {
+        let key_constr_code = self.key_constr_code.get(0).unwrap();
+        vec![quote!( #key_constr_code : key)]
+    } else {
+        self.key_constr_code.iter().enumerate()
+            .map(|(i, k)| { let index = syn::Index::from(i); quote!(#k: key. #index)})
+            .collect::<Vec<_>>()
+    };
+    let toql_eq_predicates = &self.toql_eq_predicates;
+    let toql_eq_foreign_predicates = &self.toql_eq_foreign_predicates;
 
         let key = quote! {
 
         #[derive(Debug, Eq, PartialEq, Hash #serde, Clone)]
-           #vis struct #struct_key_ident ( #key_type_code);
+           #vis struct #struct_key_ident { 
+               #(#key_field_declarations),* 
+            }
 
             impl toql::key::Key  for #struct_key_ident {
                     type Entity = #rust_stuct_ident;
@@ -309,36 +380,71 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                     } */
                 }
 
-             impl toql::sql_predicate::SqlPredicate  for #struct_key_ident {
-                 type Entity = #rust_stuct_ident;
-
-                fn sql_predicate(&self, alias: &str) -> toql::sql::Sql {
-                    let mut predicate = String::new();
-                    let mut params: Vec<toql::sql::SqlArg> = Vec::new();
-
-                    #(#key_sql_predicates)*
-
-                     if !predicate.is_empty() {
-                        predicate.pop();
-                        predicate.pop();
-                        predicate.pop();
-                        predicate.pop();
-                    }
-                   
-                    (predicate, params)
+              impl Into<toql::query::Query<#rust_stuct_ident>>  for #struct_key_ident {
+                
+                fn into(self) ->toql::query::Query<#rust_stuct_ident> {
+                     <#struct_key_ident as toql::to_query::ToQuery<#rust_stuct_ident>>::to_query(&self)
                 }
              }
+               impl toql::to_query::ToQuery<#rust_stuct_ident> for  #struct_key_ident {
+                
+                fn to_query(&self) ->toql::query::Query<#rust_stuct_ident> {
+                    let t = self;
+                    toql::query::Query::<#rust_stuct_ident>::new()
+                    #(#toql_eq_predicates)*
+                }
+                fn slice_to_query(entities: &[Self]) ->toql::query::Query<#rust_stuct_ident> 
+                where Self:Sized
+                {
+                    let mut q = toql::query::Query::<#rust_stuct_ident>::new();
+                    for t in entities {
+                       q =  q.or_parentized(
+                            toql::query::Query::<#rust_stuct_ident>::new()
+                            #(#toql_eq_predicates)*
+                                );
+                    };
+                    q
+                }
+               }
 
+                
+             
+             impl toql::to_query::ToForeignQuery  for #struct_key_ident {
+                fn to_foreign_query<M>(&self, toql_path :&str) ->toql::query::Query<M> {
+                     let t = self;
+                    toql::query::Query::<M>::new()
+                    #(#toql_eq_foreign_predicates)*
+                }
+                fn slice_to_foreign_query<M>(entities: &[Self], toql_path :&str) ->toql::query::Query<M>
+                where Self:Sized
+                 {
+                    let mut q = toql::query::Query::<M>::new();
+                    for t in entities {
+                        q = q.or_parentized(
+                                toql::query::Query::<M>::new()
+                                #(#toql_eq_foreign_predicates)*
+                        );
+                    };
+                    q
+                }
+             }
+             
+
+
+            
+            
            
 
             impl toql::key::Keyed for #rust_stuct_ident {
                 type Key = #struct_key_ident;
 
                 fn try_get_key(&self) -> toql::error::Result<Self::Key> {
-                   Ok(  #struct_key_ident (#key_getter) )
+                   Ok(  #struct_key_ident {
+                       #( #key_getters),*
+                       } )
                 }
                 fn try_set_key(&mut self, key: Self::Key) -> toql::error::Result<()> {
-                  #( #key_setters)*
+                  #( #key_setters;)*
                   Ok(())
                 }
                 
@@ -356,7 +462,9 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
             {
 
                 fn from(key: #key_type_arg) ->Self {
-                    Self( #key_index_code )
+                    Self{ 
+                        #(#key_constr_code),*
+                    }
                 }
             }
 
@@ -368,7 +476,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                 }
             }
 
-            #partial_key
+            //#partial_key
 
         };
 

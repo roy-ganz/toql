@@ -9,8 +9,8 @@ use crate::codegen_mysql_load::GeneratedMysqlLoad;
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_key::GeneratedMysqlKey;
 
-#[cfg(feature = "mysqldb")]
-use crate::codegen_mysql_select::GeneratedMysqlSelect;
+/* #[cfg(feature = "mysqldb")]
+use crate::codegen_mysql_select::GeneratedMysqlSelect; */
 
 #[cfg(feature = "mysqldb")]
 use crate::codegen_mysql_insert::GeneratedMysqlInsert;
@@ -296,8 +296,8 @@ impl quote::ToTokens for Toql {
         #[cfg(feature = "mysqldb")]
         let mut mysql_load = GeneratedMysqlLoad::from_toql(&rust_struct);
 
-        #[cfg(feature = "mysqldb")]
-        let mut mysql_select = GeneratedMysqlSelect::from_toql(&rust_struct);
+       /*  #[cfg(feature = "mysqldb")]
+        let mut mysql_select = GeneratedMysqlSelect::from_toql(&rust_struct); */
 
         #[cfg(feature = "mysqldb")]
         let mut mysql_insert = GeneratedMysqlInsert::from_toql(&rust_struct);
@@ -391,10 +391,10 @@ impl quote::ToTokens for Toql {
 
                  
                 }
-                if !skip_select {
+               /*  if !skip_select {
                     #[cfg(feature = "mysqldb")]
                     mysql_select.add_select_field(&f)?;
-                }
+                } */
             }
 
             // Fail if no keys are found
@@ -445,10 +445,10 @@ impl quote::ToTokens for Toql {
                   
                 }
 
-                if !skip_select {
+                /* if !skip_select {
                     #[cfg(feature = "mysqldb")]
                     tokens.extend(quote!(#mysql_select));
-                }
+                } */
             }
         }
     }
