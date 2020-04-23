@@ -69,7 +69,8 @@ impl SqlBuilderResult {
   
 /// Returns delete SQL statement.
     pub fn delete_stmt(&self) -> String {
-        let mut s = String::from("DELETE ");
+        let mut s = String::from("DELETE");
+         s.push_str(&self.aliased_table.trim_start_matches(|c|c != ' ')); // Remove Table type to get only alias
         self.sql_body(&mut s);
         s
     }
