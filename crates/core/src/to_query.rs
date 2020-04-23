@@ -74,7 +74,7 @@ where K:ToQuery<M>
     }
 
 }
-
+/* 
 impl<K, M, const N: usize > ToQuerySlice<M> for [K; N] 
 where K:ToQuery<M>
 {
@@ -86,3 +86,4 @@ where K:ToQuery<M>
     }
 
 }
+ */

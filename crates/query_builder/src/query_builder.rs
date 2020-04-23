@@ -168,7 +168,7 @@ impl FieldInfo {
 
 pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::punctuated::Iter<'_, syn::Expr>) -> std::result::Result<TokenStream, TokenStream> {
 
-        let mut output_stream : TokenStream = quote!(toql::query::Query::new());
+        let mut output_stream : TokenStream = quote!(toql::query::Query::<#struct_type>::new());
 
    // eprintln!("About to parse {}", toql_string);
         match  PestQueryParser::parse(Rule::query, &toql_string.value()) {
