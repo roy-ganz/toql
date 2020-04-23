@@ -38,14 +38,11 @@ impl Parse for QueryBuilder {
             query: input.parse()?,
             arguments: {
                 let lookahead = input.lookahead1();
-                if lookahead.peek(Token![,]) {
-                    eprintln!("Expecting");
+                if lookahead.peek(Token![,]) { // arguments ? 
                    input.parse::<Token![,]>()?; // skip , 
-                    
-                input.parse_terminated(Expr::parse)?
+                   input.parse_terminated(Expr::parse)?
                 } else {
-                     eprintln!("No args");
-                    Punctuated::new()
+                        Punctuated::new()
                 }
 
             }
@@ -110,9 +107,11 @@ impl FieldInfo {
                                     Some(quote!(toql::query::Query::<#struct_type>::from(#query)))
                             }, 
                             TokenType::Predicate =>{
-                                   let name = &self.name;
-                                   let is = quote!();
-                                    Some(quote!(tokens.push (#struct_type::field().#name() #is )))
+                                  
+                                let args = &self.args;
+                                 let fnname = self.name.split("_").map(|n|  Ident::new(&n.to_snake_case(), Span::call_site()));
+                                   let are =  if self.single_array_argument {quote!(.are( #(#args),* ))} else {quote!(.are( &[#(#args),*] )) };
+                                    Some(quote!(#struct_type::fields(). #(#fnname()).* #are ))
                             },
                             TokenType::Unknown =>None
                         };
@@ -178,7 +177,7 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                },
             Err(e) => {
                 let msg = e.to_string();
-                return Err( quote_spanned!(toql_string.span() => compiler_error!(#msg)));
+                return Err( quote_spanned!(toql_string.span() => compile_error!(#msg)));
             }
         }; 
 
@@ -276,7 +275,7 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                     let v = query_args.next();
                     match v {
                         Some(v) =>   field_info.args.push( quote!(#v)),
-                        None => return Err(quote!(compiler_error!("Missing argument for placeholder")))
+                        None => return Err(quote!(compile_error!("Missing argument for placeholder")))
                     };
                      
                     

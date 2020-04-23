@@ -19,6 +19,8 @@
 //!
 //! Read the guide for more information on the query syntax or see (Query)[struct.Query.html]
 //!
+use crate::to_query::ToQuerySlice;
+use crate::to_query::ToQuery;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -26,8 +28,8 @@ use std::fmt;
 /// A trait to convert any structure into a Query. 
 /// For emxaple implement this for your configuration
 /// and you can do `Query::new().with(config)`
-pub trait QueryWith {
-    fn with<T>(&self, query: Query<T>) -> Query<T>;
+pub trait QueryWith<T> {
+    fn with(&self, query: Query<T>) -> Query<T>;
 }
 
 // An trait to turn entity keys into a query perdicate (used by toql derive)
@@ -157,6 +159,7 @@ impl<U,T: Into<Query<U>> + Clone> Into<Query<U>> for &Vec<T> {
         query
     }
 } 
+ 
 impl<U,T: Into<Query<U>> + Clone> Into<Query<U>> for &[T] {
     fn into(self) -> Query<U> {
         let mut query = Query::<U>::new();
@@ -165,7 +168,7 @@ impl<U,T: Into<Query<U>> + Clone> Into<Query<U>> for &[T] {
         }
         query
     }
-} 
+}   
 
 impl FilterArg for bool {
     fn to_sql(&self) -> String {
@@ -583,23 +586,22 @@ impl Predicate {
         }
     }
 
-    /// Add Argument to predicate
+    /// Add single argument to predicate
     pub fn is(mut self, arg: impl Into<SqlArg>) -> Self{
         //self.args = arg.to_args();
         self.args.push(arg.into());
         self
     }
-   /*   pub fn are<'a, T : 'a >(mut self, args: &'a[T]) -> Self
-     where &'a T : Into<SqlArg>
+    // Add multiple Arguments
+     pub fn are< I, T >(mut self, args: I) -> Self
+     where T: Into<SqlArg>, I : IntoIterator<Item=T>
      {
-         
          for a in args {
              self.args.push(a.into());
          }
-        
         self
     }
- */
+ 
 }
 
 impl ToString for Predicate {
@@ -717,7 +719,7 @@ impl ToString for QueryToken {
 /// 
 /// 
 use crate::sql::SqlArg;
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Query<M> {
     pub(crate) tokens: Vec<QueryToken>,
     /// Select DISTINCT
@@ -736,6 +738,11 @@ pub struct Query<M> {
    // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
    pub type_marker: std::marker::PhantomData<M>
 }
+
+
+
+
+
 
 impl<M> Query<M> {
     /// Create a new empty query.
@@ -796,7 +803,7 @@ impl<M> Query<M> {
         }
     }
 
-   /*  /// Wrap query with parentheses.
+     /// Wrap query with parentheses.
     pub fn parenthesize(mut self) -> Self {
         if self.tokens.is_empty() {
             return self;
@@ -805,7 +812,7 @@ impl<M> Query<M> {
             .insert(0, QueryToken::LeftBracket(Concatenation::And));
         self.tokens.push(QueryToken::RightBracket);
         self
-    } */
+    } 
     /// Concatenate field or query with AND.
     pub fn and<T>(mut self, query: T) -> Self
     where
@@ -858,7 +865,7 @@ impl<M> Query<M> {
     }
 
     /// Modifiy the query with an additional stuct.
-    pub fn with(self, query_with: impl QueryWith) -> Self {
+    pub fn with(self, query_with: impl QueryWith<M>) -> Self {
         query_with.with(self)
     }
 
@@ -1002,3 +1009,20 @@ impl<M> From<&str> for Query<M> {
         q
     }
 }
+
+
+ /* 
+impl<M> From<&dyn ToQuery<M>> for Query<M> {
+    fn from(q: &dyn ToQuery<M>) -> Query<M> {
+       q.to_query()
+    }
+}
+impl<M> From<&dyn ToQuerySlice<M>> for Query<M> {
+    fn from(q: &dyn ToQuerySlice<M>) -> Query<M> {
+       q.to_query()
+    }
+}
+
+ */
+
+ 

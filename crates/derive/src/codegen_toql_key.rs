@@ -22,6 +22,9 @@ pub(crate) struct GeneratedToqlKey<'a> {
     toql_in_predicate: Option<TokenStream>,
 
     key_constr_code:Vec<TokenStream>,
+
+    sql_arg_code : Option<TokenStream>,
+    slice_to_query_code : Option<TokenStream>
     
     
 }
@@ -49,6 +52,8 @@ impl<'a> GeneratedToqlKey<'a> {
             toql_in_predicate: None,
 
             key_constr_code: Vec::new(),
+            sql_arg_code : None,
+            slice_to_query_code : None
           
         }
     }
@@ -82,6 +87,39 @@ impl<'a> GeneratedToqlKey<'a> {
                     self.key_constr_code.push(quote!(#rust_field_ident));
                     
                     self.key_field_declarations.push(quote!( pub #rust_field_ident: #rust_type_ident));
+
+                    
+                        self.sql_arg_code = if self.key_columns_code.len() == 1 { 
+                             let rust_stuct_ident = &self.rust_struct.rust_struct_ident;
+                             let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
+                            Some(quote!(
+                                impl Into<toql::sql::SqlArg> for #struct_key_ident {
+                                    fn into(self) -> toql::sql::SqlArg {
+                                        toql::sql::SqlArg::from(self. #rust_field_ident)
+                                    }
+                                }
+                                impl Into<toql::sql::SqlArg> for &#struct_key_ident {
+                                    fn into(self) -> toql::sql::SqlArg {
+                                        toql::sql::SqlArg::from(self. #rust_field_ident .to_owned())
+                                    }
+                                }
+                            ))
+
+                        } else { None };
+
+                        self.slice_to_query_code = if self.key_columns_code.len() == 1 { 
+                             let rust_stuct_ident = &self.rust_struct.rust_struct_ident;
+                            Some(quote!(
+                                fn slice_to_query(entities: &[Self]) -> toql::query::Query<#rust_stuct_ident>
+                                where Self: Sized,
+                                {
+                                    toql::query::Query::<#rust_stuct_ident>::new()
+                                    .and(toql::query::Field::from(#toql_field_name).ins(entities))
+                                }
+                              
+                            ))
+
+                        } else { None };
 
                     // sql predicate trait 
                    // let column_format = format!("{{}}.{} = ? AND ", column);
@@ -331,6 +369,8 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
     };
     let toql_eq_predicates = &self.toql_eq_predicates;
     let toql_eq_foreign_predicates = &self.toql_eq_foreign_predicates;
+    let slice_to_query_code = &self.slice_to_query_code;
+    let sql_arg_code = &self.sql_arg_code;   
 
         let key = quote! {
 
@@ -380,12 +420,12 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                     } */
                 }
 
-              impl Into<toql::query::Query<#rust_stuct_ident>>  for #struct_key_ident {
+                impl Into<toql::query::Query<#rust_stuct_ident>>  for #struct_key_ident {
                 
                 fn into(self) ->toql::query::Query<#rust_stuct_ident> {
                      <#struct_key_ident as toql::to_query::ToQuery<#rust_stuct_ident>>::to_query(&self)
                 }
-             }
+             }  
                impl toql::to_query::ToQuery<#rust_stuct_ident> for  #struct_key_ident {
                 
                 fn to_query(&self) ->toql::query::Query<#rust_stuct_ident> {
@@ -393,19 +433,10 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                     toql::query::Query::<#rust_stuct_ident>::new()
                     #(#toql_eq_predicates)*
                 }
-                fn slice_to_query(entities: &[Self]) ->toql::query::Query<#rust_stuct_ident> 
-                where Self:Sized
-                {
-                    let mut q = toql::query::Query::<#rust_stuct_ident>::new();
-                    for t in entities {
-                       q =  q.or_parentized(
-                            toql::query::Query::<#rust_stuct_ident>::new()
-                            #(#toql_eq_predicates)*
-                                );
-                    };
-                    q
-                }
+                #slice_to_query_code
                }
+
+               #sql_arg_code
 
                 
              

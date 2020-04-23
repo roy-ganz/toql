@@ -40,3 +40,49 @@ pub trait ToForeignQuery {
     }
 }
 
+
+
+/// Trait to define key type of a Toql entity.
+pub trait ToQuerySlice<M>
+{
+     /// Return value of the key for a given entity.
+    fn to_query(&self) -> Query<M>;
+     
+}
+
+impl<K, M> ToQuerySlice<M> for &[K] 
+where K:ToQuery<M>
+{
+     /// Return value of the key for a given entity.
+    fn to_query(&self) ->Query<M> {
+        
+        ToQuery::slice_to_query(self)
+        
+    }
+
+}
+
+
+impl<K, M> ToQuerySlice<M> for Vec<K> 
+where K:ToQuery<M>
+{
+     /// Return value of the key for a given entity.
+    fn to_query(&self) ->Query<M> {
+        
+        ToQuery::slice_to_query(self)
+        
+    }
+
+}
+
+impl<K, M, const N: usize > ToQuerySlice<M> for [K; N] 
+where K:ToQuery<M>
+{
+     /// Return value of the key for a given entity.
+    fn to_query(&self) ->Query<M> {
+        
+        ToQuery::slice_to_query(self)
+        
+    }
+
+}

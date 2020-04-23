@@ -1,3 +1,5 @@
+#![feature(const_generics)]
+
 extern crate pest;
 
 

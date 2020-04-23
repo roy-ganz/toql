@@ -54,9 +54,7 @@ impl<'a> GeneratedToqlQueryFields<'a> {
         let rust_field_name = &field.rust_field_name;
         let rust_struct_visibility = &self.rust_struct_visibility;
 
-            if field.skip_query {
-                return;
-            }
+           
         // Omit wildcard function, if there is already a field called `wildcard`
         if rust_field_name == "wildcard" {
             self.build_wildcard = false;

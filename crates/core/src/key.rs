@@ -242,7 +242,7 @@ pub trait Key {
 
      
 }
-
+/* 
 pub trait ToSqlPredicate{
 
     fn to_sql_predicate(&self, alias: &str) ->Sql;
@@ -331,10 +331,10 @@ where T: ToSqlPredicate {
 
 
 
+ */
 
 
-
- 
+ /* 
 
     /// Returns SQL predicate for collection. 
     /// This may be overridded for simple primary keys that are build with IN(..)
@@ -395,7 +395,7 @@ where T: ToSqlPredicate {
     }
 
 
-
+*/
 pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64> 
  where 
 {
@@ -407,7 +407,7 @@ pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64>
 	}
 	translation
 }
-
+ 
 /* 
 pub fn default_inverse_predicate<K>(key: K, alias: &str) -> (String, Vec<String>)
 where K:Key
