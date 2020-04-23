@@ -91,8 +91,8 @@ impl FieldInfo {
             let token = match  self.token_type {
                             TokenType::Field => {
                                 // Separate with underscore, convert to snake_case for rust
-                                let fnname = self.name.split("_").map(|n|  Ident::new(&n.to_snake_case(), Span::call_site()));
-                                 
+                                let fnname = self.name.split("_").map(|n|  syn::parse_str::<Ident>(&format!("r#{}",n.to_snake_case())).unwrap());
+                                // let reserved = Ident::new("r#", Span::call_site());
                                   let sort = &self.sort;
                                   let hidden = &self.hidden;
                                   let filter = self.filter();
@@ -109,7 +109,8 @@ impl FieldInfo {
                             TokenType::Predicate =>{
                                   
                                 let args = &self.args;
-                                 let fnname = self.name.split("_").map(|n|  Ident::new(&n.to_snake_case(), Span::call_site()));
+                                 //let fnname = self.name.split("_").map(|n|  Ident::new(&n.to_snake_case(), Span::call_site()));
+                                   let fnname = self.name.split("_").map(|n|  syn::parse_str::<Ident>(&format!("r#{}",n.to_snake_case())).unwrap());
                                    let are =  if self.single_array_argument {quote!(.are( #(#args),* ))} else {quote!(.are( &[#(#args),*] )) };
                                     Some(quote!(#struct_type::fields(). #(#fnname()).* #are ))
                             },
@@ -226,7 +227,16 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                  Rule::wildcard_path => {
                       field_info.name = span.as_str().to_string();
                 },
-                Rule::filter_name => {
+                Rule::filter0_name => {
+                    field_info.filter_name =  Some(span.as_str().to_string());
+                },
+                Rule::filter1_name => {
+                    field_info.filter_name =  Some(span.as_str().to_string());
+                },
+                Rule::filter2_name => {
+                    field_info.filter_name =  Some(span.as_str().to_string());
+                },
+                Rule::filterx_name => {
                     field_info.filter_name =  Some(span.as_str().to_string());
                 },
                 Rule::num_u64 => {
@@ -277,10 +287,9 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                         Some(v) =>   field_info.args.push( quote!(#v)),
                         None => return Err(quote!(compile_error!("Missing argument for placeholder")))
                     };
-                     
                     
                 },
-                Rule::concat => {
+                Rule::separator => {
                      output_stream.extend(field_info.concatenated_token(struct_type));
                      field_info =FieldInfo::new();
                      field_info.concat =  if span.as_str().chars().next().unwrap_or(',') == ',' {Concatenation::And} else {Concatenation::Or};

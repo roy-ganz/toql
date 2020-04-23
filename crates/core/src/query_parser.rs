@@ -167,9 +167,7 @@ impl QueryParser {
                 Rule::hidden => {
                     token_info.hidden = true;
                 }
-                Rule::aggregation => {
-                    token_info.aggregation = true;
-                }
+               
                 
                 Rule::field_path => {
                      
@@ -181,7 +179,16 @@ impl QueryParser {
                 Rule::wildcard_path => {
                       token_info.name = span.as_str().to_string();
                 }
-                Rule::filter_name => {
+                Rule::filter0_name => {
+                    token_info.filter =  Some(span.as_str().to_string());
+                },
+                Rule::filter1_name => {
+                    token_info.filter =  Some(span.as_str().to_string());
+                },
+                Rule::filter2_name => {
+                    token_info.filter =  Some(span.as_str().to_string());
+                },
+                Rule::filterx_name => {
                     token_info.filter =  Some(span.as_str().to_string());
                 },
                 Rule::num_u64 => {
@@ -212,7 +219,7 @@ impl QueryParser {
                 Rule::lpar => {
                     query.tokens.push(QueryToken::LeftBracket(token_info.concatenation.clone()));
                 }
-                Rule::concat => {
+                Rule::separator => {
 
                 let concat_type =  span.as_str().chars().next();
                    if let Some(token) = token_info.build_token()?

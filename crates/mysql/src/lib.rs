@@ -226,15 +226,16 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_many<'a, T>(&mut self, query: &Query<T>) -> Result<u64>
+    pub fn delete_many<'a, T, B>(&mut self, query: B) -> Result<u64>
     where
         T: Mapped + 'a,
+        B: Borrow<Query<T>>
     {
 
        let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-         let sql = SqlBuilder::new().build_delete_sql(sql_mapper, query, self.roles())?;
+         let sql = SqlBuilder::new().build_delete_sql(sql_mapper, query.borrow(), self.roles())?;
 
         execute_update_delete_sql(sql, self.conn)
     }
@@ -411,15 +412,16 @@ impl<C: GenericConnection> MySql<'_, C> {
 
     /// Selects a single struct for a given key.
     /// This will select all base fields and joins. Merged fields will be skipped
-    pub fn select_many<T>(&mut self, query: &Query<T>) -> Result<Vec<T>>
+    pub fn select_many<T, B>(&mut self, query: B) -> Result<Vec<T>>
     where
         T: crate::row::FromResultRow<T> + toql_core::sql_mapper::Mapped, 
+        B: Borrow<Query<T>>
     {
         
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new().build_select_sql(sql_mapper, query, self.roles(), "", "")?;
+        let sql = SqlBuilder::new().build_select_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
        
         log_sql!(sql.0, sql.1);
 
@@ -461,15 +463,16 @@ impl<C: GenericConnection> MySql<'_, C> {
 
     /// Selects all mutable fields of a single struct for a given key.
     /// This will select all base fields and joins. Merged fields will be skipped
-    pub fn select_mut_many<T>(&mut self, query: &Query<T>) -> Result<Vec<T>>
+    pub fn select_mut_many<T, B>(&mut self, query: B) -> Result<Vec<T>>
     where
         T: crate::row::FromResultRow<T> + toql_core::sql_mapper::Mapped, 
+        B: Borrow<Query<T>>
     {
         
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new().build_select_mut_sql(sql_mapper, query, self.roles(), "", "")?;
+        let sql = SqlBuilder::new().build_select_mut_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
        
         log_sql!(sql.0, sql.1);
 
@@ -484,17 +487,18 @@ impl<C: GenericConnection> MySql<'_, C> {
      /// Counts the number of rows that match the query predicate.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn count<T>(&mut self, query: &Query<T>) -> Result<u64>
+    pub fn count<T, B>(&mut self, query: B) -> Result<u64>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed + toql_core::sql_mapper::Mapped,
+        B: Borrow<Query<T>>
     {
       
 
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new().build_count_sql(sql_mapper, query, self.roles())?;
+        let sql = SqlBuilder::new().build_count_sql(sql_mapper, query.borrow(), self.roles())?;
   
         log_sql!(sql.0, sql.1);
          let result = self.conn.prep_exec(&sql.0, values_from_ref(&sql.1))?;
@@ -508,13 +512,14 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Load a struct with dependencies for a given Toql query.
     ///
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
-    pub fn load_one<T>(&mut self, query: &Query<T>) -> Result<T>
+    pub fn load_one<T, B>(&mut self, query: B) -> Result<T>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
+        B: Borrow<Query<T>>
     {
         
-        <Self as Load<T>>::load_one(self, query)
+        <Self as Load<T>>::load_one(self, query.borrow())
     }
 
     /// Load a vector of structs with dependencies for a given Toql query.
@@ -522,15 +527,16 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns a tuple with the structs and an optional tuple of count values.
     /// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
     /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
-    pub fn load_many<T>(
+    pub fn load_many<T, B>(
         &mut self,
-        query: &Query<T>,
+        query: B,
     ) -> Result<Vec<T>>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
+        B: Borrow<Query<T>>
     {
-        let (r, _) =<Self as Load<T>>::load_many(self, query,None)?;
+        let (r, _) =<Self as Load<T>>::load_many(self, query.borrow(),None)?;
         Ok(r)
     }
 
@@ -539,16 +545,17 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns a tuple with the structs and an optional tuple of count values.
     /// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
     /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
-    pub fn load_page<T>(
+    pub fn load_page<T, B>(
         &mut self,
-        query: &Query<T>,
+        query: B,
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
         Self: Load<T, Error = ToqlMySqlError>,
         T: toql_core::key::Keyed,
+        B: Borrow<Query<T>>
     {
-        <Self as Load<T>>::load_many(self, query, Some(page))
+        <Self as Load<T>>::load_many(self, query.borrow(), Some(page))
     }
 }
 /* 

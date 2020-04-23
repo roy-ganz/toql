@@ -26,30 +26,40 @@ num_f64 = @{
 num_placeholder = @{"?"} // for use in query macro
 
 value= { num_i64 | num_u64 | num_f64 | string | num_placeholder }
-filter_name= {name}
-field_filter = { filter_name ~ value+}
+
+filter0_name = {^"nen" | ^"eqn"}
+filter1_name = {^"eq" | ^"ne" | ^"lt" | ^"gt" | ^"le" | ^"ge" | ^"lk" |^"re" }
+filter2_name = {^"bw"}
+filterx_name = {^"in" | ^"out" | ^"fn"}
+
+filter0 = { filter0_name }
+filter1 = { filter1_name ~ value }
+filter2 = { filter1_name ~ value ~ value }
+filterx = { filterx_name ~ value+ }
+
+field_filter = {filter0 | filter1 | filter2 | filterx }
 sort = @{ ("+" | "-") ~ASCII_DIGIT* }
 name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
 field_path = @{ name ~ ("_" ~ name)* }
 hidden = @{"."}
-wildcard_path= {field_path ~ "_"}
-wildcard = { wildcard_path? ~ "*" }
+wildcard_path= @{field_path ~ "_"}
+wildcard = @{ wildcard_path? ~ "*" }
 
-aggregation = @{"!"}
+
 field = { sort? ~ hidden? ~ field_path }
-field_clause = { field ~ aggregation? ~ field_filter?}
+field_clause = { field ~ field_filter?}
 predicate_arg =  { value+}
 predicate_name = { "@" ~ field_path}
 predicate_clause = { predicate_name ~ predicate_arg?}
 query_placeholder = @{"{}"} // for use in query macro
 clause = { field_clause | predicate_clause | query_placeholder |( lpar ~ expr ~ rpar) } 
-concat = { "," | ";" }
+separator = { "," | ";" }
 
 lpar = @{"("}
 rpar = @{")"}
 
 
-expr = { (wildcard | clause ) ~ (concat ~ (wildcard | clause))*}
+expr = { (wildcard | clause ) ~ (separator ~ (wildcard | clause))*}
 query = { SOI ~ expr? ~ EOI }
 
 WHITESPACE = _{ " " }

@@ -35,6 +35,24 @@ where K: Keyed
      
 }
 
+
+impl<K> KeyedSlice<K> for Vec<K>
+where K:Keyed
+{
+     /// Return value of the key for a given entity.
+    fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
+        let mut keys = Vec::new();
+
+        for k in self {
+            keys.push(k.try_get_key()?);
+
+        }
+
+        Ok(keys)
+    }
+}
+
+
 impl<K> KeyedSlice<K> for &[K] 
 where K:Keyed
 {
