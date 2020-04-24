@@ -313,7 +313,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                   let columns :Vec<String> = #optional_add_primary_keys;
 
-                    let sql = toql::sql_builder::SqlBuilder::new()
+                    let sql = toql::sql_builder::SqlBuilder::new(self.aux_params())
                          #(#ignored_paths)*
                         .scope_wildcard(&wildcard_scope)
                         .build_select_sql_with_additional_columns(mapper, &query, self.roles(), "", "LIMIT 0, 2", &columns)?;
@@ -363,7 +363,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                  
                     let columns :Vec<String>= #optional_add_primary_keys;
 
-                    let sql = toql::sql_builder::SqlBuilder::new()
+                    let sql = toql::sql_builder::SqlBuilder::new(self.aux_params())
                          #(#ignored_paths)*
                         .scope_wildcard(&wildcard_scope)
                         .build_select_sql_with_additional_columns(mapper, &query, self.roles(), &hint, &sql_page, &columns)?;
@@ -393,7 +393,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 .ok_or(toql::error::ToqlError::MapperMissing(String::from("User")))?;
 
 
-                        let sql = toql::sql_builder::SqlBuilder::new()
+                        let sql = toql::sql_builder::SqlBuilder::new(self.aux_params())
                         #(#ignored_paths)*
                         .build_filtered_count_sql(mapper, &query, self.roles())?;
                 
@@ -418,7 +418,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                 {
                      // Get new mapper, because self is mut borrowed 
                     let mapper = self.registry().mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                   let sql = toql::sql_builder::SqlBuilder::new()
+                   let sql = toql::sql_builder::SqlBuilder::new(self.aux_params())
                         .scope_wildcard(&wildcard_scope)
                         .build_query_sql_for_path_with_additional_columns(mapper, &query, self.roles(),"", "", path, &additional_columns)?;
                         Ok(sql)

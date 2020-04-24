@@ -126,14 +126,14 @@ impl WildcardScope {
 }
 
 /// The Sql builder to build normal queries and count queries.
-pub struct SqlBuilder {
+pub struct SqlBuilder<'a> {
    // count_query: bool,               // Build count query
     subpath: String,                 // Build only subpath
     joins: HashSet<String>,          // Use this joins
     ignored_paths: Vec<String>,      // Ignore paths, no errors are raised for them
     selected_paths: HashSet<String>, // Selected paths
     wildcard_scope: WildcardScope,   // Wildcard restriction
-    aux_params: HashMap<String, SqlArg> // Aux params used for all queries with this builder instance, contains typically config or auth data
+    aux_params: &'a HashMap<String, SqlArg> // Aux params used for all queries with this builder instance, contains typically config or auth data
 }
 
 #[derive(Debug)]
@@ -183,14 +183,11 @@ pub enum BuildMode {
     SelectAll
 }
 
-impl SqlBuilder {
+impl<'a> SqlBuilder<'a> {
     /// Create a new SQL Builder
-    pub fn new() -> Self {
+    pub fn new(aux_params: &'a HashMap<String, SqlArg>) -> Self {
        
-       Self::with_aux_params(HashMap::new())
-    }
-    pub fn with_aux_params(aux_params: HashMap<String, SqlArg>) -> Self {
-        SqlBuilder {
+       SqlBuilder {
            // count_query: false,
             subpath: "".to_string(),
             joins: HashSet::new(),
@@ -200,6 +197,7 @@ impl SqlBuilder {
             aux_params,
         }
     }
+   
 
     /// Add wildcard scope to the wildcard scopes
     pub fn scope_wildcard(mut self, scope: &WildcardScope) -> Self {
@@ -1492,11 +1490,11 @@ impl SqlBuilder {
         false
     }
 
-    fn combine_aux_params<'a>(
-        combined_aux_params: &'a mut HashMap<String, SqlArg>,
-        query_aux_params: &'a HashMap<String, SqlArg>,
-        sql_target_aux_params: &'a HashMap<String, SqlArg>,
-    ) -> &'a HashMap<String, SqlArg> {
+    fn combine_aux_params<'b>(
+        combined_aux_params: &'b mut HashMap<String, SqlArg>,
+        query_aux_params: &'b HashMap<String, SqlArg>,
+        sql_target_aux_params: &'b HashMap<String, SqlArg>,
+    ) -> &'b HashMap<String, SqlArg> {
         if sql_target_aux_params.is_empty() {
             query_aux_params
         } else {

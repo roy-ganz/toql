@@ -201,9 +201,9 @@ where
     let diff_sql = <T as DiffSql>::diff_many_sql(&diff, roles)?;
 
      
-
+    let aux_params = HashMap::new();
      let delete_sql = if delete.is_empty() {None } else {
-         Some(SqlBuilder::new().build_delete_sql(sql_mapper, &crate::to_query::ToQuery::slice_to_query(&delete), roles)?)
+         Some(SqlBuilder::new(&aux_params).build_delete_sql(sql_mapper, &crate::to_query::ToQuery::slice_to_query(&delete), roles)?)
      };
 
     Ok((insert_sql, diff_sql, delete_sql))
