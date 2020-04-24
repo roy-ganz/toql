@@ -133,6 +133,7 @@ pub struct SqlBuilder {
     ignored_paths: Vec<String>,      // Ignore paths, no errors are raised for them
     selected_paths: HashSet<String>, // Selected paths
     wildcard_scope: WildcardScope,   // Wildcard restriction
+    aux_params: HashMap<String, SqlArg> // Aux params used for all queries with this builder instance, contains typically config or auth data
 }
 
 #[derive(Debug)]
@@ -185,6 +186,10 @@ pub enum BuildMode {
 impl SqlBuilder {
     /// Create a new SQL Builder
     pub fn new() -> Self {
+       
+       Self::with_aux_params(HashMap::new())
+    }
+    pub fn with_aux_params(aux_params: HashMap<String, SqlArg>) -> Self {
         SqlBuilder {
            // count_query: false,
             subpath: "".to_string(),
@@ -192,6 +197,7 @@ impl SqlBuilder {
             ignored_paths: Vec::new(),
             selected_paths: HashSet::new(),
             wildcard_scope: WildcardScope::All,
+            aux_params,
         }
     }
 
@@ -435,6 +441,14 @@ impl SqlBuilder {
         let mut selected_paths: HashSet<String> = HashSet::new();
 
         let mut on_params : HashMap<String, SqlArg> = HashMap::new(); // 
+
+        // aux params from query and SqlBuilder instance
+        let mut build_aux_params : HashMap<String, SqlArg> = HashMap::new();
+        Self::combine_aux_params(
+                                        &mut build_aux_params,
+                                        &query.aux_params,
+                                        &self.aux_params,
+                                    );
 
         let mut result = SqlBuilderResult {
             aliased_table: sql_mapper.aliased_table.clone(),
@@ -775,7 +789,7 @@ impl SqlBuilder {
                                         HashMap::new();
                                     let aux_params = Self::combine_aux_params(
                                         &mut combined_aux_params,
-                                        &query.aux_params,
+                                        &build_aux_params,
                                         &sql_target.options.aux_params,
                                     );
 
@@ -942,7 +956,7 @@ impl SqlBuilder {
                                         HashMap::new();
                                     let aux_params = Self::combine_aux_params(
                                         &mut combined_aux_params,
-                                        &query.aux_params,
+                                        &build_aux_params,
                                         &predicate.options.aux_params,
                                     );
 
@@ -1012,11 +1026,11 @@ impl SqlBuilder {
         
         let mut combined_on_params: HashMap<String, SqlArg>= HashMap::new();
         let on_params = if on_params.is_empty() {
-            &query.aux_params
+            &build_aux_params
         } else {
             Self::combine_aux_params(
                                         &mut combined_on_params,
-                                        &query.aux_params,
+                                        &build_aux_params,
                                         &on_params,
                                     )
         };
@@ -1042,14 +1056,14 @@ impl SqlBuilder {
         if mode == BuildMode::CountFiltered {
             Self::build_count_select_clause(
                 &mut result,
-                &query.aux_params,
+                &build_aux_params,
                 &sql_mapper.fields,
                 &sql_mapper.field_order,
             )?;
         } else {
             Self::build_ordering(
                 &mut result,
-                &query.aux_params,
+                &build_aux_params,
                 &sql_target_data,
                 &sql_mapper.fields,
                 &ordinals,
@@ -1057,7 +1071,7 @@ impl SqlBuilder {
             )?;
             Self::build_select_clause(
                 &mut result,
-                &query.aux_params,
+                &build_aux_params,
                 &sql_mapper.fields,
                 &sql_target_data,
                 &sql_mapper.field_order,

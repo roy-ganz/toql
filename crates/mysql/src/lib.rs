@@ -29,7 +29,7 @@ use toql_core::log_sql;
 
 
 
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use crate::row::FromResultRow;
 use crate::row::from_query_result;
 
@@ -45,7 +45,7 @@ pub mod sql_arg;
 pub mod error;
 use crate::error::Result;
 use crate::error::ToqlMySqlError;
-use toql_core::sql::Sql;
+use toql_core::sql::{Sql, SqlArg};
 
 
 use crate::sql_arg::{values_from, values_from_ref};
@@ -77,28 +77,42 @@ where
 pub struct MySql<'a, C: GenericConnection> {
     conn: &'a mut C,
     roles: HashSet<String>,
-    registry: &'a SqlMapperRegistry
+    registry: &'a SqlMapperRegistry,
+    aux_params: HashMap<String, SqlArg>
 }
 
-impl<C: GenericConnection> MySql<'_, C> {
+impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
 
     /// Create connection wrapper from MySql connection or transaction.
     ///
     /// Use the connection wrapper to access all Toql functionality.
-    pub fn from<'a>(conn: &'a mut C, registry: &'a SqlMapperRegistry) -> MySql<'a, C> {
-        MySql {
-            conn,
-            roles: HashSet::new(),
-            registry
-        }
+    pub fn from(conn: &'a mut C, registry: &'a SqlMapperRegistry) -> MySql<'a, C> 
+    {
+       Self::with_roles_and_aux_params(conn, registry, HashSet::new(), HashMap::new())
     }
 
     /// Create connection wrapper from MySql connection or transaction and roles.
     ///
     /// Use the connection wrapper to access all Toql functionality.
-    pub fn with_roles<'a>(conn: &'a mut C, registry: &'a SqlMapperRegistry, roles: HashSet<String>) -> MySql<'a, C> {
-        MySql { conn, registry,roles }
+    pub fn with_roles(conn: &'a mut C, registry: &'a SqlMapperRegistry, roles: HashSet<String>) -> MySql<'a, C> 
+     {
+        Self::with_roles_and_aux_params(conn, registry, roles, HashMap::new())
     }
+    /// Create connection wrapper from MySql connection or transaction and roles.
+    ///
+    /// Use the connection wrapper to access all Toql functionality.
+    pub fn with_aux_params(conn: &'a mut C, registry: &'a SqlMapperRegistry, aux_params: HashMap<String, SqlArg>) -> MySql<'a, C>
+    {
+      Self::with_roles_and_aux_params(conn, registry, HashSet::new(), aux_params)
+    }
+    /// Create connection wrapper from MySql connection or transaction and roles.
+    ///
+    /// Use the connection wrapper to access all Toql functionality.
+    pub fn with_roles_and_aux_params(conn: &'a mut C, registry: &'a SqlMapperRegistry,roles: HashSet<String>, aux_params: HashMap<String, SqlArg>) -> MySql<'a, C> 
+    {
+        MySql { conn, registry,roles, aux_params }
+    }
+
 
     /// Set roles
     ///
@@ -120,6 +134,15 @@ impl<C: GenericConnection> MySql<'_, C> {
         &self.roles
     }
 
+    pub fn set_aux_params(&mut self, aux_params: HashMap<String, SqlArg>) -> &mut Self {
+        self.aux_params = aux_params;
+        self
+    }
+
+    pub fn aux_params(&self) -> &HashMap<String, SqlArg> {
+        &self.aux_params
+    }
+
     /// Insert one struct.
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
@@ -137,7 +160,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id
-    pub fn insert_many<'a, T, Q>(&mut self, entities: &[Q]) -> Result<u64>
+    pub fn insert_many<T, Q>(&mut self, entities: &[Q]) -> Result<u64>
     where
         T: InsertSql,
         Q: Borrow<T>,
@@ -158,7 +181,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn insert_dup_one<'a, T>(&mut self, entity: &T, strategy: DuplicateStrategy) -> Result<u64>
+    pub fn insert_dup_one<T>(&mut self, entity: &T, strategy: DuplicateStrategy) -> Result<u64>
     where
         T: InsertSql + InsertDuplicate,
     {
@@ -177,7 +200,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id
-    pub fn insert_dup_many<'a, T: 'a,  Q>(
+    pub fn insert_dup_many< T,  Q>(
         &mut self,
         entities: &[Q],
         strategy: DuplicateStrategy,
@@ -206,7 +229,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// pub fn select_one<K>(&mut self, key: K) -> Result<<K as Key>::Entity>
     
     
-    pub fn delete_one<'a, K>(&mut self, key: K) -> Result<u64>
+    pub fn delete_one<K>(&mut self, key: K) -> Result<u64>
    where
         K: Key + Into<Query<<K as Key>::Entity>>,
         <K as Key>::Entity: FromResultRow<<K as Key>::Entity> + Mapped,
@@ -226,9 +249,9 @@ impl<C: GenericConnection> MySql<'_, C> {
     ///
     /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
     /// Returns the number of deleted rows.
-    pub fn delete_many<'a, T, B>(&mut self, query: B) -> Result<u64>
+    pub fn delete_many<T, B>(&mut self, query: B) -> Result<u64>
     where
-        T: Mapped + 'a,
+        T: Mapped ,
         B: Borrow<Query<T>>
     {
 
@@ -267,7 +290,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Returns the number of updated rows.
     ///
 
-    pub fn update_one<'a, T>(&mut self, entity: &T) -> Result<u64>
+    pub fn update_one<T>(&mut self, entity: &T) -> Result<u64>
     where
         T: UpdateSql,
     {
@@ -285,7 +308,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// This will updated struct fields and foreign keys from joins.
     /// Collections in a struct will be inserted, updated or deleted.
     /// Nested fields themself will not automatically be updated.
-    pub fn full_diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self, entities: &[(Q, Q)]) -> Result<u64>
+    pub fn full_diff_many<T, Q: Borrow<T>>(&mut self, entities: &[(Q, Q)]) -> Result<u64>
     where
         T: DiffSql + Mapped
     {
@@ -309,7 +332,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// This will updated struct fields and foreign keys from joins.
     /// Collections in a struct will be inserted, updated or deleted.
     /// Nested fields themself will not automatically be updated.
-    pub fn full_diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64>
+    pub fn full_diff_one<T>(&mut self, outdated: &T, current: &T) -> Result<u64>
     where T: DiffSql + Mapped,
     {
         self.full_diff_many::<T,_>(&[(outdated, current)])
@@ -319,7 +342,7 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// This will updated struct fields and foreign keys from joins.
     /// Collections in a struct will be inserted, updated or deleted.
     /// Nested fields themself will not automatically be updated.
-    pub fn diff_many<'a, T, Q: 'a + Borrow<T>>(&mut self, entities: &[(Q, Q)]) -> Result<u64>
+    pub fn diff_many<T, Q:  Borrow<T>>(&mut self, entities: &[(Q, Q)]) -> Result<u64>
     where T: DiffSql
     {
         let sql_stmts = <T as DiffSql>::diff_many_sql(entities, &self.roles)?;
@@ -336,9 +359,9 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Updates difference of two struct.
     /// This will updated struct fields and foreign keys from joins.
     /// Collections in a struct will be ignored.
-    pub fn diff_one<'a, T>(&mut self, outdated: &'a T, current: &'a T) -> Result<u64>
+    pub fn diff_one<T>(&mut self, outdated: &T, current: &T) -> Result<u64>
     where
-        T: 'a + DiffSql,
+        T: DiffSql,
     {
         self.diff_many::<T, _>(&[(outdated, current)])
     }
@@ -346,13 +369,13 @@ impl<C: GenericConnection> MySql<'_, C> {
     /// Updates difference of two collections.
     /// This will insert / update / delete database rows.
     /// Nested fields themself will not automatically be updated.
-    pub fn diff_one_collection<'a, T>(
+    pub fn diff_one_collection<T>(
         &mut self,
-        outdated: &'a [T],
-        updated: &'a [T],
+        outdated: & [T],
+        updated: & [T],
     ) -> Result<(u64, u64, u64)>
     where
-        T: Keyed + Mapped + 'a + Borrow<T> +DiffSql + InsertSql +UpdateSql,
+        T: Keyed + Mapped + Borrow<T> +DiffSql + InsertSql +UpdateSql,
         <T as Keyed>::Key: toql_core::to_query::ToQuery<T>
     {
           let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )

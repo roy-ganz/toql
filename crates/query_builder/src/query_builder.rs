@@ -96,7 +96,7 @@ impl FieldInfo {
                                   let sort = &self.sort;
                                   let hidden = &self.hidden;
                                   let filter = self.filter();
-                                Some(quote!(#struct_type::fields(). #(#fnname()).*  #sort #hidden #filter))
+                                Some(quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*  #sort #hidden #filter))
                             },
                             TokenType::Wildcard => {
                                    let name = &self.name;
@@ -112,7 +112,7 @@ impl FieldInfo {
                                  //let fnname = self.name.split("_").map(|n|  Ident::new(&n.to_snake_case(), Span::call_site()));
                                    let fnname = self.name.split("_").map(|n|  syn::parse_str::<Ident>(&format!("r#{}",n.to_snake_case())).unwrap());
                                    let are =  if self.single_array_argument {quote!(.are( #(#args),* ))} else {quote!(.are( &[#(#args),*] )) };
-                                    Some(quote!(#struct_type::fields(). #(#fnname()).* #are ))
+                                    Some(quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).* #are ))
                             },
                             TokenType::Unknown =>None
                         };
