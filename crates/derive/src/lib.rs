@@ -51,16 +51,16 @@ mod codegen_toql_key;
 mod codegen_toql_mapper;
 mod codegen_toql_query_fields;
 
-#[cfg(feature = "mysqldb")]
+#[cfg(feature = "mysqldb15")]
 mod codegen_mysql_load;
 
-#[cfg(feature = "mysqldb")]
+#[cfg(feature = "mysqldb15")]
 mod codegen_mysql_key;
 /* 
-#[cfg(feature = "mysqldb")]
+#[cfg(feature = "mysqldb15")]
 mod codegen_mysql_select;
 
-#[cfg(feature = "mysqldb")]
+#[cfg(feature = "mysqldb15")]
 mod codegen_mysql_insert; */
 
 mod sane;

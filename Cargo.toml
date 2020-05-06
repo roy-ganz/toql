@@ -28,6 +28,6 @@ members =  [
 ]
 
 [features]
-mysql = ["toql_mysql", "toql_derive/mysql15"]
+mysql15 = ["toql_mysql", "toql_derive/mysql15"]
 
 

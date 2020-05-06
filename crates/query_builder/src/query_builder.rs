@@ -100,7 +100,7 @@ impl FieldInfo {
                             },
                             TokenType::Wildcard => {
                                 
-                                dbg!(&self.name);
+                              
                                 Some(if self.name.is_empty() {
                                     quote!(<#struct_type as toql::query_fields::QueryFields>::fields() .wildcard())
                                 }else {
@@ -234,7 +234,7 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
               
               
                 Rule::wildcard => {
-                     dbg!(span.as_str().to_string());
+                     
                      field_info.name= span.as_str().trim_end_matches("*").trim_end_matches("_").to_string(); // Somehow name rules fdont work
                       field_info.token_type = TokenType::Wildcard;
                 },

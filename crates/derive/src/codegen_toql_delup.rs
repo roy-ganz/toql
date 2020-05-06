@@ -443,7 +443,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 let roles = &self.struct_upd_roles;
                 quote!(
                         toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
+                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(e)))?;
 
                 )
             };
@@ -453,7 +453,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
                 let roles = &self.struct_insdel_roles;
                 quote!(
                         toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::RoleRequired(e)))?;
+                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(e)))?;
 
                 )
             };

@@ -78,5 +78,5 @@ pub use toql_core::log; // Reexport for derive
 
 pub use toql_core::dialect; // For generic SQL code
 
-#[cfg(feature = "mysql")]
+#[cfg(feature = "mysql15")]
 pub use toql_mysql as mysql;
