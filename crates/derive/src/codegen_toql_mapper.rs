@@ -70,7 +70,7 @@ impl<'a> GeneratedToqlMapper<'a> {
           if let Some(count_filter) = &rust_struct.count_filter {
               // Only map count filter on top entity
               quote!(
-                  if roql_path.is_empty() {
+                  if toql_path.is_empty() {
                     for field in &[ #(#count_filter),*] {
                             let options = mapper.get_options(field).expect(&format!("Field {} not mapped. Skipped count filter.", &field));
                             mapper.set_options(field, options.count_filter(true));
@@ -91,6 +91,11 @@ impl<'a> GeneratedToqlMapper<'a> {
     }
 
     pub(crate) fn add_field_mapping(&mut self, field: &crate::sane::Field) -> Result<()> {
+
+        if field.skip_query {
+            return Ok(());
+        }
+
         let rust_field_name = &field.rust_field_name;
 
         // Joined field
@@ -186,6 +191,13 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!()
                 };
 
+              /*   let mut_select_ident = if join_attrs.key {
+                    quote!(.mut_select(toql_path.is_empty() || (!toql_path.is_empty() && ! toql_path.contains('_'))))
+                } else {
+                    quote!(.mut_select(toql_path.is_empty()))
+                };
+ */
+
                 let roles = &field.load_roles;
                 let roles_ident = if roles.is_empty() {
                     quote!()
@@ -208,7 +220,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                      #join_type,
                      &aliased_table,
                      #join_predicate,
-                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #select_ident #ignore_wc_ident #roles_ident );
+                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #select_ident #ignore_wc_ident #roles_ident);
                 });
 
                 if join_attrs.key {
@@ -238,6 +250,12 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!()
                 };
 
+                let mut_select_ident = if regular_attrs.key {
+                    quote!(.mut_select(toql_path.is_empty() || (!toql_path.is_empty() && ! toql_path.contains('_'))))
+                } else {
+                    quote!(.mut_select(toql_path.is_empty()))
+                };
+
                 let roles = &field.load_roles;
                 let roles_ident = if roles.is_empty() {
                     quote!()
@@ -263,7 +281,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self.field_mappings.push(quote! {
                                             #sql_mapping
                                             mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident);
                                         }
                             );
                     }
@@ -271,7 +289,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self.field_mappings.push(quote! {
                                             #sql_mapping
                                             mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident);
+                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident);
                                         }
                             );
                     }

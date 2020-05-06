@@ -59,7 +59,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                  insert_stmt.push_str("?, ");
                                  params.push( toql::sql::SqlArg::from(field.as_ref()));
                              } else {
-                                insert_stmt.push_str("DEFAULT,");
+                                insert_stmt.push_str("DEFAULT, ");
                              }
                         )
                     }

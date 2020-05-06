@@ -122,8 +122,8 @@ impl TokenInfo {
                     "BW" => Ok(Some(FieldFilter::Bw(  self.args.pop().ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?, self.args.pop().ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?))),
                     "RE" => Ok(Some(FieldFilter::Re(self.args.pop().ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?))),
                    
-                    _ => if f.starts_with("FN ") {
-                            let filtername = f.trim_start_matches("FN ").to_uppercase();
+                    _ => if upc.starts_with("FN ") {
+                            let filtername = upc.trim_start_matches("FN ");
                             Ok(Some(FieldFilter::Fn(filtername.to_string(),self.args.drain(..).collect())))
 
                         } else {
@@ -189,6 +189,9 @@ impl QueryParser {
                     token_info.filter =  Some(span.as_str().to_string());
                 },
                 Rule::filterx_name => {
+                    token_info.filter =  Some(span.as_str().to_string());
+                },
+                Rule::filterc_name => {
                     token_info.filter =  Some(span.as_str().to_string());
                 },
                 Rule::num_u64 => {

@@ -30,14 +30,16 @@ value= { num_i64 | num_u64 | num_f64 | string | num_placeholder }
 filter0_name = {^"nen" | ^"eqn"}
 filter1_name = {^"eq" | ^"ne" | ^"lt" | ^"gt" | ^"le" | ^"ge" | ^"lk" |^"re" }
 filter2_name = {^"bw"}
-filterx_name = {^"in" | ^"out" | ^"fn"}
+filterx_name = {^"in" | ^"out" }
+filterc_name = {^"fn" ~ name} 
 
 filter0 = { filter0_name }
 filter1 = { filter1_name ~ value }
 filter2 = { filter1_name ~ value ~ value }
 filterx = { filterx_name ~ value+ }
+filterc = { filterc_name ~ value* }
 
-field_filter = {filter0 | filter1 | filter2 | filterx }
+field_filter = {filter0 | filter1 | filter2 | filterx |filterc }
 sort = @{ ("+" | "-") ~ASCII_DIGIT* }
 name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
 field_path = @{ name ~ ("_" ~ name)* }

@@ -132,7 +132,8 @@ impl FieldInfo {
         let args = &self.args;
         match &self.filter_name {
             Some(f) => {
-                match f.to_uppercase().as_str() {
+                let f = f.to_uppercase();
+                match f.as_str() {
 
                     "EQ" => { quote!(.eq(#(#args),*)) },
                     "EQN" =>{ quote!(.eqn()) },
@@ -149,7 +150,7 @@ impl FieldInfo {
                     "RE" => {  quote!(.re(#(#args),*)) },
                     _ => { if f.starts_with("FN ") 
                          { 
-                            let name = f.trim_start_matches("FN ").to_uppercase();
+                            let name = f.trim_start_matches("FN ");
                             let args = &self.args;
                             if self.single_array_argument {quote!(.fnc(#name, #(#args),* ))} 
                             else {quote!(.fnc(#name &[#(#args),*] )) }
@@ -239,6 +240,9 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                 Rule::filterx_name => {
                     field_info.filter_name =  Some(span.as_str().to_string());
                 },
+                Rule::filterc_name => {
+                    field_info.filter_name =  Some(span.as_str().to_string());
+                },
                 Rule::num_u64 => {
                     let v = span.as_str().parse::<u64>().unwrap_or(0); // should not be invalid, todo check range
                     field_info.args.push( quote!(#v));
@@ -292,7 +296,8 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                 Rule::separator => {
                      output_stream.extend(field_info.concatenated_token(struct_type));
                      field_info =FieldInfo::new();
-                     field_info.concat =  if span.as_str().chars().next().unwrap_or(',') == ',' {Concatenation::And} else {Concatenation::Or};
+                     let concat = span.as_str().chars().next().unwrap_or(',');
+                     field_info.concat =  if concat == ',' {Concatenation::And} else {Concatenation::Or};
                 },
                 _ => {}
 

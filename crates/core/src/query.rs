@@ -785,6 +785,45 @@ impl<M> Query<M> {
             type_marker: std::marker::PhantomData
        }
     }
+/// Create a new query from the path of another query.
+ pub fn traverse<T>(self, path:&str) -> Query<T> {
+
+        
+        let tokens = self.tokens.iter().filter_map(|t| {
+            match t {
+                QueryToken::Field(field) => { if field.name.starts_with(path) 
+                    { 
+                        let mut field = field.clone();
+                        field.name = field.name.trim_start_matches(path).trim_start_matches('_').to_string();
+                        Some(QueryToken::Field(field))
+                    } else {None} },
+                QueryToken::Wildcard(wildcard) => {
+                    if wildcard.path.starts_with(path) {
+                        let mut wildcard = wildcard.clone();
+                        wildcard.path = wildcard.path.trim_start_matches(path).trim_start_matches('_').to_string();
+                        Some(QueryToken::Wildcard(wildcard))
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            
+            }
+        }).collect::<Vec<_>>();
+
+       Query::<T> {
+            tokens: tokens,
+            distinct: self.distinct.clone(),
+            aux_params: self.aux_params.clone(),
+            where_predicates: self.where_predicates.clone(),
+            where_predicate_params: self.where_predicate_params.clone(),
+            select_columns: self.select_columns.clone(),
+            join_stmts: self.join_stmts.clone(),
+            join_stmt_params: self.join_stmt_params.clone(),
+            type_marker: std::marker::PhantomData
+       }
+    }
+
 
     /// Create a new query that select all top fields.
     pub fn wildcard() -> Self {
@@ -840,16 +879,26 @@ impl<M> Query<M> {
         T: Into<Query<M>>,
     {
         // Change first token of query to concatenate with OR
-       /*  let mut query = query.into();
-        if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
+         let mut query = query.into();
+         match query.tokens.get_mut(0) {
+             Some(QueryToken::LeftBracket(c) ) => *c = Concatenation::Or,
+             Some(QueryToken::RightBracket ) =>  {},
+             Some(QueryToken::Field(f)) => f.concatenation = Concatenation::Or,
+             Some(QueryToken::Wildcard(w)) => w.concatenation = Concatenation::Or,
+             Some(QueryToken::Predicate(p)) => p.concatenation = Concatenation::Or,
+             None => {}
+         }
+/*         if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
             *c = Concatenation::Or;
         } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
             field.concatenation = Concatenation::Or;
         } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
             wildcard.concatenation = Concatenation::Or;
-        } */
+        } 
+ */       
 
-        self.tokens.append(&mut query.into().tokens);
+        self.tokens.append(&mut query.tokens);
+        
         self
     }
      /// Concatenate field or query with AND.
@@ -858,7 +907,7 @@ impl<M> Query<M> {
         T: Into<Query<M>>,
     {
         // All tokens are b
-        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::And));
+        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::Or));
         self.tokens.append(&mut query.into().tokens);
         self.tokens.push(QueryToken::RightBracket);
         self
@@ -909,6 +958,8 @@ impl<M> Query<M> {
             }
         })
     }
+
+   
   
 }
 

@@ -134,14 +134,15 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         &self.roles
     }
 
-    pub fn set_aux_params(&mut self, aux_params: HashMap<String, SqlArg>) -> &mut Self {
+    /* pub fn set_aux_params(&mut self, aux_params: HashMap<String, SqlArg>) -> &mut Self {
         self.aux_params = aux_params;
         self
     }
-
+ */
     pub fn aux_params(&self) -> &HashMap<String, SqlArg> {
         &self.aux_params
     }
+   
 
     /// Insert one struct.
     ///
@@ -259,8 +260,12 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
          let sql = SqlBuilder::new(self.aux_params()).build_delete_sql(sql_mapper, query.borrow(), self.roles())?;
-
+         // No arguments, nothing to delete
+        if sql.1.is_empty() {
+            Ok(0)
+        } else {
         execute_update_delete_sql(sql, self.conn)
+        }
     }
 
     /// Update a collection of structs.

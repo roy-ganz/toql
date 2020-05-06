@@ -13,6 +13,7 @@ pub trait PredicateHandler {
     fn build_predicate(
         &self,
         expression: Sql,
+        predicate_args: &Vec<SqlArg>,
         aux_params: &HashMap<String, SqlArg>,
     ) -> Result<Option<Sql>, SqlBuilderError>;
    
@@ -40,6 +41,7 @@ impl PredicateHandler for DefaultPredicateHandler {
  fn build_predicate(
         &self,
         predicate: Sql,
+        _predicate_args: &Vec<SqlArg>,
         _aux_params: &HashMap<String, SqlArg>,
     ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
        // Wrap in parens

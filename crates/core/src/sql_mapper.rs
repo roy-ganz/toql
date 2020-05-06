@@ -147,6 +147,11 @@ impl FieldOptions {
         self.count_select = count_select;
         self
     }
+    /// Field is used for the mut select query.
+    pub fn mut_select(mut self, mut_select: bool) -> Self {
+        self.mut_select = mut_select;
+        self
+    }
     /// Field is ignored by the wildcard.
     pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
         self.skip_wildcard = skip_wildcard;

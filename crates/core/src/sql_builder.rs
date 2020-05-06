@@ -364,7 +364,7 @@ impl<'a> SqlBuilder<'a> {
     }
 
   /// Build query for total count.
-    pub fn build_select_sql_with_additional_columns<M, S> (
+    pub fn build_query_sql_with_additional_columns<M, S> (
         &mut self,
         sql_mapper: &SqlMapper,
         query: &Query<M>,
@@ -376,7 +376,7 @@ impl<'a> SqlBuilder<'a> {
      where S: AsRef<str>
     {
        
-        let mut result = self.build(sql_mapper, query, roles, BuildMode::SelectAll)?;
+        let mut result = self.build(sql_mapper, query, roles, BuildMode::SelectQuery)?;
         selects.iter().for_each(|s|result.push_select(s.as_ref()));
 
         Ok((result.query_stmt(modifier, extra), result.combined_params))
@@ -586,10 +586,10 @@ impl<'a> SqlBuilder<'a> {
                             };
 
                             if !wildcard_in_scope {
-                                 //  println!("Skipped {:?}", field_name);
+                               //    println!("Skipped {:?}", field_name);
                                 continue;
                             } else {
-                                //println!("Included {:?}", field_name);
+                               // println!("Included {:?}", field_name);
                             }
 
                             // Skip field if it doesn't belong to wildcard path
@@ -667,6 +667,7 @@ impl<'a> SqlBuilder<'a> {
                             let f = sql_target_data.entry(field_name.as_str()).or_default();
 
                             f.selected = true; // Select field
+                            f.used = true;      // Used field because selected
 
                             // Ensure all parent paths are selected
                             if sql_target.subfields {
@@ -959,7 +960,7 @@ impl<'a> SqlBuilder<'a> {
                                     );
 
                                 let args = predicate_param_values(&predicate.sql_aux_param_names, &aux_params,  &query_predicate.args,&query_predicate.name )?;
-                                if let Some((expr, args)) = predicate.handler.build_predicate(( predicate.expression.to_owned(), args), aux_params)? {
+                                if let Some((expr, args)) = predicate.handler.build_predicate(( predicate.expression.to_owned(), args),&query_predicate.args, aux_params)? {
 
                                    if need_where_concatenation == true {
                                         if pending_where_parens > 0 {
@@ -1017,6 +1018,31 @@ impl<'a> SqlBuilder<'a> {
                 if mapper_field.options.count_select {
                     let f = sql_target_data.entry(field_name.as_str()).or_default();
                     f.selected = true;
+                    f.used= true;
+                }
+            }
+        }
+        // Select all fields for count queries that are marked with count_select
+        else if mode == BuildMode::SelectMut {
+            for (field_name, mapper_field) in &sql_mapper.fields {
+                if mapper_field.options.mut_select {
+                    let f = sql_target_data.entry(field_name.as_str()).or_default();
+                    f.selected = true;
+                    f.used = true;
+
+                    // Add path for join
+                     let mut path = field_name
+                    .trim_end_matches(|c| c != '_')
+                    .trim_end_matches('_');
+                    while !path.is_empty() {
+                        let exists = !selected_paths.insert(path.to_owned());
+                        if exists {
+                            break;
+                        }
+                        path =
+                            path.trim_end_matches(|c| c != '_').trim_end_matches('_');
+                    }
+
                 }
             }
         }

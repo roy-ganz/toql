@@ -316,7 +316,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     let sql = toql::sql_builder::SqlBuilder::new(self.aux_params())
                          #(#ignored_paths)*
                         .scope_wildcard(&wildcard_scope)
-                        .build_select_sql_with_additional_columns(mapper, &query, self.roles(), "", "LIMIT 0, 2", &columns)?;
+                        .build_query_sql_with_additional_columns(mapper, &query, self.roles(), "", "LIMIT 0, 2", &columns)?;
                  
                      toql::log_sql!(sql.0, sql.1);
 
@@ -366,7 +366,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     let sql = toql::sql_builder::SqlBuilder::new(self.aux_params())
                          #(#ignored_paths)*
                         .scope_wildcard(&wildcard_scope)
-                        .build_select_sql_with_additional_columns(mapper, &query, self.roles(), &hint, &sql_page, &columns)?;
+                        .build_query_sql_with_additional_columns(mapper, &query, self.roles(), &hint, &sql_page, &columns)?;
           
        
                     toql::log_sql!(sql.0, sql.1);
@@ -473,7 +473,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         quote!(e.  #rust_field_ident. push(m);)
                     };
 
-                    let path_test = if field.number_of_options > 0 && !field.preselect {
+                       
+                     let path_test = if field.number_of_options > 0 && !field.preselect {
                         if field.skip_wildcard {
                                quote!( if query.contains_path_starts_with(#toql_field_name) && wildcard_scope.contains_path(#toql_field_name) )
                         }else {
@@ -482,7 +483,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     } else {
                         quote!()
                     };
-
+ 
                     let role_test = if field.load_roles.is_empty() {
                         quote!()
                     } else {
@@ -651,6 +652,12 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, <#rust_type_ident as toql::key::Keyed>::Key, <#struct_ident as toql::key::Keyed>::Key>(entities_stmt)?;
                                     
                                     if !merge_entities.is_empty() {
+                                        dep_query.join_stmt_params.clear();
+                                        dep_query.join_stmts.clear();
+                                        dep_query.where_predicate_params.clear();
+                                        dep_query.where_predicates.clear(); 
+                                        let dep_query =  dep_query.traverse::<#rust_type_ident>(#toql_field_name);
+
                                         self.load_dependencies(&mut merge_entities, &merge_keys, &dep_query, &wildcard_scope)?; // dep_query anstatt query
                                     }
                                     toql::merge::merge(&mut entities, &entity_keys, merge_entities, &parent_keys,
