@@ -25,7 +25,7 @@ pub mod query;
 pub mod query_fields;
 pub mod query_parser;
 pub mod sql_builder;
-pub mod sql_builder_result;
+//pub mod sql_builder_result;
 pub mod sql_mapper;
 pub mod sql_mapper_registry;
 pub mod field_handler;

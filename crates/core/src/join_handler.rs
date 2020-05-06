@@ -10,7 +10,7 @@ pub trait JoinHandler {
         &self,
          on_predicate: Sql,
         _aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Sql, crate::sql_builder::SqlBuilderError> {
+    ) -> Result<Sql, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         Ok(on_predicate)
     }
 

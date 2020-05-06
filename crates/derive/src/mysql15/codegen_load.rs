@@ -44,10 +44,10 @@ impl<'a> GeneratedMysqlLoad<'a> {
               quote!(
                   let mut scopes : std::collections::HashSet<String> = std::collections::HashSet::new();
                    #(#inserts)*                
-                  let wildcard_scope = toql::sql_builder::WildcardScope::Only(scopes);
+                  let wildcard_scope = toql::sql_builder::wildcard_scope::WildcardScope::Only(scopes);
               )
         } else {
-            quote!( let wildcard_scope = toql::sql_builder::WildcardScope::All; )
+            quote!( let wildcard_scope = toql::sql_builder::wildcard_scope::WildcardScope::All; )
         };
 
         GeneratedMysqlLoad {
@@ -247,7 +247,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!(
                 fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident>,mut entity_keys: & Vec< #struct_key_ident >,
                 query: &toql::query::Query<#struct_ident>, 
-                wildcard_scope: &toql::sql_builder::WildcardScope,
+                wildcard_scope: &toql::sql_builder::wildcard_scope::WildcardScope,
              )
                 -> Result<(), toql::mysql::error::ToqlMySqlError>
                 {
@@ -406,7 +406,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     Ok((entities, count_result))
                 }
                 fn build_path(&mut self,path: &str, query: &toql::query::Query<#struct_ident>,
-                    wildcard_scope: &toql::sql_builder::WildcardScope,
+                    wildcard_scope: &toql::sql_builder::wildcard_scope::WildcardScope,
                     additional_columns: &[String]
                    )
                 -> Result<Option<toql::sql::Sql>,toql :: mysql::error:: ToqlMySqlError>

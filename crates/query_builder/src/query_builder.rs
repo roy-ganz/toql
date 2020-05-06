@@ -99,8 +99,15 @@ impl FieldInfo {
                                 Some(quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*  #sort #hidden #filter))
                             },
                             TokenType::Wildcard => {
-                                   let name = &self.name;
-                                Some(quote!(#struct_type::wildcard(#name)))
+                                
+                                dbg!(&self.name);
+                                Some(if self.name.is_empty() {
+                                    quote!(<#struct_type as toql::query_fields::QueryFields>::fields() .wildcard())
+                                }else {
+                                 let fnname = self.name.split("_").map(|n|  syn::parse_str::<Ident>(&format!("r#{}",n.to_snake_case())).unwrap());
+                                 
+                                    quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).* .wildcard())
+                                })
                             }, 
                              TokenType::Query => {
                                    let query = &self.args.get(0);
@@ -225,8 +232,11 @@ pub fn parse(toql_string: &LitStr, struct_type: Ident, query_args: &mut syn::pun
                      field_info.hidden= quote!(.hidden());
                 },
               
-                 Rule::wildcard_path => {
-                      field_info.name = span.as_str().to_string();
+              
+                Rule::wildcard => {
+                     dbg!(span.as_str().to_string());
+                     field_info.name= span.as_str().trim_end_matches("*").trim_end_matches("_").to_string(); // Somehow name rules fdont work
+                      field_info.token_type = TokenType::Wildcard;
                 },
                 Rule::filter0_name => {
                     field_info.filter_name =  Some(span.as_str().to_string());

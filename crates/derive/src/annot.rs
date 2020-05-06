@@ -341,6 +341,7 @@ impl quote::ToTokens for Toql {
                         continue;
                     } */
 
+                    toql_query_fields.add_field_for_builder(&f);
                   
                     if field.merge.is_some() {
                         toql_mapper.add_merge_function(&f);

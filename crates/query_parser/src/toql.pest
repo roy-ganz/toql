@@ -45,7 +45,7 @@ name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
 field_path = @{ name ~ ("_" ~ name)* }
 hidden = @{"."}
 wildcard_path= @{field_path ~ "_"}
-wildcard = @{ wildcard_path? ~ "*" }
+wildcard = @{ (field_path ~ "_")? ~ "*" }
 
 
 field = { sort? ~ hidden? ~ field_path }

@@ -1,7 +1,7 @@
 
 
 use std::collections::HashMap;
- use crate::sql_builder::SqlBuilderError;
+ use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::sql::{Sql, SqlArg};
 
 pub trait PredicateHandler {
@@ -43,7 +43,7 @@ impl PredicateHandler for DefaultPredicateHandler {
         predicate: Sql,
         _predicate_args: &Vec<SqlArg>,
         _aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
+    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
        // Wrap in parens
         Ok(Some((format!("({})", predicate.0),predicate.1)))
     }

@@ -14,7 +14,7 @@
 //! This avoids typing mistakes and - unlike parsing - cannot fail.
 //!
 use crate::error::ToqlError;
-use crate::sql_builder::SqlBuilderError;
+use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::query::Concatenation;
 use crate::query::Field;
 use crate::query::Predicate;

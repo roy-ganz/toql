@@ -1,6 +1,6 @@
 use crate::query::Query;
 use crate::sql_mapper_registry::SqlMapperRegistry;
-use crate::sql_builder::WildcardScope;
+use crate::sql_builder::wildcard_scope::WildcardScope;
 use std::result::Result;
 
 /// [Page](enum.Page.html) is used as an argument in load functions. It tells Toql to build and run an additional query

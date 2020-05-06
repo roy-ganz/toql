@@ -63,7 +63,6 @@ pub use toql_core::ok_or_fail; // Export macro
 pub use toql_core::query_fields;
 pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
-pub use toql_core::sql_builder_result;
 pub use toql_core::sql_mapper;
 pub use toql_core::sql_mapper_registry;
 pub use toql_core::field_handler;

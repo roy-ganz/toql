@@ -29,7 +29,7 @@
 use std::collections::HashMap;
  use crate::query::FieldFilter;
  
- use crate::sql_builder::SqlBuilderError;
+ use crate::sql_builder::sql_builder_error::SqlBuilderError;
 
 use crate::sql::{Sql, SqlArg};
 
@@ -43,7 +43,7 @@ pub trait FieldHandler {
         &self,
         select: Sql,
         _aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
+    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         Ok(Some(select))
     }
 
@@ -55,7 +55,7 @@ pub trait FieldHandler {
         select: Sql,
         filter: &FieldFilter,
         aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError>;
+    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError>;
    
     
 }
@@ -81,7 +81,7 @@ impl FieldHandler for BasicFieldHandler {
         mut select: Sql,
         filter: &FieldFilter,
         _aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Option<Sql>, crate::sql_builder::SqlBuilderError> {
+    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
                 select.1.push(criteria.clone());
