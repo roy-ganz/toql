@@ -81,11 +81,6 @@ impl<'a> GeneratedMysqlLoad<'a> {
             &self.rust_struct.rust_struct_ident, rust_field_name
         );
 
-        if field.skip_query {
-             let rust_field_ident = &field.rust_field_ident;
-             self.mysql_deserialize_fields.push(  quote!( #rust_field_ident : Default::default()));
-
-        }else {
             match &field.kind {
                 FieldKind::Regular(ref regular_attrs) => {
                     let rust_field_ident = &field.rust_field_ident;
@@ -225,7 +220,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         });
                 }
             }
-        }
+        
     }
 
     pub(crate) fn add_ignored_path(&mut self, field: &crate::sane::Field) {

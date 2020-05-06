@@ -420,7 +420,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         let sql_mapper = self.registry.mappers.get( &<<K as Key>::Entity as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<<K as Key>::Entity as Mapped>::type_name()))?;
         let query = Query::from(key);
-         let sql = SqlBuilder::new(self.aux_params()).build_select_sql(sql_mapper,  &query, self.roles(), "", "LIMIT 0,2")?;
+         let sql = SqlBuilder::new(self.aux_params()).build_select_all_sql(sql_mapper,  &query, self.roles(), "", "LIMIT 0,2")?;
 
          let entities_stmt = self.conn.prep_exec(sql.0, values_from_ref(&sql.1))?;
          let mut entities = from_query_result::<<K as Key>::Entity>(entities_stmt)?;
@@ -449,7 +449,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new(self.aux_params()).build_select_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
+        let sql = SqlBuilder::new(self.aux_params()).build_select_all_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
        
         log_sql!(sql.0, sql.1);
 

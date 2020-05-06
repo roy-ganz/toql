@@ -7,6 +7,7 @@ use crate::annot::{PredicateArg, ParamArg};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
+
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
 
@@ -59,8 +60,8 @@ impl Struct {
             mapped_predicates,
             insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
-            wildcard: toql.wildcard.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
-            count_filter: toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
+            wildcard: toql.wildcard.as_ref().map(|e|e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
+            count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()) //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
         }
     }
 }
@@ -75,8 +76,8 @@ pub enum SqlTarget {
 pub struct RegularField {
     pub sql_target: SqlTarget,
     pub key: bool,
-    pub count_select: bool,
-    pub count_filter: bool,
+  //  pub count_select: bool,
+  //  pub count_filter: bool,
     pub handler: Option<Path>,
     pub default_inverse_column: Option<String>,
     pub aux_params: Vec<ParamArg>,
@@ -428,8 +429,8 @@ impl Field {
                     ))
                 },
                 key: field.key,
-                count_select: field.count_select,
-                count_filter: field.count_filter,
+             //   count_select: field.count_select,
+                //count_filter: field.count_filter,
                 handler: field.handler.to_owned(),
                 aux_params :  field.param.clone(),
                 on_params:  field.on_param.clone()

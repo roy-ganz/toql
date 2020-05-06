@@ -306,7 +306,7 @@ impl<'a> SqlBuilder<'a> {
         Ok((result.delete_stmt(), result.combined_params))
     }
      /// Build query for total count.
-    pub fn build_select_sql<M>(
+    pub fn build_select_all_sql<M>(
         &mut self,
         sql_mapper: &SqlMapper,
         query: &Query<M>,
@@ -392,6 +392,40 @@ impl<'a> SqlBuilder<'a> {
         extra : &str,
     ) -> Result<Sql, ToqlError> {
        
+       /*  let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
+        let mut selected_paths: HashSet<String> = HashSet::new();
+
+        let mut result = SqlBuilderResult::new();
+        result.aliased_table =  sql_mapper.aliased_table.clone();
+        
+       for field_name in &sql_mapper.mut_fields {
+                let f = sql_target_data.entry(field_name.as_str()).or_default();
+                f.selected = true; // Select field
+                f.used = true;      // Used field because selected
+                Self::insert_paths(&field_name, &mut selected_paths);
+       }
+
+        let aux_params = HashMap::new();
+        Self::build_join_clause(
+            &sql_mapper.joins_root,
+            &sql_mapper.joins_tree,
+            &mut selected_paths,
+            &sql_mapper.joins,
+            &aux_params,
+            &mut result,
+        )?;
+
+         Self::build_select_clause(
+                &mut result,
+                &aux_params,
+                &sql_mapper.fields,
+                &sql_target_data,
+                &sql_mapper.field_order,
+                &selected_paths,
+            )?;
+ */
+
+
         let result = self.build(sql_mapper, query, roles, BuildMode::SelectMut)?;
         Ok((result.query_stmt(modifier, extra), result.combined_params))
     }
@@ -448,22 +482,10 @@ impl<'a> SqlBuilder<'a> {
                                         &self.aux_params,
                                     );
 
-        let mut result = SqlBuilderResult {
-            aliased_table: sql_mapper.aliased_table.clone(),
-            any_selected: false,
-            distinct: query.distinct,
-            join_clause: String::from(""),
-            select_clause: String::from(""),
-            where_clause: String::from(""),
-            order_clause: String::from(""),
-            having_clause: String::from(""),
-            select_params: vec![], // query parameters in select clause, due to sql expr with <param>
-            join_params: vec![],
-            where_params: vec![],
-            having_params: vec![],
-            order_params: vec![],
-            combined_params: vec![],
-        };
+        let mut result = SqlBuilderResult::new();
+        result.aliased_table =  sql_mapper.aliased_table.clone();
+        result.distinct =  query.distinct;
+            
 
         for t in &query.tokens {
             {
@@ -537,7 +559,10 @@ impl<'a> SqlBuilder<'a> {
 
                         for (field_name, sql_target) in &sql_mapper.fields {
                             
-                          
+                            if !sql_target.options.query_select {
+                                continue;
+                            }
+
 
                             let field_path = field_name
                                 .trim_end_matches(|c| c != '_')
@@ -725,6 +750,12 @@ impl<'a> SqlBuilder<'a> {
                                 if mode == BuildMode::CountFiltered && !sql_target.options.count_filter {
                                     continue;
                                 }
+
+                                // Skip field that cannot neither be selected and filtered
+                                if !sql_target.options.query_select {
+                                    continue;
+                                }
+
                                 /* if self.count_query == true && !sql_target.options.count_filter {
                                     continue;
                                 } */
@@ -734,7 +765,8 @@ impl<'a> SqlBuilder<'a> {
 
                                 // Add parent Joins
                                 if sql_target.subfields {
-                                    let mut path = field_name
+                                    Self::insert_paths(field_name, &mut selected_paths);
+                                    /* let mut path = field_name
                                         .trim_end_matches(|c| c != '_')
                                         .trim_end_matches('_');
                                     while !path.is_empty() {
@@ -745,7 +777,7 @@ impl<'a> SqlBuilder<'a> {
                                         path = path
                                             .trim_end_matches(|c| c != '_')
                                             .trim_end_matches('_');
-                                    }
+                                    } */
                                 }
                                 //println!("{:?}", selected_paths);
 
@@ -1532,5 +1564,20 @@ impl<'a> SqlBuilder<'a> {
             }
             combined_aux_params
         }
+    }
+
+    fn insert_paths(field_with_path:&str, paths: &mut HashSet<String>) {
+            let mut path = field_with_path
+                                    .trim_end_matches(|c| c != '_')
+                                    .trim_end_matches('_');
+                while !path.is_empty() {
+                    let exists = !paths.insert(path.to_owned());
+                    if exists {
+                        break;
+                    }
+                    path =
+                        path.trim_end_matches(|c| c != '_').trim_end_matches('_');
+                }
+
     }
 }

@@ -24,6 +24,25 @@ pub struct SqlBuilderResult {
 }
 
 impl SqlBuilderResult {
+
+    pub fn new() -> Self {
+    SqlBuilderResult {
+            aliased_table: String::from(""),
+            any_selected: false,
+            distinct: false,
+            join_clause: String::from(""),
+            select_clause: String::from(""),
+            where_clause: String::from(""),
+            order_clause: String::from(""),
+            having_clause: String::from(""),
+            select_params: vec![], // query parameters in select clause, due to sql expr with <param>
+            join_params: vec![],
+            where_params: vec![],
+            having_params: vec![],
+            order_params: vec![],
+            combined_params: vec![],
+        }
+   }
     /// Returns true if no field is neither selected nor filtered.
     /* pub fn is_empty(&self) -> bool {
         !self.any_selected && self.where_clause.is_empty() && self.having_clause.is_empty()

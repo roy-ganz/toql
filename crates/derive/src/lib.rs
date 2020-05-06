@@ -56,15 +56,20 @@ mod codegen_mysql_load;
 
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_key;
-
+/* 
 #[cfg(feature = "mysqldb")]
 mod codegen_mysql_select;
 
 #[cfg(feature = "mysqldb")]
-mod codegen_mysql_insert;
+mod codegen_mysql_insert; */
 
 mod sane;
 mod util;
+
+mod string_set;
+
+#[cfg(feature = "mysql15")]
+mod mysql15;
 
 /* 
 

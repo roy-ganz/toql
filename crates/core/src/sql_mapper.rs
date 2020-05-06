@@ -107,6 +107,7 @@ pub struct FieldOptions {
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) mut_select: bool, // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
+    pub(crate) query_select: bool,    // Select field for query builder
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
     pub(crate) on_params: Vec<String>,  // Identity params for on clauses
@@ -121,6 +122,7 @@ impl FieldOptions {
             count_select: false,
             mut_select: false,
             skip_wildcard: false,
+            query_select: true,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
             on_params: Vec::new()
@@ -150,6 +152,11 @@ impl FieldOptions {
     /// Field is used for the mut select query.
     pub fn mut_select(mut self, mut_select: bool) -> Self {
         self.mut_select = mut_select;
+        self
+    }
+    /// Field is used for the normal query.
+    pub fn query_select(mut self, query_select: bool) -> Self {
+        self.query_select = query_select;
         self
     }
     /// Field is ignored by the wildcard.
@@ -288,8 +295,10 @@ pub struct SqlMapper {
     pub(crate) joins_root: Vec<String>, // Top joins
     pub(crate) joins_tree: HashMap<String, Vec<String>>, // Subjoins
 
-    pub(crate) alias_translation: HashMap<String, String>,
+    pub(crate) mut_fields: Vec<String>,     //precalculated mut fields for quicker lookup
+    pub(crate) count_fields: Vec<String>,   //precalculated count fields for quicker lookup
 
+    pub(crate) alias_translation: HashMap<String, String>, // Translated aliases
     pub(crate) table_index: u16, //table index for aliases
 }
 
@@ -365,10 +374,11 @@ impl SqlMapper {
             predicates: HashMap::new(),
             joins_root: Vec::new(),
             joins_tree: HashMap::new(),
-            
             table_index: 0, // will be incremented before use
             alias_format: alias_format,
             alias_translation: HashMap::new(),
+            mut_fields: Vec::new(),
+            count_fields: Vec::new(),
         }
     }
     /// Create a new mapper from a struct that implements the Mapped trait.
@@ -554,7 +564,17 @@ impl SqlMapper {
         sql_expression: &str,
         options: FieldOptions,
     ) -> &'a mut Self {
-        // If sql_expression contains query params replace them with ?
+        // Add count field to selection for quicker lookup
+        if options.count_filter || options.count_select {
+            self.count_fields.push(toql_field.to_string());
+        }
+
+        // Add mut field to selection for quicker lookup
+        if options.mut_select  {
+            self.mut_fields.push(toql_field.to_string());
+        }
+
+        // Replace aux params with ?
         let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
         let sql_expression = sql_expression.to_string();
         let mut sql_aux_param_names = Vec::new();
@@ -575,6 +595,7 @@ impl SqlMapper {
 
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);
+
         self
     }
     /// Adds a join for a given path to the mapper.

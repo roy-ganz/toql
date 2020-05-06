@@ -92,9 +92,7 @@ impl<'a> GeneratedToqlMapper<'a> {
 
     pub(crate) fn add_field_mapping(&mut self, field: &crate::sane::Field) -> Result<()> {
 
-        if field.skip_query {
-            return Ok(());
-        }
+      
 
         let rust_field_name = &field.rust_field_name;
 
@@ -180,7 +178,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!(toql::sql_mapper::JoinType::Left)
                 };
 
-                let select_ident = if field.preselect || (field.number_of_options == 0) {
+                let preselect_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
                 } else {
                     quote!()
@@ -190,7 +188,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                 } else {
                     quote!()
                 };
-
+                
               /*   let mut_select_ident = if join_attrs.key {
                     quote!(.mut_select(toql_path.is_empty() || (!toql_path.is_empty() && ! toql_path.contains('_'))))
                 } else {
@@ -220,7 +218,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                      #join_type,
                      &aliased_table,
                      #join_predicate,
-                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #select_ident #ignore_wc_ident #roles_ident);
+                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident);
                 });
 
                 if join_attrs.key {
@@ -229,7 +227,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             }
             FieldKind::Regular(regular_attrs) => {
                 let toql_field_name = &field.toql_field_name;
-                let countfilter_ident = if regular_attrs.count_filter {
+              /*   let countfilter_ident = if regular_attrs.count_filter {
                     quote!( .count_filter(true))
                 } else {
                     quote!()
@@ -238,8 +236,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                     quote!( .count_select(true))
                 } else {
                     quote!()
-                };
-                let select_ident = if field.preselect || (field.number_of_options == 0) {
+                }; */
+                let preselect_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
                 } else {
                     quote!()
@@ -249,6 +247,12 @@ impl<'a> GeneratedToqlMapper<'a> {
                 } else {
                     quote!()
                 };
+                let query_select_ident = if field.skip_query {
+                    quote!( .query_select(false))
+                } else {
+                    quote!()
+                };
+
 
                 let mut_select_ident = if regular_attrs.key {
                     quote!(.mut_select(toql_path.is_empty() || (!toql_path.is_empty() && ! toql_path.contains('_'))))
@@ -281,7 +285,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self.field_mappings.push(quote! {
                                             #sql_mapping
                                             mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident);
+                                        //    &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #preselect_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
                                         }
                             );
                     }
@@ -289,7 +294,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                         self.field_mappings.push(quote! {
                                             #sql_mapping
                                             mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #select_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident);
+                                            //&aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #preselect_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
                                         }
                             );
                     }
