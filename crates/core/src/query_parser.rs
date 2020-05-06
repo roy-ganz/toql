@@ -174,11 +174,12 @@ impl QueryParser {
                      token_info.name = span.as_str().to_string();
                 },
                  Rule::wildcard => {
+                    token_info.name = span.as_str().trim_end_matches('*').trim_end_matches('_').to_string();
                     token_info.token_type = TokenType::Wildcard;
                 }
-                Rule::wildcard_path => {
-                      token_info.name = span.as_str().to_string();
-                }
+                /* Rule::wildcard_path => {
+                      token_info.name = span.as_str().to_string(); // Somehow not working
+                } */
                 Rule::filter0_name => {
                     token_info.filter =  Some(span.as_str().to_string());
                 },
