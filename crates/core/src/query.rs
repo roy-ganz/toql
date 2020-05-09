@@ -786,7 +786,7 @@ impl<M> Query<M> {
        }
     }
 /// Create a new query from the path of another query.
- pub fn traverse<T>(self, path:&str) -> Query<T> {
+ pub fn traverse<T>(&self, path:&str) -> Query<T> {
 
         
         let tokens = self.tokens.iter().filter_map(|t| {

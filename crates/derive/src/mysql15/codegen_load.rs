@@ -591,7 +591,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 #role_test
                                 let type_name = <#rust_type_ident as toql::sql_mapper::Mapped>::type_name();
                                 let mapper = self.registry().mappers.get(&type_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&type_name)))?;
-                                let mut dep_query = query.clone_for_type();
+                                let mut dep_query = query.traverse::<#rust_type_ident >(#toql_field_name); //clone_for_type();
 
                     #optional_self_column_validation
 
