@@ -272,9 +272,20 @@
         }
 
 
-         impl From<&str> for SqlArg {
+        impl From<&str> for SqlArg {
             fn from(t: &str) -> Self {
                 SqlArg::Str(t.to_owned())
+            }
+        }
+        impl From<&&str> for SqlArg { // For arguments inside slice &[]
+            fn from(t: &&str) -> Self {
+                SqlArg::Str(t.to_string().to_owned())
+            }
+        }
+
+        impl From<&SqlArg> for SqlArg { // For arguments inside slice &[]
+            fn from(t: &SqlArg) -> Self {
+                t.to_owned()
             }
         }
     

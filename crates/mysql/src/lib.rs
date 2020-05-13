@@ -187,7 +187,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         T: InsertSql + InsertDuplicate,
     {
         let (modifier, extra) = match strategy {
-            DuplicateStrategy::Skip => ("INGNORE", ""),
+            DuplicateStrategy::Skip => ("IGNORE", ""),
             DuplicateStrategy::Update => ("", "ON DUPLICATE UPDATE"),
             DuplicateStrategy::Fail => ("", "")
         };
@@ -210,7 +210,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         Q: Borrow<T>,
     {
          let (modifier, extra) = match strategy {
-            DuplicateStrategy::Skip => ("INGNORE", ""),
+            DuplicateStrategy::Skip => ("IGNORE", ""),
             DuplicateStrategy::Update => ("", "ON DUPLICATE UPDATE"),
             DuplicateStrategy::Fail => ("", "")
         };

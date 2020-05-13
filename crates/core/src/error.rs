@@ -8,7 +8,7 @@ use crate::sql_mapper::SqlMapperError;
 use std::fmt;
 
 use pest::error::Error as PestError;
-
+/* 
 #[macro_export]
 macro_rules! ok_or_fail {
     ( $var:expr ) => {
@@ -16,7 +16,7 @@ macro_rules! ok_or_fail {
             stringify!($var).to_string(),
         ))
     };
-}
+} */
 
 /// Represents all errors
 #[derive(Debug)]

@@ -86,7 +86,8 @@ pub(crate) fn eval_query<M>(
 
                         let wildcard_path = wildcard
                             .path
-                            .trim_start_matches(subpath)
+                            .trim_end_matches('_')
+                            .trim_start_matches(subpath.trim_end_matches('_'))
                             .trim_end_matches('_');
 
                         // Skip ignored path

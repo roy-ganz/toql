@@ -160,7 +160,7 @@ impl FieldInfo {
                             let name = f.trim_start_matches("FN ");
                             let args = &self.args;
                             if self.single_array_argument {quote!(.fnc(#name, #(#args),* ))} 
-                            else {quote!(.fnc(#name &[#(#args),*] )) }
+                            else {quote!(.fnc(#name, vec![#(toql::sql::SqlArg::from(#args)),*] )) }
                         } else {
                             let error= format!("Invalid filter `{}`.", f);
                             quote!(compile_error!(#error))
