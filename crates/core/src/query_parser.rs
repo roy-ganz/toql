@@ -15,14 +15,14 @@
 //!
 use crate::error::ToqlError;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::query::Concatenation;
-use crate::query::Field;
-use crate::query::Predicate;
-use crate::query::FieldFilter;
-use crate::query::FieldOrder;
+use crate::query::concatenation::Concatenation;
+use crate::query::field::Field;
+use crate::query::predicate::Predicate;
+use crate::query::field_filter::FieldFilter;
+use crate::query::field_order::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
-use crate::query::Wildcard;
+use crate::query::wildcard::Wildcard;
 use crate::sql::SqlArg;
 use toql_query_parser::PestQueryParser;
 

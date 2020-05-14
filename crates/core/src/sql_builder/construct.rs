@@ -2,9 +2,9 @@ use crate::sql_mapper::{Join, JoinType};
 use std::collections::{HashMap, HashSet};
 use crate::sql::{Sql, SqlArg};
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::sql_builder::sql_builder_result::SqlBuilderResult;
+use crate::sql_builder::build_result::BuildResult;
 use crate::sql_mapper::SqlTarget;
-use crate::query::FieldOrder;
+use crate::query::field_order::FieldOrder;
 use crate::sql_builder::sql_target_data::SqlTargetData;
 
 pub fn aux_param_values(
@@ -53,7 +53,7 @@ pub fn aux_param_values(
     }
 
     pub(crate) fn build_ordering(
-        result: &mut SqlBuilderResult,
+        result: &mut BuildResult,
         query_aux_params: &HashMap<String, SqlArg>,
         sql_target_data: &HashMap<String, SqlTargetData>,
         sql_targets: &HashMap<String, SqlTarget>,
@@ -96,7 +96,7 @@ pub fn aux_param_values(
     }
 
     pub(crate) fn build_count_select_clause(
-        result: &mut SqlBuilderResult,
+        result: &mut BuildResult,
         query_aux_params: &HashMap<String, SqlArg>,
         sql_targets: &HashMap<String, SqlTarget>,
         field_order: &Vec<String>,
@@ -137,7 +137,7 @@ pub fn aux_param_values(
     }
 
     pub(crate) fn build_select_clause(
-        result: &mut SqlBuilderResult,
+        result: &mut BuildResult,
         query_aux_params: &HashMap<String, SqlArg>,
         sql_targets: &HashMap<String, SqlTarget>,
         sql_target_data: &HashMap<String, SqlTargetData>,
@@ -212,7 +212,7 @@ pub fn aux_param_values(
         selected_paths: &mut HashSet<String>,
         sql_joins: &HashMap<String, Join>,
         aux_params: &HashMap<String, SqlArg>,
-        result: &mut SqlBuilderResult,
+        result: &mut BuildResult,
     ) -> Result<(), SqlBuilderError> {
         fn build_join_start(join: &Join) -> String {
             let mut result = String::from(match join.join_type {
@@ -233,7 +233,7 @@ pub fn aux_param_values(
             selected_paths: &mut HashSet<String>,
             sql_joins: &HashMap<String, Join>,
             aux_params: &HashMap<String, SqlArg>,
-            result: &mut SqlBuilderResult,
+            result: &mut BuildResult,
             join_tree: &HashMap<String, Vec<String>>,
         ) -> Result<(), SqlBuilderError>{
             for join in joins {
@@ -306,7 +306,7 @@ pub fn aux_param_values(
             selected_paths: &mut HashSet<String>,
             sql_joins: &HashMap<String, Join>,
             aux_params: &HashMap<String, SqlArg>,
-            result: &mut SqlBuilderResult,
+            result: &mut BuildResult,
             join_tree: &HashMap<String, Vec<String>>,
         ) -> Result<(), SqlBuilderError>{
             if join_tree.contains_key(path) {

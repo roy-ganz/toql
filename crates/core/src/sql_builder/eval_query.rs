@@ -5,8 +5,8 @@ use crate::sql_builder::construct::aux_param_values;
 use crate::sql_builder::construct::combine_aux_params;
 use std::collections::{HashSet, HashMap};
 use super::sql_target_data::SqlTargetData;
-use super::sql_builder_result::SqlBuilderResult;
-use crate::query::{Query, Concatenation, FieldOrder};
+use super::build_result::BuildResult;
+use crate::query::{Query, concatenation::Concatenation, field_order::FieldOrder};
 
 use crate::query::QueryToken;
 use super::BuildMode;
@@ -14,7 +14,7 @@ use crate::sql_mapper::SqlMapper;
 use super::sql_builder_error::SqlBuilderError;
 use super::wildcard_scope::WildcardScope;
 use crate::sql::SqlArg;
-use crate::query::FieldFilter;
+use crate::query::field_filter::FieldFilter;
 use crate::query::assert_roles;
 
 
@@ -32,7 +32,7 @@ pub(crate) fn eval_query<M>(
     mut selected_paths: &mut HashSet<String>, 
     ordinals: &mut HashSet<u8>,
     ordering: &mut HashMap<u8, Vec<(FieldOrder,String)>>,
-    result : &mut SqlBuilderResult )->Result<(), SqlBuilderError> {
+    result : &mut BuildResult )->Result<(), SqlBuilderError> {
 
  
 
@@ -399,24 +399,24 @@ pub(crate) fn eval_query<M>(
                                         if query_field.aggregation == true {
                                             if need_having_concatenation == true {
                                                 if pending_having_parens > 0 {
-                                                    SqlBuilderResult::push_concatenation(
+                                                    BuildResult::push_concatenation(
                                                         &mut result.having_clause,
                                                         &pending_having_parens_concatenation,
                                                     );
                                                 } else {
-                                                    SqlBuilderResult::push_concatenation(
+                                                    BuildResult::push_concatenation(
                                                         &mut result.having_clause,
                                                         &Some(query_field.concatenation.clone()), // OPTIMISE
                                                     );
                                                 }
                                             }
 
-                                            SqlBuilderResult::push_pending_parens(
+                                            BuildResult::push_pending_parens(
                                                 &mut result.having_clause,
                                                 &pending_having_parens,
                                             );
 
-                                            SqlBuilderResult::push_filter(
+                                            BuildResult::push_filter(
                                                 &mut result.having_clause,
                                                 &f.0,
                                             );
@@ -431,22 +431,22 @@ pub(crate) fn eval_query<M>(
                                         } else {
                                             if need_where_concatenation == true {
                                                 if pending_where_parens > 0 {
-                                                    SqlBuilderResult::push_concatenation(
+                                                    BuildResult::push_concatenation(
                                                         &mut result.where_clause,
                                                         &pending_where_parens_concatenation,
                                                     );
                                                 } else {
-                                                    SqlBuilderResult::push_concatenation(
+                                                    BuildResult::push_concatenation(
                                                         &mut result.where_clause,
                                                         &Some(query_field.concatenation.clone()), // IMPROVE
                                                     );
                                                 }
                                             }
-                                            SqlBuilderResult::push_pending_parens(
+                                            BuildResult::push_pending_parens(
                                                 &mut result.where_clause,
                                                 &pending_where_parens,
                                             );
-                                            SqlBuilderResult::push_filter(
+                                            BuildResult::push_filter(
                                                 &mut result.where_clause,
                                                 &f.0,
                                             );
@@ -549,22 +549,22 @@ pub(crate) fn eval_query<M>(
 
                                    if need_where_concatenation == true {
                                         if pending_where_parens > 0 {
-                                            SqlBuilderResult::push_concatenation(
+                                            BuildResult::push_concatenation(
                                                 &mut result.where_clause,
                                                 &pending_where_parens_concatenation,
                                             );
                                         } else {
-                                            SqlBuilderResult::push_concatenation(
+                                            BuildResult::push_concatenation(
                                                 &mut result.where_clause,
                                                 &Some(query_predicate.concatenation.clone()), // IMPROVE
                                             );
                                         }
                                     }
-                                    SqlBuilderResult::push_pending_parens(
+                                    BuildResult::push_pending_parens(
                                         &mut result.where_clause,
                                         &pending_where_parens,
                                     );
-                                    SqlBuilderResult::push_filter(
+                                    BuildResult::push_filter(
                                         &mut result.where_clause,
                                         &expr,
                                     );

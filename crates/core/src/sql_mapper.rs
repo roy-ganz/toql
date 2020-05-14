@@ -40,7 +40,7 @@ use std::sync::Arc;
 use crate::field_handler::{FieldHandler, BasicFieldHandler};
 use crate::join_handler::{JoinHandler, DefaultJoinHandler};
 use crate::sql::SqlArg;
-
+use crate::sql_expr::SqlExpr;
 
 
 
@@ -78,8 +78,8 @@ pub(crate) struct SqlTarget {
     pub(crate) filter_type: FilterType,                      // Filter on where or having clause
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>, // Handler to create clauses
     pub(crate) subfields: bool, // Target name has subfields separated by underscore
-    pub(crate) expression: String, // Column name or SQL expression
-    pub(crate) sql_aux_param_names: Vec<String>, //  Extracted from <aux_param>
+    pub(crate) expression: SqlExpr, // Column name or SQL expression
+   // pub(crate) sql_aux_param_names: Vec<String>, //  Extracted from <aux_param>
 }
 /* 
 impl SqlTarget {
@@ -444,7 +444,7 @@ impl SqlMapper {
     pub fn map_handler<'a, H>(
         &'a mut self,
         toql_field: &str,
-        expression: &str,
+        expression: SqlExpr,
         handler: H,
     ) -> &'a mut Self
     where
@@ -458,7 +458,7 @@ impl SqlMapper {
     pub fn map_handler_with_options<'a, H>(
         &'a mut self,
         toql_field: &str,
-        sql_expression: &str,
+        sql_expression: SqlExpr,
         handler: H,
         options: FieldOptions,
     ) -> &'a mut Self
@@ -466,22 +466,22 @@ impl SqlMapper {
         H: 'static + FieldHandler + Send + Sync,
     {
         // TODO put into function
-        let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
-        let sql_expression = sql_expression.to_string();
+       /*  let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
+        let sql_expression = sql_expression;
         let mut sql_aux_param_names = Vec::new();
         let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
             let name = &e[1];
             sql_aux_param_names.push(name.to_string());
             "?"
-        });
+        }); */
 
         let t = SqlTarget {
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
             handler: Arc::new(handler),
-            expression: sql_expression.to_string(),
-            sql_aux_param_names: sql_aux_param_names,
+            expression: sql_expression,
+           // sql_aux_param_names: sql_aux_param_names,
         };
         self.field_order.push(toql_field.to_string());
         self.fields.insert(toql_field.to_string(), t);
@@ -525,14 +525,14 @@ impl SqlMapper {
     pub fn alter_field(
         &mut self,
         toql_field: &str,
-        sql_expression: &str,
+        sql_expression: SqlExpr,
         options: FieldOptions,
     ) -> &mut Self {
         let sql_target = self.fields.get_mut(toql_field).expect(&format!(
             "Cannot alter \"{}\": Field is not mapped.",
             toql_field
         ));
-        sql_target.expression = sql_expression.to_string();
+        sql_target.expression = sql_expression;
         sql_target.options = options;
         self
     }
@@ -553,15 +553,15 @@ impl SqlMapper {
     } 
 
     /// Adds a new field - or updates an existing field - to the mapper.
-    pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_field: &str) -> &'a mut Self {
-        self.map_field_with_options(toql_field, sql_field, FieldOptions::new())
+    pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_expr: SqlExpr) -> &'a mut Self {
+        self.map_field_with_options(toql_field, sql_expr, FieldOptions::new())
     }
 
     /// Adds a new field - or updates an existing field - to the mapper.
     pub fn map_field_with_options<'a>(
         &'a mut self,
         toql_field: &str,
-        sql_expression: &str,
+        sql_expression: SqlExpr,
         options: FieldOptions,
     ) -> &'a mut Self {
         // Add count field to selection for quicker lookup
@@ -574,7 +574,7 @@ impl SqlMapper {
             self.mut_fields.push(toql_field.to_string());
         }
 
-        // Replace aux params with ?
+      /*   // Replace aux params with ?
         let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
         let sql_expression = sql_expression.to_string();
         let mut sql_aux_param_names = Vec::new();
@@ -582,15 +582,15 @@ impl SqlMapper {
             let name = &e[1];
             sql_aux_param_names.push(name.to_string());
             "?"
-        });
+        }); */
 
         let t = SqlTarget {
-            expression: sql_expression.to_string(),
+            expression: sql_expression,
             options: options,
             filter_type: FilterType::Where, // Filter on where clause
             subfields: toql_field.find('_').is_some(),
             handler: Arc::clone(&self.field_handler),
-            sql_aux_param_names,
+          //  sql_aux_param_names,
         };
 
         self.field_order.push(toql_field.to_string());

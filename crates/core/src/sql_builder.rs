@@ -1,6 +1,6 @@
 //!
 //! The SQL Builder turns a [Query](../query/struct.Query.html) with the help of a [SQL Mapper](../sql_mapper/struct.SqlMapper.html)
-//! into a [SQL Builder Result](../sql_builder_result/SqlBuilderResult.html)
+//! into a [SQL Builder Result](../sql_builder_result/BuildResult.html)
 //! The result hold the different parts of an SQL query and can be turned into an SQL query that can be sent to the database.
 //!
 //! ## Example
@@ -37,9 +37,12 @@
 pub mod construct;
 pub mod eval_query;
 pub mod sql_builder_error;
-pub mod sql_builder_result;
+pub mod build_result;
+pub mod build_context;
 pub mod sql_target_data;
 pub mod wildcard_scope;
+
+
 
 use crate::sql_builder::eval_query::eval_query;
 use crate::sql_builder::construct::build_join_clause;
@@ -51,11 +54,11 @@ use crate::sql_builder::sql_target_data::SqlTargetData;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::error::ToqlError;
 use crate::query::assert_roles;
-use crate::query::Concatenation;
-use crate::query::FieldOrder;
+use crate::query::concatenation::Concatenation;
+use crate::query::field_order::FieldOrder;
 use crate::query::Query;
-use crate::query::{FieldFilter, QueryToken};
-use sql_builder_result::SqlBuilderResult;
+use crate::query::{field_filter::FieldFilter, QueryToken};
+use build_result::BuildResult;
 use crate::sql_mapper::Join;
 use crate::sql_mapper::JoinType;
 use crate::sql_mapper::SqlMapper;
@@ -141,6 +144,10 @@ impl<'a> SqlBuilder<'a> {
         self.joins.insert(join.into());
         self
     }
+
+
+    
+
 
     /// Build query for total count.
     pub fn build_query_sql<M>(
@@ -299,7 +306,7 @@ impl<'a> SqlBuilder<'a> {
        /*  let mut sql_target_data: HashMap<&str, SqlTargetData> = HashMap::new();
         let mut selected_paths: HashSet<String> = HashSet::new();
 
-        let mut result = SqlBuilderResult::new();
+        let mut result = BuildResult::new();
         result.aliased_table =  sql_mapper.aliased_table.clone();
         
        for field_name in &sql_mapper.mut_fields {
@@ -341,7 +348,7 @@ impl<'a> SqlBuilder<'a> {
         sql_mapper: &SqlMapper,
         query: &Query<M>,
         roles: &HashSet<String>,mode: BuildMode
-    ) -> Result<SqlBuilderResult, SqlBuilderError> {
+    ) -> Result<BuildResult, SqlBuilderError> {
         self.subpath = {
             let p = path.into();
             if p.ends_with("_") {
@@ -362,7 +369,7 @@ impl<'a> SqlBuilder<'a> {
         query: &Query<M>,
         roles: &HashSet<String>,
         mode: BuildMode
-    ) -> Result<SqlBuilderResult, SqlBuilderError> {
+    ) -> Result<BuildResult, SqlBuilderError> {
         let mut ordinals: HashSet<u8> = HashSet::new();
         let mut ordering: HashMap<u8, Vec<(FieldOrder, String)>> = HashMap::new();
 
@@ -381,8 +388,8 @@ impl<'a> SqlBuilder<'a> {
                                         &self.aux_params,
                                     );
 
-        let mut result = SqlBuilderResult::new();
-        result.aliased_table =  sql_mapper.aliased_table.clone();
+        let mut result = BuildResult::new(&sql_mapper.aliased_table);
+        //result.aliased_table =  sql_mapper.aliased_table.clone();
         result.distinct =  query.distinct;
             
         eval_query(
@@ -549,7 +556,5 @@ impl<'a> SqlBuilder<'a> {
 
         Ok(result)
     }
-
-
-    
+   
 }

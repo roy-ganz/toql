@@ -1,12 +1,12 @@
 //!
 //! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
-use crate::query::Concatenation;
+use crate::query::concatenation::Concatenation;
 use crate::sql::SqlArg;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
-pub struct SqlBuilderResult {
-    pub(crate) aliased_table: String,
+pub struct BuildResult<'a> {
+    pub(crate) aliased_table: &'a str,
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
     pub(crate) join_clause: String,
@@ -23,11 +23,11 @@ pub struct SqlBuilderResult {
     
 }
 
-impl SqlBuilderResult {
+impl<'a> BuildResult<'a> {
 
-    pub fn new() -> Self {
-    SqlBuilderResult {
-            aliased_table: String::from(""),
+    pub fn new(aliased_table: &'a str) -> Self {
+    BuildResult {
+            aliased_table,
             any_selected: false,
             distinct: false,
             join_clause: String::from(""),
