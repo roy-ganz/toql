@@ -29,12 +29,16 @@
 //! If you *update* a struct, fields of type `Option<>` with value `None` are skipped. Read the guide for details!
 //!
 
+use crate::alias_translator::AliasTranslator;
+use crate::alias::AliasFormat;
+use crate::sql_mapper_registry::SqlMapperRegistry;
 use crate::error::ToqlError;
 use crate::key::Keyed;
 use core::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::result::Result;
-use crate::sql_mapper::{Mapped, SqlMapper};
+use crate::sql_mapper::mapped::Mapped;
+use crate::sql_mapper::SqlMapper;
 
 
 use crate::sql::Sql;
@@ -173,8 +177,9 @@ pub trait InsertDuplicate {}
 pub fn collection_delta_sql<'a, T>(
     outdated: &'a [T],
     updated: &'a [T],
-    roles: &HashSet<String>,
-    sql_mapper: &crate::sql_mapper::SqlMapper
+    roles: HashSet<String>,
+    sql_mapper_registry: &SqlMapperRegistry,
+    mut alias_translator: &mut AliasTranslator
 ) -> Result<
     (
         Option<Sql>,
@@ -197,13 +202,14 @@ where
     diff.append(&mut di);
     delete.append(&mut de);
 
-    let insert_sql = <T as InsertSql>::insert_many_sql(insert.as_slice(), roles, "", "")?;
-    let diff_sql = <T as DiffSql>::diff_many_sql(&diff, roles)?;
+    let insert_sql = <T as InsertSql>::insert_many_sql(insert.as_slice(), &roles, "", "")?;
+    let diff_sql = <T as DiffSql>::diff_many_sql(&diff, &roles)?;
 
      
-    let aux_params = HashMap::new();
+    
      let delete_sql = if delete.is_empty() {None } else {
-         Some(SqlBuilder::new(&aux_params).build_delete_sql(sql_mapper, &crate::to_query::ToQuery::slice_to_query(&delete), roles)?)
+         Some(SqlBuilder::new( <T as Mapped>::table_name(), &sql_mapper_registry).with_roles(roles)
+         .build_delete_sql(&crate::to_query::ToQuery::slice_to_query(&delete), "", "", &mut alias_translator)?)
      };
 
     Ok((insert_sql, diff_sql, delete_sql))

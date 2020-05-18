@@ -1,11 +1,11 @@
-use crate::sql_mapper::{Join, JoinType};
+use crate::sql_mapper::join::{Join, JoinType};
 use std::collections::{HashMap, HashSet};
 use crate::sql::{Sql, SqlArg};
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::sql_builder::build_result::BuildResult;
-use crate::sql_mapper::SqlTarget;
+use crate::sql_mapper::field::Field as MapperField;
 use crate::query::field_order::FieldOrder;
-use crate::sql_builder::sql_target_data::SqlTargetData;
+//use crate::sql_builder::sql_target_data::MapperFieldData;
 
 pub fn aux_param_values(
         aux_param_names: &Vec<String>,
@@ -55,8 +55,8 @@ pub fn aux_param_values(
     pub(crate) fn build_ordering(
         result: &mut BuildResult,
         query_aux_params: &HashMap<String, SqlArg>,
-        sql_target_data: &HashMap<String, SqlTargetData>,
-        sql_targets: &HashMap<String, SqlTarget>,
+        sql_target_data: &HashMap<String, MapperFieldData>,
+        sql_targets: &HashMap<String, MapperField>,
         ordinals: &HashSet<u8>,
         ordering: &HashMap<u8, Vec<(FieldOrder, String)>>,
     ) -> Result<(), SqlBuilderError> {
@@ -98,7 +98,7 @@ pub fn aux_param_values(
     pub(crate) fn build_count_select_clause(
         result: &mut BuildResult,
         query_aux_params: &HashMap<String, SqlArg>,
-        sql_targets: &HashMap<String, SqlTarget>,
+        sql_targets: &HashMap<String, MapperField>,
         field_order: &Vec<String>,
     ) -> Result<(), SqlBuilderError> {
         let mut any_selected = false;
@@ -139,8 +139,8 @@ pub fn aux_param_values(
     pub(crate) fn build_select_clause(
         result: &mut BuildResult,
         query_aux_params: &HashMap<String, SqlArg>,
-        sql_targets: &HashMap<String, SqlTarget>,
-        sql_target_data: &HashMap<String, SqlTargetData>,
+        sql_targets: &HashMap<String, MapperField>,
+        sql_target_data: &HashMap<String, MapperFieldData>,
         field_order: &Vec<String>,
         //  used_paths: &HashSet<String>,
         selected_paths: &HashSet<String>,

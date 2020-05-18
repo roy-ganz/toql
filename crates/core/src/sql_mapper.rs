@@ -29,7 +29,24 @@
 //!  - to all fields with [new_with_handler()](struct.SqlMapper.html#method.new_with_handler).
 //!
 
+pub(crate) mod field_options;
+pub(crate) mod field;
+pub(crate) mod join_options;
+pub(crate) mod join;
+pub(crate) mod predicate_options;
+pub(crate) mod predicate;
+pub(crate) mod mapped;
 
+
+use heck::MixedCase;
+use crate::sql_mapper::predicate_options::PredicateOptions;
+use crate::sql_mapper::join_options::JoinOptions;
+use crate::sql_mapper::join::JoinType;
+use crate::sql_mapper::field_options::FieldOptions;
+use crate::sql_mapper::mapped::Mapped;
+use crate::sql_mapper::join::Join;
+use crate::sql_mapper::predicate::Predicate;
+use crate::sql_mapper::field::{Field, FilterType};
 use crate::predicate_handler::{PredicateHandler, DefaultPredicateHandler};
 use crate::alias::AliasFormat;
 
@@ -41,7 +58,14 @@ use crate::field_handler::{FieldHandler, BasicFieldHandler};
 use crate::join_handler::{JoinHandler, DefaultJoinHandler};
 use crate::sql::SqlArg;
 use crate::sql_expr::SqlExpr;
+use crate::error::{Result, ToqlError};
 
+#[derive(Debug)]
+pub enum MapperType {
+    Field(String), // Toql fieldname
+    Join(String),  // Toql join path
+    //Embedded
+}
 
 
 #[derive(Debug)]
@@ -64,25 +88,9 @@ impl fmt::Display for SqlMapperError {
     }
 }
 
-#[derive(Debug)]
-#[allow(dead_code)] // IMPROVE Having AND None are considered unused
-pub(crate) enum FilterType {
-    Where,
-    Having,
-    None,
-}
 
-#[derive(Debug)]
-pub(crate) struct SqlTarget {
-    pub(crate) options: FieldOptions,                        // Options
-    pub(crate) filter_type: FilterType,                      // Filter on where or having clause
-    pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>, // Handler to create clauses
-    pub(crate) subfields: bool, // Target name has subfields separated by underscore
-    pub(crate) expression: SqlExpr, // Column name or SQL expression
-   // pub(crate) sql_aux_param_names: Vec<String>, //  Extracted from <aux_param>
-}
 /* 
-impl SqlTarget {
+impl Field {
    /*  pub fn sql_aux_param_values(
         &self,
         aux_params: &HashMap<String, String>,
@@ -99,183 +107,8 @@ impl SqlTarget {
 } */
 
 
-#[derive(Debug, Clone)]
-/// Options for a mapped field.
-pub struct FieldOptions {
-    pub(crate) preselect: bool, // Always select this field, regardless of query fields
-    pub(crate) count_filter: bool, // Filter field on count query
-    pub(crate) count_select: bool, // Select field on count query
-    pub(crate) mut_select: bool, // Select field on mut select
-    pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
-    pub(crate) query_select: bool,    // Select field for query builder
-    pub(crate) roles: HashSet<String>, // Only for use by these roles
-    pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
-    pub(crate) on_params: Vec<String>,  // Identity params for on clauses
-}
 
-impl FieldOptions {
-    /// Create new mapper options
-    pub fn new() -> Self {
-        FieldOptions {
-            preselect: false,
-            count_filter: false,
-            count_select: false,
-            mut_select: false,
-            skip_wildcard: false,
-            query_select: true,
-            roles: HashSet::new(),
-            aux_params: HashMap::new(),
-            on_params: Vec::new()
-        }
-    }
 
-    /// Field is selected, regardless of the query.
-    pub fn preselect(mut self, preselect: bool) -> Self {
-        self.preselect = preselect;
-        self
-    }
-    /// Any filter on the field is considered when creating a count query.
-    /// Typically applied to fields that represent permissions and foreign keys.
-    /// Assumme a user wants to see all books. You will restrict the user query
-    /// with a permission filter, so that the user sees all of *his* books.
-    /// The count query must also use the filter.
-    pub fn count_filter(mut self, count_filter: bool) -> Self {
-        self.count_filter = count_filter;
-        self
-    }
-    /// Any selected field is also used for the count query.
-    /// Only used in rare cases where you fiddle with distinct results.
-    pub fn count_select(mut self, count_select: bool) -> Self {
-        self.count_select = count_select;
-        self
-    }
-    /// Field is used for the mut select query.
-    pub fn mut_select(mut self, mut_select: bool) -> Self {
-        self.mut_select = mut_select;
-        self
-    }
-    /// Field is used for the normal query.
-    pub fn query_select(mut self, query_select: bool) -> Self {
-        self.query_select = query_select;
-        self
-    }
-    /// Field is ignored by the wildcard.
-    pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
-        self.skip_wildcard = skip_wildcard;
-        self
-    }
-    /// The field can only be selected and filtered by queries that have
-    /// these roles.
-    /// Example: The email address is only visible to users with
-    /// the _admin_ role.
-    pub fn restrict_roles(mut self, roles: HashSet<String>) -> Self {
-        self.roles = roles;
-        self
-    }
-
-    
-     /// Additional build param. This is used by the query builder together with
-     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
-     /// and field handlers.
-    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
-    where S: Into<String>, T: Into<SqlArg>
-    {
-        self.aux_params.insert(name.into(), value.into());
-        self
-    }
-}
-
-/// Options for a mapped field.
-#[derive(Debug)]
-pub struct JoinOptions {
-    pub(crate) preselect: bool, // Always select this join, regardless of query fields
-    pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
-    pub(crate) roles: HashSet<String>, // Only for use by these roles
-    pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
-    pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>> // Optional join handler
-        
-}
-
-impl JoinOptions {
-    /// Create new mapper options
-    pub fn new() -> Self {
-        JoinOptions {
-            preselect: false,
-            skip_wildcard: false,
-            roles: HashSet::new(),
-            aux_params: HashMap::new(),
-            join_handler:None
-        }
-    }
-
-    /// Field is selected, regardless of the query.
-    pub fn preselect(mut self, preselect: bool) -> Self {
-        self.preselect = preselect;
-        self
-    }
-
-    /// Field is ignored by the wildcard.
-    pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
-        self.skip_wildcard = skip_wildcard;
-        self
-    }
-    /// The field can only be selected and filtered by queries that have
-    /// these roles.
-    /// Example: The email address is only visible to users with
-    /// the _admin_ role.
-    pub fn restrict_roles(mut self, roles: HashSet<String>) -> Self {
-        self.roles = roles;
-        self
-    }
-
-    /// Additional build param. This is used by the query builder together with
-    /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
-    /// and field handlers.
-    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
-    where S: Into<String>, T:Into<SqlArg>
-    {
-        self.aux_params.insert(name.into(), value.into());
-        self
-    }
-}
-
-#[derive(Debug)]
-pub struct PredicateOptions {
-     pub(crate) aux_params: HashMap<String, SqlArg>,
-     pub(crate) on_params: Vec<(u8,String)>,  // Argument params for on clauses (index, name)
-     pub(crate) count_filter: bool
-}
-
-impl PredicateOptions {
-
-    pub fn new() -> Self {
-        PredicateOptions { aux_params: HashMap::new(), on_params: Vec::new(), count_filter: false}
-    }
-
- /// Additional build param. This is used by the query builder together with
-     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
-     /// and field handlers.
-    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
-    where S: Into<String>, T:Into<SqlArg>
-    {
-        self.aux_params.insert(name.into(), value.into());
-        self
-    }
-
-    /// Additional build param. This is used by the query builder together with
-     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
-     /// and field handlers.
-    pub fn on_param(mut self, index: u8, name: String) -> Self {
-        self.on_params.push((index, name));
-        self
-    }
-    /// By default predicates are considered when creating a count query.
-    /// However the predicate can be ignored by setting the count filter to false
-    pub fn count_filter(mut self, count_filter: bool) -> Self {
-        self.count_filter = count_filter;
-        self
-    }
-}
 
 trait MapperFilter {
     fn build(field: crate::query::QueryToken) -> String;
@@ -284,112 +117,98 @@ trait MapperFilter {
 /// Translates Toql fields into columns or SQL expressions.
 #[derive(Debug)]
 pub struct SqlMapper {
-    pub aliased_table: String,
-    pub alias_format: AliasFormat,       //
+    pub table_name: String,
+    pub canonical_table_alias: String, // Calculated form table_name
+
+    /* pub aliased_table: String,
+    pub alias_format: AliasFormat,       // */
     pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>, // Default field handler
     pub(crate) predicate_handler: Arc<dyn PredicateHandler + Send + Sync>, // Default predicate handler
-    pub(crate) field_order: Vec<String>,
-    pub(crate) fields: HashMap<String, SqlTarget>,
+
+   // pub(crate) field_order: Vec<String>, 
+
+     // Deserialization order for selects statements
+    pub(crate) deserialize_order: Vec<MapperType>,
+
+    /// Joined mappers
+    pub(crate) joined_mappers: HashMap<String, String>, // Toql path, Mapper name
+
+    /// Field information
+    pub(crate) fields: HashMap<String, Field>, 
+
+    /// Predicate information
     pub(crate) predicates: HashMap<String, Predicate>,
+
+    /// Join information
     pub(crate) joins: HashMap<String, Join>,
-    pub(crate) joins_root: Vec<String>, // Top joins
-    pub(crate) joins_tree: HashMap<String, Vec<String>>, // Subjoins
 
-    pub(crate) mut_fields: Vec<String>,     //precalculated mut fields for quicker lookup
-    pub(crate) count_fields: Vec<String>,   //precalculated count fields for quicker lookup
+    /// Selections
+    /// Automatic created selection are
+    /// #count - Fields for count query
+    /// #mut - Fields for insert
+    /// #all - All mapped fields
+    pub(crate) selections: HashMap<String, Vec<String>>, // name, toql fields or paths
 
-    pub(crate) alias_translation: HashMap<String, String>, // Translated aliases
-    pub(crate) table_index: u16, //table index for aliases
+
+//    pub(crate) joins_root: Vec<String>, // Top joins
+//    pub(crate) joins_tree: HashMap<String, Vec<String>>, // Subjoins
+
+   
+   
 }
 
-#[derive(Debug, PartialEq)]
-pub enum JoinType {
-    Left,
-    Inner,
-}
-
-#[derive(Debug)]
-pub(crate) struct Predicate {
-    pub(crate) expression: String,
-    pub(crate) handler: Arc<dyn PredicateHandler + Send + Sync>, // Handler to create clauses
-    pub(crate) sql_aux_param_names: Vec<String>, // aux params in predicate statement or ? in correct order
-    pub(crate) options: PredicateOptions,
-}
-
-
-
-#[derive(Debug)]
-pub(crate) struct Join {
-    pub(crate) join_type: JoinType,   // LEFT JOIN ...
-    pub(crate) aliased_table: String, // Table t0
-    pub(crate) on_predicate: String,  // ON ..
-    pub(crate) options: JoinOptions,
-    pub(crate) sql_aux_param_names: Vec<String>, // aux params in ON clause
-}
-/// Structs that implement `Mapped` can be added to the mapper with [map()](struct.SqlMapper.html#method.map).
-///
-/// The Toql derive implements this trait for derived structs.
-pub trait Mapped {
-    fn table_name() -> String;
-    fn table_alias() -> String;
-    fn type_name() -> String;
-    fn map(mapper: &mut SqlMapper, toql_path: &str, sql_alias: &str); // Map entity fields
-}
 
 impl SqlMapper {
      /// Create new mapper for _table_ or _table alias_.
     /// Example: `::new("Book")` or `new("Book b")`.
     /// If you use an alias you must map all
     /// SQL columns with the alias too.
-     pub fn new<T>(table: T) -> Self
+     pub fn new<T>(sql_table_name: &str) -> Self
     where
-        T: Into<String>,
     {
-        Self::with_alias_format(table, AliasFormat::Canonical)
+        let f = BasicFieldHandler {};
+        Self::new_with_handler(sql_table_name, f)
     }
     /// Create new mapper for _table_ or _table alias_.
     /// The alias format defines how aliases are look like, if
     /// the Sql Mapper is called to build them.
-    pub fn with_alias_format<T>(table: T, alias_format: AliasFormat) -> Self
+   /*  pub fn with_alias_format<T>(table: T, alias_format: AliasFormat) -> Self
     where
         T: Into<String>,
     {
         let f = BasicFieldHandler {};
         Self::new_with_handler(table, alias_format, f)
-    }
+    } */
     /// Creates new mapper with a custom handler.
     /// Use this to provide custom filter functions for all fields.
-    pub fn new_with_handler<T, H>(aliased_table: T, alias_format: AliasFormat, handler: H) -> Self
+    pub fn new_with_handler<H>(sql_table_name: &str, handler: H) -> Self
     where
-        T: Into<String>,
         H: 'static + FieldHandler + Send + Sync, // TODO improve lifetime
     {
         SqlMapper {
             field_handler: Arc::new(handler),
             predicate_handler: Arc::new(DefaultPredicateHandler::new()),
-            aliased_table: aliased_table.into(),
+            table_name: sql_table_name.to_string(),
+            canonical_table_alias: sql_table_name.to_mixed_case(),
             joins: HashMap::new(),
             fields: HashMap::new(),
-            field_order: Vec::new(),
             predicates: HashMap::new(),
-            joins_root: Vec::new(),
-            joins_tree: HashMap::new(),
-            table_index: 0, // will be incremented before use
-            alias_format: alias_format,
-            alias_translation: HashMap::new(),
-            mut_fields: Vec::new(),
-            count_fields: Vec::new(),
+            deserialize_order: Vec::new(),
+            joined_mappers: HashMap::new(),
+            selections: HashMap::new(),
         }
     }
     /// Create a new mapper from a struct that implements the Mapped trait.
     /// The Toql derive does that for every attributed struct.
     pub fn from_mapped<M: Mapped>() -> SqlMapper 
     {
-        Self::from_mapped_with_alias::<M>(&M::table_alias(), AliasFormat::Canonical)
+         Self::from_mapped_with_handler::<M, _>(BasicFieldHandler::new())
+
+        //Self::from_mapped_with_::<M>(&M::table_alias(), AliasFormat::Canonical)
     }
      /// Create a new mapper from a struct that implements the Mapped trait.
     /// The alias format defines what the table aliases in Sql look like.
-    pub fn from_mapped_with_alias<M: Mapped>(
+    /* pub fn from_mapped_with_alias<M: Mapped>(
         sql_alias: &str,
         alias_format: AliasFormat,
     ) -> SqlMapper // Create new SQL Mapper and map entity fields
@@ -401,26 +220,20 @@ impl SqlMapper {
             } else {
                 s
             },
-            alias_format,
+           
         );
         M::map(&mut m, "", &M::table_alias());
         m
-    }
+    } */
     pub fn from_mapped_with_handler<M: Mapped, H>(
-        alias_format: AliasFormat,
         handler: H,
     ) -> SqlMapper
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        let s = format!("{} {}", M::table_name(), M::table_alias());
+     
         let mut m = SqlMapper::new_with_handler(
-            if M::table_alias().is_empty() {
-                M::table_name()
-            } else {
-                s
-            },
-            alias_format,
+            &M::table_name(),
             handler,
         );
 
@@ -429,19 +242,22 @@ impl SqlMapper {
     }
 
     
-    /// Maps all fields from a struct as a joined dependency.
+    /* /// Maps all fields from a struct as a joined dependency.
     /// Example: To map for a user an `Address` struct that implements `Mapped`
     /// ``` ignore
     /// user_mapper.map_join<Address>("address", "a");
     /// ```
     pub fn map_join<'a, T: Mapped>(&'a mut self, toql_path: &str, sql_alias: &str) -> &'a mut Self {
-        T::map(self, toql_path, sql_alias);
+        //T::map(self, toql_path, sql_alias);
+
         self
     }
+ */
+
     /// Maps a Toql field to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
     /// how to generate SQL for your field.
-    pub fn map_handler<'a, H>(
+    pub fn map_field_with_handler<'a, H>(
         &'a mut self,
         toql_field: &str,
         expression: SqlExpr,
@@ -450,12 +266,12 @@ impl SqlMapper {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        self.map_handler_with_options(toql_field, expression, handler, FieldOptions::new())
+        self.map_field_with_handler_and_options(toql_field, expression, handler, FieldOptions::new())
     }
     // Maps a Toql field with options to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
     /// how to generate SQL for your field.
-    pub fn map_handler_with_options<'a, H>(
+    pub fn map_field_with_handler_and_options<'a, H>(
         &'a mut self,
         toql_field: &str,
         sql_expression: SqlExpr,
@@ -475,22 +291,20 @@ impl SqlMapper {
             "?"
         }); */
 
-        let t = SqlTarget {
+        let t = Field {
             options: options,
-            filter_type: FilterType::Where, // Filter on where clause
-            subfields: toql_field.find('_').is_some(),
             handler: Arc::new(handler),
             expression: sql_expression,
            // sql_aux_param_names: sql_aux_param_names,
         };
-        self.field_order.push(toql_field.to_string());
+        self.deserialize_order.push(MapperType::Field(toql_field.to_string()));
         self.fields.insert(toql_field.to_string(), t);
         self
     }
     /// Changes the handler of a field.
     /// This will panic if the field does not exist
     /// Use it to make changes, it prevents typing errors of field names.
-    pub fn alter_handler<H>(&mut self, toql_field: &str, handler: H) -> &mut Self
+   /*  pub fn alter_handler<H>(&mut self, toql_field: &str, handler: H) -> &mut Self
     where
         H: 'static + FieldHandler + Send + Sync,
     {
@@ -501,11 +315,11 @@ impl SqlMapper {
 
         sql_target.handler = Arc::new(handler);
         self
-    }
+    } */
     /// Changes the handler and options of a field.
     /// This will panic if the field does not exist
     /// Use it to make changes, it prevents typing errors of field names.
-    pub fn alter_handler_with_options(
+    /* pub fn alter_handler_with_options(
         &mut self,
         toql_field: &str,
         handler: Arc<dyn FieldHandler + Sync + Send>,
@@ -518,11 +332,11 @@ impl SqlMapper {
         sql_target.options = options;
         sql_target.handler = handler;
         self
-    }
+    } */
     /// Changes the database column or SQL expression of a field.
     /// This will panic if the field does not exist
     /// Use it to make changes, it prevents typing errors of field names.
-    pub fn alter_field(
+    /* pub fn alter_field(
         &mut self,
         toql_field: &str,
         sql_expression: SqlExpr,
@@ -550,99 +364,95 @@ impl SqlMapper {
             toql_field
         )); 
         f.options = options;
-    } 
+    }  */
+
+  
+
 
     /// Adds a new field - or updates an existing field - to the mapper.
-    pub fn map_field<'a>(&'a mut self, toql_field: &str, sql_expr: SqlExpr) -> &'a mut Self {
-        self.map_field_with_options(toql_field, sql_expr, FieldOptions::new())
+    pub fn map_column<'a, T>(&'a mut self, toql_field: &str, column_name: T) -> &'a mut Self 
+    where T: Into<String>
+    {
+        self.map_expr_with_options(toql_field, SqlExpr::aliased_column(column_name.into()), FieldOptions::new())
     }
 
     /// Adds a new field - or updates an existing field - to the mapper.
-    pub fn map_field_with_options<'a>(
+    pub fn map_column_with_options<'a, T>(&'a mut self, toql_field: &str, column_name: T, options: FieldOptions,) -> &'a mut Self 
+    where T: Into<String>
+    {
+        self.map_expr_with_options(toql_field, SqlExpr::aliased_column(column_name.into()), options)
+    }
+   
+    /// Adds a new field - or updates an existing field - to the mapper.
+    pub fn map_expr_with_options<'a>(
         &'a mut self,
         toql_field: &str,
         sql_expression: SqlExpr,
         options: FieldOptions,
     ) -> &'a mut Self {
+
         // Add count field to selection for quicker lookup
         if options.count_filter || options.count_select {
-            self.count_fields.push(toql_field.to_string());
+            let s = self.selections.entry("count".to_string()).or_insert(Vec::new());
+            s.push(toql_field.to_string());
         }
 
         // Add mut field to selection for quicker lookup
         if options.mut_select  {
-            self.mut_fields.push(toql_field.to_string());
-        }
+            let s = self.selections.entry("mut".to_string()).or_insert(Vec::new());
+            s.push(toql_field.to_string());
+        } 
 
-      /*   // Replace aux params with ?
-        let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
-        let sql_expression = sql_expression.to_string();
-        let mut sql_aux_param_names = Vec::new();
-        let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
-            let name = &e[1];
-            sql_aux_param_names.push(name.to_string());
-            "?"
-        }); */
-
-        let t = SqlTarget {
+     
+        let t = Field {
             expression: sql_expression,
             options: options,
-            filter_type: FilterType::Where, // Filter on where clause
-            subfields: toql_field.find('_').is_some(),
             handler: Arc::clone(&self.field_handler),
           //  sql_aux_param_names,
         };
 
-        self.field_order.push(toql_field.to_string());
+        self.deserialize_order.push(MapperType::Field(toql_field.to_string()));
         self.fields.insert(toql_field.to_string(), t);
 
         self
     }
     /// Adds a join for a given path to the mapper.
     /// Example: `map.join("foo", "LEFT JOIN Foo f ON (foo_id = f.id)")`
-    pub fn join<'a>(
+    pub fn map_join<'a>(
         &'a mut self,
         toql_path: &str,
-        join_type: JoinType,
-        aliased_table: &str,
-        on_predicate: &str,
+         joined_mapper: &str,
+        join_expression: SqlExpr
     ) -> &'a mut Self {
-        self.join_with_options(
+        self.map_join_with_options(
             toql_path,
-            join_type,
-            aliased_table,
-            on_predicate,
+            joined_mapper,
+            join_expression,
             JoinOptions::new(),
         )
     }
-    pub fn join_with_options<'a>(
+    pub fn map_join_with_options<'a, S, T>(
         &'a mut self,
-        toql_path: &str,
-        join_type: JoinType,
-        aliased_table: &str,
-        on_predicate: &str,
+        toql_path: S,
+        joined_mapper: T,
+        join_expression: SqlExpr,
         options: JoinOptions,
-    ) -> &'a mut Self {
-        let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
-        let on_predicate = on_predicate.to_string();
-        let mut sql_aux_param_names = Vec::new();
-        let on_predicate = query_param_regex.replace_all(&on_predicate, |e: &regex::Captures| {
-            let name = &e[1];
-            sql_aux_param_names.push(name.to_string());
-            "?"
-        });
-        self.joins.insert(
-            toql_path.to_string(),
+    ) -> &'a mut Self 
+    where S: Into<String> + Clone, T: Into<String>
+    {
+      
+             self.joins.insert(
+            toql_path.clone().into(),
             Join {
-                join_type,
-                aliased_table: aliased_table.to_string(),
-                on_predicate: on_predicate.to_string(),
+               joined_mapper: joined_mapper.into(),
+               join_expression,
                 options,
-                sql_aux_param_names,
             },
         );
 
-        // Precalculate tree information for quicker join construction
+        self.deserialize_order.push(MapperType::Join( toql_path.into()));
+
+        /* // Precalculate tree information for quicker join construction
         // Build root joins and store child joins to parent joins
         // Eg. [user] = [user_country, user_address, user_info]
 
@@ -661,7 +471,7 @@ impl SqlMapper {
                 .or_insert(Vec::new());
             j.push(toql_path.to_string());
         }
-
+ */
         // Find targets that use join and set join field
 
         self
@@ -669,63 +479,53 @@ impl SqlMapper {
     /// Changes an already added join.
     /// This will panic if the join does not exist
     /// Use it to make changes, it prevents typing errors of path names.
-    pub fn alter_join<'a>(
+  /*   pub fn alter_join<'a>(
         &'a mut self,
         toql_path: &str,
-        join_type: JoinType,
-        aliased_table: &str,
-        on_predicate: &str,
-    ) -> &'a mut Self {
-        let j = self.joins.get_mut(toql_path).expect("Join is missing.");
-        j.join_type = join_type;
-        j.aliased_table = aliased_table.to_string();
-        j.on_predicate = on_predicate.to_string();
-        self
-    }
+        join_expression: SqlExpr,
+    ) -> Result<&'a mut Self> {
+        let j = self.joins.get_mut(toql_path).ok_or(ToqlError::MapperMissing)?;
+        j.expression = join_expression;
+        Ok(self)
+    } */
 
-    pub fn map_predicate_handler<H>(&mut self, name: &str, sql_expression :&str, handler: H) 
+    pub fn map_predicate_handler<H>(&mut self, name: &str, sql_expression :SqlExpr, handler: H) 
       where  H: 'static + PredicateHandler + Send + Sync,
     {
 
        self.map_predicate_handler_with_options(name, sql_expression, handler, PredicateOptions::new())
 
     }
-    pub fn map_predicate(&mut self, name: &str, sql_expression :&str) {
+    pub fn map_predicate(&mut self, name: &str, sql_expression :SqlExpr) {
          
         self.map_predicate_with_options(name, sql_expression, PredicateOptions::new());
     }
-    pub fn map_predicate_handler_with_options<H>(&mut self, name: &str, sql_expression :&str, handler: H, options: PredicateOptions) 
+    pub fn map_predicate_handler_with_options<H>(&mut self, name: &str, sql_expression :SqlExpr, handler: H, options: PredicateOptions) 
       where  H: 'static + PredicateHandler + Send + Sync,
     {
 
-       let (expression, sql_aux_param_names) = Self::predicate_argument_names(sql_expression);
                 
         let predicate = Predicate {
-            expression,
-            sql_aux_param_names,
+            expression:sql_expression,
             handler:  Arc::new(handler),
             options,
         };
         self.predicates.insert(name.to_string(), predicate);
 
     }
-    pub fn map_predicate_with_options(&mut self, name: &str, sql_expression :&str, options: PredicateOptions) {
-         
-        let (expression, sql_aux_param_names) = Self::predicate_argument_names(sql_expression);
+    pub fn map_predicate_with_options(&mut self, name: &str, sql_expression :SqlExpr, options: PredicateOptions) {
                 
         let predicate = Predicate {
-            expression,
-            sql_aux_param_names,
+            expression: sql_expression,
             handler: self.predicate_handler.clone(),
             options,
         };
         self.predicates.insert(name.to_string(), predicate);
         
-
     }
   
 
-    /// Translates a canonical sql alias into a shorter alias
+    /* /// Translates a canonical sql alias into a shorter alias
     pub fn translate_alias(&mut self, canonical_alias: &str) -> String {
         use std::collections::hash_map::Entry;
 
@@ -844,5 +644,5 @@ impl SqlMapper {
                 let replaced_sql_expression = REGEX.replace_all(sql_expression, "?");
 
                 ( replaced_sql_expression.to_owned().to_string(), sql_aux_param_names)
-         }
+         } */
 }

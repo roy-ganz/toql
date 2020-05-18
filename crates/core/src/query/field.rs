@@ -17,7 +17,7 @@ use super::field_filter::FieldFilter;
 use crate::sql::SqlArg;
 use super::QueryToken;
 use super::field_path::FieldPath;
-use heck::to_mixed_case;
+use heck::MixedCase;
 
 #[derive(Clone, Debug)]
 pub struct Field {

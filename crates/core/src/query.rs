@@ -29,6 +29,7 @@ pub mod field_path;
 pub mod wildcard;
 pub mod predicate;
 pub mod query_with;
+pub mod selection;
 
 
 use std::collections::HashMap;

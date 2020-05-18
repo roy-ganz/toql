@@ -1,6 +1,7 @@
 use crate::query::Query;
+use crate::query::selection::Selections;
 use crate::sql_mapper_registry::SqlMapperRegistry;
-use crate::sql_builder::wildcard_scope::WildcardScope;
+//use crate::sql_builder::wildcard_scope::WildcardScope;
 use std::result::Result;
 
 /// [Page](enum.Page.html) is used as an argument in load functions. It tells Toql to build and run an additional query
@@ -51,7 +52,7 @@ pub trait Load<T: crate::key::Keyed> {
         &mut self,
         path: &str,
         query: &crate::query::Query<T>,
-        wildcard_scope: &WildcardScope,
+        selection: &Selections,
         additional_columns: &[String]
     ) -> Result<Option<crate::sql::Sql>, Self::Error>;
 
@@ -62,7 +63,7 @@ pub trait Load<T: crate::key::Keyed> {
         _entities: &mut Vec<T>,
         _entity_keys: &Vec<T::Key>,
         _query: &crate::query::Query<T>,
-        _wildcard_scope: &WildcardScope
+        _selection: &Selections
     ) -> Result<(), Self::Error> {
         Ok(())
     }

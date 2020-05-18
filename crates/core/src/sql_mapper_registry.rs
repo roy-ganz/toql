@@ -5,7 +5,8 @@
 //!
 /// A registry that holds mappers.
 use crate::alias::AliasFormat;
-use crate::sql_mapper::{SqlMapper, Mapped};
+use crate::sql_mapper::{SqlMapper};
+use crate::sql_mapper::mapped::Mapped;
 use crate::field_handler::FieldHandler;
 use std::collections::HashMap;
 
@@ -26,7 +27,7 @@ impl SqlMapperRegistry {
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
       let now = std::time::Instant::now();
-        let m = SqlMapper::from_mapped_with_alias::<M>(&M::table_alias(), self.alias_format.clone());
+        let m = SqlMapper::from_mapped::<M>();
         self.mappers.insert(String::from(M::type_name()), m);
          println!("Mapped `{}` in {}ms",  M::type_name(), now.elapsed().as_millis());
         M::type_name()
@@ -35,7 +36,7 @@ impl SqlMapperRegistry {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        let m = SqlMapper::from_mapped_with_handler::<M, _>(self.alias_format.clone(), handler);
+        let m = SqlMapper::from_mapped_with_handler::<M, _>(handler);
         // m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
         self.mappers.insert(String::from(M::type_name()), m);
         M::type_name()

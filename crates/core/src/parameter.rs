@@ -1,12 +1,12 @@
 use crate::sql::SqlArg;
 use std::collections::HashMap;
 
-pub struct Parameter<'a>(&'a [HashMap<String, SqlArg>]);
+pub struct Parameters<'a>(&'a [&'a HashMap<String, SqlArg>]);
 
-impl<'a> Parameter<'a> {
+impl<'a> Parameters<'a> {
 
-    pub fn new(params: &'a [HashMap<String, SqlArg>]) -> Self {
-        Parameter (params)
+    pub fn new(params: &'a [&'a HashMap<String, SqlArg>]) -> Self {
+        Parameters (params)
     }
 
     pub fn contains(&self, name: &str) -> bool {
@@ -22,6 +22,8 @@ impl<'a> Parameter<'a> {
         }
         None
     } 
-
-
 }
+
+
+
+
