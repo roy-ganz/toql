@@ -907,7 +907,7 @@ impl<M> Query<M> {
         T: Into<Query<M>>,
     {
         // All tokens are b
-        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::Or));
+        self.tokens.push(QueryToken::LeftBracket(Concatenation::Or));
         self.tokens.append(&mut query.into().tokens);
         self.tokens.push(QueryToken::RightBracket);
         self

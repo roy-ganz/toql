@@ -143,6 +143,7 @@ impl QueryParser {
     pub fn parse<M>(toql_string: &str) -> Result<Query<M>, ToqlError> {
         let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
 
+        let mut pending_rpar = 0;
         let mut query = Query::new();
         
         let mut token_info = TokenInfo::new();
@@ -163,12 +164,10 @@ impl QueryParser {
                             } else {
                                  token_info.order = Some(FieldOrder::Desc(p));
                             }
-                }
+                },
                 Rule::hidden => {
                     token_info.hidden = true;
-                }
-               
-                
+                },
                 Rule::field_path => {
                      
                      token_info.name = span.as_str().to_string();
@@ -176,7 +175,7 @@ impl QueryParser {
                  Rule::wildcard => {
                     token_info.name = span.as_str().trim_end_matches('*').trim_end_matches('_').to_string();
                     token_info.token_type = TokenType::Wildcard;
-                }
+                },
                 /* Rule::wildcard_path => {
                       token_info.name = span.as_str().to_string(); // Somehow not working
                 } */
@@ -198,19 +197,19 @@ impl QueryParser {
                 Rule::num_u64 => {
                     let v = span.as_str().parse::<u64>().unwrap_or(0); // should not be invalid, todo check range
                     token_info.args.push(SqlArg::from(v));
-                }
+                },
                 Rule::num_i64 => {
                     let v = span.as_str().parse::<u64>().unwrap_or(0); // should not be invalid, todo check range
                     token_info.args.push(SqlArg::from(v));
-                }
+                },
                 Rule::num_f64 => {
                     let v = span.as_str().parse::<u64>().unwrap_or(0); // should not be invalid, todo check range
                     token_info.args.push(SqlArg::from(v));
-                }
+                },
                 Rule::string => {
                     let v = span.as_str().trim_start_matches("'").trim_end_matches("'").replace("''", "'");
                     token_info.args.push(SqlArg::from(v));
-                }
+                },
                  Rule::predicate_clause => {
                      token_info.token_type= TokenType::Predicate;
                 },
@@ -218,32 +217,29 @@ impl QueryParser {
                      token_info.name = span.as_str().trim_start_matches("@").to_string();
                 },
                 Rule::rpar => {
-                    query.tokens.push(QueryToken::RightBracket);
-                }
+                    pending_rpar += 1;
+                },
                 Rule::lpar => {
                     query.tokens.push(QueryToken::LeftBracket(token_info.concatenation.clone()));
-                }
+                },
                 Rule::separator => {
 
-                let concat_type =  span.as_str().chars().next();
-                   if let Some(token) = token_info.build_token()?
-                  /*  .map_err(|e| ToqlError::QueryParserError(Error::new_from_span (
-                                        CustomError {    message:e      }, span)))?  */
-                                        {
-                        query.tokens.push(token);
-                        token_info = TokenInfo::new(); // Restart token builder
-
-                       // println!("{:?}", query);
+                    let concat_type =  span.as_str().chars().next();
+                    if let Some(token) = token_info.build_token()? {
+                            query.tokens.push(token);
+                            token_info = TokenInfo::new(); // Restart token builder
+                    }
+                    while pending_rpar > 0 {
+                        query.tokens.push(QueryToken::RightBracket);
+                        pending_rpar -= 1;
                     }
 
                     token_info.concatenation = if let Some(',') = concat_type {
-                         Concatenation::And
+                        Concatenation::And
                     } else {
                         Concatenation::Or
                     };
-
-                }
-
+                },
                 _ => {}
             }
         }

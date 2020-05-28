@@ -71,8 +71,13 @@ impl<'a> GeneratedToqlDelup<'a> {
                     }
 
                     // Add field to keys, struct may contain multiple keys (composite key)
+                    let column = if let SqlTarget::Column(ref c) = regular_attrs.sql_target {
+                        c
+                    } else {
+                        rust_field_name 
+                    };
                     self.key_columns_code.push(quote!(
-                        keys.push(String::from(#rust_field_name));
+                        keys.push(String::from(#column));
                     ));
                 }
             }
@@ -93,6 +98,38 @@ impl<'a> GeneratedToqlDelup<'a> {
                                             params.extend_from_slice( &toql::key::Key::params(&<#rust_type_ident as toql::key::Keyed>::try_get_key( &entity . #rust_field_ident #unwrap )?));
                                         )
                                     );
+
+                        // TODO Improve, use defrault inverse columns OR join columns, if set
+                        // Use constants as join keys are known at compile time
+                        self.key_columns_code.push(quote!(
+                                <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::default_inverse_columns().iter().for_each(|c|  keys.push(c.to_string()));
+                        ));
+
+              /*   eprintln!("COLUMNS = {:?}", &join_attrs.columns );
+                for pair in  &join_attrs.columns {
+                    let column = &pair.this;
+                   
+                    self.key_columns_code.push(quote!(
+                        keys.push(#column);
+                    ));
+                }  */
+                
+                   /*  let mut key_pred = String::new();
+                    for  pair in  &join_attrs.columns {
+                        let p = format!("{}", &pair.this);
+                        key_pred.push_str(&p);
+                        key_pred.push_str(" AND ");
+                    }      
+                    // Remove ' AND '                        
+                    key_pred.pop();
+                    key_pred.pop();
+                    key_pred.pop();
+                    key_pred.pop();
+                    key_pred.pop();
+
+                    self.key_columns_code.push(quote!(
+                        keys.push(format!(#key_pred, alias));
+                    )); */
                 }
             }
             FieldKind::Merge(_) => {}

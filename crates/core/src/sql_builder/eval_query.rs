@@ -42,7 +42,7 @@ pub(crate) fn eval_query<M>(
         let mut pending_having_parens_concatenation: Option<Concatenation> = None;
         let mut pending_where_parens: u8 = 0;
         let mut pending_having_parens: u8 = 0;
-
+        
         for t in &query.tokens {
             {
                 match t {

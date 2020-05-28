@@ -142,6 +142,9 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     pub fn aux_params(&self) -> &HashMap<String, SqlArg> {
         &self.aux_params
     }
+    pub fn aux_param(&mut self, name:String, value: SqlArg)  {
+        self.aux_params.insert(name, value);
+    }
    
 
     /// Insert one struct.

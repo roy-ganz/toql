@@ -90,8 +90,44 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     self.regular_fields += 1;
 
+                    match field.number_of_options {
+                        2 => {
+                                self.mysql_deserialize_fields.push(quote!(
+                                        #rust_field_ident : {
+                                        
+                                            ( if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                                None
+                                            } else {
+                                               Some( row.take_opt( *i).unwrap()
+                                                    .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?)
+                                            }, *i += 1).0
+                                        }))
+                        },
+                        1 if field.preselect == false => {
+                             self.mysql_deserialize_fields.push(quote!(
+                        #rust_field_ident : {
+                        
+                            ( if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
+                                None
+                            } else {
+                                row.take_opt( *i).unwrap()
+                                    .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                            }, *i += 1).0
+                        }
+                    ));
+                        },
+                    _ => { // 0 or preselect
+                            self.mysql_deserialize_fields.push(quote!(
+                            #rust_field_ident : (row.take_opt( *i).unwrap()
+                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
+                                *i += 1).0
+                        ));
+                    }
+
+                    }
+
                     // Check selection for optional Toql fields: Option<Option<..> or Option<..>
-                    if field.number_of_options > 0 && field.preselect == false {
+                    /* if field.number_of_options > 0 && field.preselect == false {
                         self.mysql_deserialize_fields.push(quote!(
                         #rust_field_ident : {
                         
@@ -109,7 +145,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
                                 *i += 1).0
                         ));
-                    }
+                    } */
 
                     if regular_attrs.key {
                         self.key_field_names.push(rust_field_name.to_string());
