@@ -60,6 +60,7 @@ use crate::sql::SqlArg;
 use crate::sql_expr::SqlExpr;
 use crate::error::{Result, ToqlError};
 
+
 #[derive(Debug)]
 pub enum DeserializeType {
     Field(String), // Toql fieldname
