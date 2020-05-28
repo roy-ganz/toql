@@ -61,7 +61,7 @@ use crate::sql_expr::SqlExpr;
 use crate::error::{Result, ToqlError};
 
 #[derive(Debug)]
-pub enum MapperType {
+pub enum DeserializeType {
     Field(String), // Toql fieldname
     Join(String),  // Toql join path
     //Embedded
@@ -89,25 +89,6 @@ impl fmt::Display for SqlMapperError {
 }
 
 
-/* 
-impl Field {
-   /*  pub fn sql_aux_param_values(
-        &self,
-        aux_params: &HashMap<String, String>,
-    ) -> Result<Vec<String>, SqlBuilderError> {
-        let mut params: Vec<String> = Vec::with_capacity(self.sql_aux_param_names.len());
-        for p in &self.sql_aux_param_names {
-            let qp = aux_params
-                .get(p)
-                .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
-            params.push(qp.to_owned());
-        }
-        Ok(params)
-    } */
-} */
-
-
-
 
 
 trait MapperFilter {
@@ -128,7 +109,7 @@ pub struct SqlMapper {
    // pub(crate) field_order: Vec<String>, 
 
      // Deserialization order for selects statements
-    pub(crate) deserialize_order: Vec<MapperType>,
+    pub(crate) deserialize_order: Vec<DeserializeType>,
 
     /// Joined mappers
     pub(crate) joined_mappers: HashMap<String, String>, // Toql path, Mapper name
@@ -141,6 +122,9 @@ pub struct SqlMapper {
 
     /// Join information
     pub(crate) joins: HashMap<String, Join>,
+
+      /// Merge information
+      pub(crate) merges: HashMap<String, Merge>,
 
     /// Selections
     /// Automatic created selection are
