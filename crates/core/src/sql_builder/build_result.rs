@@ -1,25 +1,38 @@
 //!
 //! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
+use std::collections::HashSet;
 use crate::query::concatenation::Concatenation;
-use crate::sql::SqlArg;
+use crate::sql::{Sql, SqlArg};
+
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 pub struct BuildResult<'a> {
     pub(crate) aliased_table: &'a str,
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
+
+    pub (crate) selection_stream: Vec<bool>,
+    pub (crate) unmerged_paths: HashSet<String>,
+    pub (crate) select_sql: Sql,
+    pub (crate) join_sql: Sql,
+    pub (crate) where_sql: Sql,
+    pub (crate) order_sql: Sql,
+    
+    
+/* 
     pub(crate) join_clause: String,
+    pub(crate) join_params: Vec<SqlArg>, // Not sure if needed 
+
     pub(crate) select_clause: String,
     pub(crate) where_clause: String,
     pub(crate) order_clause: String,
-    pub(crate) having_clause: String,
     pub(crate) select_params: Vec<SqlArg>,
     pub(crate) where_params: Vec<SqlArg>,
-    pub(crate) having_params: Vec<SqlArg>,
     pub(crate) order_params: Vec<SqlArg>,
-    pub(crate) join_params: Vec<SqlArg>, // Not sure if needed
-    pub(crate) combined_params: Vec<SqlArg>,
+    */
+   
+
     
 }
 
@@ -30,18 +43,13 @@ impl<'a> BuildResult<'a> {
             aliased_table,
             any_selected: false,
             distinct: false,
-            join_clause: String::from(""),
-            select_clause: String::from(""),
-            where_clause: String::from(""),
-            order_clause: String::from(""),
-            having_clause: String::from(""),
-            select_params: vec![], // query parameters in select clause, due to sql expr with <param>
-            join_params: vec![],
-            where_params: vec![],
-            having_params: vec![],
-            order_params: vec![],
-            combined_params: vec![],
-        }
+            unmerged_paths: HashSet::new(),
+            selection_stream: Vec::new(),
+            select_sql: Sql::new(),
+            join_sql:Sql::new(),
+            where_sql:Sql::new(),
+            order_sql:Sql::new(),
+       }
    }
     /// Returns true if no field is neither selected nor filtered.
     /* pub fn is_empty(&self) -> bool {
@@ -51,16 +59,16 @@ impl<'a> BuildResult<'a> {
         self.any_selected 
     }
     pub fn push_select(&mut self, s: &str) {
-        if !self.select_clause.trim_end().ends_with(',') {
-            self.select_clause.push(',');
-        }
-        self.select_clause.push_str(s);
+         if !self.select_sql.0.trim_end().ends_with(',') {
+            self.select_sql.0.push(',');
+        } 
+        self.select_sql.push_literal(s);
     }
     pub fn push_join(&mut self, s: &str) {
-        if !self.join_clause.ends_with(' ') {
-            self.join_clause.push(' ');
+        if !self.join_sql.0.ends_with(' ') {
+            self.join_sql.0.push(' ');
         }
-        self.join_clause.push_str(s);
+        self.join_sql.0.push_str(s);
     }  
     
 
@@ -68,31 +76,69 @@ impl<'a> BuildResult<'a> {
        
         s.push_str(" FROM ");
         s.push_str(&self.aliased_table);
-        if !self.join_clause.is_empty() {
+        if !self.join_sql.is_empty() {
             s.push(' ');
-            s.push_str(&self.join_clause);
+            s.push_str(&self.join_sql.0);
         }
-        if !self.where_clause.is_empty() {
+        if !self.where_sql.is_empty() {
             s.push_str(" WHERE ");
-            s.push_str(&self.where_clause);
+            s.push_str(&self.where_sql.0);
         }
-        if !self.having_clause.is_empty() {
-            s.push_str(" HAVING ");
-            s.push_str(&self.having_clause);
-        }
-        if !self.order_clause.is_empty() {
+       
+        if !self.order_sql.is_empty() {
             s.push_str(" ORDER BY ");
-            s.push_str(&self.order_clause);
+            s.push_str(&self.order_sql.0);
         }
     }
   
+    pub fn delete_sql(&self) -> Sql {
+        let n=  self.join_sql.1.len() + self.where_sql.1.len() ;
+        let mut args = Vec::with_capacity(n);
+      
+        args.extend_from_slice(&self.join_sql.1);
+        args.extend_from_slice(&self.where_sql.1);
+
+        let mut stmt = String::from("DELETE");
+        stmt.push_str(&self.aliased_table.trim_start_matches(|c|c != ' ')); // Remove Table type to get only alias
+        self.sql_body(&mut stmt);
+      
+        Sql(stmt,args)
+    }
+
+    pub fn select_sql(&self, modifier: &str, extra: &str) -> Sql {
+       let n=    self.select_sql.1.len() + self.join_sql.1.len() 
+            + self.where_sql.1.len() + self.order_sql.1.len() ;
+        let mut args = Vec::with_capacity(n);
+        args.extend_from_slice(&self.select_sql.1);
+        args.extend_from_slice(&self.join_sql.1);
+        args.extend_from_slice(&self.where_sql.1);
+        args.extend_from_slice(&self.order_sql.1);
+
+        let mut stmt = String::from("SELECT ");
+        if self.distinct {
+            stmt.push_str("DISTINCT ");
+        }
+        if !modifier.is_empty() {
+            stmt.push_str(modifier);
+            stmt.push(' ');
+        }
+        stmt.push_str(&self.select_sql.0);
+        self.sql_body(&mut stmt);
+        if !extra.is_empty() {
+              stmt.push(' ');
+            stmt.push_str(extra);
+        }
+      
+        Sql(stmt,args)
+    }
+
 /// Returns delete SQL statement.
-    pub fn delete_stmt(&self) -> String {
+   /*  pub fn delete_stmt(&self) -> String {
         let mut s = String::from("DELETE");
          s.push_str(&self.aliased_table.trim_start_matches(|c|c != ' ')); // Remove Table type to get only alias
         self.sql_body(&mut s);
         s
-    }
+    } */
 
  /// Returns count SQL statement.
     pub fn count_stmt(&self) -> String {
@@ -118,7 +164,7 @@ impl<'a> BuildResult<'a> {
             s.push_str(modifier);
             s.push(' ');
         }
-        s.push_str(&self.select_clause);
+        s.push_str(&self.select_sql.0);
         self.sql_body(&mut s);
         if !extra.is_empty() {
               s.push(' ');
@@ -128,28 +174,24 @@ impl<'a> BuildResult<'a> {
         s
     }
     
-    pub fn count_params(&self) -> &Vec<SqlArg> {
-        &self.combined_params // TODO
-
-        /* if self.where_params.is_empty() {
-            &self.having_params
-        } else if self.having_params.is_empty() {
-            &self.where_params
-        } else {
-            &self.combined_params
-        } */
+    pub fn count_params(&self) -> Vec<SqlArg> {
+        let n =  self.join_sql.1.len() + self.where_sql.1.len();
+        let mut args = Vec::with_capacity(n);
+        args.extend_from_slice(&self.join_sql.1);
+        args.extend_from_slice(&self.where_sql.1);
+        args
     }
     /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
-    pub fn query_params(&self) -> &Vec<SqlArg> {
-        &self.combined_params
-
-        /* if self.where_params.is_empty() {
-            &self.having_params
-        } else if self.having_params.is_empty() {
-            &self.where_params
-        } else {
-            &self.combined_params
-        } */
+    pub fn query_params(&self) -> Vec<SqlArg> {
+       
+        let n= self.select_sql.1.len() + self.join_sql.1.len() + self.where_sql.1.len() + self.order_sql.1.len();
+        let mut args = Vec::with_capacity(n);
+        args.extend_from_slice(&self.select_sql.1);
+        args.extend_from_slice(&self.join_sql.1);
+        args.extend_from_slice(&self.where_sql.1);
+        args.extend_from_slice(&self.order_sql.1);
+        args
+       
     }
 
     pub(crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {
@@ -172,3 +214,4 @@ impl<'a> BuildResult<'a> {
         clause.push_str(filter);
     }
 }
+

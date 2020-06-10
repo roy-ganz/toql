@@ -1,17 +1,13 @@
 
+use crate::sql_expr::SqlExpr;
 use super::join_options::JoinOptions;
 
-#[derive(Debug, PartialEq)]
-pub enum JoinType {
-    Left,
-    Inner,
-}
+
 
 #[derive(Debug)]
 pub(crate) struct Join {
-    pub(crate) join_type: JoinType,   // LEFT JOIN ...
-    pub(crate) aliased_table: String, // Table t0
-    pub(crate) on_predicate: String,  // ON ..
+    pub(crate) joined_mapper: String,
+    pub(crate) join_expression: SqlExpr,  // INNER JOIN Table ...
+    pub(crate) on_expression: SqlExpr,    // ON ...id = ..table_id
     pub(crate) options: JoinOptions,
-    pub(crate) sql_aux_param_names: Vec<String>, // aux params in ON clause
 }

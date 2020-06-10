@@ -32,7 +32,7 @@ use std::collections::HashMap;
  use crate::sql_builder::sql_builder_error::SqlBuilderError;
 
 use crate::sql::{Sql, SqlArg};
-use crate::parameter::Parameters;
+use crate::parameter::ParameterMap;
 
 pub trait FieldHandler {
     
@@ -43,7 +43,7 @@ pub trait FieldHandler {
     fn build_select(
         &self,
         select: Sql,
-        _aux_params: &Parameters,
+        _aux_params: &ParameterMap,
     ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         Ok(Some(select))
     }
@@ -55,7 +55,7 @@ pub trait FieldHandler {
         &self,
         select: Sql,
         filter: &FieldFilter,
-        aux_params: &Parameters,
+        aux_params: &ParameterMap,
     ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError>;
    
     
@@ -81,45 +81,45 @@ impl FieldHandler for BasicFieldHandler {
         &self,
         mut select: Sql,
         filter: &FieldFilter,
-        _aux_params: &Parameters,
+        _aux_params: &ParameterMap,
     ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         match filter {
-            FieldFilter::Eq(criteria) => Ok(Some((format!("{} = ?", select.0), {
+            FieldFilter::Eq(criteria) => Ok(Some(Sql(format!("{} = ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::Eqn => Ok(Some((format!("{} IS NULL", select.0), select.1))),
-            FieldFilter::Ne(criteria) => Ok(Some((format!("{} <> ?", select.0), {
+            FieldFilter::Eqn => Ok(Some(Sql(format!("{} IS NULL", select.0), select.1))),
+            FieldFilter::Ne(criteria) => Ok(Some(Sql(format!("{} <> ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::Nen => Ok(Some((format!("{} IS NOT NULL", select.0), select.1))),
-            FieldFilter::Ge(criteria) => Ok(Some((format!("{} >= ?", select.0), {
+            FieldFilter::Nen => Ok(Some(Sql(format!("{} IS NOT NULL", select.0), select.1))),
+            FieldFilter::Ge(criteria) => Ok(Some(Sql(format!("{} >= ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::Gt(criteria) => Ok(Some((format!("{} > ?", select.0), {
+            FieldFilter::Gt(criteria) => Ok(Some(Sql(format!("{} > ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::Le(criteria) => Ok(Some((format!("{} <= ?", select.0), {
+            FieldFilter::Le(criteria) => Ok(Some(Sql(format!("{} <= ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::Lt(criteria) => Ok(Some((format!("{} < ?", select.0), {
+            FieldFilter::Lt(criteria) => Ok(Some(Sql(format!("{} < ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::Bw(lower, upper) => Ok(Some((format!("{} BETWEEN ? AND ?", select.0), {
+            FieldFilter::Bw(lower, upper) => Ok(Some(Sql(format!("{} BETWEEN ? AND ?", select.0), {
                 select.1.push(lower.clone());
                 select.1.push(upper.clone());
                 select.1
             }))),
-            FieldFilter::Re(criteria) => Ok(Some((format!("{} RLIKE ?", select.0), {
+            FieldFilter::Re(criteria) => Ok(Some(Sql(format!("{} RLIKE ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),
-            FieldFilter::In(args) => Ok(Some((
+            FieldFilter::In(args) => Ok(Some(Sql(
                 format!(
                     "{} IN ({})",
                     select.0,
@@ -134,7 +134,7 @@ impl FieldHandler for BasicFieldHandler {
                     select.1
                 },
             ))),
-            FieldFilter::Out(args) => Ok(Some((
+            FieldFilter::Out(args) => Ok(Some(Sql(
                 format!(
                     "{} NOT IN ({})",
                     select.0,
@@ -150,7 +150,7 @@ impl FieldHandler for BasicFieldHandler {
                 },
             ))),
             //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
-            FieldFilter::Lk(criteria) => Ok(Some((format!("{} LIKE ?", select.0), {
+            FieldFilter::Lk(criteria) => Ok(Some(Sql(format!("{} LIKE ?", select.0), {
                 select.1.push(criteria.clone());
                 select.1
             }))),

@@ -13,6 +13,7 @@ pub mod mutate;
 pub mod select;
 pub mod sql;
 pub mod to_query;
+pub mod deserialize;
 
 #[macro_use]
 pub mod log_helper;
@@ -27,6 +28,7 @@ pub mod query_parser;
 pub mod sql_builder;
 //pub mod sql_builder_new;
 pub mod sql_expr;
+pub mod sql_expr_parser;
 pub mod alias_translator;
 pub mod parameter;
 

@@ -1,5 +1,7 @@
 
 
+use crate::sql_expr::SqlExpr;
+use crate::parameter::ParameterMap;
 use std::{ collections::HashMap};
 use crate::sql::{Sql, SqlArg};
 
@@ -9,7 +11,7 @@ pub trait JoinHandler {
     fn build_on_predicate(
         &self,
          on_predicate: Sql,
-        _aux_params: &HashMap<String, SqlArg>,
+        _aux_params: &ParameterMap,
     ) -> Result<Sql, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         Ok(on_predicate)
     }

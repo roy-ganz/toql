@@ -179,7 +179,7 @@ pub fn collection_delta_sql<'a, T>(
     updated: &'a [T],
     roles: HashSet<String>,
     sql_mapper_registry: &SqlMapperRegistry,
-    mut alias_translator: &mut AliasTranslator
+    format: AliasFormat
 ) -> Result<
     (
         Option<Sql>,
@@ -208,8 +208,8 @@ where
      
     
      let delete_sql = if delete.is_empty() {None } else {
-         Some(SqlBuilder::new( <T as Mapped>::table_name(), &sql_mapper_registry).with_roles(roles)
-         .build_delete_sql(&crate::to_query::ToQuery::slice_to_query(&delete), "", "", &mut alias_translator)?)
+         Some(SqlBuilder::new( &<T as Mapped>::table_name(), &sql_mapper_registry).with_roles(roles)
+         .build_delete_sql(&crate::to_query::ToQuery::slice_to_query(&delete), "", "", format)?)
      };
 
     Ok((insert_sql, diff_sql, delete_sql))

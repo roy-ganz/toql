@@ -2,15 +2,14 @@
 use super::field_options::FieldOptions;
 use crate::field_handler::FieldHandler;
 use std::sync::Arc;
+use crate::sql_expr::SqlExpr;
 
 #[derive(Debug)]
 pub(crate) struct Field {
     pub(crate) options: FieldOptions,                        // Options
-    pub(crate) filter_type: FilterType,                      // Filter on where or having clause
     pub(crate) handler: Arc<dyn FieldHandler + Send + Sync>, // Handler to create clauses
-    pub(crate) subfields: bool, // Target name has subfields separated by underscore
-    pub(crate) expression: String, // Column name or SQL expression
-    pub(crate) sql_aux_param_names: Vec<String>, //  Extracted from <aux_param>
+    pub(crate) expression: SqlExpr, // Column name or SQL expression
+ 
 }
 
 

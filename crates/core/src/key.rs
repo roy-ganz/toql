@@ -142,7 +142,7 @@ where
         predicate.push(')');
     }
     
-    (predicate, params)
+    Sql(predicate, params)
 }
 
 pub fn predicate_from_columns_sql<K: Key, T>(

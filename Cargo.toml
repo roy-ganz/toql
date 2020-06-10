@@ -15,6 +15,7 @@ toql_mysql = { path = "crates/mysql", version = "0.1", optional = true }
 toql_derive = { path = "crates/derive", version = "0.1" }
 toql_query_builder = { path = "crates/query_builder", version = "0.1" }
 toql_query_parser = { path = "crates/query_parser", version = "0.1" }
+toql_sql_expr_parser = { path = "crates/sql_expr_parser", version = "0.1" }
 
 log = "0.4"
 
@@ -24,7 +25,8 @@ members =  [
     "crates/mysql",
     "crates/derive",
     "crates/query_builder",
-    "crates/query_parser"
+    "crates/query_parser",
+    "crates/sql_expr_parser"
 ]
 
 [features]

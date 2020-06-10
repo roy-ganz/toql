@@ -45,7 +45,7 @@ impl PredicateHandler for DefaultPredicateHandler {
         _aux_params: &HashMap<String, SqlArg>,
     ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
        // Wrap in parens
-        Ok(Some((format!("({})", predicate.0),predicate.1)))
+        Ok(Some(Sql(format!("({})", predicate.0),predicate.1)))
     }
    
 

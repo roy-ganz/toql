@@ -4,11 +4,13 @@
 //! load the full dependency tree.
 //!
 /// A registry that holds mappers.
+use crate::query::field_path::FieldPath;
 use crate::alias::AliasFormat;
 use crate::sql_mapper::{SqlMapper};
 use crate::sql_mapper::mapped::Mapped;
 use crate::field_handler::FieldHandler;
 use std::collections::HashMap;
+use heck::MixedCase;
 
 #[derive(Debug)]
 pub struct SqlMapperRegistry {
@@ -19,11 +21,20 @@ impl SqlMapperRegistry {
     pub fn new() -> SqlMapperRegistry {
         Self::with_alias_format(AliasFormat::Canonical)
     }
+    pub fn get(&self, name: &str) -> Option<&SqlMapper> {
+        self.mappers.get(name)
+    }
+    
     pub fn with_alias_format(alias_format: AliasFormat) -> SqlMapperRegistry {
         SqlMapperRegistry {
             mappers: HashMap::new(),
             alias_format,
         }
+    }
+    pub fn insert(&mut self, mapper: SqlMapper) 
+    {
+        // Mixed case corresponds to toql path
+        self.mappers.insert(mapper.table_name.to_mixed_case(), mapper);
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> String {
       let now = std::time::Instant::now();

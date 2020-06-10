@@ -175,16 +175,19 @@ impl Field {
         self
     }
 
-    pub fn basename(&self) -> &str {
-        let i = self.name.rfind('_').unwrap_or(0);
-        &self.name[i..]
-    }
-    pub fn path(&self) -> FieldPath {
-        let i = self.name.rfind('_').unwrap_or(0);
+   /*  pub fn basename(&self) -> &str {
+        match self.name.rfind('_'){
+            Some(i) => &self.name[i+1..],
+            None => &self.name
+        }
+    } */
+   /*  pub fn path(&self) -> FieldPath {
+        //let i = self.name.rfind('_').unwrap_or(0);
         
-        FieldPath::from(&self.name[0..i])
+        //FieldPath::from(&self.name[0..i])
+        FieldPath::from(&self.name)
 
-    }
+    } */
 
 }
 

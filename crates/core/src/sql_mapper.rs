@@ -36,35 +36,36 @@ pub(crate) mod join;
 pub(crate) mod predicate_options;
 pub(crate) mod predicate;
 pub(crate) mod mapped;
-
+pub(crate) mod merge;
 
 use heck::MixedCase;
+
 use crate::sql_mapper::predicate_options::PredicateOptions;
 use crate::sql_mapper::join_options::JoinOptions;
-use crate::sql_mapper::join::JoinType;
+
 use crate::sql_mapper::field_options::FieldOptions;
 use crate::sql_mapper::mapped::Mapped;
 use crate::sql_mapper::join::Join;
+use crate::sql_mapper::merge::Merge;
 use crate::sql_mapper::predicate::Predicate;
-use crate::sql_mapper::field::{Field, FilterType};
+use crate::sql_mapper::field::{Field};
 use crate::predicate_handler::{PredicateHandler, DefaultPredicateHandler};
-use crate::alias::AliasFormat;
+
 
 use std::collections::HashMap;
-use std::collections::HashSet;
+
 use std::fmt;
 use std::sync::Arc;
 use crate::field_handler::{FieldHandler, BasicFieldHandler};
-use crate::join_handler::{JoinHandler, DefaultJoinHandler};
-use crate::sql::SqlArg;
 use crate::sql_expr::SqlExpr;
-use crate::error::{Result, ToqlError};
+
 
 
 #[derive(Debug)]
 pub enum DeserializeType {
     Field(String), // Toql fieldname
     Join(String),  // Toql join path
+    Merge(String),  // Toql merge path
     //Embedded
 }
 
@@ -176,6 +177,7 @@ impl SqlMapper {
             table_name: sql_table_name.to_string(),
             canonical_table_alias: sql_table_name.to_mixed_case(),
             joins: HashMap::new(),
+            merges: HashMap::new(),
             fields: HashMap::new(),
             predicates: HashMap::new(),
             deserialize_order: Vec::new(),
@@ -188,28 +190,9 @@ impl SqlMapper {
     pub fn from_mapped<M: Mapped>() -> SqlMapper 
     {
          Self::from_mapped_with_handler::<M, _>(BasicFieldHandler::new())
-
-        //Self::from_mapped_with_::<M>(&M::table_alias(), AliasFormat::Canonical)
+     
     }
-     /// Create a new mapper from a struct that implements the Mapped trait.
-    /// The alias format defines what the table aliases in Sql look like.
-    /* pub fn from_mapped_with_alias<M: Mapped>(
-        sql_alias: &str,
-        alias_format: AliasFormat,
-    ) -> SqlMapper // Create new SQL Mapper and map entity fields
-    {
-        let s = format!("{} {}", M::table_name(), sql_alias);
-        let mut m = Self::with_alias_format(
-            if sql_alias.is_empty() {
-                M::table_name()
-            } else {
-                s
-            },
-           
-        );
-        M::map(&mut m, "", &M::table_alias());
-        m
-    } */
+    
     pub fn from_mapped_with_handler<M: Mapped, H>(
         handler: H,
     ) -> SqlMapper
@@ -226,7 +209,14 @@ impl SqlMapper {
         m
     }
 
-    
+    pub(crate) fn join(&self, name:&str) ->Option<&Join> {
+        self.joins.get(name)
+    }
+    pub(crate) fn field(&self, name:&str) ->Option<&Field> {
+        self.fields.get(name)
+    }
+
+
     /* /// Maps all fields from a struct as a joined dependency.
     /// Example: To map for a user an `Address` struct that implements `Mapped`
     /// ``` ignore
@@ -282,7 +272,7 @@ impl SqlMapper {
             expression: sql_expression,
            // sql_aux_param_names: sql_aux_param_names,
         };
-        self.deserialize_order.push(MapperType::Field(toql_field.to_string()));
+        self.deserialize_order.push(DeserializeType::Field(toql_field.to_string()));
         self.fields.insert(toql_field.to_string(), t);
         self
     }
@@ -396,7 +386,7 @@ impl SqlMapper {
           //  sql_aux_param_names,
         };
 
-        self.deserialize_order.push(MapperType::Field(toql_field.to_string()));
+        self.deserialize_order.push(DeserializeType::Field(toql_field.to_string()));
         self.fields.insert(toql_field.to_string(), t);
 
         self
@@ -407,35 +397,39 @@ impl SqlMapper {
         &'a mut self,
         toql_path: &str,
          joined_mapper: &str,
-        join_expression: SqlExpr
+        join_expression: SqlExpr,
+        on_expression: SqlExpr
     ) -> &'a mut Self {
         self.map_join_with_options(
             toql_path,
             joined_mapper,
             join_expression,
+            on_expression,
             JoinOptions::new(),
         )
     }
-    pub fn map_join_with_options<'a, S, T>(
+    pub fn map_join_with_options<'a, S>(
         &'a mut self,
         toql_path: S,
-        joined_mapper: T,
+        joined_mapper: &str,
         join_expression: SqlExpr,
+        on_expression: SqlExpr,
         options: JoinOptions,
     ) -> &'a mut Self 
-    where S: Into<String> + Clone, T: Into<String>
+    where S: Into<String> + Clone
     {
       
              self.joins.insert(
             toql_path.clone().into(),
             Join {
-               joined_mapper: joined_mapper.into(),
+               joined_mapper: joined_mapper.to_mixed_case(),
                join_expression,
+               on_expression,
                 options,
             },
         );
 
-        self.deserialize_order.push(MapperType::Join( toql_path.into()));
+        self.deserialize_order.push(DeserializeType::Join( toql_path.into()));
 
         /* // Precalculate tree information for quicker join construction
         // Build root joins and store child joins to parent joins

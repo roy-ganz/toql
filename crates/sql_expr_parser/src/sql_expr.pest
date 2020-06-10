@@ -1,0 +1,15 @@
+quoted = ${  "'" ~ ( "''" | (!"'" ~ ANY) )* ~  "'" }
+
+name =  @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*   }
+
+other_alias = @{"..."}
+self_alias = @{".."}
+
+
+aux_param = @{"<" ~ name ~ ">"}
+
+literal = { ANY }
+
+expr = { ( aux_param |quoted | other_alias | self_alias |literal) ~  ( aux_param |quoted |other_alias | self_alias |literal)+}
+query = { SOI ~ expr? ~ EOI }
+

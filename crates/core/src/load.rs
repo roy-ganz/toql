@@ -1,5 +1,5 @@
 use crate::query::Query;
-use crate::query::selection::Selections;
+use crate::query::selection::SelectionPool;
 use crate::sql_mapper_registry::SqlMapperRegistry;
 //use crate::sql_builder::wildcard_scope::WildcardScope;
 use std::result::Result;
@@ -45,25 +45,25 @@ pub trait Load<T: crate::key::Keyed> {
         page: Option<Page>,
     ) -> Result<(Vec<T>, Option<(u32, u32)>), Self::Error>;
 
-    /// Build SQL for a toql path. This is used by the Toql derive to load a collection (merged entities). 
+    /* /// Build SQL for a toql path. This is used by the Toql derive to load a collection (merged entities). 
     /// Collections are referenced in the Toql query language throught a field with a path, say `user_addresses`.
     /// This function can now be used to build a full SQL statement for the collection `addresses`.
     fn build_path(
         &mut self,
         path: &str,
         query: &crate::query::Query<T>,
-        selection: &Selections,
+        selection: &SelectionPool,
         additional_columns: &[String]
-    ) -> Result<Option<crate::sql::Sql>, Self::Error>;
+    ) -> Result<Option<crate::sql::Sql>, Self::Error>; */
 
     /// Loads all collections for a given struct. This is used by the Toql derive
     /// and issues as many select statements as there merged entities.
-    fn load_dependencies(
+    fn load_merges(
         &mut self,
         _entities: &mut Vec<T>,
         _entity_keys: &Vec<T::Key>,
         _query: &crate::query::Query<T>,
-        _selection: &Selections
+        _selection: &SelectionPool
     ) -> Result<(), Self::Error> {
         Ok(())
     }

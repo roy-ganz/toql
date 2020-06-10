@@ -21,6 +21,6 @@ extern crate pest_derive;
 
 
 #[derive(Parser)]
-#[grammar = "toql.pest"]
+#[grammar = "sql_expr.pest"]
 pub struct PestSqlExprParser;
 

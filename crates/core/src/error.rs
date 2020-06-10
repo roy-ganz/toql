@@ -2,7 +2,7 @@
 //!
 //! ToqlError represents all library errors and wraps errors from the Pest parser and the optional database crate.
 //!
-use toql_query_parser::Rule;
+
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::sql_mapper::SqlMapperError;
 use std::fmt;
@@ -26,7 +26,9 @@ pub enum ToqlError {
     /// Many records found, when exactly one was expected.
     NotUnique,
     /// The query parser encountered a syntax error.
-    QueryParserError(PestError<Rule>),
+    QueryParserError(PestError<toql_query_parser::Rule>),
+    /// The sql expression parser encountered a syntax error.
+    SqlExprParserError(PestError<toql_sql_expr_parser::Rule>),
     /// The query encoding was not valid UTF-8.
     EncodingError(std::str::Utf8Error),
     /// No mapper was found for a given struct. Contains the struct name.
@@ -55,9 +57,14 @@ impl From<SqlMapperError> for ToqlError {
     }
 }
 
-impl From<PestError<Rule>> for ToqlError {
-    fn from(err: PestError<Rule>) -> ToqlError {
+impl From<PestError<toql_query_parser::Rule>> for ToqlError {
+    fn from(err: PestError<toql_query_parser::Rule>) -> ToqlError {
         ToqlError::QueryParserError(err)
+    }
+}
+impl From<PestError<toql_sql_expr_parser::Rule>> for ToqlError {
+    fn from(err: PestError<toql_sql_expr_parser::Rule>) -> ToqlError {
+        ToqlError::SqlExprParserError(err)
     }
 }
 
@@ -73,6 +80,7 @@ impl fmt::Display for ToqlError {
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),
+            ToqlError::SqlExprParserError(ref e) => e.fmt(f),
             ToqlError::DeserializeError(ref n, ref e) => {
                 write!(f, "unable to deserialize field `{}` because: {}", n, e)
             }
