@@ -16,6 +16,15 @@ impl<'a> FieldPath<'a> {
     pub fn from( path: &'a str) -> Self {
         FieldPath(path)
     }
+
+    pub fn relative_path( &self, root_path: &str) -> Option<FieldPath> {
+        if self.0.starts_with(root_path) {
+            let t = self.0.trim_start_matches(root_path);
+            Some( FieldPath::from(t.trim_start_matches("_")))
+        } else {
+            None
+        }
+    }
    
 
     pub fn ancestors(&self) -> Ancestor {
@@ -26,14 +35,7 @@ impl<'a> FieldPath<'a> {
         self.0
     }
 
-  /*   pub fn basename(&self) -> &str {
-        if let Some(pos) = self.0.rfind('_') {
-            &self.0[pos+1..]
-        } else {
-            &self.0
-        }
-    } */
-
+ 
     pub fn ancestor(&self) -> Option<FieldPath> {
         if let Some(pos) = self.0.rfind('_') {
             Some(FieldPath::from(&self.0[..pos]))
@@ -64,6 +66,33 @@ impl<'a> FieldPath<'a> {
     pub fn children(&self) -> Children {
         Children{pos: 0, path: self.0}
     } 
+
+    pub fn step(&self) -> Step {
+        Step{pos: 0,path: self.0}
+    } 
+}
+
+pub struct Step<'a> {
+    pos: usize,
+    path: &'a str
+}
+
+/// Iterator to step down
+/// Field without path has no descendents.
+/// user_address_country_id -> user, user_address, user_address_country, user_address_country_id
+impl<'a> Iterator for Step<'a> {
+    type Item = FieldPath<'a>;
+    fn next(&mut self) -> Option<FieldPath<'a>>{
+
+       let p =  self.path[self.pos..].find('_');
+       
+       match p {
+        Some(i) => Some((FieldPath::from(&self.path[..i]),self.pos = i + 1).0),
+        None  if self.pos != self.path.len() =>  Some((FieldPath::from(&self.path),self.pos = self.path.len()).0),
+        _ => None
+    }
+
+    }
 }
 
 
@@ -74,7 +103,7 @@ pub struct Ancestor<'a> {
 
 /// Iterator to yield ancestors
 /// Field without path has no descendents.
-/// user_address_country_id -> user_address_country, user_address, user, id
+/// user_address_country_id -> user_address_country_id, user_address_country, user_address, user
 impl<'a> Iterator for Ancestor<'a> {
     type Item = FieldPath<'a>;
     fn next(&mut self) -> Option<FieldPath<'a>>{
@@ -102,7 +131,7 @@ impl<'a> Iterator for Descendents<'a> {
 
        let p =  self.path[self.pos..].find('_');
        match p {
-           Some(i) => { (Some( FieldPath::from(&self.path[self.pos..i-1])), self.pos = i).0},
+           Some(i) => { (Some( FieldPath::from(&self.path[self.pos..i])), self.pos = i + 1).0},
            None if self.pos != self.path.len() => { (Some(FieldPath::from(&self.path[self.pos..])), self.pos = self.path.len()).0},
            _ => None
        }
@@ -155,5 +184,10 @@ impl<'a> Iterator for Children<'a> {
     }
 }
 
+impl<'a> ToString for FieldPath<'a> {
 
+    fn to_string(&self) -> String { 
+        self.0.to_string()
+    }
+}
 

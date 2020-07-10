@@ -37,8 +37,8 @@
 
 pub(crate) mod build_context;
 pub(crate) mod build_result;
-pub(crate) mod sql_builder_error;
 pub(crate) mod path_tree;
+pub(crate) mod sql_builder_error;
 pub(crate) mod sql_with_placeholders;
 
 /* use crate::sql_builder::eval_query::eval_query;
@@ -49,63 +49,62 @@ use crate::sql_builder::construct::build_select_clause;
 use crate::sql_builder::construct::build_ordering;
 use crate::sql_builder::sql_target_data::SqlTargetData; */
 
-
-use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::error::{Result,ToqlError};
+use super::sql_builder::build_context::BuildContext;
+use super::sql_builder::build_result::BuildResult;
+use crate::error::{Result, ToqlError};
 use crate::query::assert_roles;
 use crate::query::concatenation::Concatenation;
 use crate::query::field_order::FieldOrder;
 use crate::query::Query;
 use crate::query::{field_filter::FieldFilter, QueryToken};
-use super::sql_builder::build_result::BuildResult;
-use super::sql_builder::build_context::BuildContext;
+use crate::sql_builder::sql_builder_error::SqlBuilderError;
+use crate::sql_mapper::field::Field as MapperField;
 use crate::sql_mapper::join::Join;
 use crate::sql_mapper::SqlMapper;
-use crate::sql_mapper::field::Field as MapperField;
 
+use crate::query::field::Field;
+use heck::MixedCase;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
-use crate::query::field::Field;
-use heck::MixedCase;
 
 use self::sql_with_placeholders::SqlOrPlaceholder;
 use crate::sql_mapper_registry::SqlMapperRegistry;
 
-use crate::sql::{Sql, SqlArg};
 use crate::alias::AliasFormat;
 use crate::alias_translator::AliasTranslator;
+use crate::sql::{Sql, SqlArg};
 use crate::{parameter::ParameterMap, query::field_path::FieldPath};
 //use wildcard_scope::WildcardScope;
 use path_tree::PathTree;
+use std::borrow::Cow;
+use crate::sql_expr::SqlExpr;
 
-
-
+enum MapperOrMerge<'a> {
+    Mapper(&'a SqlMapper),
+    Merge(String),
+}
 
 /// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder<'a> {
-
     root_mapper: String,
     sql_mapper_registry: &'a SqlMapperRegistry,
     roles: HashSet<String>,
     aux_params: HashMap<String, SqlArg>, // Aux params used for all queries with this builder instance, contains typically config or auth data
-     
-    extra_joins: HashSet<String>,          // Use this joins
-  //  alias_translator: &'a mut AliasTranslator
-      
-}
 
+    extra_joins: HashSet<String>, // Use this joins
+                                  //  alias_translator: &'a mut AliasTranslator
+}
 
 impl<'a> SqlBuilder<'a> {
     /// Create a new SQL Builder
     pub fn new(root_mapper: &'a str, sql_mapper_registry: &'a SqlMapperRegistry) -> Self {
-      
-       SqlBuilder {
-           root_mapper: root_mapper.to_mixed_case(),
-           sql_mapper_registry,
-           roles :HashSet::new(),
-           aux_params: HashMap::new(),
-           extra_joins:HashSet::new(),
+        SqlBuilder {
+            root_mapper: root_mapper.to_mixed_case(),
+            sql_mapper_registry,
+            roles: HashSet::new(),
+            aux_params: HashMap::new(),
+            extra_joins: HashSet::new(),
         }
     }
 
@@ -113,272 +112,513 @@ impl<'a> SqlBuilder<'a> {
         self.alias_translator = alia;
         self
     } */
-   /*  pub fn with_alias_format(mut self, alias_format: AliasFormat) ->  Self {
+    /*  pub fn with_alias_format(mut self, alias_format: AliasFormat) ->  Self {
         self.alias_translator = &mut AliasTranslator::new(alias_format);
         self
     } */
-   
-    pub fn with_roles(mut self, roles: HashSet<String>) ->  Self {
+
+    pub fn with_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
         self
     }
-   
-        
+
     pub fn with_extra_join<T: Into<String>>(mut self, join: T) -> Self {
         self.extra_joins.insert(join.into());
         self
     }
 
+    pub fn join_sql(&self, field_path: &str, format: AliasFormat) -> Result<Sql> {
     
+            let mut context = BuildContext::new(AliasTranslator::new(format));
+            let mut sql = Sql::new(); 
+            let mut current_mapper = self.root_mapper()?;
+            let alias = std::iter::once(FieldPath::from("")).chain(FieldPath::from(field_path).descendents());
+            let canonical_table_alias = self.root_mapper()?.canonical_table_alias;
+            let p = [&self.aux_params];
+            let aux_params = ParameterMap::new(&p);
 
+            for d in FieldPath::from(field_path).step() {
+                if let Some(j) = current_mapper.join(d.as_str()) {
 
-    pub fn build_delete_sql<M>(&mut self,  query: &Query<M>, _modified: &str, _extra: &str, format:AliasFormat ) -> Result<Sql> {
-                      
+                    let self_alias = context
+                    .alias_translator
+                    .translate(alias.next().unwrap_or("").prefix(canonical_table_alias);
+
+                    current_mapper = self
+                    .sql_mapper_registry
+                    .get(&j.joined_mapper)
+                    .ok_or(ToqlError::MapperMissing(j.joined_mapper.to_string()))?;
+
+                    let other_alias = context
+                    .alias_translator
+                    .translate(&current_mapper.canonical_table_alias);
+
+                  
+                    let join_sql = j.join_expression.resolve(&self_alias, Some(&other_alias), &aux_params)?;
+                   sql.append(&join_sql);
+                } 
+                else if let Some(m) = current_mapper.merge(d.as_str()) {
+                    let self_alias = context
+                    .alias_translator
+                    .translate(&current_mapper.canonical_table_alias);
+                    current_mapper = self
+                    .sql_mapper_registry
+                    .get(&m.merged_mapper)
+                    .ok_or(ToqlError::MapperMissing(m.merged_mapper.to_string()))?;
+
+                    let other_alias = context
+                    .alias_translator
+                    .translate(&current_mapper.canonical_table_alias);
+
+                    let merge_sql = m.merge_predicate.resolve(&self_alias, Some(&other_alias), &aux_params)?;
+                    sql.append(&merge_sql);
+                }
+                else  {
+                    return Err(ToqlError::MapperMissing(d.as_str().to_string()));
+                }
+
+            }
+            Ok(sql)
+    }
+
+    pub fn build_delete_sql<M>(
+        &mut self,
+        query: &Query<M>,
+        _modified: &str,
+        _extra: &str,
+        format: AliasFormat,
+    ) -> Result<Sql> {
         let mut context = BuildContext::new(AliasTranslator::new(format));
-        let root_mapper = self.sql_mapper_registry.mappers.get(&self.root_mapper)
-                .ok_or(ToqlError::MapperMissing(self.root_mapper.to_owned()))?;
-        let alias_table = context.alias_translator.translate(&root_mapper.canonical_table_alias);
+        let root_mapper = self
+            .sql_mapper_registry
+            .mappers
+            .get(&self.root_mapper)
+            .ok_or(ToqlError::MapperMissing(self.root_mapper.to_owned()))?;
+        let alias_table = context
+            .alias_translator
+            .translate(&root_mapper.canonical_table_alias);
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
         let mut result = BuildResult::new(&aliased_table);
 
         self.build_where_clause(&query, &mut context, &mut result)?;
         self.build_join_clause(&mut context, &mut result)?;
-             
+
         Ok(result.delete_sql())
     }
 
-    pub fn build_select_sql<M>(&mut self,  query: &Query<M>, modified: &str, extra: &str, format:AliasFormat ) -> Result<(Sql,impl Iterator<Item = bool>, HashSet<String>)> {
-                      
+    pub fn build_select_sql<M>(
+        &mut self,
+        query_root_path: &str,
+        query: &Query<M>,
+        modified: &str,
+        extra: &str,
+        format: AliasFormat,
+    ) -> Result<(Sql, impl Iterator<Item = bool>, HashSet<String>)> {
         let mut context = BuildContext::new(AliasTranslator::new(format));
-        let root_mapper = self.sql_mapper_registry.mappers.get(&self.root_mapper)
-                .ok_or(ToqlError::MapperMissing(self.root_mapper.to_owned()))?;
-        let alias_table = context.alias_translator.translate(&root_mapper.canonical_table_alias);
+        context.query_root_path = query_root_path.to_string();
+        let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
+        let alias_table = context
+            .alias_translator
+            .translate(&root_mapper.canonical_table_alias);
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
         let mut result = BuildResult::new(&aliased_table);
-       
-        
+
         self.build_where_clause(&query, &mut context, &mut result)?;
         self.build_select_clause(&query, &mut context, &mut result)?;
         self.build_join_clause(&mut context, &mut result)?;
-       
-        Ok((result.select_sql(modified, extra), result.selection_stream.into_iter(), result.unmerged_paths))
+
+        Ok((
+            result.select_sql(modified, extra),
+            result.selection_stream.into_iter(),
+            result.unmerged_paths,
+        ))
     }
 
-
     fn mapper_for_path(&self, path: &Option<FieldPath>) -> Result<&SqlMapper> {
-
-        let mut current_mapper = self.sql_mapper_registry
+        let mut current_mapper = self
+            .sql_mapper_registry
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
-             
-            if let Some(path) = path {
-                for p in path.children() {
-                    let join = current_mapper.joins.get(p.as_str()).ok_or(ToqlError::MapperMissing(p.as_str().to_string()))?;
-                    current_mapper = self.sql_mapper_registry.get(&join.joined_mapper).ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
+
+        if let Some(path) = path {
+            for p in path.children() {
+                if let Some(join) = current_mapper.joins.get(p.as_str()) {
+                    current_mapper = self
+                        .sql_mapper_registry
+                        .get(&join.joined_mapper)
+                        .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
+                } else {
+                    //else if let Some(merge) = current_mapper.merges.get(p.as_str()){
+                    /* current_mapper = self.sql_mapper_registry.get(&merge.merged_mapper).ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
+                    } else { */
+                    return Err(ToqlError::MapperMissing(p.as_str().to_string()));
                 }
             }
-            
+        }
+
         Ok(current_mapper)
     }
 
-    fn build_join_clause(&self, mut build_context: &mut BuildContext, result: &mut BuildResult)-> Result<()> {
+    fn mapper_or_merge_for_path(
+        &'a self,
+        path: &'a Option<FieldPath>,
+    ) -> Result<MapperOrMerge<'a>> {
+        let mut current_mapper = self
+            .sql_mapper_registry
+            .get(&self.root_mapper)
+            .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
 
-            // Build join tree for all selected paths
-            // This allows to nest joins properly
-            // Eg [user] = [user_address, user_folder]
-            // [user_folder] = [ user_folder_owner]
-            // [user_folder_owner] =[]
-            // [user address] =[]
-           
-           let mut join_tree = PathTree::new();
-
-            for selectect_path in &build_context.joined_paths {
-                let absolute_path= format!("{}_{}", self.root_mapper, selectect_path);
-                join_tree.insert(&FieldPath::from(&absolute_path));
+        if let Some(path) = path {
+            for (p, a) in path.children().zip(path.step()) {
+                dbg!(&a);
+                if current_mapper.merges.contains_key(p.as_str()) {
+                    return Ok(MapperOrMerge::Merge(a.to_string()));
+                }
+                let join = current_mapper
+                    .joins
+                    .get(p.as_str())
+                    .ok_or(ToqlError::MapperMissing(p.as_str().to_string()))?;
+                current_mapper = self
+                    .sql_mapper_registry
+                    .get(&join.joined_mapper)
+                    .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
             }
-            dbg!(&join_tree);
-            
-            // Build join 
-            for r in join_tree.roots() {
-              let sql = &self.resolve_join(&FieldPath::from(&r), &join_tree, &mut build_context)?;
-              result.join_sql.append(sql);
-              result.join_sql.pop_literals(1); // Remove trailing whitespace
-            }
+        }
 
-            Ok(())
-    } 
-    fn resolve_join(&self, canonical_path: &FieldPath, join_tree: &PathTree, build_context : &mut BuildContext) -> Result<Sql> {
-        
-      //  let mapper_name= canonical_path.ancestor().unwrap_or(canonical_path.basename());
-      
-       let mut join_sql = Sql::new();
-      
-        for nodes in join_tree.nodes(canonical_path.as_str()){
+        Ok(MapperOrMerge::Mapper(current_mapper))
+    }
+
+    fn build_join_clause(
+        &self,
+        mut build_context: &mut BuildContext,
+        result: &mut BuildResult,
+    ) -> Result<()> {
+        // Build join tree for all selected paths
+        // This allows to nest joins properly
+        // Eg [user] = [user_address, user_folder]
+        // [user_folder] = [ user_folder_owner]
+        // [user_folder_owner] =[]
+        // [user address] =[]
+
+        let mut join_tree = PathTree::new();
+
+        for selectect_path in &build_context.joined_paths {
+            let absolute_path = format!("{}_{}", self.root_mapper, selectect_path);
+            join_tree.insert(&FieldPath::from(&absolute_path));
+        }
+        dbg!(&join_tree);
+
+        // Build join
+        for r in join_tree.roots() {
+            let sql = &self.resolve_join(&FieldPath::from(&r), &join_tree, &mut build_context)?;
+            result.join_sql.append(sql);
+            result.join_sql.pop_literals(1); // Remove trailing whitespace
+        }
+
+        Ok(())
+    }
+    fn resolve_join(
+        &self,
+        canonical_path: &FieldPath,
+        join_tree: &PathTree,
+        build_context: &mut BuildContext,
+    ) -> Result<Sql> {
+        //  let mapper_name= canonical_path.ancestor().unwrap_or(canonical_path.basename());
+
+        let mut join_sql = Sql::new();
+
+        for nodes in join_tree.nodes(canonical_path.as_str()) {
             for n in nodes {
                 let mapper = self.mapper_from_path(canonical_path)?;
-                
+
                 let (basename, _) = FieldPath::split_basename(n);
-                
-                 let join = mapper.join(basename)
-                .ok_or(SqlBuilderError::JoinMissing(n.to_string()))?; 
+
+                let join = mapper
+                    .join(basename)
+                    .ok_or(SqlBuilderError::JoinMissing(n.to_string()))?;
 
                 let p = [&self.aux_params, &join.options.aux_params];
                 let aux_params = ParameterMap::new(&p);
 
-                let self_alias = build_context.alias_translator.translate(canonical_path.as_str());
+                let self_alias = build_context
+                    .alias_translator
+                    .translate(canonical_path.as_str());
                 let other_alias = build_context.alias_translator.translate(n.as_str());
-                let sql = join.join_expression.resolve(&self_alias, Some(&other_alias), &aux_params)?;
+                let sql =
+                    join.join_expression
+                        .resolve(&self_alias, Some(&other_alias), &aux_params)?;
                 join_sql.append(&sql);
-               
-                let sql = self.resolve_join(&FieldPath::from(n.as_str()), join_tree, build_context)?;
+
+                let sql =
+                    self.resolve_join(&FieldPath::from(n.as_str()), join_tree, build_context)?;
                 if !sql.is_empty() {
                     join_sql.push_literal(" (");
                     join_sql.append(&sql);
                     join_sql.push_literal(")");
                 }
-                               
+
                 join_sql.push_literal(" ON (");
 
-                let on_sql= join.on_expression.resolve(&self_alias, Some(&other_alias), &aux_params)?;
-               
-               let sql = match &join.options.join_handler {
+                let on_sql =
+                    join.on_expression
+                        .resolve(&self_alias, Some(&other_alias), &aux_params)?;
+
+                let sql = match &join.options.join_handler {
                     Some(handler) => handler.build_on_predicate(on_sql, &aux_params)?,
-                    None => on_sql
+                    None => on_sql,
                 };
-                join_sql.append(&sql); 
-               
+                join_sql.append(&sql);
+
                 join_sql.push_literal(") ");
             }
         }
-       
+
         Ok(join_sql)
     }
-   
-    fn mapper_from_path(&self, canonical_path: &FieldPath) -> Result<&SqlMapper> {
-        
-            //let path = canonical_path.trim_start_matches(self.root_path);
-            let path= canonical_path;
-            let mut mapper :Option<&SqlMapper>= None;
-            for c in path.children() {
-                mapper= Some(self.sql_mapper_registry.get(c.as_str())
-                    .ok_or(ToqlError::MapperMissing(c.as_str().to_string()))?);
-            }
 
-           mapper.ok_or(ToqlError::MapperMissing("".to_ascii_lowercase()))
+    fn mapper_from_path(&self, canonical_path: &FieldPath) -> Result<&SqlMapper> {
+        //let path = canonical_path.trim_start_matches(self.root_path);
+        let path = canonical_path;
+        let mut mapper: Option<&SqlMapper> = None;
+        for c in path.children() {
+            mapper = Some(
+                self.sql_mapper_registry
+                    .get(c.as_str())
+                    .ok_or(ToqlError::MapperMissing(c.as_str().to_string()))?,
+            );
         }
-      
-    fn build_where_clause<M>(&mut self, query: &Query<M>, build_context: &mut BuildContext, result: &mut BuildResult) -> Result<()>{
-        let p= [&self.aux_params, &query.aux_params];
+
+        mapper.ok_or(ToqlError::MapperMissing("".to_ascii_lowercase()))
+    }
+
+    fn build_where_clause<M>(
+        &mut self,
+        query: &Query<M>,
+        build_context: &mut BuildContext,
+        result: &mut BuildResult,
+    ) -> Result<()> {
+        let p = [&self.aux_params, &query.aux_params];
         let aux_params = ParameterMap::new(&p);
 
-        for token in &query.tokens{
-
+        println!("token: {:?}", &query.tokens);
+        for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
+                    let (basename, path) = FieldPath::split_basename(&field.name);
 
-                    // Returns error for inexistant field
-                
-                    let (basename, path)= FieldPath::split_basename(&field.name);
-                    let mapper =  self.mapper_for_path(&path)?;
-                    let mapped_field =  mapper.fields.get(basename)
-                        .ok_or(SqlBuilderError::FieldMissing(basename.to_string()))?;
-
-                    // Continue if field is not filtered
-                    if field.filter.is_none() {
+                    // skip if field path is not relative to root path
+                    if !Self::root_contains(&build_context.query_root_path, &path) {
                         continue;
                     }
 
-                    if let Some(role) = self.missing_role( &mapped_field.options.roles/*mapper.load_roles(field)*/) {
-                            return Err (SqlBuilderError::RoleRequired(role.to_string()).into());
-                    }
-                    
-                    let alias = build_context.alias_translator.translate(&mapper.canonical_table_alias);
-                    let sql = mapped_field.expression.resolve(&alias, None, &aux_params)?;
+                    let relative_path = path
+                        .as_ref()
+                        .and_then(|p| p.relative_path(&build_context.query_root_path));
 
-                    let select_sql = mapped_field
-                                        .handler
-                                        .build_select(
-                                            sql,
-                                            &aux_params,
-                                        )?
-                                        .unwrap_or(Sql("NULL".to_string(), vec![]));
+                    let mapper_or_merge = self.mapper_or_merge_for_path(&relative_path)?;
 
-                    // Does filter apply
-                    if let Some(sql) = mapped_field.handler
-                                            .build_filter(select_sql, field.filter.as_ref().unwrap(), &aux_params)?
-                    {
-                        result.where_sql.append(&sql);
+                    match mapper_or_merge {
+                        MapperOrMerge::Mapper(mapper) => {
+                            let mapped_field = mapper
+                                .fields
+                                .get(basename)
+                                .ok_or(SqlBuilderError::FieldMissing(basename.to_string()))?;
 
-                        if let (_, Some(path)) = FieldPath::split_basename(&field.name){
-                            build_context.joined_paths.insert(path.as_str().to_string());
+                            // Continue if field is not filtered
+                            if field.filter.is_none() {
+                                continue;
+                            }
+
+                            if let Some(role) = self.missing_role(
+                                &mapped_field.options.roles, /*mapper.load_roles(field)*/
+                            ) {
+                                return Err(SqlBuilderError::RoleRequired(role.to_string()).into());
+                            }
+                            let canonical_alias = match &relative_path {
+                                Some(p) => Cow::Owned(format!(
+                                    "{}_{}",
+                                    &self.root_mapper()?.canonical_table_alias,
+                                    p.as_str()
+                                )),
+                                None => Cow::Borrowed(&mapper.canonical_table_alias),
+                            };
+                            let alias = build_context.alias_translator.translate(&canonical_alias);
+                            let sql = mapped_field.expression.resolve(&alias, None, &aux_params)?;
+
+                            let select_sql = mapped_field
+                                .handler
+                                .build_select(sql, &aux_params)?
+                                .unwrap_or(Sql("NULL".to_string(), vec![]));
+
+                            // Does filter apply
+                            if let Some(sql) = mapped_field.handler.build_filter(
+                                select_sql,
+                                field.filter.as_ref().unwrap(),
+                                &aux_params,
+                            )? {
+                                result.where_sql.append(&sql);
+
+                                if let (_, Some(path)) = FieldPath::split_basename(&field.name) {
+                                    build_context.joined_paths.insert(path.as_str().to_string());
+                                }
+                            }
+                        }
+                        MapperOrMerge::Merge(merge_path) => {
+                            result.unmerged_paths.insert(merge_path);
                         }
                     }
-                    
-                },
-                QueryToken::Predicate(predicate) => {
+                }
 
-                },
+                QueryToken::Predicate(predicate) => {
+                    let (basename, path) = FieldPath::split_basename(&predicate.name);
+
+                    // skip if field path is not relative to root path
+                    if !Self::root_contains(&build_context.query_root_path, &path) {
+                        continue;
+                    }
+
+                    let relative_path = path
+                        .as_ref()
+                        .and_then(|p| p.relative_path(&build_context.query_root_path));
+
+                    let mapper_or_merge = self.mapper_or_merge_for_path(&relative_path)?;
+
+                    match mapper_or_merge {
+                        MapperOrMerge::Mapper(mapper) => {
+                            let mapped_predicate = mapper
+                                .predicates
+                                .get(basename)
+                                .ok_or(SqlBuilderError::PredicateMissing(basename.to_string()))?;
+
+                            if let Some(role) = self.missing_role(&mapped_predicate.options.roles) {
+                                return Err(SqlBuilderError::RoleRequired(role.to_string()).into());
+                            }
+                            // Build canonical alias
+                            let canonical_alias = match &relative_path {
+                                Some(p) => Cow::Owned(format!(
+                                    "{}_{}",
+                                    &self.root_mapper()?.canonical_table_alias,
+                                    p.as_str()
+                                )),
+                                None => Cow::Borrowed(&mapper.canonical_table_alias),
+                            };
+                            let alias = build_context.alias_translator.translate(&canonical_alias);
+                            let sql =
+                                mapped_predicate
+                                    .expression
+                                    .resolve(&alias, None, &aux_params)?;
+
+                            result.where_sql.append(&sql);
+
+                            if let Some(p) = path {
+                                build_context.joined_paths.insert(p.as_str().to_string());
+                            }
+                        }
+                        MapperOrMerge::Merge(merge_path) => {
+                            result.unmerged_paths.insert(merge_path);
+                        }
+                    }
+                }
                 _ => {}
             }
-
         }
         Ok(())
+    }
+
+    fn canonical_alias<'b>(&'b self, path: &'b Option<String>, canonical_table_alias: &'b String) -> Result<Cow<String>> {
+        Ok(match path {
+            Some(p) => Cow::Owned(format!(
+                "{}_{}",
+                &self.root_mapper()?.canonical_table_alias,
+                p.as_str()
+            )),
+            None => Cow::Borrowed(&canonical_table_alias),
+        })
 
     }
 
-    fn build_select_clause<M>(&mut self, query: &Query<M>, build_context: &mut BuildContext, result: &mut BuildResult) 
-    -> Result<()>{
-
-       
-        let (selected_fields, selected_paths) = self.selection_from_query(query)?;
+    fn build_select_clause<M>(
+        &mut self,
+        query: &Query<M>,
+        build_context: &mut BuildContext,
+        result: &mut BuildResult,
+    ) -> Result<()> {
+        let (selected_fields, selected_paths) = self.selection_from_query(query, build_context)?;
         build_context.selected_fields = selected_fields;
         build_context.selected_paths = selected_paths;
+        dbg!(&build_context.selected_paths);
 
-       self.resolve_select(&None, query, build_context, result)?;
-         result.select_sql = build_context.select_sql.into_sql(&build_context.selected_placeholders);
+        self.resolve_select(&None, query, build_context, result)?;
+        result.select_sql = build_context
+            .select_sql
+            .into_sql(&build_context.selected_placeholders);
         if result.select_sql.is_empty() {
-           result.select_sql.push_literal("1");
+            result.select_sql.push_literal("1");
         } else {
-           result.select_sql.pop_literals(2); // Remove trailing ,
+            result.select_sql.pop_literals(2); // Remove trailing ,
         }
-        
-        Ok(())
 
+        Ok(())
     }
 
-    fn resolve_select<M>(&self, join_path: &Option<FieldPath>, query: &Query<M>, build_context: &mut BuildContext, result: &mut BuildResult) -> Result<()> {
-
+    fn resolve_select<M>(
+        &self,
+        join_path: &Option<FieldPath>,
+        query: &Query<M>,
+        build_context: &mut BuildContext,
+        result: &mut BuildResult,
+    ) -> Result<()> {
         use crate::sql_mapper::DeserializeType;
         let mapper = self.mapper_for_path(&join_path)?;
-        let p= [&self.aux_params, &query.aux_params];
-        let aux_params = ParameterMap::new(&p);
-        let canonical_alias = join_path.as_ref().map(|j|j.as_str()).unwrap_or(&self.root_mapper);
 
-      
-        let ph_index = build_context.current_placeholder  + 1;
-        
-       
+        let p = [&self.aux_params, &query.aux_params];
+        let aux_params = ParameterMap::new(&p);
+        let canonical_alias = match join_path {
+            Some(p) => Cow::Owned(format!("{}_{}", &self.root_mapper, p.as_str())),
+            None => Cow::Borrowed(&self.root_mapper),
+        };
+
+        let ph_index = build_context.current_placeholder + 1;
+
         let mut any_selected = false;
-        
+
+        dbg!(&join_path);
+        // relativ_path
 
         for deserialization_type in &mapper.deserialize_order {
             match deserialization_type {
                 DeserializeType::Field(field) => {
-                    if  if let Some(a) = FieldPath::from(field).ancestor() {
-                        build_context.selected_paths.contains(a.as_str())
-                    } else {false} 
-                    || build_context.selected_fields.contains(field) {
+                    let absolute_path = FieldPath::from(field);
+                    let relative_path = absolute_path.relative_path(&build_context.query_root_path);
 
-                        let field_info = mapper.field(field).ok_or(SqlBuilderError::FieldMissing(field.to_string()))?;
+                    if if let Some(a) = relative_path.as_ref().and_then(|p| p.ancestor()) {
+                        build_context.selected_paths.contains(a.as_str())
+                    } else {
+                        false
+                    } || {
+                        let selection_name = if let Some(j) = join_path {
+                            Cow::Owned(format!("{}_{}", j.as_str(), field))
+                        } else {
+                            Cow::Borrowed(field)
+                        };
+                        build_context
+                            .selected_fields
+                            .contains(selection_name.as_ref())
+                    } {
+                        let field_info = mapper
+                            .field(field)
+                            .ok_or(SqlBuilderError::FieldMissing(field.to_string()))?;
                         let alias = build_context.alias_translator.translate(&canonical_alias);
-                        let select_sql = field_info.expression.resolve(&alias, None, &aux_params)?;
-                        let select_sql =  field_info.handler.build_select(select_sql, &aux_params)?;
+                        let select_sql =
+                            field_info.expression.resolve(&alias, None, &aux_params)?;
+                        let select_sql =
+                            field_info.handler.build_select(select_sql, &aux_params)?;
 
                         if let Some(sql) = select_sql {
                             if field_info.options.preselect {
                                 // TODO Insert placeholder
                                 build_context.select_sql.push_placeholder(ph_index, sql);
-                                
+
                                 result.selection_stream.push(false);
                             } else {
                                 build_context.select_sql.push_sql(sql);
@@ -389,97 +629,173 @@ impl<'a> SqlBuilder<'a> {
                         } else {
                             result.selection_stream.push(false);
                         }
-                     } else {
+                    } else {
                         result.selection_stream.push(false);
                     }
-                
-                }, 
+                }
                 DeserializeType::Join(join) => {
-                    let new_join_path= format!("{}_{}", &canonical_alias, &join);
+                    //   let new_join_path= format!("{}_{}", &canonical_alias, &join);
 
-                    if build_context.selected_paths.contains(join){
-                        self.resolve_select(&Some(FieldPath::from(&new_join_path)), query, build_context, result)?;
+                    if build_context.selected_paths.contains(join) {
+                        // self.resolve_select(&Some(FieldPath::from(&new_join_path)), query, build_context, result)?;
+                        self.resolve_select(
+                            &Some(FieldPath::from(&join)),
+                            query,
+                            build_context,
+                            result,
+                        )?;
                     } else {
-                        self.resolve_select_none(&Some(FieldPath::from(&new_join_path)), result)?;
+                        //self.resolve_select_none(&Some(FieldPath::from(&new_join_path)), result)?;
+                        self.resolve_select_none(&Some(FieldPath::from(&join)), result)?;
                     }
-                }, 
+                }
                 DeserializeType::Merge(merge) => {
                     if build_context.selected_paths.contains(merge) {
                         result.unmerged_paths.insert(merge.to_owned());
                     }
-                },  
+                }
             }
         }
-       
+
         if any_selected {
             build_context.selected_placeholders.insert(ph_index);
         }
         Ok(())
-
     }
-    fn resolve_select_none(&self, join_path: &Option<FieldPath>,result: &mut BuildResult) -> Result<()> {
-
+    fn resolve_select_none(
+        &self,
+        join_path: &Option<FieldPath>,
+        result: &mut BuildResult,
+    ) -> Result<()> {
         use crate::sql_mapper::DeserializeType;
         let mapper = self.mapper_for_path(&join_path)?;
-        let canonical_alias = join_path.as_ref().map(|j|j.as_str()).unwrap_or(&self.root_mapper);
+        let canonical_alias = join_path
+            .as_ref()
+            .map(|j| j.as_str())
+            .unwrap_or(&self.root_mapper);
 
         for deserialization_type in &mapper.deserialize_order {
             match deserialization_type {
                 DeserializeType::Field(_) => {
-                        result.selection_stream.push(false);
-                }, 
+                    result.selection_stream.push(false);
+                }
                 DeserializeType::Join(join) => {
-                    let new_join_path= format!("{}_{}", &canonical_alias, &join);
-                    self.resolve_select_none(&Some(FieldPath::from(&new_join_path)), result)?;
-                }, 
-                DeserializeType::Merge(_) => { },  
+                    let new_join_path = format!("{}_{}", &canonical_alias, &join);
+                    self.resolve_select_none(&Some(FieldPath::from(&join)), result)?;
+                }
+                DeserializeType::Merge(_) => {}
             }
         }
         Ok(())
-
     }
 
-    fn selection_from_query<M>(&mut self, query: &Query<M>) -> Result<(HashSet<String>, HashSet<String>)> {
+    fn selection_from_query<M>(
+        &mut self,
+        query: &Query<M>,
+        build_context: &BuildContext,
+    ) -> Result<(HashSet<String>, HashSet<String>)> {
+        let mut relative_fields = HashSet::new();
+        let mut relative_paths = HashSet::new();
 
-        let mut relative_fields= HashSet::new();
-        let mut relative_paths= HashSet::new();
-        for token in &query.tokens{
-
+        for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
-                    
+                    let (_, absolute_path) = FieldPath::split_basename(&field.name);
                     // TODO validate roles and raise error
-                    relative_fields.insert(field.name.to_string());
-                    
 
-                      
-                    
-                },
+                    if !Self::root_contains(&build_context.query_root_path, &absolute_path) {
+                        continue;
+                    }
+
+                    if let Some(absolute_path) = absolute_path {
+                        let relative_path =
+                            absolute_path.relative_path(&build_context.query_root_path);
+                        if let Some(relative_path) = relative_path {
+                            for p in relative_path.step() {
+                                relative_paths.insert(p.to_string());
+                            }
+                        }
+                    }
+                    let field = FieldPath::from(&field.name);
+                    let relative_field =
+                        field.relative_path(&build_context.query_root_path).unwrap();
+                    relative_fields.insert(relative_field.to_string());
+                }
                 QueryToken::Wildcard(wildcard) => {
+                    let (_, absolute_path) = FieldPath::split_basename(&wildcard.path);
+                    if let Some(absolute_path) = absolute_path {
+                        for p in absolute_path.descendents() {
+                            // Todo validate roles and skip
+                            relative_paths.insert(p.to_string());
+                        }
+                    }
 
-                    // Todo validate roles and skip
-                    relative_paths.insert(wildcard.path.to_string());
-                },
-               /*  QueryToken::Selection(selection) => {
+                    //  relative_paths.insert(wildcard.path.to_string());
+                }
+                /*  QueryToken::Selection(selection) => {
 
                 }, */
                 _ => {}
             }
-
         }
         Ok((relative_fields, relative_paths))
-
-    } 
+    }
 
     fn root_mapper(&self) -> Result<&SqlMapper> {
         self.sql_mapper_registry
-        .get(&self.root_mapper)
-        .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))
+            .get(&self.root_mapper)
+            .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))
     }
-    fn missing_role<'b>(&'b self, roles: &'b HashSet<String>) ->Option<&'b str>{
-           let s =  roles.difference(&self.roles).next();
-           s.map(|r| r.as_str())
+    fn missing_role<'b>(&'b self, roles: &'b HashSet<String>) -> Option<&'b str> {
+        let s = roles.difference(&self.roles).next();
+        s.map(|r| r.as_str())
+    }
+    fn root_contains(root_path: &str, absolute_path: &Option<FieldPath>) -> bool {
+        println!(
+            "Test absolute path  {:?} has root {:?}",
+            &absolute_path, &root_path
+        );
+        let root: Option<&str> = if root_path.is_empty() {
+            None
+        } else {
+            Some(root_path)
+        };
+        let r = match (root, absolute_path) {
+            (None, None) => true,
+            (None, Some(_)) => true,
+            (Some(_), None) => false,
+            (Some(r), Some(a)) => a.as_str().starts_with(r),
+        };
+        println!("Result {:?}", r);
+
+        r
+    }
+    fn root_field_path(root_path: &str) -> Option<FieldPath> {
+        if root_path.is_empty() {
+            None
+        } else {
+            Some(FieldPath::from(root_path))
+        }
     }
 
-  
+    /* pub fn merge_path(&self, path: &FieldPath) -> Result<Option<&str>> {
+
+
+        let mut mapper = self.root_mapper()?;
+        let mp = path.children();
+
+        for p in path.descendents() {
+            match mapper.join(p.as_str()) {
+                Some(m) => {mapper = self.mm.joined_mapper },
+                None= {
+                    if mapper.merges.contains(p) {
+                        Ok(Some(mp))
+                    }
+                }
+            }
+
+        }
+        Ok(None)
+
+    } */
 }

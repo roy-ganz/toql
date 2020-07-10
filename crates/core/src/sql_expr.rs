@@ -19,12 +19,23 @@ pub struct SqlExpr {
 
 
 impl SqlExpr {
+/* 
+    pub fn new() -> Self {
+        SqlExpr {
+            tokens:Vec::new()
+        }
+    } */
 
     pub fn from(tokens: Vec<SqlExprToken>) -> Self {
         SqlExpr {
             tokens
         }
     }
+
+   /*  pub fn extend(&mut self, expr: SqlExpr) {
+            self.tokens.extend(self.tokens);
+    } */
+
 
     pub fn aliased_column(column_name: String) -> Self {
         SqlExpr {

@@ -1,18 +1,19 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use crate::sql::SqlArg;
 
 #[derive(Debug)]
 pub struct PredicateOptions {
      pub(crate) aux_params: HashMap<String, SqlArg>,
      pub(crate) on_params: Vec<(u8,String)>,  // Argument params for on clauses (index, name)
-     pub(crate) count_filter: bool
+     pub(crate) count_filter: bool,
+     pub(crate) roles: HashSet<String>, // Only for use by these roles
 }
 
 impl PredicateOptions {
 
     pub fn new() -> Self {
-        PredicateOptions { aux_params: HashMap::new(), on_params: Vec::new(), count_filter: false}
+        PredicateOptions { aux_params: HashMap::new(), on_params: Vec::new(), count_filter: false, roles: HashSet::new()}
     }
 
  /// Additional build param. This is used by the query builder together with

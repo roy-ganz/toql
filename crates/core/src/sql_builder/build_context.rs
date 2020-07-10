@@ -6,7 +6,7 @@ use super::sql_with_placeholders::SqlWithPlaceholders;
 
 pub(crate) struct BuildContext {
 
-    pub(crate) root_path: String,
+    pub(crate) query_root_path: String,
     
     pub(crate) joined_paths: HashSet<String>,
     pub(crate) alias_translator : AliasTranslator,
@@ -24,7 +24,7 @@ impl BuildContext {
     pub fn new(alias_translator: AliasTranslator) -> Self {
 
         BuildContext {
-            root_path: "".to_string(),
+            query_root_path: "".to_string(),
             joined_paths:HashSet::new(),
             alias_translator,
             selected_paths: HashSet::new(),
@@ -35,6 +35,8 @@ impl BuildContext {
         }
 
     }
+
+   
 
 
 }
