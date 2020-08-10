@@ -25,7 +25,7 @@ use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_mapper::Mapped;
 
 use core::borrow::Borrow;
-use toql_core::log_sql;
+use toql_core::{log_sql, log_mut_sql};
 
 
 
@@ -55,7 +55,7 @@ where
     C: GenericConnection,
 {
     let (update_stmt, params) = statement;
-    log_sql!(update_stmt, params);
+    log_mut_sql!(update_stmt, params);
     let mut stmt = conn.prepare(&update_stmt)?;
     let res = stmt.execute( values_from(params))?;
     Ok(res.affected_rows())
@@ -66,7 +66,7 @@ where
     C: GenericConnection,
 {
     let (insert_stmt, params) = statement;
-    log_sql!(insert_stmt, params);
+    log_mut_sql!(insert_stmt, params);
 
     
     let mut stmt = conn.prepare(&insert_stmt)?;
@@ -191,7 +191,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     {
         let (modifier, extra) = match strategy {
             DuplicateStrategy::Skip => ("IGNORE", ""),
-            DuplicateStrategy::Update => ("", "ON DUPLICATE UPDATE"),
+            DuplicateStrategy::Update => ("", "ON DUPLICATE KEY UPDATE"),
             DuplicateStrategy::Fail => ("", "")
         };
 
@@ -214,7 +214,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     {
          let (modifier, extra) = match strategy {
             DuplicateStrategy::Skip => ("IGNORE", ""),
-            DuplicateStrategy::Update => ("", "ON DUPLICATE UPDATE"),
+            DuplicateStrategy::Update => ("", "ON DUPLICATE KEY UPDATE"), // BUG! should be REPLACE
             DuplicateStrategy::Fail => ("", "")
         };
         let sql = <T as InsertSql>::insert_many_sql(&entities, &self.roles, modifier, extra)?;

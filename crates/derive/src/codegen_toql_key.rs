@@ -319,6 +319,13 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         } else {
             quote!()
         };
+        let serde_attrs = if self.serde_key {
+            quote!(#[serde(rename_all = "camelCase")])
+        } else {
+            quote!()
+        };
+
+        
 
         let key_field_declarations = &self.key_field_declarations;
         //let key_sql_predicates = &self.key_sql_predicates;
@@ -375,10 +382,11 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
         let key = quote! {
 
         #[derive(Debug, Eq, PartialEq, Hash #serde, Clone)]
+        #serde_attrs
            #vis struct #struct_key_ident { 
                #(#key_field_declarations),* 
             }
-
+            
             impl toql::key::Key  for #struct_key_ident {
                     type Entity = #rust_stuct_ident;
 

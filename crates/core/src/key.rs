@@ -74,10 +74,12 @@ where K:Keyed
 
 
 
-pub fn keys<K: Keyed>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
+pub fn keys<K, Q>(entities: &[Q]) -> crate::error::Result<Vec<K::Key>> 
+where K:Keyed, Q: Borrow<K>
+{
     let mut keys = Vec::with_capacity(entities.len());
     for e in entities {
-        keys.push(e.try_get_key()?);
+        keys.push(e.borrow().try_get_key()?);
     }
     Ok(keys)
 }
