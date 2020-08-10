@@ -3,14 +3,16 @@ use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_mapper::FieldOptions;
 use toql_core::sql_mapper::JoinType;
 use toql_core::sql_mapper::SqlMapper;
+use toql_core::sql_expr_parser::SqlExprParser;
+
+struct User {}
 
 fn setup_mapper() -> SqlMapper {
-    let mut mapper = SqlMapper::new("User");
+    let mut mapper = SqlMapper::new::<User>("User");
     mapper
-        .join("book", JoinType::Inner, "Book b", "id = b.id")
-        .map_field("id", "id")
-        .map_field("username", "username")
-        .map_field("book_id", "b.id");
+        .map_join("book", "Book", SqlExprParser::parse("JOIN Book b").unwrap(), SqlExprParser::parse("..id = ...id").unwrap())
+        .map_column("id", "id")
+        .map_column("username", "username");
     mapper
 }
 

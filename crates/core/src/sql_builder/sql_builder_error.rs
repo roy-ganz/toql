@@ -9,6 +9,8 @@ pub enum SqlBuilderError {
     PredicateMissing(String),
     /// The join is not mapped to a column or SQL expression. Contains the field name.
     JoinMissing(String),
+     /// The selection is not known to the mapper. Contains the field name.
+     SelectionMissing(String),
     /// The field requires a role that the query does not have. Contains the role.
     RoleRequired(String),
     /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
@@ -25,6 +27,7 @@ impl fmt::Display for SqlBuilderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             SqlBuilderError::FieldMissing(ref s) => write!(f, "field `{}` is missing", s),
+            SqlBuilderError::SelectionMissing(ref s) => write!(f, "selection `{}` is missing", s),
             SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
             SqlBuilderError::JoinMissing(ref s) => write!(f, "join `{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),

@@ -130,7 +130,7 @@ pub struct SqlMapper {
 
     /// Selections
     /// Automatic created selection are
-    /// #count - Fields for count query
+    /// #cnt - Fields for count query
     /// #mut - Fields for insert
     /// #all - All mapped fields
     pub(crate) selections: HashMap<String, Vec<String>>, // name, toql fields or paths
@@ -399,7 +399,7 @@ impl SqlMapper {
     pub fn map_join<'a>(
         &'a mut self,
         toql_path: &str,
-         joined_mapper: &str,
+        joined_mapper: &str,
         join_expression: SqlExpr,
         on_expression: SqlExpr
     ) -> &'a mut Self {
@@ -509,6 +509,15 @@ impl SqlMapper {
         };
         self.predicates.insert(name.to_string(), predicate);
         
+    }
+
+    pub fn map_selection(&mut self, name:&str, fields_or_paths:&[String]) {
+        if cfg!(debug_assertion) {
+            if name.len() <= 3 {
+                panic!("Selection name `{}` is invalid: name must be longer than 3 characters.", name);
+            }
+        }
+        self.selections.insert(name.to_string(), fields_or_paths.to_vec());
     }
   
 

@@ -41,7 +41,7 @@ filterc = { filterc_name ~ value* }
 
 field_filter = {filter0 | filter1 | filter2 | filterx |filterc }
 sort = @{ ("+" | "-") ~ASCII_DIGIT* }
-name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC*   }
+name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
 field_path = @{ name ~ ("_" ~ name)* }
 hidden = @{"."}
 wildcard_path= @{field_path ~ "_"}
@@ -49,12 +49,14 @@ wildcard = @{ (field_path ~ "_")? ~ "*" }
 
 
 field = { sort? ~ hidden? ~ field_path }
-field_clause = { field ~ field_filter?}
+field_clause = { field ~ field_filter? }
 predicate_arg =  { value+}
 predicate_name = { "@" ~ field_path}
-predicate_clause = { predicate_name ~ predicate_arg?}
+predicate_clause = { predicate_name ~ predicate_arg? }
+selection_clause = { "#"  ~ selection_name? }
+selection_name = { name }
 query_placeholder = @{"{}"} // for use in query macro
-clause = { field_clause | predicate_clause | query_placeholder |( lpar ~ expr ~ rpar) } 
+clause = { field_clause | predicate_clause | selection_clause | query_placeholder |( lpar ~ expr ~ rpar) } 
 separator = { "," | ";" }
 
 lpar = @{"("}

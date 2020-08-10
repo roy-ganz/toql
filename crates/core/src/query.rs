@@ -32,6 +32,7 @@ pub mod query_with;
 pub mod selection;
 
 
+use crate::query::selection::Selection;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -52,7 +53,8 @@ pub(crate) enum QueryToken {
     RightBracket,
     Wildcard(Wildcard),
     Field(Field),
-    Predicate(Predicate)
+    Predicate(Predicate),
+    Selection(Selection)
 }
 
 impl From<&str> for QueryToken {
@@ -74,7 +76,8 @@ impl ToString for QueryToken {
                 Concatenation::Or => String::from("("),
             },
             QueryToken::Field(field) => field.to_string(),
-             QueryToken::Predicate(predicate) => predicate.to_string(),
+            QueryToken::Predicate(predicate) => predicate.to_string(),
+            QueryToken::Selection(selection) => selection.name.to_string(),
             QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
         };
         s
@@ -291,6 +294,7 @@ impl<M> Query<M> {
              Some(QueryToken::Field(f)) => f.concatenation = Concatenation::Or,
              Some(QueryToken::Wildcard(w)) => w.concatenation = Concatenation::Or,
              Some(QueryToken::Predicate(p)) => p.concatenation = Concatenation::Or,
+             Some(QueryToken::Selection(p)) => p.concatenation = Concatenation::Or,
              None => {}
          }
 /*         if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {

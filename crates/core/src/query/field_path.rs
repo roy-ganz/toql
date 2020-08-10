@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 #[derive(Debug)]
-pub struct FieldPath<'a> (&'a str);
+pub struct FieldPath<'a> (Cow<'a, str>);
 
 
 impl<'a> FieldPath<'a> {
@@ -14,7 +16,13 @@ impl<'a> FieldPath<'a> {
 
 
     pub fn from( path: &'a str) -> Self {
-        FieldPath(path)
+        FieldPath(Cow::Borrowed(path))
+    }
+
+    pub fn prefix( &self, prefix: &'a str) -> Self {
+        let path = format!("{}{}{}", prefix, if self.0.is_empty() {""} else {"_"}, self.0.as_ref());
+
+        FieldPath(Cow::Owned(path))
     }
 
     pub fn relative_path( &self, root_path: &str) -> Option<FieldPath> {
@@ -28,11 +36,11 @@ impl<'a> FieldPath<'a> {
    
 
     pub fn ancestors(&self) -> Ancestor {
-        Ancestor{pos: self.0.len(), path: self.0}
+        Ancestor{pos: self.0.len(), path: self.0.as_ref()}
     }
 
     pub fn as_str(&self) -> &str {
-        self.0
+        self.0.as_ref()
     }
 
  
@@ -51,24 +59,24 @@ impl<'a> FieldPath<'a> {
 
     /// True, if path is immediate child of root path
     pub fn child(&self, root_path: &str) -> bool {
-        let relative_path= root_path.trim_start_matches(self.0);
+        let relative_path= root_path.trim_start_matches(self.0.as_ref());
         !relative_path.contains('_')
     }
     
     pub fn descendents(&self) -> Descendents {
-        Descendents{pos: 0, path: self.0}
+        Descendents{pos: 0, path: self.0.as_ref()}
     } 
     pub fn parents(&self) -> Parents {
-        Parents{pos: self.0.len(), path: self.0}
+        Parents{pos: self.0.len(), path: self.0.as_ref()}
     } 
 
     // Iterator 
     pub fn children(&self) -> Children {
-        Children{pos: 0, path: self.0}
+        Children{pos: 0, path: self.0.as_ref()}
     } 
 
     pub fn step(&self) -> Step {
-        Step{pos: 0,path: self.0}
+        Step{pos: 0,path: self.0.as_ref()}
     } 
 }
 

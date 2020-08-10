@@ -18,6 +18,7 @@ use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::query::concatenation::Concatenation;
 use crate::query::field::Field;
 use crate::query::predicate::Predicate;
+use crate::query::selection::Selection;
 use crate::query::field_filter::FieldFilter;
 use crate::query::field_order::FieldOrder;
 use crate::query::Query;
@@ -42,6 +43,7 @@ enum TokenType {
     Field,
     Wildcard,
     Predicate,
+    Selection,
     Unknown
 }
 
@@ -97,6 +99,15 @@ impl TokenInfo {
                    })))
 
                },
+               TokenType::Selection => {
+                // validate name
+                
+                Ok(Some(QueryToken::Selection (Selection{
+                 name: String::from(if self.name.is_empty(){"default"} else {self.name.as_str()}),
+                 concatenation : self.concatenation.clone()
+                })))
+
+            },
                _ => Ok(None)
            }
        }
@@ -217,6 +228,12 @@ impl QueryParser {
                  Rule::predicate_name =>  {
                      token_info.name = span.as_str().trim_start_matches("@").to_string();
                 },
+                Rule::selection_clause => {
+                    token_info.token_type= TokenType::Selection;
+               },
+                Rule::selection_name =>  {
+                    token_info.name = span.as_str().trim_start_matches("@").to_string();
+               },
                 Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);
                 }
