@@ -202,8 +202,8 @@ impl BuildResult {
        
     }
 
-    pub fn selection_stream(&self) -> impl Iterator<Item=&bool> {
-        self.selection_stream.iter()
+    pub fn selection_stream(&self) -> &Vec<bool> {
+        &self.selection_stream
     }
 
     pub(crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {

@@ -14,12 +14,13 @@ pub trait FromResultRow<T> {
 }
 
 /// Function to convert MySQL query result into Toql struct.
-pub fn from_query_result<'a, T,I>(result: mysql::QueryResult, mut iter: &mut I) -> Result<Vec<T>>
-where T: FromResultRow<T>, I: Iterator<Item = &'a bool> {
+pub fn from_query_result<'a, T>(result: mysql::QueryResult, selection: &'a Vec<bool>) -> Result<Vec<T>>
+where T: FromResultRow<T>{
     let mut i: usize = 0;
     result
         .map(|row| {
             i = 0;
+            let mut iter = selection.iter();
             T::from_row_with_index(&mut row?, &mut i, &mut iter)
         })
         .collect()
@@ -33,8 +34,8 @@ where T: FromResultRow<T>, I: Iterator<Item = &'a bool> {
 }
 
 /// Function to convert MySQL query result into Toql struct.
-pub fn from_query_result_with_primary_keys<'a, T,J,I>( result: mysql::QueryResult, mut iter :  &mut I) -> Result<(Vec<T>, Vec<J>)> 
-where T: FromResultRow<T>,   J: FromResultRow<J>,  I: Iterator<Item = &'a bool>
+pub fn from_query_result_with_primary_keys<'a, T,J>( result: mysql::QueryResult, selection: &'a Vec<bool>) -> Result<(Vec<T>, Vec<J>)> 
+where T: FromResultRow<T>,   J: FromResultRow<J>, 
 {
     let mut entities: Vec<T> = Vec::new();
     let mut pkeys: Vec<J> = Vec::new();
@@ -42,6 +43,7 @@ where T: FromResultRow<T>,   J: FromResultRow<J>,  I: Iterator<Item = &'a bool>
     for row in result {
         let mut i: usize = 0;
         let mut r = row?;
+        let mut iter = selection.iter();
         entities.push(T::from_row_with_index(&mut r, &mut i, &mut iter)?);
         
         pkeys.push(J::from_row_with_index(&mut r, &mut i, &mut iter)?);
@@ -50,7 +52,7 @@ where T: FromResultRow<T>,   J: FromResultRow<J>,  I: Iterator<Item = &'a bool>
     Ok((entities, pkeys))
 }
 /// Function to convert MySQL query result into Toql struct.
-pub fn from_query_result_with_merge_keys<'a, T,J,K,I>(result: mysql::QueryResult, mut iter:  &mut I) -> Result<(Vec<T>, Vec<J>, Vec<K>)> 
+pub fn from_query_result_with_merge_keys<'a, T,J,K,I>(result: mysql::QueryResult, selection: &'a Vec<bool>) -> Result<(Vec<T>, Vec<J>, Vec<K>)> 
 where  T: FromResultRow<T>, J: FromResultRow<J>, K: FromResultRow<K>, I: Iterator<Item = &'a bool>
 {
     let mut entities: Vec<T> = Vec::new();
@@ -60,6 +62,7 @@ where  T: FromResultRow<T>, J: FromResultRow<J>, K: FromResultRow<K>, I: Iterato
     for row in result {
         let mut i: usize = 0;
         let mut r = row?;
+          let mut iter = selection.iter();
         entities.push(T::from_row_with_index(&mut r, &mut i, &mut iter)?);
      
         pkeys.push(J::from_row_with_index(&mut r, &mut i, &mut iter)?);

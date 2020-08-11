@@ -85,7 +85,7 @@ impl<'a> SqlBuilder<'a> {
     /// Create a new SQL Builder
     pub fn new(root_mapper: &'a str, sql_mapper_registry: &'a SqlMapperRegistry) -> Self {
         SqlBuilder {
-            root_mapper: root_mapper.to_mixed_case(),
+            root_mapper: root_mapper.to_string(),
             sql_mapper_registry,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
@@ -654,7 +654,7 @@ impl<'a> SqlBuilder<'a> {
                     let absolute_path = FieldPath::from(field);
                     let relative_path = absolute_path.relative_path(&build_context.query_root_path);
 
-                    if if let Some(a) = relative_path.as_ref().and_then(|p| p.ancestor()) {
+                    let explicit_selection = if let Some(a) = relative_path.as_ref().and_then(|p| p.ancestor()) {
                         build_context.selected_paths.contains(a.as_str())
                     } else {
                         false
@@ -667,10 +667,14 @@ impl<'a> SqlBuilder<'a> {
                         build_context
                             .selected_fields
                             .contains(selection_name.as_ref())
-                    } {
-                        let field_info = mapper
+                    };
+
+                    let field_info = mapper
                             .field(field)
                             .ok_or(SqlBuilderError::FieldMissing(field.to_string()))?;
+
+                    // Field is explicitly selected in query
+                    if explicit_selection {
                         let alias = build_context.alias_translator.translate(&canonical_alias);
                         let select_sql =
                             field_info.expression.resolve(&alias, None, &aux_params)?;
@@ -678,21 +682,28 @@ impl<'a> SqlBuilder<'a> {
                             field_info.handler.build_select(select_sql, &aux_params)?;
 
                         if let Some(sql) = select_sql {
-                            if field_info.options.preselect {
-                                // TODO Insert placeholder
-                                build_context.select_sql.push_placeholder(ph_index, sql);
-
-                                result.selection_stream.push(false);
-                            } else {
                                 build_context.select_sql.push_sql(sql);
                                 build_context.select_sql.push_literal(", ");
                                 result.selection_stream.push(true);
                                 any_selected = true;
-                            }
                         } else {
                             result.selection_stream.push(false);
                         }
-                    } else {
+                    } 
+                    // Field may have preselection
+                    // TODO skip unrelated preseleted fields
+                    else {
+                        if field_info.options.preselect {
+                            let alias = build_context.alias_translator.translate(&canonical_alias);
+                            let select_sql =
+                                field_info.expression.resolve(&alias, None, &aux_params)?;
+                            let select_sql =
+                                field_info.handler.build_select(select_sql, &aux_params)?;
+                            if let Some(sql) = select_sql {
+                                // keep optional sql statement
+                                build_context.select_sql.push_placeholder(ph_index, sql);
+                            }
+                        }
                         result.selection_stream.push(false);
                     }
                 }

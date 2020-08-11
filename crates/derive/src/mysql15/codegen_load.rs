@@ -95,8 +95,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         self.mysql_deserialize_fields.push(quote!(
                             #rust_field_ident : {
                                 if iter.next().map(ToOwned::to_owned).unwrap_or(false) {
-                                    *i += 1;
-                                    row.take_opt( *i).unwrap()
+                                   
+                                    row.take_opt( (*i,  *i += 1).0).unwrap()
                                         .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                 } else {
                                     None
@@ -111,8 +111,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 if iter.next().map(ToOwned::to_owned).unwrap_or(false) == false {
                                      return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected `true` but got `false`")).into());
                                 }
-                                *i += 1;
-                                row.take_opt( *i).unwrap()
+                              
+                                row.take_opt((*i,  *i += 1).0).unwrap()
                                     .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                             }
                         ));
@@ -242,6 +242,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
     }
 
     pub(crate) fn loader_functions(&self) -> proc_macro2::TokenStream {
+      
+
         let struct_ident = &self.rust_struct.rust_struct_ident;
         let struct_name = &self.rust_struct.rust_struct_name;
         let path_loaders = &self.path_loaders;
@@ -281,11 +283,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
         let from_query_result = if self.merge_fields.is_empty() {
             quote!(
-                let mut entities = toql::mysql::row::from_query_result::< #struct_ident, _ >(entities_stmt, &mut iter)?;
+                let mut entities = toql::mysql::row::from_query_result::< #struct_ident, _ >(entities_stmt, selection_stream)?;
             )
         } else {
             quote!(
-            let (mut entities, keys) = toql::mysql::row::from_query_result_with_primary_keys::<#struct_ident,_, #struct_key_ident>(entities_stmt, &mut iter)?;
+            let (mut entities, keys) = toql::mysql::row::from_query_result_with_primary_keys::<#struct_ident,_, #struct_key_ident>(entities_stmt, selection_stream)?;
             )
         };
 
@@ -296,6 +298,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             self.load_dependencies(&mut entities, &keys, &query, &wildcard_scope)?;
             )
         };
+        
 
         let wildcard_scope_code = &self.wildcard_scope_code;
         quote!(
@@ -317,10 +320,10 @@ impl<'a> GeneratedMysqlLoad<'a> {
 
                     let result = toql::sql_builder::SqlBuilder::new( #struct_name, self.registry())
           //               #(#ignored_paths)*
-                        .build_select_result(#struct_name, &query, self.alias_format())?;
+                        .build_select_result("", &query, self.alias_format())?;
                     
                     let sql = result.select_sql_with_additional_columns("", "LIMIT 0, 2",&columns);
-                    let mut iter = result.selection_stream();
+                    let selection_stream = result.selection_stream();
 
                      toql::log_sql!(&sql);
 
@@ -371,10 +374,10 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     .with_roles( self.roles().clone())
                       //   #(#ignored_paths)*
                       //  .scope_wildcard(&wildcard_scope)
-                        .build_select_result(#struct_name, &query, self.alias_format())?;
+                        .build_select_result("", &query, self.alias_format())?;
           
                         let sql = result.select_sql_with_additional_columns( &hint, &sql_page, &columns);
-                        let mut iter = result.selection_stream();
+                        let selection_stream = result.selection_stream();
        
                     toql::log_sql!(&sql);
 
@@ -403,7 +406,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     let sql = toql::sql_builder::SqlBuilder::new( #struct_name, self.registry())
                                     .with_roles(self.roles().clone())
                                     //#(#ignored_paths)*
-                                    .build_count_sql( #struct_name, &query, "", "", self.alias_format())?;
+                                    .build_count_sql("", &query, "", "", self.alias_format())?;
                             
                                     toql::log_sql!( sql);
                                     
