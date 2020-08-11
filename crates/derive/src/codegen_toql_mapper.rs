@@ -102,6 +102,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
                 let rust_type_ident = &field.rust_type_ident;
+                let rust_type_name = &field.rust_type_name;
                 let toql_field_name = &field.toql_field_name;
                 let join_alias = &join_attrs.join_alias;
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
@@ -207,7 +208,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
                     .collect::<Vec<TokenStream>>();
 
-                self.field_mappings.push(quote! {
+               /*  self.field_mappings.push(quote! {
                     #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",
                         toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
@@ -219,7 +220,15 @@ impl<'a> GeneratedToqlMapper<'a> {
                      &aliased_table,
                      #join_predicate,
                      toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident);
+                }); */
+                self.field_mappings.push(quote! {
+                   mapper.map_join_withg_options( &format!( #toql_field_name, #rust_type_name, 
+                        toql::sql_expr_parser::SqlExprParser::parse( #join_expression_builder)?,
+                         toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?,
+                    , toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident), 
+                    );
                 });
+
 
                 if join_attrs.key {
                     self.key_field_names.push(rust_field_name.to_string());
@@ -302,7 +311,15 @@ impl<'a> GeneratedToqlMapper<'a> {
                     self.key_field_names.push(rust_field_name.to_string());
                 }
             }
-            FieldKind::Merge(ref _merge_attrs) => {}
+            FieldKind::Merge(ref _merge_attrs) => {
+                         let toql_field_name = &field.toql_field_name;
+                         let merge_mapper = &field.rust_type_name;
+                          self.field_mappings.push(quote! {
+                                                        mapper.map_merge(#toql_field_name,   #merge_mapper, SqlExprParser::parse("todo") );
+                                                    }
+                                        );
+
+            }
         };
         Ok(())
     }
