@@ -1,6 +1,6 @@
 
 use mysql::Value;
-use toql_core::sql::SqlArg;
+use toql_core::sql_arg::SqlArg;
 
 pub fn values_from_ref(args :&[SqlArg]) -> Vec<Value> {
 

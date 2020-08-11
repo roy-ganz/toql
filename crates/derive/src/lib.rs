@@ -124,14 +124,14 @@ pub fn toql_sql_arg_derive(input: TokenStream) -> TokenStream {
     //let gen = impl_filter_arg_derive(&ast);
     let name = &ast.ident;
     let gen = quote! {
-                    impl From<#name> for toql::sql::SqlArg {
+                    impl From<#name> for toql::sql_arg::SqlArg {
                         fn from(t: #name) -> Self {
-                            toql::sql::SqlArg::Str(t.to_string())
+                            toql::sql_arg::SqlArg::Str(t.to_string())
                         }
                     }
-                     impl From<&#name> for toql::sql::SqlArg {
+                     impl From<&#name> for toql::sql_arg::SqlArg {
                         fn from(t: &#name) -> Self {
-                            toql::sql::SqlArg::Str(t.to_owned().to_string())
+                            toql::sql_arg::SqlArg::Str(t.to_owned().to_string())
                         }
                     }
     };

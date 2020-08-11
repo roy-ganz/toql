@@ -1,6 +1,6 @@
 
 use std::collections::{HashMap, HashSet};
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 
 #[derive(Debug)]
 pub struct PredicateOptions {

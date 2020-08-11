@@ -3,7 +3,8 @@
 use crate::sql_expr::SqlExpr;
 use crate::parameter::ParameterMap;
 use std::{ collections::HashMap};
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 
 pub trait JoinHandler {
    

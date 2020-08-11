@@ -1,5 +1,5 @@
 use std::collections::{HashSet, HashMap};
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 
 #[derive(Debug, Clone)]
 /// Options for a mapped field.

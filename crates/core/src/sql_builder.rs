@@ -34,11 +34,12 @@
 //!  - The first pass will query all users with the user mapper and will ignore the path *phones_*.
 //!  - The second pass will only build the query for the path *phones_* with the help of the phone mapper.
 //!
+pub mod sql_builder_error;
+pub mod wildcard_scope;
 
 pub(crate) mod build_context;
 pub(crate) mod build_result;
 pub(crate) mod path_tree;
-pub(crate) mod sql_builder_error;
 pub(crate) mod sql_with_placeholders;
 
 use super::sql_builder::build_context::BuildContext;
@@ -58,7 +59,8 @@ use crate::sql_mapper_registry::SqlMapperRegistry;
 
 use crate::alias::AliasFormat;
 use crate::alias_translator::AliasTranslator;
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 use crate::{parameter::ParameterMap, query::field_path::FieldPath};
 use path_tree::PathTree;
 use std::borrow::Cow;
@@ -102,6 +104,10 @@ impl<'a> SqlBuilder<'a> {
 
     pub fn with_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
+        self
+    }
+     pub fn with_aux_params(mut self, aux_params: HashMap<String, SqlArg>) -> Self {
+        self.aux_params = aux_params;
         self
     }
 
@@ -182,13 +188,11 @@ impl<'a> SqlBuilder<'a> {
         Ok(sql)
     }
 
-    pub fn build_delete_sql<M>(
+    pub fn build_delete_result<M>(
         &mut self,
         query: &Query<M>,
-        _modified: &str,
-        _extra: &str,
         format: AliasFormat,
-    ) -> Result<Sql> {
+    ) -> Result<BuildResult> {
         let mut context = BuildContext::new(AliasTranslator::new(format));
         let root_mapper = self
             .sql_mapper_registry
@@ -199,13 +203,47 @@ impl<'a> SqlBuilder<'a> {
             .alias_translator
             .translate(&root_mapper.canonical_table_alias);
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
-        let mut result = BuildResult::new(&aliased_table);
+        let mut result = BuildResult::new(aliased_table);
 
         self.build_where_clause(&query, &mut context, &mut result)?;
         self.build_join_clause(&mut context, &mut result)?;
 
+        Ok(result)
+    }
+     pub fn build_delete_sql<M>(
+        &mut self,
+        query: &Query<M>,
+        modified: &str,
+        extra: &str,
+        format: AliasFormat,
+    ) -> Result<Sql> {
+        let result = self.build_delete_result(query, format)?;
+
         Ok(result.delete_sql())
     }
+
+     pub fn build_select_result<M>(
+        &mut self,
+        query_root_path: &str,
+        query: &Query<M>,
+        format: AliasFormat,
+    ) -> Result<BuildResult> {
+        let mut context = BuildContext::new(AliasTranslator::new(format));
+        context.query_root_path = query_root_path.to_string();
+        let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
+        let alias_table = context
+            .alias_translator
+            .translate(&root_mapper.canonical_table_alias);
+        let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
+        let mut result = BuildResult::new(aliased_table);
+
+        self.build_where_clause(&query, &mut context, &mut result)?;
+        self.build_select_clause(&query, &mut context, &mut result)?;
+        self.build_join_clause(&mut context, &mut result)?;
+
+        Ok(result)
+    }
+
 
     pub fn build_select_sql<M>(
         &mut self,
@@ -215,6 +253,23 @@ impl<'a> SqlBuilder<'a> {
         extra: &str,
         format: AliasFormat,
     ) -> Result<(Sql, impl Iterator<Item = bool>, HashSet<String>)> {
+       let result = self.build_select_result(query_root_path, query, format)?;
+
+        Ok((
+            result.select_sql(modified, extra),
+            result.selection_stream.into_iter(),
+            result.unmerged_paths,
+        ))
+    }
+
+   
+
+     pub fn build_count_result<M>(
+        &mut self,
+        query_root_path: &str,
+        query: &Query<M>,
+        format: AliasFormat,
+    ) -> Result<BuildResult> {
         let mut context = BuildContext::new(AliasTranslator::new(format));
         context.query_root_path = query_root_path.to_string();
         let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
@@ -222,17 +277,28 @@ impl<'a> SqlBuilder<'a> {
             .alias_translator
             .translate(&root_mapper.canonical_table_alias);
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
-        let mut result = BuildResult::new(&aliased_table);
+        let mut result = BuildResult::new(aliased_table);
 
         self.build_where_clause(&query, &mut context, &mut result)?;
-        self.build_select_clause(&query, &mut context, &mut result)?;
+        todo!();
+        //self.build_select_clause(&query, &mut context, &mut result)?;
         self.build_join_clause(&mut context, &mut result)?;
 
-        Ok((
-            result.select_sql(modified, extra),
-            result.selection_stream.into_iter(),
-            result.unmerged_paths,
-        ))
+        Ok(result)
+    }
+    pub fn build_count_sql<M>(
+        &mut self,
+        query_root_path: &str,
+        query: &Query<M>,
+        modified: &str,
+        extra: &str,
+        format: AliasFormat,
+    ) -> Result<Sql> {
+       let result = self.build_count_result(query_root_path, query,format)?;
+
+        Ok(
+            result.count_sql(),
+        )
     }
 
     fn mapper_for_path(&self, path: &Option<FieldPath>) -> Result<&SqlMapper> {

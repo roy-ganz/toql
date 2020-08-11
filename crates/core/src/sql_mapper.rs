@@ -28,14 +28,14 @@
 //!  - to a single field with [map_handler()](struct.SqlMapper.html#method.map_handler).
 //!  - to all fields with [new_with_handler()](struct.SqlMapper.html#method.new_with_handler).
 //!
+pub mod mapped;
+pub mod predicate_options;
+pub mod field_options;
+pub mod join_options;
 
-pub(crate) mod field_options;
 pub(crate) mod field;
-pub(crate) mod join_options;
 pub(crate) mod join;
-pub(crate) mod predicate_options;
 pub(crate) mod predicate;
-pub(crate) mod mapped;
 pub(crate) mod merge;
 
 use heck::MixedCase;
@@ -235,21 +235,21 @@ impl SqlMapper {
     /// Maps a Toql field to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
     /// how to generate SQL for your field.
-    pub fn map_field_with_handler<'a, H>(
+    pub fn map_handler<'a, H>(
         &'a mut self,
         toql_field: &str,
-        expression: SqlExpr,
+        sql_expression: SqlExpr,
         handler: H,
     ) -> &'a mut Self
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        self.map_field_with_handler_and_options(toql_field, expression, handler, FieldOptions::new())
+        self.map_handler_with_options(toql_field, sql_expression, handler, FieldOptions::new())
     }
     // Maps a Toql field with options to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
     /// how to generate SQL for your field.
-    pub fn map_field_with_handler_and_options<'a, H>(
+    pub fn map_handler_with_options<'a, H>(
         &'a mut self,
         toql_field: &str,
         sql_expression: SqlExpr,

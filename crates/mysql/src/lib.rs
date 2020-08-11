@@ -22,10 +22,11 @@ use toql_core::sql_mapper_registry::SqlMapperRegistry;
 use toql_core::error::ToqlError;
 use toql_core::sql_builder::SqlBuilder;
 
-use toql_core::sql_mapper::Mapped;
+use toql_core::sql_mapper::mapped::Mapped;
 
 use core::borrow::Borrow;
 use toql_core::log_sql;
+use toql_core::alias::AliasFormat;
 
 
 
@@ -45,7 +46,8 @@ pub mod sql_arg;
 pub mod error;
 use crate::error::Result;
 use crate::error::ToqlMySqlError;
-use toql_core::sql::{Sql, SqlArg};
+use toql_core::sql::Sql;
+use toql_core::sql_arg::SqlArg;
 
 
 use crate::sql_arg::{values_from, values_from_ref};
@@ -54,8 +56,9 @@ fn execute_update_delete_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
 where
     C: GenericConnection,
 {
-    let (update_stmt, params) = statement;
-    log_sql!(update_stmt, params);
+     log_sql!(&statement);
+    let Sql(update_stmt, params) = statement;
+   
     let mut stmt = conn.prepare(&update_stmt)?;
     let res = stmt.execute( values_from(params))?;
     Ok(res.affected_rows())
@@ -65,8 +68,9 @@ fn execute_insert_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
 where
     C: GenericConnection,
 {
-    let (insert_stmt, params) = statement;
-    log_sql!(insert_stmt, params);
+     log_sql!(&statement);
+    let Sql(insert_stmt, params) = statement;
+   
 
     
     let mut stmt = conn.prepare(&insert_stmt)?;
@@ -78,7 +82,8 @@ pub struct MySql<'a, C: GenericConnection> {
     conn: &'a mut C,
     roles: HashSet<String>,
     registry: &'a SqlMapperRegistry,
-    aux_params: HashMap<String, SqlArg>
+    aux_params: HashMap<String, SqlArg>,
+    alias_format: AliasFormat
 }
 
 impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
@@ -110,7 +115,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_roles_and_aux_params(conn: &'a mut C, registry: &'a SqlMapperRegistry,roles: HashSet<String>, aux_params: HashMap<String, SqlArg>) -> MySql<'a, C> 
     {
-        MySql { conn, registry,roles, aux_params }
+        MySql { conn, registry,roles, aux_params, alias_format:  AliasFormat::Canonical }
     }
 
 
@@ -132,6 +137,10 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     }
     pub fn roles(&self) -> &HashSet<String> {
         &self.roles
+    }
+
+     pub fn alias_format(&self) -> AliasFormat {
+        self.alias_format.to_owned()
     }
 
     /* pub fn set_aux_params(&mut self, aux_params: HashMap<String, SqlArg>) -> &mut Self {
@@ -237,13 +246,14 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         
     {
         
-        let sql_mapper = self.registry.mappers.get( &<K as Key>::Entity::type_name() )
-                    .ok_or( ToqlError::MapperMissing(<K as Key>::Entity::type_name()))?;
+       /*  let sql_mapper = self.registry.mappers.get( &<K as Key>::Entity::type_name() )
+                    .ok_or( ToqlError::MapperMissing(<K as Key>::Entity::type_name()))?; */
         
         let query =  Query::from(key);
-         let sql = SqlBuilder::new(self.aux_params()).build_delete_sql(sql_mapper, &query, self.roles())?;
 
-        execute_update_delete_sql(sql, self.conn)
+        self.delete_many(query)
+
+        //execute_update_delete_sql(sql, self.conn)
     }
 
     /// Delete a collection of structs.
@@ -256,12 +266,15 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         B: Borrow<Query<T>>
     {
 
-       let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
-                    .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
+      /*  let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
+                    .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?; */
 
-         let sql = SqlBuilder::new(self.aux_params()).build_delete_sql(sql_mapper, query.borrow(), self.roles())?;
+         let sql = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
+         .with_aux_params(self.aux_params().clone())
+         .with_roles(self.roles().clone())
+         .build_delete_sql(query.borrow(), "", "", self.alias_format.clone())?;
          // No arguments, nothing to delete
-        if sql.1.is_empty() {
+        if sql.is_empty() {
             Ok(0)
         } else {
         execute_update_delete_sql(sql, self.conn)
@@ -351,8 +364,9 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     where T: DiffSql
     {
         let sql_stmts = <T as DiffSql>::diff_many_sql(entities, &self.roles)?;
-        Ok(if let Some((update_stmt, params)) = sql_stmts {
-            log_sql!(update_stmt, params);
+        Ok(if let Some(sql) = sql_stmts {
+            log_sql!(&sql);
+            let Sql(update_stmt, params) = sql;
             let mut stmt = self.conn.prepare(&update_stmt)?;
             let res = stmt.execute(values_from(params))?;
             res.affected_rows()
@@ -390,8 +404,9 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
             collection_delta_sql::<T>(
                 outdated,
                 updated,
-                &self.roles,
-                sql_mapper
+                self.roles.clone(),
+                self.registry,
+                self.alias_format.clone()
             )?;
         let mut affected = (0, 0, 0);
 
@@ -408,7 +423,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         Ok(affected)
     }
 
-    /// Selects a single struct for a given key.
+   /*  /// Selects a single struct for a given key.
     /// This will select all base fields and join. Merged fields will be skipped
     pub fn select_one<K>(&mut self, key: K) -> Result<<K as Key>::Entity>
     where
@@ -442,14 +457,17 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     /// This will select all base fields and joins. Merged fields will be skipped
     pub fn select_many<T, B>(&mut self, query: B) -> Result<Vec<T>>
     where
-        T: crate::row::FromResultRow<T> + toql_core::sql_mapper::Mapped, 
+        T: crate::row::FromResultRow<T> + toql_core::sql_mapper::mapped::Mapped, 
         B: Borrow<Query<T>>
     {
         
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new(self.aux_params()).build_select_all_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
+        let sql = SqlBuilder::new( &<T as Mapped>::type_name(), self.registry ) 
+        .with_roles(self.roles().clone())
+        .with_aux_params(self.aux_params().clone())
+        .build_select_all_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
        
         log_sql!(sql.0, sql.1);
 
@@ -458,8 +476,8 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
        
         Ok(entities)
     }
-
-    /// Selects all mutable fields of a single struct for a given key.
+ */
+   /*  /// Selects all mutable fields of a single struct for a given key.
     /// This will select all base fields and join. Merged fields will be skipped
     pub fn select_mut_one<K>(&mut self, key: K) -> Result<<K as Key>::Entity>
     where
@@ -487,28 +505,30 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         }
         Ok(entities.pop().unwrap())
     
-    }
+    } */
 
-    /// Selects all mutable fields of a single struct for a given key.
+    /* /// Selects all mutable fields of a single struct for a given key.
     /// This will select all base fields and joins. Merged fields will be skipped
     pub fn select_mut_many<T, B>(&mut self, query: B) -> Result<Vec<T>>
     where
-        T: crate::row::FromResultRow<T> + toql_core::sql_mapper::Mapped, 
+        T: crate::row::FromResultRow<T> + toql_core::sql_mapper::mapped::Mapped, 
         B: Borrow<Query<T>>
     {
         
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new(self.aux_params()).build_select_mut_sql(sql_mapper, query.borrow(), self.roles(), "", "")?;
+        let (sql, deser, un_fields) = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
+        .with_roles(self.roles().clone())
+        .build_select_sql(&<T as Mapped>::type_name(), query.borrow(),  "", "", self.alias_format)?;
        
-        log_sql!(sql.0, sql.1);
+        log_sql!(&sql);
 
         let entities_stmt = self.conn.prep_exec(sql.0, values_from_ref(&sql.1))?;
         let entities = from_query_result::<T>(entities_stmt)?;
        
         Ok(entities)
-    }
+    } */
 
     
 
@@ -518,7 +538,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     pub fn count<T, B>(&mut self, query: B) -> Result<u64>
     where
         Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Keyed + toql_core::sql_mapper::Mapped,
+        T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped,
         B: Borrow<Query<T>>
     {
       
@@ -526,9 +546,12 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
                     .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
-        let sql = SqlBuilder::new(self.aux_params()).build_count_sql(sql_mapper, query.borrow(), self.roles())?;
+        let sql = SqlBuilder::new( &<T as Mapped>::type_name() , self.registry)
+        .with_roles(self.roles().clone())
+        .with_aux_params(self.aux_params().clone())
+            .build_count_sql( &<T as Mapped>::type_name(), query.borrow(), "", "", self.alias_format.clone())?;
   
-        log_sql!(sql.0, sql.1);
+        log_sql!(sql);
          let result = self.conn.prep_exec(&sql.0, values_from_ref(&sql.1))?;
 
         let count = result.into_iter().next().unwrap().unwrap().get(0).unwrap();

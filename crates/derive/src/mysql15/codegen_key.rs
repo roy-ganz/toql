@@ -97,14 +97,11 @@ impl<'a> quote::ToTokens for GeneratedMysqlKey<'a> {
 
             impl toql :: mysql :: row:: FromResultRow < #struct_key_ident > for #struct_key_ident {
 
-            fn forward_row(mut i : usize) -> usize {
-                i = i + #forward_key_columns;
-                #(#forward_key_joins)*
-                i
-            }
+           
 
-            fn from_row_with_index ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize)
-                -> toql :: mysql :: error:: Result < #struct_key_ident> {
+            fn from_row_with_index<'a, I>( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize, mut iter: &mut I)
+                -> toql :: mysql :: error:: Result < #struct_key_ident> 
+                where I: Iterator<Item = &'a bool>{
 
                 Ok ( #struct_key_ident{
                     #(#mysql_deserialize_key),*

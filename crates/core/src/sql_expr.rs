@@ -1,6 +1,7 @@
 
 
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 use crate::parameter::ParameterMap;
 use crate::error::{Result, ToqlError};
 

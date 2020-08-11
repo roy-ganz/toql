@@ -12,6 +12,7 @@ pub mod load;
 pub mod mutate;
 pub mod select;
 pub mod sql;
+pub mod sql_arg;
 pub mod to_query;
 pub mod deserialize;
 

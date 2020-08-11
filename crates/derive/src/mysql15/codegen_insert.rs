@@ -57,7 +57,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                         quote!(
                              if  let Some(field) = &entity . #rust_field_ident  {
                                  insert_stmt.push_str("?, ");
-                                 params.push( toql::sql::SqlArg::from(field.as_ref()));
+                                 params.push( toql::sql_arg::SqlArg::from(field.as_ref()));
                              } else {
                                 insert_stmt.push_str("DEFAULT, ");
                              }
@@ -67,7 +67,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                         // Option<T>  selected (nullable column)
                         quote!(
                             insert_stmt.push_str("?, ");
-                            params.push( toql::sql::SqlArg::from(entity . #rust_field_ident.as_ref()));
+                            params.push( toql::sql_arg::SqlArg::from(entity . #rust_field_ident.as_ref()));
                         )
                     }
                     1 if !field.preselect => {
@@ -75,7 +75,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                         quote!(
                             if  let Some(field) = &entity . #rust_field_ident {
                                  insert_stmt.push_str("?, ");
-                                  params.push( toql::sql::SqlArg::from(field));
+                                  params.push( toql::sql_arg::SqlArg::from(field));
                             } else {
                                  insert_stmt.push_str("DEFAULT, ");
                             }
@@ -85,7 +85,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
                         // selected field
                         quote!(
                             insert_stmt.push_str("?, ");
-                            params.push(  toql::sql::SqlArg::from(&entity . #rust_field_ident));
+                            params.push(  toql::sql_arg::SqlArg::from(&entity . #rust_field_ident));
                         )
                     }
                 });
@@ -116,8 +116,8 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                                  <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_|  insert_stmt.push_str("?, "));
                                                 params.extend_from_slice(
                                                    & field.as_ref()
-                                                   .map_or_else::<Result<Vec<toql::sql::SqlArg>,toql::error::ToqlError>,_,_>(| |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
-                                                            .map(|_| toql::sql::SqlArg::Null())
+                                                   .map_or_else::<Result<Vec<toql::sql_arg::SqlArg>,toql::error::ToqlError>,_,_>(| |{ Ok(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                                                            .map(|_| toql::sql_arg::SqlArg::Null())
                                                             .collect::<Vec<_>>())},
                                                    | some| {Ok(toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(&some)?))})?
                                                );
@@ -134,8 +134,8 @@ impl<'a> GeneratedMysqlInsert<'a> {
                                          params.extend_from_slice(
                                                    &entity
                                                     . #rust_field_ident .as_ref()
-                                                   .map_or_else::<Result<Vec<toql::sql::SqlArg>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
-                                                    .map(|_| toql::sql::SqlArg::Null()).collect::<Vec<_>>())},
+                                                   .map_or_else::<Result<Vec<toql::sql_arg::SqlArg>,toql::error::ToqlError>,_,_>(| |{ Ok(<#rust_type_ident as toql::key::Key>::columns().iter()
+                                                    .map(|_| toql::sql_arg::SqlArg::Null()).collect::<Vec<_>>())},
                                                    | some| { Ok(toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(some)?))})?
                                                 );
                                            )
@@ -214,7 +214,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                                 return Ok(None);
                             }
 
-                            let mut params :Vec<toql::sql::SqlArg>= Vec::new();
+                            let mut params :Vec<toql::sql_arg::SqlArg>= Vec::new();
                             let mut columns :Vec<String>= Vec::new();
 
                              
@@ -240,7 +240,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
                                 insert_stmt.push(' ');
                                 insert_stmt.push_str(extra);
                             };
-                            Ok(Some((insert_stmt, params)))
+                            Ok(Some(Sql(insert_stmt, params)))
                     }
                 }
 

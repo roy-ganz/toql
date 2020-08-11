@@ -1,4 +1,4 @@
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 use std::collections::HashMap;
 
 pub struct ParameterMap<'a>(&'a [&'a HashMap<String, SqlArg>]);

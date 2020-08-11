@@ -123,7 +123,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                                                 format!("({} IS NOT NULL)",  & mapper.translate_aliased_column(&join_alias, &other_column))
                                         }).collect::<Vec<String>>().join(" AND ");   
                                         mapper.map_field_with_options(
-                                        &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::FieldOptions::new().preselect(true));
+                                        &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::field_options::FieldOptions::new().preselect(true));
                                 )
                  
                 } else {
@@ -271,31 +271,28 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
                     .collect::<Vec<_>>();
              
-                let sql_mapping = match &regular_attrs.sql_target {
+                let sql_expression = match &regular_attrs.sql_target {
                     SqlTarget::Expression(ref expression) => {
-                        quote! {let aliased_column = &format!("({})", #expression .replace("..",&format!("{}.",  mapper.translate_alias(canonical_sql_alias))));}
+                        quote! {toql::sql_expr_parser::SqlExprParser::parse(#expression)?}
                     }
                     SqlTarget::Column(ref column) => {
-                        quote! { let aliased_column =  & mapper.translate_aliased_column(canonical_sql_alias, #column); }
+                        quote! {toql::sql_expr::SqlExpr::aliased_column(String::from(#column)) }
                     }
                 };
 
                 match &regular_attrs.handler {
                     Some(handler) => {
                         self.field_mappings.push(quote! {
-                                            #sql_mapping
-                                            mapper.map_handler_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                        //    &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #preselect_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
-                                            &aliased_column, #handler (), toql::sql_mapper::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                            mapper.map_handler_with_options(&#toql_field_name, #sql_expression ,                                        
+                                            #handler (), toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
                                         }
                             );
                     }
                     None => {
+                                               
                         self.field_mappings.push(quote! {
-                                            #sql_mapping
-                                            mapper.map_field_with_options(&format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                            //&aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #preselect_ident #countfilter_ident #countselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
-                                            &aliased_column,toql::sql_mapper::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                            mapper.map_expr_with_options(&#toql_field_name, 
+                                            #sql_expression, toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
                                         }
                             );
                     }
@@ -328,7 +325,7 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
        
         let builder = quote!(
 
-            impl toql::sql_mapper::Mapped for #struct_ident {
+            impl toql::sql_mapper::mapped::Mapped for #struct_ident {
 
                 fn type_name() -> String {
                     String::from(#struct_name)
@@ -341,14 +338,11 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                     String::from(#sql_table_alias)
                 }
                 fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str, canonical_sql_alias: &str) {
-                    if toql_path.is_empty() {
-                        mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
-                    }
-                    
+                   
 
                     #(#field_mappings)*
 
-                    #count_filter_code
+                    // #count_filter_code
                 }
             }
 

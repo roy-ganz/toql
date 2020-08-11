@@ -2,7 +2,8 @@
 
 use std::collections::HashMap;
  use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 
 pub trait PredicateHandler {
     

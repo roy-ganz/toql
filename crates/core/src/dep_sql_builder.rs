@@ -50,7 +50,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 
 struct SqlTargetData {
     selected: bool, // Target is selected

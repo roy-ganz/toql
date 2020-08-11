@@ -14,7 +14,7 @@
 use super::concatenation::Concatenation;
 use super::field_order::FieldOrder;
 use super::field_filter::FieldFilter;
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 use super::QueryToken;
 use super::field_path::FieldPath;
 use heck::MixedCase;

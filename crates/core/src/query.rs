@@ -126,7 +126,7 @@ impl ToString for QueryToken {
 /// 
 /// 
 /// 
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 #[derive(Debug)]
 pub struct Query<M> {
     pub(crate) tokens: Vec<QueryToken>,

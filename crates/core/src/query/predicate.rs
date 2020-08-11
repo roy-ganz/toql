@@ -12,7 +12,7 @@
 /// ```
 
 use super::concatenation::Concatenation;
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 use super::QueryToken;
 
 #[derive(Clone, Debug)]

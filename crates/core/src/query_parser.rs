@@ -24,7 +24,7 @@ use crate::query::field_order::FieldOrder;
 use crate::query::Query;
 use crate::query::QueryToken;
 use crate::query::wildcard::Wildcard;
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 use toql_query_parser::PestQueryParser;
 
 use pest::error::Error;

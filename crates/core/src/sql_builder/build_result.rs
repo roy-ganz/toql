@@ -3,12 +3,13 @@
 
 use std::collections::HashSet;
 use crate::query::concatenation::Concatenation;
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
-pub struct BuildResult<'a> {
-    pub(crate) aliased_table: &'a str,
+pub struct BuildResult {
+    pub(crate) aliased_table: String,
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
 
@@ -36,9 +37,9 @@ pub struct BuildResult<'a> {
     
 }
 
-impl<'a> BuildResult<'a> {
+impl BuildResult {
 
-    pub fn new(aliased_table: &'a str) -> Self {
+    pub fn new(aliased_table: String) -> Self {
     BuildResult {
             aliased_table,
             any_selected: false,
@@ -104,8 +105,11 @@ impl<'a> BuildResult<'a> {
       
         Sql(stmt,args)
     }
+ pub fn select_sql(&self, modifier: &str, extra: &str)  -> Sql {
+     self.select_sql_with_additional_columns::<&str>(modifier, extra, &[])
+ }
 
-    pub fn select_sql(&self, modifier: &str, extra: &str) -> Sql {
+ pub fn select_sql_with_additional_columns<T: AsRef<str>>(&self, modifier: &str, extra: &str, columns: &[T]) -> Sql {
        let n=    self.select_sql.1.len() + self.join_sql.1.len() 
             + self.where_sql.1.len() + self.order_sql.1.len() ;
         let mut args = Vec::with_capacity(n);
@@ -123,6 +127,10 @@ impl<'a> BuildResult<'a> {
             stmt.push(' ');
         }
         stmt.push_str(&self.select_sql.0);
+        for c in columns {
+            stmt.push_str(" ,");
+            stmt.push_str(c.as_ref());
+        }
         self.sql_body(&mut stmt);
         if !extra.is_empty() {
               stmt.push(' ');
@@ -141,18 +149,24 @@ impl<'a> BuildResult<'a> {
     } */
 
  /// Returns count SQL statement.
-    pub fn count_stmt(&self) -> String {
-        let mut s = String::from("SELECT ");
+    pub fn count_sql(&self) -> Sql {
+        let mut stmt = String::from("SELECT ");
            if self.distinct {
-            s.push_str("COUNT(DISTINCT *)");
+            stmt.push_str("COUNT(DISTINCT *)");
         } else {
-            s.push_str("COUNT(*)");
+            stmt.push_str("COUNT(*)");
         }
        
-        self.sql_body(&mut s);
+        self.sql_body(&mut stmt);
        
-        s
+        let n =  self.join_sql.1.len() + self.where_sql.1.len();
+        let mut args = Vec::with_capacity(n);
+        args.extend_from_slice(&self.join_sql.1);
+        args.extend_from_slice(&self.where_sql.1);
+        
+        Sql(stmt, args)
     }
+     
 
     /// Returns simple SQL.
     pub fn query_stmt(&self, modifier:&str, extra:&str) -> String {
@@ -174,13 +188,7 @@ impl<'a> BuildResult<'a> {
         s
     }
     
-    pub fn count_params(&self) -> Vec<SqlArg> {
-        let n =  self.join_sql.1.len() + self.where_sql.1.len();
-        let mut args = Vec::with_capacity(n);
-        args.extend_from_slice(&self.join_sql.1);
-        args.extend_from_slice(&self.where_sql.1);
-        args
-    }
+   
     /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
     pub fn query_params(&self) -> Vec<SqlArg> {
        
@@ -192,6 +200,10 @@ impl<'a> BuildResult<'a> {
         args.extend_from_slice(&self.order_sql.1);
         args
        
+    }
+
+    pub fn selection_stream(&self) -> impl Iterator<Item=&bool> {
+        self.selection_stream.iter()
     }
 
     pub(crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {

@@ -52,7 +52,10 @@ pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::key;
 pub use toql_core::sql;
+pub use toql_core::sql_arg;
 pub use toql_core::load;
+pub use toql_core::sql_expr;
+pub use toql_core::sql_expr_parser;
 pub use toql_core::merge;
 pub use toql_core::mutate;
 pub use toql_core::query;
@@ -63,7 +66,6 @@ pub use toql_core::ok_or_fail; // Export macro
 
 pub use toql_core::query_fields;
 pub use toql_core::query_parser;
-pub use toql_core::sql_expr_parser;
 pub use toql_core::sql_builder;
 pub use toql_core::sql_mapper;
 pub use toql_core::sql_mapper_registry;

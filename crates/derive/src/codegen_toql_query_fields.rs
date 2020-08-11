@@ -26,9 +26,9 @@ impl<'a> GeneratedToqlQueryFields<'a> {
             let fnc_ident = Ident::new(fnc_name, Span::call_site());
             let toql_field=  args.name.as_str().trim_start_matches("r#");
             builder_fields.push(quote!(
-                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: Predicate {
+                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: predicate: : Predicate {
                             self . 0 . push_str ( #toql_field ) ;
-                            toql :: query :: Predicate :: from ( self . 0 )
+                            toql :: query :: predicate:: Predicate :: from ( self . 0 )
                         }
                     ));
 
@@ -65,14 +65,14 @@ impl<'a> GeneratedToqlQueryFields<'a> {
                 let toql_field = &field.toql_field_name;
 
                 self.builder_fields.push(quote!(
-                        #rust_struct_visibility fn #rust_field_ident (mut self) -> toql :: query :: Field {
+                        #rust_struct_visibility fn #rust_field_ident (mut self) -> toql :: query :: field::  Field {
                             self . 0 . push_str ( #toql_field ) ;
-                            toql :: query :: Field :: from ( self . 0 )
+                            toql :: query :: field:: Field :: from ( self . 0 )
                         }
                     ));
                 if regular_attrs.key {
                     self.key_composite_predicates.push(quote! {
-                        .and(toql::query::Field::from(
+                        .and(toql::query::field::Field::from(
                             format!("{}{}{}", path, if path.is_empty() || path.ends_with("_") {""}else {"_"}, #toql_field)
                         ).eq( &self . #key_index))
                     });
@@ -117,8 +117,8 @@ impl<'a> quote::ToTokens for GeneratedToqlQueryFields<'a> {
 
         let wildcard = if self.build_wildcard {
             quote!(
-                pub fn wildcard( self) -> toql::query::Wildcard {
-                    toql::query::Wildcard::from(self.0)
+                pub fn wildcard( self) -> toql::query::wildcard::Wildcard {
+                    toql::query::wildcard::Wildcard::from(self.0)
                 }
             )
         } else {

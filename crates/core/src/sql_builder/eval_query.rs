@@ -13,7 +13,7 @@ use super::BuildMode;
 use crate::sql_mapper::SqlMapper;
 use super::sql_builder_error::SqlBuilderError;
 use super::wildcard_scope::WildcardScope;
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 use crate::query::field_filter::FieldFilter;
 use crate::query::assert_roles;
 

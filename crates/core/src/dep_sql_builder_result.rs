@@ -2,7 +2,7 @@
 //! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
 use crate::query::Concatenation;
-use crate::sql::SqlArg;
+use crate::sql_arg::SqlArg;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 pub struct SqlBuilderResult {

@@ -10,7 +10,8 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 use std::borrow::Borrow;
 
-use crate::sql::{Sql, SqlArg};
+use crate::sql::Sql;
+use crate::sql_arg::SqlArg;
 
 /// Trait to define key type of a Toql entity.
 pub trait Keyed {

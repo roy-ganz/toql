@@ -81,8 +81,8 @@ impl<'a> GeneratedToqlKey<'a> {
                             .push(quote!( columns.push( String::from(#inverse_column)); ));
                     }
 
-                    self.toql_eq_predicates.push( quote!(.and(toql::query::Field::from(#toql_field_name).eq(&t. #rust_field_ident))));
-                    self.toql_eq_foreign_predicates.push( quote!(.and( toql::query::Field::from(format!("{}_{}",toql_path ,#toql_field_name)).eq(&t.#rust_field_ident))));
+                    self.toql_eq_predicates.push( quote!(.and(toql::query::field::Field::from(#toql_field_name).eq(&t. #rust_field_ident))));
+                    self.toql_eq_foreign_predicates.push( quote!(.and( toql::query::field::Field::from(format!("{}_{}",toql_path ,#toql_field_name)).eq(&t.#rust_field_ident))));
 
                     self.key_constr_code.push(quote!(#rust_field_ident));
                     
@@ -93,14 +93,14 @@ impl<'a> GeneratedToqlKey<'a> {
                              let rust_stuct_ident = &self.rust_struct.rust_struct_ident;
                              let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
                             Some(quote!(
-                                impl Into<toql::sql::SqlArg> for #struct_key_ident {
-                                    fn into(self) -> toql::sql::SqlArg {
-                                        toql::sql::SqlArg::from(self. #rust_field_ident)
+                                impl Into<toql::sql_arg::SqlArg> for #struct_key_ident {
+                                    fn into(self) -> toql::sql_arg::SqlArg {
+                                        toql::sql_arg::SqlArg::from(self. #rust_field_ident)
                                     }
                                 }
-                                impl Into<toql::sql::SqlArg> for &#struct_key_ident {
-                                    fn into(self) -> toql::sql::SqlArg {
-                                        toql::sql::SqlArg::from(self. #rust_field_ident .to_owned())
+                                impl Into<toql::sql_arg::SqlArg> for &#struct_key_ident {
+                                    fn into(self) -> toql::sql_arg::SqlArg {
+                                        toql::sql_arg::SqlArg::from(self. #rust_field_ident .to_owned())
                                     }
                                 }
                             ))
@@ -114,7 +114,7 @@ impl<'a> GeneratedToqlKey<'a> {
                                 where Self: Sized,
                                 {
                                     toql::query::Query::<#rust_stuct_ident>::new()
-                                    .and(toql::query::Field::from(#toql_field_name).ins(entities))
+                                    .and(toql::query::field::Field::from(#toql_field_name).ins(entities))
                                 }
                               
                             ))
@@ -126,12 +126,12 @@ impl<'a> GeneratedToqlKey<'a> {
                     /* self.partial_key_sql_predicates.push( quote!(
                         if let Some(v) = &self.#rust_field_ident {
                             predicate.push_str( &format!(#column_format, alias));
-                            params.push(toql::sql::SqlArg::from(v));
+                            params.push(toql::sql_arg::SqlArg::from(v));
                         }
                     ));
                      self.key_sql_predicates.push( quote!(
                             predicate.push_str( &format!(#column_format, alias));
-                            params.push( toql::sql::SqlArg::from(&self. #rust_field_ident));
+                            params.push( toql::sql_arg::SqlArg::from(&self. #rust_field_ident));
                     )); */
 
                 } else {
@@ -171,7 +171,7 @@ impl<'a> GeneratedToqlKey<'a> {
                // let key_index = syn::Index::from(self.key_fields.len() - 1);
 
                 self.key_params_code
-                    .push(quote!(params.push(toql::sql::SqlArg::from(&key . #rust_field_ident)); ));
+                    .push(quote!(params.push(toql::sql_arg::SqlArg::from(&key . #rust_field_ident)); ));
             }
             FieldKind::Join(ref join_attrs) => {
                 if !join_attrs.key {
@@ -339,7 +339,7 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
 
                 fn sql_predicate(&self, alias: &str) ->  toql::sql::Sql {
                     let mut predicate = String::new();
-                    let mut params: Vec<toql::sql::SqlArg> = Vec::new();
+                    let mut params: Vec<toql::sql_arg::SqlArg> = Vec::new();
 
                     #(#partial_key_sql_predicates)*
 
@@ -394,8 +394,8 @@ impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
                         #(#key_inverse_columns_code)*
                         columns
                     }
-                    fn params(&self) ->Vec<toql::sql::SqlArg> {
-                        let mut params: Vec<toql::sql::SqlArg>= Vec::new();
+                    fn params(&self) ->Vec<toql::sql_arg::SqlArg> {
+                        let mut params: Vec<toql::sql_arg::SqlArg>= Vec::new();
                         let key = self; // TODO cleanup
 
                         #(#key_params_code)*
