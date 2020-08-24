@@ -25,6 +25,9 @@ pub struct MergeArg {
     pub on_sql: Option<String>, */
     #[darling(default)]
     pub join_sql: Option<String>,
+
+    #[darling(default)]
+    pub on_sql: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]

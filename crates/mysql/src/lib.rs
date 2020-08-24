@@ -584,11 +584,61 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     ) -> Result<Vec<T>>
     where
         Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Keyed,
-        B: Borrow<Query<T>>
+        T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped + row::FromResultRow<T>,
+        B: Borrow<Query<T>>,
+        <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
+        
     {
-        let (r, _) =<Self as Load<T>>::load_many(self, query.borrow(),None)?;
-        Ok(r)
+        use  std::collections::HashSet;
+        use toql_core::sql::Sql;
+        use toql_core::key::Keyed;
+        use toql_core::query::field_path::FieldPath;
+
+      //  let (r, _) =<Self as Load<T>>::load_many(self, query.borrow(),None)?;
+
+    let mut unmerged_fields : HashSet<&str>= HashSet::new();
+         
+    let mut builder = SqlBuilder::new(&<T as Mapped>::type_name(), &self.registry);
+    let (Sql(sql, args), selection_stream, unmerged)=  builder.build_select_sql("", query.borrow(), "", "", self.alias_format())?;
+
+    let args = crate ::  sql_arg :: values_from_ref(& args); 
+    let query_results = self.conn().prep_exec(sql, args) ?;
+
+    // deserialize base entities
+
+    let index = 0;
+    let (entities, keys) = crate :: row :: from_query_result_with_primary_keys :: < T, <T as Keyed>::Key>(query_results, &selection_stream) ?;
+        
+
+    for root_path in unmerged_fields {
+        
+        let  mut join_sql = builder.join_sql(&root_path,self.alias_format())?;
+        let on_sql_expr = builder.merge_predicate(&root_path)?; // builder kann predicate bringen, aber keine argumente (key values)
+        
+        // resolves on_sql_expr for multiple entities (copies and concats expr)
+        // ex: (id = ?) -> SQL (id = ?) OR (id = ?) OR (id = ?) with [12,17,29]
+        // common for all databases
+        let on_sql = <T as Merged>::predicate_for_path(&root_path, on_sql_expr);
+
+        join_sql.push_literal(" ON ");
+        join_sql.append(on_sql);
+        
+        // Change root of builder. This will ignore path starting with other roots
+        // NOt sure if needed
+      //  builder.change_root_for_path(&<T as Mapped>::type_name(), &root_path)?; 
+        
+        let result =  builder.build_select_result(&root_path, query.borrow(), self.alias_format())?;
+        result.push_join(&join_sql);
+        let Sql(sql, args) = result.select_sql_with_additional_columns("", "", &["id", "djfk"]); // TODO columns
+        let args = crate ::  sql_arg :: values_from_ref(& args); 
+        let query_results = self.conn().prep_exec(sql, args) ?;
+
+        // MySql functionality
+        <T as Merger>::merge_results(&root_path, &query_results)?; // includes result / primary keys / merge keys
+
+    }
+
+        Ok(entities)
     }
 
     /// Load a vector of structs with dependencies for a given Toql query.
@@ -632,3 +682,4 @@ pub fn sql_from_query_result(
    
 }
  */
+

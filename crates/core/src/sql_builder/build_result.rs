@@ -65,11 +65,18 @@ impl BuildResult {
         } 
         self.select_sql.push_literal(s);
     }
-    pub fn push_join(&mut self, s: &str) {
+  /*   pub fn push_join(&mut self, s: &str) {
         if !self.join_sql.0.ends_with(' ') {
             self.join_sql.0.push(' ');
         }
         self.join_sql.0.push_str(s);
+    }  
+ */
+     pub fn push_join(&mut self, j: &crate::sql::Sql) {
+        if !self.join_sql.0.ends_with(' ') {
+            self.join_sql.0.push(' ');
+        }
+        self.join_sql.append(j);
     }  
     
 

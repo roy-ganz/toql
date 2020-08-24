@@ -66,8 +66,9 @@ impl<'a> GeneratedToqlMapper<'a> {
            
         }
         
-        let count_filter_code = 
-          if let Some(count_filter) = &rust_struct.count_filter {
+         let count_filter_code =  quote!();
+
+        /*   if let Some(count_filter) = &rust_struct.count_filter {
               // Only map count filter on top entity
               quote!(
                   if toql_path.is_empty() {
@@ -76,10 +77,11 @@ impl<'a> GeneratedToqlMapper<'a> {
                             mapper.set_options(field, options.count_filter(true));
                         }
                   }
-              )
+              ) 
+              quote!()
         } else {
             quote!( )
-        }; 
+        };  */
 
         GeneratedToqlMapper {
             rust_struct,
@@ -95,6 +97,7 @@ impl<'a> GeneratedToqlMapper<'a> {
       
 
         let rust_field_name = &field.rust_field_name;
+      
 
         // Joined field
         match &field.kind {
@@ -102,36 +105,77 @@ impl<'a> GeneratedToqlMapper<'a> {
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
                 let rust_type_ident = &field.rust_type_ident;
-                let rust_type_name = &field.rust_type_name;
                 let toql_field_name = &field.toql_field_name;
-                let join_alias = &join_attrs.join_alias;
+                let sql_join_mapper_name = &field.rust_type_name;
+
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
                 
 
                // self.field_mappings.push(quote!( )); // use Toql field name to build join alias (prevents underscore in name)))
 
-                // Add discriminator field for LEFT joins
-               let left_join_discriminator = if field.number_of_options > 1
+               // Add discriminator field for LEFT joins
+                let left_join_discriminator = if field.number_of_options > 1
                     || (field.number_of_options == 1 && field.preselect == true)
                 {
-                 
-                                    quote!(
-                                        let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias);
-                                        let none_condition = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
-                                                
-                                              //  #default_self_column_code;
-                                              //  let self_column = #columns_map_code;
-                                                format!("({} IS NOT NULL)",  & mapper.translate_aliased_column(&join_alias, &other_column))
-                                        }).collect::<Vec<String>>().join(" AND ");   
-                                        mapper.map_field_with_options(
-                                        &format!("{}{}{}_",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), &none_condition,toql::sql_mapper::field_options::FieldOptions::new().preselect(true));
-                                )
-                 
+                    quote!(
+                        .discriminator( toql::sql_expr_parser::SqlExprParser::parse( {
+                            <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
+                                    format!("(...{} IS NOT NULL)", &other_column)
+                            }).collect::<Vec<String>>().join(" AND ").as_str()  
+
+                        })? 
+                        ) 
+                    )
                 } else {
                     quote!()
-                };
+                }; 
 
                 // If no columns are provided, use default
+             /*    let col_array = if join_attrs.columns.is_empty() {
+                    quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns())
+                } else {
+                     let other_columns: Vec<String> = join_attrs.columns
+                        .iter()
+                        .map(|column| String::from(column.other.as_str()))
+                        .collect::<Vec<_>>();
+                        quote!( [ #(String::from(#other_columns)),* ])
+                }; */
+/* 
+                let join_expression_builder = quote!(
+                    
+                //  let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias);
+
+                 // #left_join_discriminator
+                  //let join_expression = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                 /*  let join_expression =  #col_array .iter()
+                    .map(|other_column| {
+                        #default_self_column_code;
+                        let self_column= #columns_map_code;
+                        format!("{} = {}", & mapper.translate_aliased_column(canonical_sql_alias, &self_column),
+                        & mapper.translate_aliased_column(&join_alias,other_column))
+                    }).collect::<Vec<String>>().join(" AND ")
+                ); */
+                  let join_expression =  #col_array .iter()
+                    .map(|other_column| {
+                        #default_self_column_code;
+                        let self_column= #columns_map_code;
+                        format!("{} = {}",  &self_column,&other_column)
+                    }).collect::<Vec<String>>().join(" AND ")
+                ); */
+    // Alias resolving
+             /*    let on_sql = if let Some(ref sql) = &join_attrs.on_sql {
+                    format!(" AND ({})", sql.replace("...", "{join_alias}.").replace("..", "{alias}."))
+                } else {
+                    String::from("")
+                }; */
+
+              
+
+                
+                // Avoid unused arguments by consuming them with zero length
+                // let join_predicate_format = format!("{{join}}{}{{join_alias:.0}}{{alias:.0}}", on_sql);
+
+                // Build predicate based on key information or custom provided column pairs
                 let col_array = if join_attrs.columns.is_empty() {
                     quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns())
                 } else {
@@ -141,42 +185,24 @@ impl<'a> GeneratedToqlMapper<'a> {
                         .collect::<Vec<_>>();
                         quote!( [ #(String::from(#other_columns)),* ])
                 };
-
-                let join_expression_builder = quote!(
-                    
-                  let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias);
-
-                  #left_join_discriminator
-                  //let join_expression = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
-                  let join_expression =  #col_array .iter()
+                let on_predicate = &join_attrs.on_sql;
+                let join_predicate = quote!(&format!( "{}{}", {
+                     #col_array .iter()
                     .map(|other_column| {
                         #default_self_column_code;
                         let self_column= #columns_map_code;
-                        format!("{} = {}", & mapper.translate_aliased_column(canonical_sql_alias, &self_column),
-                        & mapper.translate_aliased_column(&join_alias,other_column))
+                        format!("{} = {}",  &self_column,&other_column)
                     }).collect::<Vec<String>>().join(" AND ")
-                );
+                }
+                    , #on_predicate));
+                          
 
-                let on_sql = if let Some(ref sql) = &join_attrs.on_sql {
-                    format!(" AND ({})", sql.replace("...", "{join_alias}.").replace("..", "{alias}."))
-                } else {
-                    String::from("")
-                };
-
-                
-                // Avoid unused arguments by consuming them with zero length
-                let join_predicate_format = format!("{{join}}{}{{join_alias:.0}}{{alias:.0}}", on_sql);
-                let join_predicate = quote!(&format!( #join_predicate_format, 
-                            join = join_expression, 
-                            join_alias =   &mapper.translated_alias(&join_alias),
-                            alias = &mapper.translated_alias(canonical_sql_alias)));
-
-                let join_type = if field.number_of_options == 0
+                let join_statement = if field.number_of_options == 0
                     || (field.number_of_options == 1 && field.preselect == false)
                 {
-                    quote!(toql::sql_mapper::JoinType::Inner)
+                   format!("JOIN {} ...", &sql_join_table_name)
                 } else {
-                    quote!(toql::sql_mapper::JoinType::Left)
+                    format!("LEFT JOIN {} ...", &sql_join_table_name)
                 };
 
                 let preselect_ident = if field.preselect || (field.number_of_options == 0) {
@@ -208,8 +234,17 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
                     .collect::<Vec<TokenStream>>();
 
-               /*  self.field_mappings.push(quote! {
-                    #join_expression_builder;
+                // todo map handler, see regular field
+
+                self.field_mappings.push(quote! {
+
+                    mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
+                    toql::sql_expr_parser::SqlExprParser::parse(#join_statement)?, 
+                    toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?,
+                     toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
+                    );
+
+                  /*   #join_expression_builder;
                     mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",
                         toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
                         &join_alias);
@@ -219,16 +254,8 @@ impl<'a> GeneratedToqlMapper<'a> {
                      #join_type,
                      &aliased_table,
                      #join_predicate,
-                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident);
-                }); */
-                self.field_mappings.push(quote! {
-                   mapper.map_join_withg_options( &format!( #toql_field_name, #rust_type_name, 
-                        toql::sql_expr_parser::SqlExprParser::parse( #join_expression_builder)?,
-                         toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?,
-                    , toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident), 
-                    );
+                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident); */
                 });
-
 
                 if join_attrs.key {
                     self.key_field_names.push(rust_field_name.to_string());
@@ -280,30 +307,28 @@ impl<'a> GeneratedToqlMapper<'a> {
                     .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
                     .collect::<Vec<_>>();
              
-                let sql_expression = match &regular_attrs.sql_target {
+              let sql_mapping = match &regular_attrs.sql_target {
                     SqlTarget::Expression(ref expression) => {
-                        quote! {toql::sql_expr_parser::SqlExprParser::parse(#expression)?}
+                        quote! {let sql_mapping = toql::sql_expr_parser::SqlExprParser::parse( #expression)?;}
                     }
                     SqlTarget::Column(ref column) => {
-                        quote! {toql::sql_expr::SqlExpr::aliased_column(String::from(#column)) }
+                        quote! { let sql_mapping = #column; }
                     }
-                };
+                }; 
 
                 match &regular_attrs.handler {
                     Some(handler) => {
                         self.field_mappings.push(quote! {
-                                            mapper.map_handler_with_options(&#toql_field_name, #sql_expression ,                                        
-                                            #handler (), toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
-                                        }
-                            );
+                                #sql_mapping
+                                mapper.map_handler_with_options( #toql_field_name, sql_mapping, #handler (), toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                            });
                     }
                     None => {
-                                               
                         self.field_mappings.push(quote! {
-                                            mapper.map_expr_with_options(&#toql_field_name, 
-                                            #sql_expression, toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
-                                        }
-                            );
+                            #sql_mapping
+                                mapper.map_column_with_options( #toql_field_name, sql_mapping,
+                                toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                            });
                     }
                 };
 
@@ -311,13 +336,25 @@ impl<'a> GeneratedToqlMapper<'a> {
                     self.key_field_names.push(rust_field_name.to_string());
                 }
             }
-            FieldKind::Merge(ref _merge_attrs) => {
-                         let toql_field_name = &field.toql_field_name;
-                         let merge_mapper = &field.rust_type_name;
-                          self.field_mappings.push(quote! {
-                                                        mapper.map_merge(#toql_field_name,   #merge_mapper, SqlExprParser::parse("todo") );
-                                                    }
-                                        );
+            FieldKind::Merge(ref merge_attrs) => {
+                let toql_field_name = &field.toql_field_name;
+                let sql_merge_mapper_name = &field.rust_type_name;
+
+                // simple join statement or custom join statement
+                let join_statement= &merge_attrs.join_sql; 
+
+                // From keys or custom predicate
+                
+                let join_predicate= &merge_attrs.on_sql; // from on predicate or 
+
+                self.field_mappings.push(quote! {
+                        mapper.map_merge(#toql_field_name, #sql_merge_mapper_name, 
+                            toql::sql_expr_parser::SqlExprParser::parse(#join_statement)?, 
+                            toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?
+                            );
+                });
+                    
+
 
             }
         };
@@ -354,12 +391,16 @@ impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
                 fn table_alias() -> String {
                     String::from(#sql_table_alias)
                 }
-                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str, canonical_sql_alias: &str) {
-                   
+                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str, canonical_sql_alias: &str) -> toql::error::Result<()>{
+                  /*   if toql_path.is_empty() {
+                        mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
+                    } */
+                    
 
                     #(#field_mappings)*
 
-                    // #count_filter_code
+                    #count_filter_code
+                    Ok(())
                 }
             }
 

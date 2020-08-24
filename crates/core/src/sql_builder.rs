@@ -93,6 +93,19 @@ impl<'a> SqlBuilder<'a> {
         }
     }
 
+     pub fn change_root_for_path(&mut self, root: &str, path: &str)->Result<()> {
+         let path = if path.is_empty() {
+             None}
+             else {
+                 Some(FieldPath::from(path))
+             };
+         self.root_mapper = String::from(root);
+         let mapper = self.mapper_for_path(&path)?;
+         self.root_mapper = String::from(&mapper.table_name);
+         Ok(())
+     
+    }
+
     /*  pub fn with_alias_translator(mut self, alia: &'a mut AliasTranslator) ->  Self {
         self.alias_translator = alia;
         self
@@ -252,12 +265,12 @@ impl<'a> SqlBuilder<'a> {
         modified: &str,
         extra: &str,
         format: AliasFormat,
-    ) -> Result<(Sql, impl Iterator<Item = bool>, HashSet<String>)> {
+    ) -> Result<(Sql, Vec<bool>, HashSet<String>)> {
        let result = self.build_select_result(query_root_path, query, format)?;
 
         Ok((
             result.select_sql(modified, extra),
-            result.selection_stream.into_iter(),
+            result.selection_stream,
             result.unmerged_paths,
         ))
     }

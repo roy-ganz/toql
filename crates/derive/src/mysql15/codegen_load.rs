@@ -152,6 +152,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 quote!( i = < #rust_type_ident > ::forward_row(i);)
                             });
             
+
+
+
                     // For optional joined fields (left Joins) a discriminator field must be added to check
                     // - for unselected entity (discriminator column is NULL Type)
                     // - for null entity (discriminator column is false) - only left joins

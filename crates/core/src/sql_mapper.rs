@@ -470,10 +470,10 @@ impl SqlMapper {
         j.expression = join_expression;
         Ok(self)
     } */
-    pub fn map_merge<S>(  &mut self,toql_path:S,  merged_mapper: &str,   merge_predicate: SqlExpr) -> &mut Self 
+    pub fn map_merge<S>(  &mut self,toql_path:S,  merged_mapper: &str,   merge_join: SqlExpr, merge_predicate: SqlExpr) -> &mut Self 
     where S:Into<String>,{
         self.deserialize_order.push(DeserializeType::Merge(merged_mapper.to_string()));
-        self.merges.insert(toql_path.into(), merge::Merge{merged_mapper: merged_mapper.to_mixed_case(), merge_predicate});
+        self.merges.insert(toql_path.into(), merge::Merge{merged_mapper: merged_mapper.to_mixed_case(), merge_join, merge_predicate});
         self
     }
     pub fn map_predicate_handler<H>(&mut self, name: &str, sql_expression :SqlExpr, handler: H) 

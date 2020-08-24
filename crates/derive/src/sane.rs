@@ -118,6 +118,7 @@ pub struct MergeField {
 
     pub columns: Vec<MergeMatch>,
     pub join_sql: Option<String>,
+    pub on_sql: Option<String>,
 }
 
 impl MergeField {
@@ -400,6 +401,7 @@ impl Field {
                     .to_owned(),
                 sql_join_table_name,
                 join_sql: field.merge.as_ref().unwrap().join_sql.to_owned(),
+                on_sql: field.merge.as_ref().unwrap().on_sql.to_owned(),
                 /*  columns: toql
                 .columns
                 .as_ref()

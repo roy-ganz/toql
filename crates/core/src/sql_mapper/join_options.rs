@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use crate::sql_arg::SqlArg;
 use crate::join_handler::JoinHandler;
 use std::sync::Arc;
+use crate::sql_expr::SqlExpr;
 
 /// Options for a mapped field.
 #[derive(Debug)]
@@ -10,7 +11,8 @@ pub struct JoinOptions {
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
-    pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>> // Optional join handler
+    pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
+    pub(crate) discriminator: Option<SqlExpr> // Optional discriminator field to distimguish unselected left join from selected but NULL join
         
 }
 
@@ -22,13 +24,20 @@ impl JoinOptions {
             skip_wildcard: false,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
-            join_handler:None
+            join_handler:None,
+            discriminator: None
         }
     }
 
     /// Field is selected, regardless of the query.
     pub fn preselect(mut self, preselect: bool) -> Self {
         self.preselect = preselect;
+        self
+    }
+
+     /// use this discrminator to check if the (left) join is NULL
+    pub fn discriminator(mut self, discriminator: SqlExpr) -> Self {
+        self.discriminator = Some(discriminator);
         self
     }
 
