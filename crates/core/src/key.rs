@@ -416,7 +416,7 @@ where T: ToSqlPredicate {
 
 
 */
-pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64> 
+pub fn key_translation(keys: &Vec<u64>, mut id: u64) -> HashMap<u64, u64> 
  where 
 {
     	
