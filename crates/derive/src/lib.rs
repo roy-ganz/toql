@@ -50,6 +50,7 @@ mod codegen_toql_delup;
 mod codegen_toql_key;
 mod codegen_toql_mapper;
 mod codegen_toql_query_fields;
+mod codegen_toql_tree;
 
 #[cfg(feature = "mysqldb15")]
 mod codegen_mysql_load;

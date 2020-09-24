@@ -40,7 +40,8 @@ pub mod field_handler;
 pub mod join_handler;
 pub mod predicate_handler;
 
-pub mod path_predicate;
+//pub mod path_predicate;
+pub mod tree;
 
 
 pub use log; // Reexport for generated code from Toql derive

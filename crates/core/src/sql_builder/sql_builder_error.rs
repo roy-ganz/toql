@@ -19,7 +19,7 @@ pub enum SqlBuilderError {
     QueryParamMissing(String),
     /// The query parameter that is required by the query expression is wrong. Contains the parameter and the details.
     QueryParamInvalid(String, String),
-    /// A predicate requires more arguments, than the toql query provided, contains the predicate.
+    /// A predicate requires more arguments, than the toql q uery provided, contains the predicate.
     PredicateArgumentMissing(String),
 }
 

@@ -6,8 +6,6 @@
 //! 
 
 
-use std::collections::HashSet;
-use std::collections::HashMap;
 use std::borrow::Borrow;
 
 use crate::sql::Sql;
@@ -415,7 +413,7 @@ where T: ToSqlPredicate {
 
 
 */
-pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64> 
+/* pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64> 
  where 
 {
     	
@@ -425,7 +423,7 @@ pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64>
     	id += 1;
 	}
 	translation
-}
+} */
  
 /* 
 pub fn default_inverse_predicate<K>(key: K, alias: &str) -> (String, Vec<String>)
