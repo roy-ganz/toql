@@ -4,7 +4,7 @@
 */
 
 use crate::sane::{FieldKind, SqlTarget};
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use std::collections::HashSet;
 use syn::Ident;
 
@@ -35,12 +35,22 @@ impl<'a> GeneratedToqlTree<'a> {
     
 
         // Handle key predicate and parameters
+         let unwrap = match field.number_of_options {
+                    1 => quote!(.as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
+                    0 => quote!(.as_ref()),
+                    _ => quote!(.as_ref().unwrap().as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
+                };
+
+
         match &field.kind {
             FieldKind::Join(join_attrs) => {
+
+               
                self.dispatch_predicate_code.push(
                    quote!(
-                        #toql_field_name => {
-                            <#rust_type_ident as toql::tree::TreePredicate>::predicate(&#rust_field_ident ,&p, &mut predicate)
+                       self. #toql_field_name => { 
+                            <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                            predicate(&#rust_field_ident # unwrap ,&mut descendents, predicate, args)?
                         }
                 )
                );
@@ -48,9 +58,10 @@ impl<'a> GeneratedToqlTree<'a> {
             FieldKind::Merge(_) => {
                 self.dispatch_predicate_code.push(
                    quote!(
-                       #toql_field_name => {
-                        for f in #rust_field_ident {
-                            <#rust_type_ident as toql::tree::TreePredicate>::predicate(&f, &p, &mut predicate)
+                      self. #toql_field_name => {
+                        for f in & #rust_field_ident #unwrap {
+                            <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                            predicate(f, &mut descendents, predicate, args)?
                         }
                        }
                 )
@@ -69,21 +80,33 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
         let struct_ident = self.struct_ident;
 
         let dispatch_predicate_code = &self.dispatch_predicate_code;
+        let struct_key_ident = Ident::new(&format!("{}Key", &self.struct_ident), Span::call_site());
        
        let mods =  quote! {
-                impl toql::tree::TreePredicate for #struct_ident {
-                    fn predicate<'a>(&self,  descendents: &toql::query::field_path::Descendents<'a>, 
-                            predicate: &mut toql::sql::Sql) -> toql::error::Result<()> {
+                impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
+                    fn predicate<'a>(&self,  mut descendents: &mut toql::query::field_path::Descendents<'a>, 
+                            mut predicate: &mut toql::sql_expr::SqlExpr,  mut args: &mut Vec<toql::sql_arg::SqlArg>) -> toql::error::Result<()> {
                          match descendents.next() {
-                               Some(d) => match d {
+                               Some(d) => match d.as_str() {
                                    // #(#dispatch_predicate_code*),
-                                   #(#dispatch_predicate_code)* ,
-                                   f @ _ => return Err(toql::error::ToqlError::SqlBuilderError(toql::sql_builder::SqlBuilderError::FieldMissing(f.to_string())));
+                                   #(#dispatch_predicate_code),* 
+                                   f @ _ => {
+                                        return Err(toql::error::ToqlError::SqlBuilderError(
+                                            toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
+                                    }
                                },
                                None => {
                                         // TODO Sql Expr because of alias
-                                         predicate.push(toql::key::predicate_sql(&[self.try_get_key()?]));
-                                         predicate.push_str(" OR ");
+                                        let key = toql::key::Keyed::try_get_key(self) ? ; 
+                                        if  #struct_key_ident ::columns() . len() == 1 {
+                                                 predicate.push_literal(" KEY WIth IN ".to_string());
+                                        } else {
+                                            if !predicate.is_empty(){
+                                                predicate.push_literal(" OR ");
+                                            }
+                                            predicate.push_literal(" KEY WIth AND ".to_string());
+                                         
+                                        }
                                }
                         } 
                         Ok(())

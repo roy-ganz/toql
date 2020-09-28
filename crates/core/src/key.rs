@@ -154,6 +154,13 @@ where
     predicate_from_columns_with_alias_sql::<K, T, &str>(keys, aliased_columns, None)
 }
 
+/* pub fn predicate_sql_expr<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> crate::sql_expr::SqlExpr
+where
+    U: Borrow<str>,
+{
+    predicate_from_columns_with_alias_sql::<K, _, U>(keys, &K::columns(), sql_alias)
+} */
+
 pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> Sql
 where
     U: Borrow<str>,

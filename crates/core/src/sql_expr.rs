@@ -32,6 +32,25 @@ impl SqlExpr {
             tokens
         }
     }
+    pub fn new() -> Self {
+        SqlExpr {
+            tokens: Vec::new()
+        }
+    }
+
+    pub fn push_literal(&mut self, lit: String) {
+        self.tokens.push(SqlExprToken::Literal(lit));
+    }
+    pub fn push_self_alias(&mut self) {
+        self.tokens.push(SqlExprToken::SelfAlias());
+    }
+    pub fn push_other_alias(&mut self) {
+        self.tokens.push(SqlExprToken::OtherAlias());
+    }
+    pub fn is_empty(&mut self) -> bool{
+        self.tokens.is_empty()
+    }
+
 
    /*  pub fn extend(&mut self, expr: SqlExpr) {
             self.tokens.extend(self.tokens);

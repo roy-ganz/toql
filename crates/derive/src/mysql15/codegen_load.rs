@@ -142,7 +142,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     let rust_field_ident = &field.rust_field_ident;
                     let rust_field_name = &field.rust_field_name;
                     let rust_type_ident = &field.rust_type_ident;
-                    self.forward_joins
+                   /*  self.forward_joins
                         .push(
                             
                             if  field.number_of_options  == 2 {
@@ -150,7 +150,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                 quote!( i = < #rust_type_ident > ::forward_row(i) + 1;)
                             } else {
                                 quote!( i = < #rust_type_ident > ::forward_row(i);)
-                            });
+                            }); */
             
 
 
@@ -165,21 +165,18 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         quote!(
                                     #rust_field_ident : {
                                         
-                                        if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                            *i += 1; // Step over discriminator field
-                                                *i = < #rust_type_ident > ::forward_row(*i); 
-                                            None
-                                        }
-                                        else if row.take_opt::<bool,_>(*i).unwrap()
-                                            .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
-                                            == false {
-                                            *i += 1;  // Step over discriminator field
-                                            *i = < #rust_type_ident > ::forward_row(*i);
-
-                                            Some(None)
+                                          if  iter . next() . map(ToOwned :: to_owned) .unwrap_or(false) {
+                                            if row.take_opt::<bool,_>(*i).unwrap()
+                                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                                                == false {
+                                                *i += 1;  // Step over discriminator field
+                                                Some(None)
                                             } else {
-                                            *i += 1; // Step over discriminator field
-                                            Some(Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?))
+                                                *i += 1; // Step over discriminator field
+                                                Some(Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?))
+                                            }
+                                        } else {
+                                            None
                                         }
                                     }
                             ),
@@ -190,10 +187,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                         if row.take_opt::<bool,_>(*i).unwrap()
                                         .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                         == false {
-                                                *i = < #rust_type_ident > ::forward_row(*i);
                                             None
                                         } else {
-                                            Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
+                                            Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?)
                                         }
                                     }
                                 ),
@@ -202,16 +198,16 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                         #rust_field_ident : {
                                         
                                             if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                                *i = < #rust_type_ident > ::forward_row(*i); 
+                                                //*i = < #rust_type_ident > ::forward_row(*i); 
                                                 None
                                             } else {
-                                            Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i )?)
+                                            Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?)
                                             }
                                         }
                                     ),
                         _ =>   //    T                                 -> Selected Join -> InnerJoin
                         quote!(
-                            #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , i )?
+                            #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?
                         )
                     }
                 );
@@ -711,16 +707,16 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
 
         let mysql = quote!(
 
-            #loader
+         //   #loader
 
 
             impl toql :: mysql :: row:: FromResultRow < #struct_ident > for #struct_ident {
-/* 
-            fn forward_row(mut i : usize) -> usize {
+ 
+           /*  fn forward_row(mut i : usize) -> usize {
                 i += #regular_fields ;
                 #(#forward_joins)*
                 i
-            } */
+            }  */
 
             fn from_row_with_index<'a, I> ( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_ident> 

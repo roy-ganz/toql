@@ -13,7 +13,8 @@ use toql_core::mutate::collection_delta_sql;
 use toql_core::key::Key;
 
 use toql_core::key::Keyed;
-use toql_core::load::{Load, Page};
+//use toql_core::load::{Load, Page};
+use toql_core::load::{Page};
 use toql_core::mutate::{DiffSql, DuplicateStrategy, InsertSql, InsertDuplicate, UpdateSql};
 use toql_core::query::Query;
 
@@ -51,6 +52,70 @@ use toql_core::sql_arg::SqlArg;
 
 
 use crate::sql_arg::{values_from, values_from_ref};
+
+
+
+fn load<T, B, C> (mysql: & mut MySql<C>, query: B, page: Option<Page>) -> Result<(Vec<T>, Option<(u32, u32)>)>
+where   T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped +  row::FromResultRow<T>,
+        B: Borrow<Query<T>>,
+         <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
+        C: GenericConnection
+{
+     use  std::collections::HashSet;
+        use toql_core::sql::Sql;
+        use toql_core::key::Keyed;
+        use toql_core::query::field_path::FieldPath;
+
+      //  let (r, _) =<Self as Load<T>>::load_many(self, query.borrow(),None)?;
+
+    let mut unmerged_fields : HashSet<&str>= HashSet::new();
+
+     let ty =<T as Mapped>::type_name();
+    let mut builder = SqlBuilder::new(&ty, mysql.registry());
+    let (Sql(sql, args), selection_stream, unmerged)=  builder.build_select_sql("", query.borrow(), "", "", mysql.alias_format())?;
+
+    let args = crate ::  sql_arg :: values_from_ref(& args); 
+    let query_results = mysql.conn.prep_exec(sql, args) ?;
+
+    // deserialize base entities
+
+   // let index = 0;
+ //   let (entities, keys) = crate :: row :: from_query_result_with_primary_keys :: < T, <T as Keyed>::Key>(query_results, &selection_stream) ?;
+    let entities = crate :: row :: from_query_result :: <T>(query_results, &selection_stream) ?;
+    Ok((entities, None))
+        
+
+   /*  for root_path in unmerged_fields {
+        
+        let  mut join_sql = builder.join_sql(&root_path,self.alias_format())?;
+        let on_sql_expr = builder.merge_predicate(&root_path)?; // builder kann predicate bringen, aber keine argumente (key values)
+        
+        // resolves on_sql_expr for multiple entities (copies and concats expr)
+        // ex: (id = ?) -> SQL (id = ?) OR (id = ?) OR (id = ?) with [12,17,29]
+        // common for all databases
+        let on_sql = <T as Merged>::predicate_for_path(&root_path, on_sql_expr);
+
+        join_sql.push_literal(" ON ");
+        join_sql.append(on_sql);
+        
+        // Change root of builder. This will ignore path starting with other roots
+        // NOt sure if needed
+      //  builder.change_root_for_path(&<T as Mapped>::type_name(), &root_path)?; 
+        
+        let result =  builder.build_select_result(&root_path, query.borrow(), self.alias_format())?;
+        result.push_join(&join_sql);
+        let Sql(sql, args) = result.select_sql_with_additional_columns("", "", &["id", "djfk"]); // TODO columns
+        let args = crate ::  sql_arg :: values_from_ref(& args); 
+        let query_results = self.conn().prep_exec(sql, args) ?;
+
+        // MySql functionality
+        <T as PathMerge>::merge_results(&root_path, &query_results)?; // includes result / primary keys / merge keys
+
+    }
+*/
+}
+
+
 
 fn execute_update_delete_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
 where
@@ -151,6 +216,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     pub fn aux_params(&self) -> &HashMap<String, SqlArg> {
         &self.aux_params
     }
+   
    
 
     /// Insert one struct.
@@ -537,7 +603,7 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
     pub fn count<T, B>(&mut self, query: B) -> Result<u64>
     where
-        Self: Load<T, Error = ToqlMySqlError>,
+       
         T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped,
         B: Borrow<Query<T>>
     {
@@ -565,12 +631,20 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
     pub fn load_one<T, B>(&mut self, query: B) -> Result<T>
     where
-        Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Keyed,
-        B: Borrow<Query<T>>
+      T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped + row::FromResultRow<T> + toql_core::tree::tree_predicate::TreePredicate,
+        B: Borrow<Query<T>>,
+        <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
     {
         
-        <Self as Load<T>>::load_one(self, query.borrow())
+       // <Self as Load<T>>::load_one(self, query.borrow())
+       let (mut e, _) = load( self, query.borrow(), Some(Page::Uncounted(0,2)))?;
+       match e.len() {
+        
+           0 => Err(ToqlError::NotFound.into()),
+           1 => Ok(e.pop().unwrap()),
+            _ => Err(ToqlError::NotUnique.into()),
+       }
+
     }
 
     /// Load a vector of structs with dependencies for a given Toql query.
@@ -583,63 +657,15 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         query: B,
     ) -> Result<Vec<T>>
     where
-        Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped + row::FromResultRow<T>,
+       
+        T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped + row::FromResultRow<T> + toql_core::tree::tree_predicate::TreePredicate,
         B: Borrow<Query<T>>,
         <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
         
     {
-        use  std::collections::HashSet;
-        use toql_core::sql::Sql;
-        use toql_core::key::Keyed;
-        use toql_core::query::field_path::FieldPath;
-
-      //  let (r, _) =<Self as Load<T>>::load_many(self, query.borrow(),None)?;
-
-    let mut unmerged_fields : HashSet<&str>= HashSet::new();
-         
-    let mut builder = SqlBuilder::new(&<T as Mapped>::type_name(), &self.registry);
-    let (Sql(sql, args), selection_stream, unmerged)=  builder.build_select_sql("", query.borrow(), "", "", self.alias_format())?;
-
-    let args = crate ::  sql_arg :: values_from_ref(& args); 
-    let query_results = self.conn().prep_exec(sql, args) ?;
-
-    // deserialize base entities
-
-    let index = 0;
-    let (entities, keys) = crate :: row :: from_query_result_with_primary_keys :: < T, <T as Keyed>::Key>(query_results, &selection_stream) ?;
-        
-
-    for root_path in unmerged_fields {
-        
-        let  mut join_sql = builder.join_sql(&root_path,self.alias_format())?;
-        let on_sql_expr = builder.merge_predicate(&root_path)?; // builder kann predicate bringen, aber keine argumente (key values)
-        
-        // resolves on_sql_expr for multiple entities (copies and concats expr)
-        // ex: (id = ?) -> SQL (id = ?) OR (id = ?) OR (id = ?) with [12,17,29]
-        // common for all databases
-        let on_sql = <T as Merged>::predicate_for_path(&root_path, on_sql_expr);
-
-        join_sql.push_literal(" ON ");
-        join_sql.append(on_sql);
-        
-        // Change root of builder. This will ignore path starting with other roots
-        // NOt sure if needed
-      //  builder.change_root_for_path(&<T as Mapped>::type_name(), &root_path)?; 
-        
-        let result =  builder.build_select_result(&root_path, query.borrow(), self.alias_format())?;
-        result.push_join(&join_sql);
-        let Sql(sql, args) = result.select_sql_with_additional_columns("", "", &["id", "djfk"]); // TODO columns
-        let args = crate ::  sql_arg :: values_from_ref(& args); 
-        let query_results = self.conn().prep_exec(sql, args) ?;
-
-        // MySql functionality
-        <T as Merger>::merge_results(&root_path, &query_results)?; // includes result / primary keys / merge keys
-
-    }
-
+       let (entities, _) =load(self, query, None)?;
         Ok(entities)
-    }
+    } 
 
     /// Load a vector of structs with dependencies for a given Toql query.
     ///
@@ -651,35 +677,16 @@ impl<'a, C: 'a +  GenericConnection> MySql<'a, C> {
         query: B,
         page: Page,
     ) -> Result<(Vec<T>, Option<(u32, u32)>)>
-    where
-        Self: Load<T, Error = ToqlMySqlError>,
-        T: toql_core::key::Keyed,
-        B: Borrow<Query<T>>
+    
+      where   T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped +  row::FromResultRow<T>,
+        B: Borrow<Query<T>>,
+         <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
+      
     {
-        <Self as Load<T>>::load_many(self, query.borrow(), Some(page))
+        let conn = self.conn();
+        let registry = self.registry();
+        let alias_format = self.alias_format();
+       let entities_page = load(self, query.borrow(), Some(page))?;
+       Ok(entities_page)
     }
 }
-/* 
-/// Helper function to convert result from SQlBuilder into SQL (MySql dialect).
-pub fn sql_from_query_result(
-    result: &SqlBuilderResult,
-    modifier: &str,
-    page: Option<(u64,u16)>
-) -> String {
-
-
-    let extra = match page {
-        Some((offset, max)) => { 
-            let mut e = String::from("LIMIT ");
-        e.push_str(&offset.to_string());
-        e.push(',');
-        e.push_str(&max.to_string()); e},
-        None => String::from("")
-    }
-    ;
-
-    result.query_stmt(modifier, &extra)
-   
-}
- */
-

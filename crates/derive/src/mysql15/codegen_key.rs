@@ -63,16 +63,10 @@ impl<'a> GeneratedMysqlKey<'a> {
                 self.mysql_forward_join_key.push(quote!(
                    *i = < #rust_type_ident > ::forward_row(*i);
                 ));
-               /*  let increment = if self.mysql_deserialize_key.is_empty() {
-                    quote!(i)
-                } else {
-                    quote!({
-                        *i = *i + 1;
-                        i
-                    })
-                }; */
+
+              
                 self.mysql_deserialize_key.push(quote!(
-                    #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i /*#increment*/)?
+                    #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i. iter /*#increment*/)?
                 ));
             }
             _ => {}

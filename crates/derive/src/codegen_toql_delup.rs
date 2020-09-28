@@ -395,7 +395,7 @@ impl<'a> GeneratedToqlDelup<'a> {
                                      outdated. #rust_field_ident .as_ref() #optional_ok_or,
                                     entity.#rust_field_ident .as_ref() #optional_unwrap,
                                     roles,
-                                    &sql_mapper
+                                    &sql_mapper, format
                                      )?;
 
                                   if let Some( s) = insert_sql {
@@ -549,7 +549,7 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     }
                 }
-                impl toql::mutate::DiffSql for #struct_ident
+               /*  impl toql::mutate::DiffSql for #struct_ident
                 {
                    
 
@@ -648,8 +648,8 @@ impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
 
                     }
                 }
-
-            }
+    */
+            } 
         };
 
         log::debug!(

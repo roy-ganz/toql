@@ -5,9 +5,11 @@ use crate::error::Result;
 /// Trait to convert MySQL result row into Toql structs.
 /// This is implements by Toql Derive for all dervied structs.
 pub trait FromResultRow<T> {
-    // Skip row values for struct.
+    // Skip entity values for struct.
     // Returns a new index that points to next struct.
-   // fn forward_row(i: usize) -> usize;
+    // To skip entity, count 1 in deserialize stream and forward index
+   // fn forward_row(i: usize) -> usize; 
+
     // Read row values into struct, starting from index `i`.
     fn from_row_with_index<'a, I>(row: &mut mysql::Row, i: &mut usize, iter: &mut I ) -> Result<T>
     where I: Iterator<Item = &'a bool>;

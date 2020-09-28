@@ -73,6 +73,7 @@ pub use toql_core::field_handler;
 pub use toql_core::join_handler;
 pub use toql_core::predicate_handler;
 pub use toql_core::to_query;
+pub use toql_core::tree;
 
 pub use toql_derive as derive;
 pub use toql_query_builder as query_builder;

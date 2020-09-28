@@ -23,7 +23,7 @@ pub enum Page {
     /// Argments are *start index* and *number of records*.
     Counted(u64, u16),
 }
-
+/* 
 /// Trait to load entities from database.
 /// This is implemented for each struct in each SQL dialect. E.g. `impl Load<User> for MySql<..>`
 pub trait Load<T: crate::key::Keyed> {
@@ -68,3 +68,4 @@ pub trait Load<T: crate::key::Keyed> {
         Ok(())
     }
 }
+ */
