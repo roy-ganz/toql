@@ -39,6 +39,7 @@ pub mod sql_mapper_registry;
 pub mod field_handler;
 pub mod join_handler;
 pub mod predicate_handler;
+pub mod from_row;
 
 //pub mod path_predicate;
 pub mod tree;

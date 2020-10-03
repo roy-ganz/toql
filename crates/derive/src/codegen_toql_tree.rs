@@ -58,8 +58,8 @@ impl<'a> GeneratedToqlTree<'a> {
             FieldKind::Merge(_) => {
                 self.dispatch_predicate_code.push(
                    quote!(
-                      self. #toql_field_name => {
-                        for f in & #rust_field_ident #unwrap {
+                       #toql_field_name => {
+                        for f in &self. #rust_field_ident #unwrap {
                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
                             predicate(f, &mut descendents, predicate, args)?
                         }
@@ -96,17 +96,22 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                     }
                                },
                                None => {
-                                        // TODO Sql Expr because of alias
-                                        let key = toql::key::Keyed::try_get_key(self) ? ; 
-                                        if  #struct_key_ident ::columns() . len() == 1 {
-                                                 predicate.push_literal(" KEY WIth IN ".to_string());
-                                        } else {
-                                            if !predicate.is_empty(){
-                                                predicate.push_literal(" OR ");
-                                            }
-                                            predicate.push_literal(" KEY WIth AND ".to_string());
-                                         
+                                    let key = toql::key::Keyed::try_get_key(self)?;
+                                    let columns = <UserKey as toql::key::Key>::columns();
+                                    let params =  <UserKey as toql::key::Key>::params(&key);
+
+                                    if columns.len() == 1 {
+                                        predicate.push_self_alias();
+                                        predicate.push_in_clause(columns.get(0).unwrap(), params.get(0).unwrap().to_owned());
+                                    
+                                    } else {
+                                        if !predicate.is_empty() {
+                                            predicate.push_literal(" OR ".to_string());
                                         }
+                                        predicate.push_literal("(".to_string());
+                                        toql::key::predicate_expr(key);
+                                        predicate.push_literal(") ".to_string());
+                                    }
                                }
                         } 
                         Ok(())

@@ -60,6 +60,7 @@ pub use toql_core::merge;
 pub use toql_core::mutate;
 pub use toql_core::query;
 pub use toql_core::select;
+pub use toql_core::from_row;
 
 pub use toql_core::log_sql; // Export macro
 pub use toql_core::ok_or_fail; // Export macro

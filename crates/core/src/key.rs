@@ -9,7 +9,7 @@
 use std::borrow::Borrow;
 
 use crate::sql::Sql;
-use crate::sql_arg::SqlArg;
+use crate::{sql_expr::{SqlExprArg, SqlExpr}, sql_arg::SqlArg};
 
 /// Trait to define key type of a Toql entity.
 pub trait Keyed {
@@ -160,6 +160,27 @@ where
 {
     predicate_from_columns_with_alias_sql::<K, _, U>(keys, &K::columns(), sql_alias)
 } */
+
+pub fn predicate_expr<K:Key>(key: K) -> SqlExpr {
+
+    let columns = <K as Key>::columns();
+    let mut  params = key.params().into_iter();
+    let mut expr = SqlExpr::new();
+
+
+    for c in columns {
+        if !expr.is_empty() {
+            expr.push_literal(" AND ".to_string());
+        }
+        expr.push_self_alias();
+        expr.push_literal(c);
+        expr.push_literal(" = ".to_string());
+        expr.push_arg(SqlExprArg::Resolved(params.next().unwrap_or(SqlArg::Null())));
+    }
+
+    expr
+
+}
 
 pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> Sql
 where
