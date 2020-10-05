@@ -36,10 +36,10 @@ impl SqlExprParser {
                     tokens.push(SqlExprToken::Literal( span.as_str().to_string()))
                 },
                 Rule::self_alias => {
-                    tokens.push(SqlExprToken::SelfAlias())
+                    tokens.push(SqlExprToken::SelfAlias)
                 }
                 Rule::other_alias => {
-                    tokens.push(SqlExprToken::OtherAlias())
+                    tokens.push(SqlExprToken::OtherAlias)
                 }
                 Rule::aux_param => {
                     tokens.push(SqlExprToken::AuxParam( span.as_str().to_string()))

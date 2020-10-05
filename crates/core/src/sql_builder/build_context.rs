@@ -8,8 +8,7 @@ pub(crate) struct BuildContext {
     pub(crate) query_root_path: String,
     
     pub(crate) joined_paths: HashSet<String>,
-    pub(crate) alias_translator : AliasTranslator,
-
+  
     pub(crate) selected_paths: HashSet<String>,
     pub(crate) selected_fields: HashSet<String>,
     pub(crate )all_fields_selected: bool,
@@ -21,12 +20,11 @@ pub(crate) struct BuildContext {
 }
 
 impl BuildContext {
-    pub fn new(alias_translator: AliasTranslator) -> Self {
+    pub fn new() -> Self {
 
         BuildContext {
             query_root_path: "".to_string(),
             joined_paths:HashSet::new(),
-            alias_translator,
             selected_paths: HashSet::new(),
             selected_fields: HashSet::new(),
             all_fields_selected: true,

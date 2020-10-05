@@ -30,6 +30,7 @@ pub mod sql_builder;
 //pub mod sql_builder_new;
 pub mod sql_expr;
 pub mod sql_expr_parser;
+pub mod sql_expr_resolver;
 pub mod alias_translator;
 pub mod parameter;
 
@@ -40,6 +41,7 @@ pub mod field_handler;
 pub mod join_handler;
 pub mod predicate_handler;
 pub mod from_row;
+
 
 //pub mod path_predicate;
 pub mod tree;

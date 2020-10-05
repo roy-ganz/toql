@@ -61,7 +61,7 @@ use crate::alias::AliasFormat;
 use crate::alias_translator::AliasTranslator;
 use crate::sql::Sql;
 use crate::sql_arg::SqlArg;
-use crate::{parameter::ParameterMap, query::field_path::FieldPath};
+use crate::{parameter::ParameterMap, query::field_path::FieldPath, sql_expr::{resolver::Resolver, SqlExpr}};
 use path_tree::PathTree;
 use std::borrow::Cow;
 
@@ -78,7 +78,7 @@ pub struct SqlBuilder<'a> {
     aux_params: HashMap<String, SqlArg>, // Aux params used for all queries with this builder instance, contains typically config or auth data
 
     extra_joins: HashSet<String>, // Use this joins
-                                  //  alias_translator: &'a mut AliasTranslator
+  
 }
 
 impl<'a> SqlBuilder<'a> {
@@ -105,14 +105,7 @@ impl<'a> SqlBuilder<'a> {
         Ok(())
     }
 
-    /*  pub fn with_alias_translator(mut self, alia: &'a mut AliasTranslator) ->  Self {
-        self.alias_translator = alia;
-        self
-    } */
-    /*  pub fn with_alias_format(mut self, alias_format: AliasFormat) ->  Self {
-        self.alias_translator = &mut AliasTranslator::new(alias_format);
-        self
-    } */
+   
 
     pub fn with_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
@@ -128,8 +121,8 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-    pub fn join_sql(&self, field_path: &str, format: AliasFormat) -> Result<Sql> {
-        let mut context = BuildContext::new(AliasTranslator::new(format));
+   /*  pub fn join_sql(&self, field_path: &str) -> Result<Sql> {
+        let mut context = BuildContext::new();
         let mut sql = Sql::new();
         let mut current_mapper = self.root_mapper()?;
         let field_path = FieldPath::from(field_path);
@@ -144,14 +137,14 @@ impl<'a> SqlBuilder<'a> {
         for d in field_path.children() {
             dbg!(&d);
 
-            let self_alias = context.alias_translator.translate(
+            let self_alias = self.alias_translator.translate(
                 alias1
                     .unwrap_or(FieldPath::from("")) // Should never be used
                     .prefix(&canonical_table_alias)
                     .as_str(),
             );
 
-            let other_alias = context.alias_translator.translate(
+            let other_alias = self.alias_translator.translate(
                 alias2
                     .as_ref()
                     .unwrap_or(&FieldPath::from("")) // Should never be used
@@ -197,10 +190,10 @@ impl<'a> SqlBuilder<'a> {
         }
         sql.pop_literals(1); // Remove trailing space
         Ok(sql)
-    }
-    pub fn merge_sql(&self, field_path: &str, format: AliasFormat) -> Result<Sql> {
-        let mut context = BuildContext::new(AliasTranslator::new(format));
-        let mut sql = Sql::new();
+    } */
+    pub fn merge_sql(&self, field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
+        
+       // let mut sql = SqlExpr::new();
         let mut current_mapper = self.root_mapper()?;
         let (basename, ancestor_path) = FieldPath::split_basename(field_path);
              
@@ -223,24 +216,39 @@ impl<'a> SqlBuilder<'a> {
             }
         }
 
+        
+
+
         // Build canonical alias
-        let self_alias = context.alias_translator.translate(
+        let self_alias = 
             ancestor_path
                 .unwrap_or(FieldPath::from(""))
-                .prefix(&canonical_table_alias)
-                .as_str(),
-        );
+                .prefix(&canonical_table_alias).as_str();
 
-        let other_alias = context.alias_translator.translate(
+
+        let other_alias =
             FieldPath::from(field_path)
                 .prefix(&canonical_table_alias)
-                .as_str(),
-        );
+                .as_str();
+        
 
         // Get merge join statement and on predicate
         let merge = current_mapper.merge(basename).ok_or(ToqlError::NotFound)?;
 
-        let join_clause_sql =
+        let resolver = Resolver::new()
+            .with_self_alias(&self_alias)
+            .with_other_alias(&other_alias);
+
+
+
+        let join_expr =  resolver.resolve(&merge.merge_join)?;
+        let on_expr =  resolver.resolve(&merge.merge_predicate)?;
+
+         Ok((join_expr, on_expr))
+
+
+
+        /* let join_clause_sql =
             merge
                 .merge_join
                 .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
@@ -256,21 +264,20 @@ impl<'a> SqlBuilder<'a> {
         // TODO translator in sql builder to have same translations
         // Oder anstatt Alias Format -> Translator übergeben
         // Rückgabe 2 expressions -> resolve in hauptfunktion
-        Ok(sql) 
+        Ok(sql)  */
     }
 
     pub fn build_delete_result<M>(
         &mut self,
         query: &Query<M>,
-        format: AliasFormat,
     ) -> Result<BuildResult> {
-        let mut context = BuildContext::new(AliasTranslator::new(format));
+        let mut context = BuildContext::new();
         let root_mapper = self
             .sql_mapper_registry
             .mappers
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_owned()))?;
-        let alias_table = context
+        let alias_table = self
             .alias_translator
             .translate(&root_mapper.canonical_table_alias);
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
@@ -286,9 +293,8 @@ impl<'a> SqlBuilder<'a> {
         query: &Query<M>,
         modified: &str,
         extra: &str,
-        format: AliasFormat,
     ) -> Result<Sql> {
-        let result = self.build_delete_result(query, format)?;
+        let result = self.build_delete_result(query)?;
 
         Ok(result.delete_sql())
     }
@@ -297,14 +303,16 @@ impl<'a> SqlBuilder<'a> {
         &mut self,
         query_root_path: &str,
         query: &Query<M>,
-        format: AliasFormat,
+       
     ) -> Result<BuildResult> {
-        let mut context = BuildContext::new(AliasTranslator::new(format));
+        let mut context = BuildContext::new();
         context.query_root_path = query_root_path.to_string();
-        let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
-        let alias_table = context
+        let root_mapper = self.root_mapper()?; 
+              
+        let alias_table = self
             .alias_translator
             .translate(&root_mapper.canonical_table_alias);
+            
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
         let mut result = BuildResult::new(aliased_table);
 
@@ -323,7 +331,7 @@ impl<'a> SqlBuilder<'a> {
         extra: &str,
         format: AliasFormat,
     ) -> Result<(Sql, Vec<bool>, HashSet<String>)> {
-        let result = self.build_select_result(query_root_path, query, format)?;
+        let result = self.build_select_result(query_root_path, query)?;
 
         Ok((
             result.select_sql(modified, extra),
@@ -338,10 +346,11 @@ impl<'a> SqlBuilder<'a> {
         query: &Query<M>,
         format: AliasFormat,
     ) -> Result<BuildResult> {
-        let mut context = BuildContext::new(AliasTranslator::new(format));
+        let mut context = BuildContext::new();
         context.query_root_path = query_root_path.to_string();
         let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
-        let alias_table = context
+        
+        let alias_table = self
             .alias_translator
             .translate(&root_mapper.canonical_table_alias);
         let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
@@ -475,10 +484,10 @@ impl<'a> SqlBuilder<'a> {
                 let p = [&self.aux_params, &join.options.aux_params];
                 let aux_params = ParameterMap::new(&p);
 
-                let self_alias = build_context
+                let self_alias = self
                     .alias_translator
                     .translate(canonical_path.as_str());
-                let other_alias = build_context.alias_translator.translate(n.as_str());
+                let other_alias = self.alias_translator.translate(n.as_str());
                 let sql = join.join_expression.resolve(
                     &self_alias,
                     Some(&other_alias),
@@ -576,7 +585,7 @@ impl<'a> SqlBuilder<'a> {
                                 return Err(SqlBuilderError::RoleRequired(role.to_string()).into());
                             }
                             let canonical_alias = self.canonical_alias(&relative_path)?;
-                            let alias = build_context.alias_translator.translate(&canonical_alias);
+                            let alias = self.alias_translator.translate(&canonical_alias);
                             let sql =
                                 mapped_field
                                     .expression
@@ -641,7 +650,7 @@ impl<'a> SqlBuilder<'a> {
                                 )),
                                 None => Cow::Borrowed(&mapper.canonical_table_alias),
                             }; */
-                            let alias = build_context.alias_translator.translate(&canonical_alias);
+                            let alias = self.alias_translator.translate(&canonical_alias);
                             let sql = mapped_predicate.expression.resolve(
                                 &alias,
                                 None,
@@ -666,7 +675,7 @@ impl<'a> SqlBuilder<'a> {
         Ok(())
     }
 
-    fn canonical_alias<'b>(&'b self, optional_path: &'b Option<FieldPath>) -> Result<Cow<String>> {
+    fn canonical_alias<'c>(&'c self, optional_path: &'c Option<FieldPath>) -> Result<Cow<String>> {
         let root_alias = &self.root_mapper()?.canonical_table_alias;
 
         Ok(match optional_path {
@@ -753,7 +762,7 @@ impl<'a> SqlBuilder<'a> {
 
                     // Field is explicitly selected in query
                     if explicit_selection {
-                        let alias = build_context.alias_translator.translate(&canonical_alias);
+                        let alias = self.alias_translator.translate(&canonical_alias);
                         let select_sql =
                             field_info
                                 .expression
@@ -774,7 +783,7 @@ impl<'a> SqlBuilder<'a> {
                     // TODO skip unrelated preseleted fields
                     else {
                         if field_info.options.preselect {
-                            let alias = build_context.alias_translator.translate(&canonical_alias);
+                            let alias = self.alias_translator.translate(&canonical_alias);
                             let select_sql =
                                 field_info
                                     .expression
@@ -962,7 +971,7 @@ impl<'a> SqlBuilder<'a> {
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))
     }
-    fn missing_role<'b>(&'b self, roles: &'b HashSet<String>) -> Option<&'b str> {
+    fn missing_role<'c>(&'c self, roles: &'c HashSet<String>) -> Option<&'c str> {
         let s = roles.difference(&self.roles).next();
         s.map(|r| r.as_str())
     }

@@ -205,11 +205,11 @@ where
     let insert_sql = <T as InsertSql>::insert_many_sql(insert.as_slice(), &roles, "", "")?;
     let diff_sql = <T as DiffSql>::diff_many_sql(&diff, &roles)?;
 
-     
+     let mut alias_translator = AliasTranslator::new(format);
     
      let delete_sql = if delete.is_empty() {None } else {
-         Some(SqlBuilder::new( &<T as Mapped>::table_name(), &sql_mapper_registry).with_roles(roles)
-         .build_delete_sql(&crate::to_query::ToQuery::slice_to_query(&delete), "", "", format)?)
+         Some(SqlBuilder::new( &<T as Mapped>::table_name(), &sql_mapper_registry, &mut alias_translator).with_roles(roles)
+         .build_delete_sql(&crate::to_query::ToQuery::slice_to_query(&delete), "", "")?)
      };
 
     Ok((insert_sql, diff_sql, delete_sql))

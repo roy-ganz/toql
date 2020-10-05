@@ -1,3 +1,7 @@
+
+pub mod resolver_error;
+pub mod resolver;
+
 use crate::parameter::ParameterMap;
 use crate::sql::Sql;
 use crate::sql_arg::SqlArg;
@@ -6,19 +10,17 @@ use crate::{
     sql_builder::sql_builder_error::SqlBuilderError,
 };
 
-#[derive(Debug)]
-pub enum SqlExprArg {
-    Unresolved,
-    Resolved(SqlArg),
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SqlExprToken {
-    Literal(String),
-    SelfAlias(),
-    OtherAlias(),
+    
+    SelfAlias,              
+    OtherAlias,
     AuxParam(String),
-    Arg(SqlExprArg),
+    UnresolvedArg,
+
+    Literal(String),
+    Arg(SqlArg),
+    Alias(String),
     InClause { column: String, args: Vec<SqlArg> },
 }
 
@@ -46,12 +48,12 @@ impl SqlExpr {
         self.tokens.push(SqlExprToken::Literal(lit));
     }
     pub fn push_self_alias(&mut self) {
-        self.tokens.push(SqlExprToken::SelfAlias());
+        self.tokens.push(SqlExprToken::SelfAlias);
     }
     pub fn push_other_alias(&mut self) {
-        self.tokens.push(SqlExprToken::OtherAlias());
+        self.tokens.push(SqlExprToken::OtherAlias);
     }
-    pub fn push_arg(&mut self, arg: SqlExprArg) {
+    pub fn push_arg(&mut self, arg: SqlArg) {
         self.tokens.push(SqlExprToken::Arg(arg));
     }
     pub fn is_empty(&mut self) -> bool {
@@ -83,18 +85,54 @@ impl SqlExpr {
     pub fn extend(&mut self, expr: SqlExpr) {
         self.tokens.extend(expr.tokens);
     }
+    pub fn tokens(&self) -> &[SqlExprToken]{
+        &self.tokens
+    }
 
     pub fn aliased_column(column_name: String) -> Self {
         SqlExpr {
             tokens: vec![
-                SqlExprToken::SelfAlias(),
+                SqlExprToken::SelfAlias,
                 SqlExprToken::Literal(column_name),
             ],
         }
     }
+}
+
+    /* pub fn replace_self_alias(&mut self, canonical_alias: &str) {
+
+        self.tokens.iter_mut().for_each(|&mut t|
+        {
+            if let SqlExprToken::SelfAlias() = t {
+                t = SqlExprToken::CanonicalAlias(canonical_alias.to_string());
+            }
+        })
+
+    }
+    pub fn replace_aliases(&self, self_canonical_alias: &str, other_canonical_alias: Option<&str>) -> Self {
+
+        let mut output_tokens = Vec::new();
+        self.tokens.iter_mut().for_each(|t|
+        {
+            match  t {
+                SqlExprToken::SelfAlias() => {
+                     output_tokens.push(SqlExprToken::CanonicalAlias(self_canonical_alias.to_string()));
+                }
+                SqlExprToken::OtherAlias() if other_canonical_alias.is_some() => {
+                     output_tokens.push(SqlExprToken::CanonicalAlias(other_canonical_alias.unwrap().to_string()));
+                },
+                tok @ _ => {
+                    output_tokens.push(tok);
+                }
+            }
+           
+        });
+        SqlExpr::from(output_tokens)
+
+    } */
 
     // TODO make consuming self + args
-    pub fn resolve(
+    /* pub fn resolve(
         &self,
         self_alias: &str,
         other_alias: Option<&str>,
@@ -116,25 +154,32 @@ impl SqlExpr {
                     }
                     stmt.push_str(&lit)
                 }
-                SqlExprToken::SelfAlias() => {
+                SqlExprToken::SelfAlias => {
                     stmt.push_str(self_alias);
                     aliased = true
-                }
-                SqlExprToken::OtherAlias() => {
+                },
+                 SqlExprToken::Alias(alias) => {
+                    stmt.push_str(alias);
+                    aliased = true
+                },
+                SqlExprToken::OtherAlias => {
                     stmt.push_str(other_alias.ok_or(ToqlError::ValueMissing("...".to_owned()))?);
                     aliased = true
-                }
-                SqlExprToken::Arg(arg) => {
+                },
+                 SqlExprToken::UnresolvedArg => {
                     stmt.push_str("?");
-                    match arg {
-                        SqlExprArg::Unresolved => {
+                   
                             let a = iter
                                 .next()
                                 .ok_or(ToqlError::ValueMissing("sql arg".to_string()))?;
                             output_args.push(a.to_owned());
-                        }
-                        SqlExprArg::Resolved(a) => output_args.push(a.to_owned()),
-                    }
+                       
+                    
+                },
+                SqlExprToken::Arg(arg) => {
+                    stmt.push_str("?");
+                    output_args.push(arg.to_owned());
+                    
                 }
 
                 SqlExprToken::AuxParam(name) => {
@@ -176,3 +221,4 @@ impl SqlExpr {
         Ok(Sql(stmt, output_args))
     }
 }
+     */
