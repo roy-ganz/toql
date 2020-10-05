@@ -1,5 +1,5 @@
-use std::collections::{HashSet, HashMap};
 use crate::sql_arg::SqlArg;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 /// Options for a mapped field.
@@ -9,10 +9,10 @@ pub struct FieldOptions {
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) mut_select: bool, // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
-    pub(crate) query_select: bool,    // Select field for query builder
+    pub(crate) query_select: bool, // Select field for query builder
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
-    pub(crate) on_params: Vec<String>,  // Identity params for on clauses
+    pub(crate) on_params: Vec<String>, // Identity params for on clauses
 }
 
 impl FieldOptions {
@@ -27,7 +27,7 @@ impl FieldOptions {
             query_select: true,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
-            on_params: Vec::new()
+            on_params: Vec::new(),
         }
     }
 
@@ -75,12 +75,13 @@ impl FieldOptions {
         self
     }
 
-    
-     /// Additional build param. This is used by the query builder together with
-     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
-     /// and field handlers.
-    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
-    where S: Into<String>, T: Into<SqlArg>
+    /// Additional build param. This is used by the query builder together with
+    /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
+    /// and field handlers.
+    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self
+    where
+        S: Into<String>,
+        T: Into<SqlArg>,
     {
         self.aux_params.insert(name.into(), value.into());
         self

@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet};
-use crate::sql_arg::SqlArg;
 use crate::join_handler::JoinHandler;
-use std::sync::Arc;
+use crate::sql_arg::SqlArg;
 use crate::sql_expr::SqlExpr;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 /// Options for a mapped field.
 #[derive(Debug)]
@@ -12,8 +12,7 @@ pub struct JoinOptions {
     pub(crate) roles: HashSet<String>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
-    pub(crate) discriminator: Option<SqlExpr> // Optional discriminator field to distimguish unselected left join from selected but NULL join
-        
+    pub(crate) discriminator: Option<SqlExpr>, // Optional discriminator field to distimguish unselected left join from selected but NULL join
 }
 
 impl JoinOptions {
@@ -24,8 +23,8 @@ impl JoinOptions {
             skip_wildcard: false,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
-            join_handler:None,
-            discriminator: None
+            join_handler: None,
+            discriminator: None,
         }
     }
 
@@ -35,7 +34,7 @@ impl JoinOptions {
         self
     }
 
-     /// use this discrminator to check if the (left) join is NULL
+    /// use this discrminator to check if the (left) join is NULL
     pub fn discriminator(mut self, discriminator: SqlExpr) -> Self {
         self.discriminator = Some(discriminator);
         self
@@ -58,8 +57,10 @@ impl JoinOptions {
     /// Additional build param. This is used by the query builder together with
     /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
     /// and field handlers.
-    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self 
-    where S: Into<String>, T:Into<SqlArg>
+    pub fn aux_param<S, T>(mut self, name: S, value: T) -> Self
+    where
+        S: Into<String>,
+        T: Into<SqlArg>,
     {
         self.aux_params.insert(name.into(), value.into());
         self

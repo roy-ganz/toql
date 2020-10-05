@@ -3,13 +3,12 @@
 //! The key trait is implemented for every Toql derived struct.
 //! The most useful functions for library consumers are [get_key] and [set_key] to access the primary key of a struct.
 //! Notice that these operations fail, if the fields that should hold the values are `None`.
-//! 
-
+//!
 
 use std::borrow::Borrow;
 
 use crate::sql::Sql;
-use crate::{sql_expr::{SqlExprArg, SqlExpr}, sql_arg::SqlArg};
+use crate::{sql_arg::SqlArg, sql_expr::SqlExpr};
 
 /// Trait to define key type of a Toql entity.
 pub trait Keyed {
@@ -21,57 +20,48 @@ pub trait Keyed {
 
     /// Sets the key on a given entity.
     fn try_set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
-   
 }
-
 
 /// Trait to define key type of a Toql entity.
-pub trait KeyedSlice<K> 
-where K: Keyed
+pub trait KeyedSlice<K>
+where
+    K: Keyed,
 {
-     /// Return value of the key for a given entity.
+    /// Return value of the key for a given entity.
     fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>>;
-     
 }
 
-
 impl<K> KeyedSlice<K> for Vec<K>
-where K:Keyed
+where
+    K: Keyed,
 {
-     /// Return value of the key for a given entity.
+    /// Return value of the key for a given entity.
     fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
         let mut keys = Vec::new();
 
         for k in self {
             keys.push(k.try_get_key()?);
-
         }
 
         Ok(keys)
     }
 }
 
-
-impl<K> KeyedSlice<K> for &[K] 
-where K:Keyed
+impl<K> KeyedSlice<K> for &[K]
+where
+    K: Keyed,
 {
-     /// Return value of the key for a given entity.
+    /// Return value of the key for a given entity.
     fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
         let mut keys = Vec::new();
 
         for k in *self {
             keys.push(k.try_get_key()?);
-
         }
 
         Ok(keys)
     }
-
 }
-
-
-
-
 
 pub fn keys<K: Keyed>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
     let mut keys = Vec::with_capacity(entities.len());
@@ -90,7 +80,6 @@ where
     T: Borrow<str>,
     U: Borrow<str>,
 {
-    
     let mut params: Vec<SqlArg> = Vec::new();
     let mut predicate = String::new();
 
@@ -140,14 +129,11 @@ where
         predicate.pop();
         predicate.push(')');
     }
-    
+
     Sql(predicate, params)
 }
 
-pub fn predicate_from_columns_sql<K: Key, T>(
-    keys: &[K],
-    aliased_columns: &[T],
-) -> Sql
+pub fn predicate_from_columns_sql<K: Key, T>(keys: &[K], aliased_columns: &[T]) -> Sql
 where
     T: Borrow<str>,
 {
@@ -161,12 +147,10 @@ where
     predicate_from_columns_with_alias_sql::<K, _, U>(keys, &K::columns(), sql_alias)
 } */
 
-pub fn predicate_expr<K:Key>(key: K) -> SqlExpr {
-
+pub fn predicate_expr<K: Key>(key: K) -> SqlExpr {
     let columns = <K as Key>::columns();
-    let mut  params = key.params().into_iter();
+    let mut params = key.params().into_iter();
     let mut expr = SqlExpr::new();
-
 
     for c in columns {
         if !expr.is_empty() {
@@ -175,11 +159,10 @@ pub fn predicate_expr<K:Key>(key: K) -> SqlExpr {
         expr.push_self_alias();
         expr.push_literal(c);
         expr.push_literal(" = ".to_string());
-        expr.push_arg(SqlExprArg::Resolved(params.next().unwrap_or(SqlArg::Null())));
+        expr.push_arg(params.next().unwrap_or(SqlArg::Null()));
     }
 
     expr
-
 }
 
 pub fn predicate_sql<K: Key, U>(keys: &[K], sql_alias: Option<U>) -> Sql
@@ -246,22 +229,19 @@ pub fn predicate_sql<K :Key>(keys: &[K::Key], sql_alias: Option<&str>) -> (Strin
 
  */
 
-
-
 /// Trait to provide a partial key type of a Toql entity.
 /// Only entities with composite keys can have a partial key.
 /// Only the select_many function makes use of it (to select a merged collection from an entity).
 pub trait PartialKey {
-       type Key: Eq + std::hash::Hash;
+    type Key: Eq + std::hash::Hash;
 }
-
 
 /// Trait to provide the entity type for a key. This is only used
 /// for ergonomics of the api.
 pub trait Key {
     type Entity;
 
-        /// Return primary key columns for a given entity.
+    /// Return primary key columns for a given entity.
     fn columns() -> Vec<String>;
 
     /// Return foreign key columns that match the primary keys for a given entity.
@@ -269,32 +249,30 @@ pub trait Key {
     /// The names are calculated and do not necessarily match
     /// the actual foreign keys on the other table.
     /// The translation rules are (for snake case column format):
-    /// 
+    ///
     /// | Type          | Guessing rule             | Example      |
     /// | --------------|---------------------------|---------------|
     /// | Normal fields |  tablename + normal field | `id` -> `user_id`, `access_code` -> `user_access_code` |
     /// | Joins         |  *No change* | `language_id` -> `language_id` |
-    /// 
+    ///
     /// If the automatic generated names are not correct, the user is required to correct them by attributing
-    /// the relevant field with 
+    /// the relevant field with
     ///  
     /// `#[toql( merge( columns( self = "id", other = "user_code")))]`
-    /// 
+    ///
     fn default_inverse_columns() -> Vec<String>;
 
     /// Return key values as params. Useful to loop across a composite key.
     fn params(&self) -> Vec<SqlArg>;
-
-     
 }
-/* 
+/*
 pub trait ToSqlPredicate{
 
     fn to_sql_predicate(&self, alias: &str) ->Sql;
     fn build_sql_predicate(&self, aliased_predicate: &str) -> Sql;
 }
 
-impl<T> ToSqlPredicate for T 
+impl<T> ToSqlPredicate for T
 where T: Key
 {
     fn to_sql_predicate(&self, alias: &str) -> Sql {
@@ -304,7 +282,7 @@ where T: Key
          Self::columns().iter().zip(self.params()).for_each(|(col, par)| {
              predicate.push_str(alias);
              predicate.push('.');
-           
+
              predicate.push_str(&col);
              predicate.push_str("= ? AND ");
              params.push(par);
@@ -321,7 +299,7 @@ where T: Key
 
             // todo in debug check number of ? corresponds to params
             if cfg!(debug_assertions) {
-                let expect = aliased_predicate.matches('?').count(); 
+                let expect = aliased_predicate.matches('?').count();
                 if expect != self.params().len() {
                     panic!("Predicate `{}` does not have {} placeholders.",  aliased_predicate, expect);
                 }
@@ -378,12 +356,11 @@ where T: ToSqlPredicate {
 
  */
 
+/*
 
- /* 
-
-    /// Returns SQL predicate for collection. 
+    /// Returns SQL predicate for collection.
     /// This may be overridded for simple primary keys that are build with IN(..)
-    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> Sql 
+    pub fn sql_predicate<'a, K, Q>(keys: &[Q], alias:&str) -> Sql
     where K: crate::key::Key, Q: 'a + Borrow<K>
     {
         let mut predicate = String::new();
@@ -393,7 +370,7 @@ where T: ToSqlPredicate {
             K::columns().iter().zip(k.borrow().params()).for_each(|(col, par)| {
              predicate.push_str(alias);
              predicate.push('.');
-           
+
              predicate.push_str(&col);
              predicate.push_str("= ? AND ");
              params.push(SqlArg::from(par));
@@ -403,7 +380,7 @@ where T: ToSqlPredicate {
             predicate.pop();
             predicate.pop();
             predicate.pop();
-            
+
             predicate.push_str(" OR ")
          }
 
@@ -421,7 +398,7 @@ where T: ToSqlPredicate {
          let mut predicate = String::new();
          let mut params = Vec::new();
 
-         
+
 
           for k in keys {
               // TODO check number of params equal ? in sql
@@ -441,24 +418,24 @@ where T: ToSqlPredicate {
 
 
 */
-/* pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64> 
- where 
+/* pub fn key_translation(keys: &HashSet<u64>, mut id: u64) -> HashMap<u64, u64>
+ where
 {
-    	
-	let mut translation = HashMap::new();
-	for k in keys {
-    	translation.insert( *k, id);
-    	id += 1;
-	}
-	translation
+
+    let mut translation = HashMap::new();
+    for k in keys {
+        translation.insert( *k, id);
+        id += 1;
+    }
+    translation
 } */
- 
-/* 
+
+/*
 pub fn default_inverse_predicate<K>(key: K, alias: &str) -> (String, Vec<String>)
 where K:Key
 {
         let mut predicate= String::from("(");
-        
+
         for c in Key::default_inverse_columns() {
             predicate.push_str(alias);
             predicate.push('.');
@@ -474,10 +451,9 @@ where K:Key
 
 } */
 
-
-
-pub fn params<K>( keys: &[K]) -> Vec<SqlArg>
-where K: Key
+pub fn params<K>(keys: &[K]) -> Vec<SqlArg>
+where
+    K: Key,
 {
     let mut params = Vec::new();
     for k in keys {
@@ -485,4 +461,3 @@ where K: Key
     }
     params
 }
-

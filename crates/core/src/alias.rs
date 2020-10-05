@@ -1,23 +1,18 @@
 //! Alias formatter.
 //!
-//! AliasFormat determines how the [SqlMapper](../sql_mapper/struct.SqlMapper.html) formats table aliases in SQL code. 
+//! AliasFormat determines how the [SqlMapper](../sql_mapper/struct.SqlMapper.html) formats table aliases in SQL code.
 //! Table aliases are needed for every column. E.g. in  `country.id` the table alias is `country` and `ìd` is the column.
-//! 
+//!
 //! There are 4 different formats supported:
-//!  - Canonical, this is the internal default alias format. 
+//!  - Canonical, this is the internal default alias format.
 //!    It is the most verbose and useful for debugging, it can however blow SQL state up in size.
 //!  - TinyIndex, the shortes possible alias, not human friendly, but useful for production as it's fast for the database to parse.
-//!  - ShortIndex and MediumIndex, readable and fast to parse. 
-//! 
-
-
+//!  - ShortIndex and MediumIndex, readable and fast to parse.
+//!
 
 pub trait Aliased {
-
     fn canonical_alias() -> String;
-
 }
-
 
 /// Represents the table alias format
 #[derive(Clone, Debug)]
@@ -33,7 +28,6 @@ pub enum AliasFormat {
 }
 
 impl AliasFormat {
-    
     /// Creates a tiny alias from an index number
     pub fn tiny_index(index: u16) -> String {
         let mut tiny_name = String::from("t");
@@ -41,7 +35,7 @@ impl AliasFormat {
         tiny_name
     }
 
-    /// Creates a short alias from a name and an index number. 
+    /// Creates a short alias from a name and an index number.
     /// If the name ends with a number an underscore is added to separate it from the index.
     pub fn short_index(name: &str, index: u16) -> String {
         let medium_name = String::from(if name.is_empty() {
@@ -69,7 +63,7 @@ impl AliasFormat {
         short_name.push_str(index.to_string().as_str());
         short_name
     }
-    /// Creates a medium alias from a name and an index number. 
+    /// Creates a medium alias from a name and an index number.
     /// If the name ends with a number an underscore is added to separate it from the index.
     pub fn medium_index(name: &str, index: u16) -> String {
         let mut wrap = false;

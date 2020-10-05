@@ -1,3 +1,4 @@
+use crate::parameter::ParameterMap;
 /// A FieldHandler maps a Toql field onto an SQL.
 /// Use it to
 /// - define your own custom function (through FN)
@@ -25,27 +26,19 @@
 /// let my_handler = MyHandler {};
 /// let mapper = SqlMapper::new_with_handler(my_handler);
 ///
-
-use std::collections::HashMap;
- use crate::query::field_filter::FieldFilter;
- 
- use crate::sql_builder::sql_builder_error::SqlBuilderError;
-
-use crate::sql::Sql;
-use crate::sql_arg::SqlArg;
-use crate::parameter::ParameterMap;
+use crate::query::field_filter::FieldFilter;
+use crate::sql_builder::sql_builder_error::SqlBuilderError;
+use crate::sql_expr::SqlExpr;
 
 pub trait FieldHandler {
-    
     /// Context parameters allow to share information between different handlers
-    
 
     /// Return sql and params if you want to select it.
     fn build_select(
         &self,
-        select: Sql,
+        select: SqlExpr,
         _aux_params: &ParameterMap,
-    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
+    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         Ok(Some(select))
     }
 
@@ -54,21 +47,18 @@ pub trait FieldHandler {
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
     fn build_filter(
         &self,
-        select: Sql,
+        select: SqlExpr,
         filter: &FieldFilter,
         aux_params: &ParameterMap,
-    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError>;
-   
-    
+    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError>;
 }
-
 
 impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sync + 'static) {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "FieldHandler()")
     }
 }
-/* 
+/*
 pub fn sql_param(s: String) -> String {
     if s.chars().next().unwrap_or(' ') == '\'' {
         return unquote(&s).expect("Argument invalid"); // Must be valid, because Pest rule
@@ -77,90 +67,84 @@ pub fn sql_param(s: String) -> String {
 } */
 
 impl FieldHandler for BasicFieldHandler {
-   
     fn build_filter(
         &self,
-        mut select: Sql,
+        mut select: SqlExpr,
         filter: &FieldFilter,
         _aux_params: &ParameterMap,
-    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
+    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         match filter {
-            FieldFilter::Eq(criteria) => Ok(Some(Sql(format!("{} = ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::Eqn => Ok(Some(Sql(format!("{} IS NULL", select.0), select.1))),
-            FieldFilter::Ne(criteria) => Ok(Some(Sql(format!("{} <> ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::Nen => Ok(Some(Sql(format!("{} IS NOT NULL", select.0), select.1))),
-            FieldFilter::Ge(criteria) => Ok(Some(Sql(format!("{} >= ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::Gt(criteria) => Ok(Some(Sql(format!("{} > ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::Le(criteria) => Ok(Some(Sql(format!("{} <= ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::Lt(criteria) => Ok(Some(Sql(format!("{} < ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::Bw(lower, upper) => Ok(Some(Sql(format!("{} BETWEEN ? AND ?", select.0), {
-                select.1.push(lower.clone());
-                select.1.push(upper.clone());
-                select.1
-            }))),
-            FieldFilter::Re(criteria) => Ok(Some(Sql(format!("{} RLIKE ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
-            FieldFilter::In(args) => Ok(Some(Sql(
-                format!(
-                    "{} IN ({})",
-                    select.0,
-                    std::iter::repeat("?")
-                        .take(args.len())
-                        .collect::<Vec<&str>>()
-                        .join(",")
-                ),
-                {
-                   // let a: Vec<SqlArg> = args.iter( ).collect();
-                    select.1.extend_from_slice(&args);
-                    select.1
-                },
-            ))),
-            FieldFilter::Out(args) => Ok(Some(Sql(
-                format!(
-                    "{} NOT IN ({})",
-                    select.0,
-                    std::iter::repeat("?")
-                        .take(args.len())
-                        .collect::<Vec<&str>>()
-                        .join(",")
-                ),
-                {
-                    //let a: Vec<SqlArg> = args.iter().collect::<Vec<_>>();
-                    select.1.extend_from_slice(&args);
-                    select.1
-                },
-            ))),
+            FieldFilter::Eq(criteria) => {
+                select.push_literal(" = ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Eqn => {
+                select.push_literal(" IS NULL");
+                Ok(Some(select))
+            }
+            FieldFilter::Ne(criteria) => {
+                select.push_literal(" <> ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Nen => {
+                select.push_literal(" IS NULL");
+                Ok(Some(select))
+            }
+            FieldFilter::Ge(criteria) => {
+                select.push_literal(" >= ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Gt(criteria) => {
+                select.push_literal(" > ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Le(criteria) => {
+                select.push_literal(" <= ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Lt(criteria) => {
+                select.push_literal(" < ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Bw(lower, upper) => {
+                select
+                    .push_literal(" BETWEEN ")
+                    .push_arg(lower.clone())
+                    .push_literal(" AND ")
+                    .push_arg(upper.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::Re(criteria) => {
+                select.push_literal(" RLIKE ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
+            FieldFilter::In(args) => {
+                select.push_literal(" IN (");
+                for a in args {
+                    select.push_separator(", ");
+                    select.push_arg(a.clone());
+                }
+                select.push_literal(")");
+                Ok(Some(select))
+            }
+            FieldFilter::Out(args) => {
+                select.push_literal(" NOT IN (");
+                for a in args {
+                    select.push_separator(", ");
+                    select.push_arg(a.clone());
+                }
+                select.push_literal(")");
+                Ok(Some(select))
+            }
             //      FieldFilter::Sc(_) => Ok(Some(format!("FIND_IN_SET (?, {})", expression))),
-            FieldFilter::Lk(criteria) => Ok(Some(Sql(format!("{} LIKE ?", select.0), {
-                select.1.push(criteria.clone());
-                select.1
-            }))),
+            FieldFilter::Lk(criteria) => {
+                select.push_literal(" LIKE ").push_arg(criteria.clone());
+                Ok(Some(select))
+            }
             FieldFilter::Fn(name, _) => Err(SqlBuilderError::FilterInvalid(name.to_owned())), // Must be implemented by user
         }
     }
 }
-
-
 
 /// Handles the standart filters as documented in the guide.
 /// Returns [FilterInvalid](../sql_builder/enum.SqlBuilderError.html) for any attempt to use FN filters.

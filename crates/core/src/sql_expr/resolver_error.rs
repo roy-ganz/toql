@@ -7,9 +7,10 @@ pub enum ResolverError {
     UnresolvedSelfAlias,
     UnresolvedOtherAlias,
     UnresolvedArgument,
-    UnresolvedAuxParameter(String)
+    UnresolvedAuxParameter(String),
 }
 
+pub type Result<T> = std::result::Result<T, ResolverError>;
 
 impl fmt::Display for ResolverError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -19,7 +20,9 @@ impl fmt::Display for ResolverError {
             ResolverError::UnresolvedSelfAlias => write!(f, "unresolved self alias `..`"),
             ResolverError::UnresolvedOtherAlias => write!(f, "unresolved other alias `...`"),
             ResolverError::UnresolvedArgument => write!(f, "unresolved argument"),
-            ResolverError::UnresolvedAuxParameter(ref s) => write!(f, "unresolved aux param `{}`", s),
+            ResolverError::UnresolvedAuxParameter(ref s) => {
+                write!(f, "unresolved aux param `{}`", s)
+            }
         }
     }
 }

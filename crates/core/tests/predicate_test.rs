@@ -1,4 +1,3 @@
-
 fn setup_mapper() -> SqlMapper {
     let mut mapper = SqlMapper::new("Book");
     mapper

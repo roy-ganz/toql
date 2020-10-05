@@ -1,4 +1,3 @@
-
 /// A wildcard is used to select all fields from top or from a path.
 ///
 /// Example
@@ -10,8 +9,7 @@
 /// ```
 /// Note that the Toql derive builds a wildcard function too.
 /// If a struct `Foo` contained a struct `Bar`, it would be possible to replace the second call to _and()_ with  `.and(Bar::fields().bar().wildcard())`
-/// 
-
+///
 use super::concatenation::Concatenation;
 
 #[derive(Clone, Debug)]

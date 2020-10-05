@@ -29,21 +29,14 @@
 //! If you *update* a struct, fields of type `Option<>` with value `None` are skipped. Read the guide for details!
 //!
 
-use crate::alias_translator::AliasTranslator;
-use crate::alias::AliasFormat;
-use crate::sql_mapper_registry::SqlMapperRegistry;
 use crate::error::ToqlError;
-use crate::key::Keyed;
-use core::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
-use std::result::Result;
-use crate::sql_mapper::mapped::Mapped;
-use crate::sql_mapper::SqlMapper;
 
+use crate::sql_mapper::SqlMapper;
+use core::borrow::Borrow;
+use std::collections::HashSet;
+use std::result::Result;
 
 use crate::sql::Sql;
-
-
 
 /* /// Trait for delete functions (They work with entity keys).
 pub trait Delete<'a, T: crate::key::Keyed + 'a> {
@@ -67,11 +60,7 @@ pub trait Delete<'a, T: crate::key::Keyed + 'a> {
 
 /// Trait for update. They work with entities
 pub trait UpdateSql {
-    
-    fn update_one_sql(
-        &self,
-        roles: &HashSet<String>,
-    ) -> Result<Option<Sql>, ToqlError> {
+    fn update_one_sql(&self, roles: &HashSet<String>) -> Result<Option<Sql>, ToqlError> {
         Self::update_many_sql(&[self], roles)
     }
     /// Update many structs, returns tuple with SQL statement and SQL params or error.
@@ -83,7 +72,6 @@ pub trait UpdateSql {
 
 /// Trait for update. They work with entities
 pub trait DiffSql {
-   
     /// Update difference of two structs, given as tuple (old, new), returns a vectro with SQL statements and SQL params or error.
     /// This includes foreign keys of joined structs and merged structs.
     /// To exclude any fields annotate them with `skip_delup` or set selectable fields to None in updated entity.
@@ -92,7 +80,7 @@ pub trait DiffSql {
         outdated: Q,
         updated: Q,
         roles: &HashSet<String>,
-        sql_mapper: &SqlMapper
+        sql_mapper: &SqlMapper,
     ) -> Result<Vec<Sql>, ToqlError> {
         Ok(Self::full_diff_many_sql(&[(outdated, updated)], roles, sql_mapper)?.unwrap())
     }
@@ -103,8 +91,8 @@ pub trait DiffSql {
     fn full_diff_many_sql<Q: Borrow<Self>>(
         entities: &[(Q, Q)],
         roles: &HashSet<String>,
-        sql_mapper: &SqlMapper
-    ) -> Result<Option<Vec<Sql>>,ToqlError>;
+        sql_mapper: &SqlMapper,
+    ) -> Result<Option<Vec<Sql>>, ToqlError>;
 
     /// Update difference of two structs, given as tuple (old, new), returns tuple with SQL statement and SQL params or error.
     /// This includes foreign keys of joined structs, but excludes merged structs
@@ -140,11 +128,9 @@ pub enum DuplicateStrategy {
 /// This trait is implemented if keys of an entity are inserted too. This is typically the case for association tables.
 /// Conflicts can happed if the keys already exist. A strategy must be provided to tell how to resolve the conflict.
 pub trait InsertSql {
-    
-
     /// Insert one struct, returns tuple with SQL statement and SQL params or error.
     fn insert_one_sql(
-       &self,
+        &self,
         //strategy: DuplicateStrategy,
         roles: &HashSet<String>,
         modifier: &str,
@@ -155,7 +141,7 @@ pub trait InsertSql {
     /// Insert many structs, returns tuple with SQL statement and SQL params, none if no entities are provided or error.
     fn insert_many_sql<Q: Borrow<Self>>(
         entities: &[Q],
-       // strategy: DuplicateStrategy,
+        // strategy: DuplicateStrategy,
         roles: &HashSet<String>,
         modifier: &str,
         extra: &str,
@@ -167,6 +153,7 @@ pub trait InsertSql {
 /// Insert conflicts cannot happed, if all keys are annotated with #[toql(skip_mut)].
 pub trait InsertDuplicate {}
 
+/*
 /// Update difference of two collections
 /// Compares multiple tuples with outdated / current collections and builds insert / update / delete statements
 /// to save the changes in a database.
@@ -174,7 +161,7 @@ pub trait InsertDuplicate {}
 ///
 /// Returns three tuples for insert / update / delete, each containing the SQL statement and parameters.
 
-pub fn collection_delta_sql<'a, T>(
+ pub fn collection_delta_sql<'a, T>(
     outdated: &'a [T],
     updated: &'a [T],
     roles: HashSet<String>,
@@ -193,7 +180,7 @@ where
     <T as Keyed>::Key: crate::to_query::ToQuery<T>
 {
     use  crate::sql_builder::SqlBuilder;
-   
+
     let mut insert: Vec<&T> = Vec::new();
     let mut diff: Vec<(&'a T, &'a T)> = Vec::new();
     let mut delete: Vec<T::Key> = Vec::new();
@@ -206,7 +193,7 @@ where
     let diff_sql = <T as DiffSql>::diff_many_sql(&diff, &roles)?;
 
      let mut alias_translator = AliasTranslator::new(format);
-    
+
      let delete_sql = if delete.is_empty() {None } else {
          Some(SqlBuilder::new( &<T as Mapped>::table_name(), &sql_mapper_registry, &mut alias_translator).with_roles(roles)
          .build_delete_sql(&crate::to_query::ToQuery::slice_to_query(&delete), "", "")?)
@@ -249,3 +236,4 @@ where
 
     Ok((insert, diff, delete))
 }
+ */

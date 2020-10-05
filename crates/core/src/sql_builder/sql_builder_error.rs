@@ -5,12 +5,12 @@ use std::fmt;
 pub enum SqlBuilderError {
     /// The field is not mapped to a column or SQL expression. Contains the field name.
     FieldMissing(String),
-     /// The field is not mapped to a column or SQL expression. Contains the field name.
+    /// The field is not mapped to a column or SQL expression. Contains the field name.
     PredicateMissing(String),
     /// The join is not mapped to a column or SQL expression. Contains the field name.
     JoinMissing(String),
-     /// The selection is not known to the mapper. Contains the field name.
-     SelectionMissing(String),
+    /// The selection is not known to the mapper. Contains the field name.
+    SelectionMissing(String),
     /// The field requires a role that the query does not have. Contains the role.
     RoleRequired(String),
     /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
@@ -37,7 +37,7 @@ impl fmt::Display for SqlBuilderError {
             }
             SqlBuilderError::QueryParamInvalid(ref s, ref d) => {
                 write!(f, "query parameter `{}` is invalid: {} ", s, d)
-            },
+            }
             SqlBuilderError::PredicateArgumentMissing(ref s) => {
                 write!(f, "predicate `{}` requires more arguments. ", s)
             }

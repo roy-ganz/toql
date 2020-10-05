@@ -1,7 +1,5 @@
-
 /// The filter operation on a field. You use this when creating a [FieldHandler](../sql_mapper/trait.FieldHandler.html)
 /// to provide custom functions through the _Fn_ filter or implement a alternative mapping to SQL.
-
 use crate::sql_arg::SqlArg;
 
 #[derive(Clone, Debug)]
@@ -73,17 +71,35 @@ impl ToString for FieldFilter {
             }
             FieldFilter::In(ref args) => {
                 s.push_str("IN ");
-                s.push_str(&args.iter().map(|a|a.to_sql_string()).collect::<Vec<_>>().join(" "))
+                s.push_str(
+                    &args
+                        .iter()
+                        .map(|a| a.to_sql_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                )
             }
             FieldFilter::Out(ref args) => {
                 s.push_str("OUT ");
-                s.push_str(&args.iter().map(|a|a.to_sql_string()).collect::<Vec<_>>().join(" "))
+                s.push_str(
+                    &args
+                        .iter()
+                        .map(|a| a.to_sql_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                )
             }
             FieldFilter::Fn(ref name, ref args) => {
                 s.push_str("FN ");
                 s.push_str(name);
                 s.push(' ');
-                s.push_str(&args.iter().map(|a|a.to_sql_string()).collect::<Vec<_>>().join(" "))
+                s.push_str(
+                    &args
+                        .iter()
+                        .map(|a| a.to_sql_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                )
             }
         }
         s

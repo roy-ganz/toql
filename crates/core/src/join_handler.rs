@@ -1,25 +1,16 @@
-
-
-use crate::sql_expr::SqlExpr;
 use crate::parameter::ParameterMap;
-use std::{ collections::HashMap};
-use crate::sql::Sql;
-use crate::sql_arg::SqlArg;
+use crate::sql_expr::SqlExpr;
 
 pub trait JoinHandler {
-   
     /// Return customized SQL on predicate
     fn build_on_predicate(
         &self,
-         on_predicate: Sql,
+        on_predicate: SqlExpr,
         _aux_params: &ParameterMap,
-    ) -> Result<Sql, crate::sql_builder::sql_builder_error::SqlBuilderError> {
+    ) -> Result<SqlExpr, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         Ok(on_predicate)
     }
-
 }
-
-
 
 impl std::fmt::Debug for (dyn JoinHandler + std::marker::Send + std::marker::Sync + 'static) {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

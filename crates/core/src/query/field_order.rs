@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug)]
 pub(crate) enum FieldOrder {
     Asc(u8),

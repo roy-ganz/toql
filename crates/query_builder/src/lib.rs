@@ -32,49 +32,47 @@ extern crate proc_macro;
 
 extern crate syn;
 
-
 #[macro_use]
 extern crate quote;
 
-use syn::{parse_macro_input};
+use syn::parse_macro_input;
 
 use proc_macro::TokenStream;
 
-
 mod query_builder;
-
-
 
 #[proc_macro]
 pub fn query(input: TokenStream) -> TokenStream {
-
-     let _ = env_logger::try_init(); // Avoid multiple init
-    // eprintln!("{:?}", input);
+    let _ = env_logger::try_init(); // Avoid multiple init
+                                    // eprintln!("{:?}", input);
 
     let ast = parse_macro_input!(input as query_builder::QueryBuilder);
-     
-   
-    
 
     let gen = query_builder::parse(&ast.query, ast.ident, &mut ast.arguments.iter());
 
-     
-
-  /* let gen = quote!( 
-      pub fn hello() 
-   { 
-       println!("hello");
-   }
-   );
-    */
-    match gen {
-        Ok(o) => {  log::debug!("Source code for `{}`:\n{}", ast.query.value(), o.to_string());
-   TokenStream::from(o)},
-        Err(e) => { log::debug!("Source code for `{}`:\n{}", ast.query.value(), e.to_string());
-   TokenStream::from(e)}
+    /* let gen = quote!(
+       pub fn hello()
+    {
+        println!("hello");
     }
-  
+    );
+     */
+    match gen {
+        Ok(o) => {
+            log::debug!(
+                "Source code for `{}`:\n{}",
+                ast.query.value(),
+                o.to_string()
+            );
+            TokenStream::from(o)
+        }
+        Err(e) => {
+            log::debug!(
+                "Source code for `{}`:\n{}",
+                ast.query.value(),
+                e.to_string()
+            );
+            TokenStream::from(e)
+        }
+    }
 }
-
-
-

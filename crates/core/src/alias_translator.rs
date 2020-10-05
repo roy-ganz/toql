@@ -1,24 +1,20 @@
-
 use crate::alias::AliasFormat;
 use std::collections::HashMap;
 
 pub struct AliasTranslator {
     format: AliasFormat,
     table_index: u16,
-    translations: HashMap<String, String> // canonical alias to translated alias
+    translations: HashMap<String, String>, // canonical alias to translated alias
 }
 
-
-    impl AliasTranslator {
-
-        pub fn new (format: AliasFormat) -> Self{
-            AliasTranslator {
-                format,
-                table_index: 0,
-                translations: HashMap::new()
-            }
+impl AliasTranslator {
+    pub fn new(format: AliasFormat) -> Self {
+        AliasTranslator {
+            format,
+            table_index: 0,
+            translations: HashMap::new(),
         }
-
+    }
 
     /// Translates a canonical sql alias into a shorter alias
     pub fn translate(&mut self, canonical_alias: &str) -> String {
@@ -47,8 +43,6 @@ pub struct AliasTranslator {
         }
         .to_owned();
 
-        
         a
     }
-   
-    }
+}

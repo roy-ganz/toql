@@ -6,7 +6,7 @@
 
 use mysql::prelude::GenericConnection;
 
-use toql_core::mutate::collection_delta_sql;
+//use toql_core::mutate::collection_delta_sql;
 
 use toql_core::key::Key;
 
@@ -43,7 +43,10 @@ use crate::error::ToqlMySqlError;
 use toql_core::sql::Sql;
 use toql_core::sql_arg::SqlArg;
 use toql_core::tree::tree_predicate::TreePredicate;
-use toql_core::{parameter::ParameterMap, sql_mapper::mapped::Mapped};
+use toql_core::{
+    alias_translator::AliasTranslator, parameter::ParameterMap, sql_expr::resolver::Resolver,
+    sql_mapper::mapped::Mapped,
+};
 
 use crate::sql_arg::{values_from, values_from_ref};
 
@@ -69,15 +72,24 @@ where
     let alias_format = mysql.alias_format();
 
     let ty = <T as Mapped>::type_name();
-    
+
     let (entities, unmerged_paths) = {
         let mut builder = SqlBuilder::new(&ty, mysql.registry());
-        let (Sql(sql, args), selection_stream, unmerged) =
-            builder.build_select_sql("", query.borrow(), "", "", alias_format.to_owned())?;
+        let result = builder.build_select("", query.borrow())?;
+
+        let unmerged = result.unmerged_paths().clone();
+        let mut alias_translator = AliasTranslator::new(alias_format);
+        let aux_params = [mysql.aux_params()];
+        let parameters = ParameterMap::new(&aux_params);
+
+        let Sql(sql, args) = result
+            .to_sql(&parameters, &mut alias_translator)
+            .map_err(ToqlError::from)?;
 
         let args = crate::sql_arg::values_from_ref(&args);
         let query_results = mysql.conn.prep_exec(sql, args)?;
-        let entities = crate::row::from_query_result::<T>(query_results, &selection_stream)?;
+        let entities =
+            crate::row::from_query_result::<T>(query_results, &result.selection_stream())?;
         (entities, unmerged)
     };
 
@@ -89,12 +101,10 @@ where
     let mut pending_paths: HashSet<&str> = HashSet::new();
     for root_path in unmerged_paths {
         let mut builder = SqlBuilder::new(&ty, mysql.registry()); // Add alias format or translator to constructor
-        //  let  mut join_sql = builder.join_sql(&root_path, alias_format.to_owned())?;
-        let on_sql_expr = builder.merge_sql(&root_path, alias_format.clone())?; // builder kann predicate bringen, aber keine argumente (key values)
+                                                                  //  let  mut join_sql = builder.join_sql(&root_path, alias_format.to_owned())?;
+        let on_sql_expr = builder.merge_expr(&root_path)?; // builder kann predicate bringen, aber keine argumente (key values)
         dbg!(on_sql_expr);
 
-        
-        
         let mut sql_expr = SqlExpr::new();
         let mut predicate_args: Vec<SqlArg> = Vec::new();
         let path = FieldPath::from(root_path.as_str());
@@ -106,7 +116,8 @@ where
 
         let p = [mysql.aux_params()];
         let aux_params = ParameterMap::new(&p);
-        let sql = sql_expr.resolve("a", None, &aux_params, &[])?; // Resolve with self alias
+        let resolver = Resolver::new().with_self_alias(&path.as_str());
+        let sql = resolver.resolve(&sql_expr).map_err(ToqlError::from)?;
 
         dbg!(sql);
 
@@ -360,14 +371,21 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         /*  let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
         .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?; */
 
-        let sql = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
-            .with_aux_params(self.aux_params().clone())
-            .with_roles(self.roles().clone())
-            .build_delete_sql(query.borrow(), "", "", self.alias_format.clone())?;
+        let result = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
+            .with_aux_params(self.aux_params().clone()) // todo ref
+            .with_roles(self.roles().clone()) // todo ref
+            .build_delete(query.borrow())?;
+
         // No arguments, nothing to delete
-        if sql.is_empty() {
+        if result.is_empty() {
             Ok(0)
         } else {
+            let pa = [&self.aux_params];
+            let p = ParameterMap::new(&pa);
+            let mut alias_translator = AliasTranslator::new(self.alias_format());
+            let sql = result
+                .to_sql(&p, &mut alias_translator)
+                .map_err(ToqlError::from)?;
             execute_update_delete_sql(sql, self.conn)
         }
     }
@@ -469,7 +487,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         })
     }
 
-    /// Updates difference of two struct.
+    /* /// Updates difference of two struct.
     /// This will updated struct fields and foreign keys from joins.
     /// Collections in a struct will be ignored.
     pub fn diff_one<T>(&mut self, outdated: &T, current: &T) -> Result<u64>
@@ -517,7 +535,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         }
 
         Ok(affected)
-    }
+    } */
 
     /*  /// Selects a single struct for a given key.
        /// This will select all base fields and join. Merged fields will be skipped
@@ -634,22 +652,24 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         T: toql_core::key::Keyed + toql_core::sql_mapper::mapped::Mapped,
         B: Borrow<Query<T>>,
     {
-        let sql_mapper = self
-            .registry
-            .mappers
-            .get(&<T as Mapped>::type_name())
-            .ok_or(ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
+        /* let sql_mapper = self
+        .registry
+        .mappers
+        .get(&<T as Mapped>::type_name())
+        .ok_or(ToqlError::MapperMissing(<T as Mapped>::type_name()))?; */
 
-        let sql = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
+        let mut alias_translator = AliasTranslator::new(self.alias_format());
+
+        let result = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
             .with_roles(self.roles().clone())
             .with_aux_params(self.aux_params().clone())
-            .build_count_sql(
-                &<T as Mapped>::type_name(),
-                query.borrow(),
-                "",
-                "",
-                self.alias_format.clone(),
-            )?;
+            .build_count("", query.borrow())?;
+        let p = [self.aux_params()];
+        let aux_params = ParameterMap::new(&p);
+
+        let sql = result
+            .to_sql(&aux_params, &mut alias_translator)
+            .map_err(ToqlError::from)?;
 
         log_sql!(sql);
         let result = self.conn.prep_exec(&sql.0, values_from_ref(&sql.1))?;

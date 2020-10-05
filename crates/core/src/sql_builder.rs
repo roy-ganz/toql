@@ -40,7 +40,7 @@ pub mod wildcard_scope;
 pub(crate) mod build_context;
 pub(crate) mod build_result;
 pub(crate) mod path_tree;
-pub(crate) mod sql_with_placeholders;
+//pub(crate) mod sql_with_placeholders;
 
 use super::sql_builder::build_context::BuildContext;
 use super::sql_builder::build_result::BuildResult;
@@ -51,17 +51,17 @@ use crate::sql_builder::sql_builder_error::SqlBuilderError;
 
 use crate::sql_mapper::{DeserializeType, SqlMapper};
 
-use heck::MixedCase;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
 use crate::sql_mapper_registry::SqlMapperRegistry;
 
-use crate::alias::AliasFormat;
-use crate::alias_translator::AliasTranslator;
-use crate::sql::Sql;
 use crate::sql_arg::SqlArg;
-use crate::{parameter::ParameterMap, query::field_path::FieldPath, sql_expr::{resolver::Resolver, SqlExpr}};
+use crate::{
+    parameter::ParameterMap,
+    query::field_path::FieldPath,
+    sql_expr::{resolver::Resolver, SqlExpr},
+};
 use path_tree::PathTree;
 use std::borrow::Cow;
 
@@ -78,7 +78,6 @@ pub struct SqlBuilder<'a> {
     aux_params: HashMap<String, SqlArg>, // Aux params used for all queries with this builder instance, contains typically config or auth data
 
     extra_joins: HashSet<String>, // Use this joins
-  
 }
 
 impl<'a> SqlBuilder<'a> {
@@ -105,13 +104,12 @@ impl<'a> SqlBuilder<'a> {
         Ok(())
     }
 
-   
-
     pub fn with_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
         self
     }
     pub fn with_aux_params(mut self, aux_params: HashMap<String, SqlArg>) -> Self {
+        // TODO use Parameter Map
         self.aux_params = aux_params;
         self
     }
@@ -121,7 +119,7 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-   /*  pub fn join_sql(&self, field_path: &str) -> Result<Sql> {
+    /*  pub fn join_sql(&self, field_path: &str) -> Result<Sql> {
         let mut context = BuildContext::new();
         let mut sql = Sql::new();
         let mut current_mapper = self.root_mapper()?;
@@ -191,15 +189,14 @@ impl<'a> SqlBuilder<'a> {
         sql.pop_literals(1); // Remove trailing space
         Ok(sql)
     } */
-    pub fn merge_sql(&self, field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
-        
-       // let mut sql = SqlExpr::new();
+    pub fn merge_expr(&self, field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
+        // let mut sql = SqlExpr::new();
         let mut current_mapper = self.root_mapper()?;
         let (basename, ancestor_path) = FieldPath::split_basename(field_path);
-             
+
         let canonical_table_alias = &self.root_mapper()?.canonical_table_alias;
-        let p = [&self.aux_params];
-        let aux_params = ParameterMap::new(&p);
+        /*  let p = [&self.aux_params];
+        let aux_params = ParameterMap::new(&p); */
 
         if let Some(p) = ancestor_path.as_ref() {
             for d in p.children() {
@@ -216,37 +213,24 @@ impl<'a> SqlBuilder<'a> {
             }
         }
 
-        
-
-
         // Build canonical alias
-        let self_alias = 
-            ancestor_path
-                .unwrap_or(FieldPath::from(""))
-                .prefix(&canonical_table_alias).as_str();
+        let self_alias = ancestor_path
+            .unwrap_or(FieldPath::from(""))
+            .prefix(&canonical_table_alias);
 
-
-        let other_alias =
-            FieldPath::from(field_path)
-                .prefix(&canonical_table_alias)
-                .as_str();
-        
+        let other_alias = FieldPath::from(field_path).prefix(&canonical_table_alias);
 
         // Get merge join statement and on predicate
         let merge = current_mapper.merge(basename).ok_or(ToqlError::NotFound)?;
 
         let resolver = Resolver::new()
-            .with_self_alias(&self_alias)
-            .with_other_alias(&other_alias);
+            .with_self_alias(&self_alias.as_str())
+            .with_other_alias(&other_alias.as_str());
 
+        let join_expr = resolver.resolve(&merge.merge_join)?;
+        let on_expr = resolver.resolve(&merge.merge_predicate)?;
 
-
-        let join_expr =  resolver.resolve(&merge.merge_join)?;
-        let on_expr =  resolver.resolve(&merge.merge_predicate)?;
-
-         Ok((join_expr, on_expr))
-
-
+        Ok((join_expr, on_expr))
 
         /* let join_clause_sql =
             merge
@@ -260,35 +244,37 @@ impl<'a> SqlBuilder<'a> {
                 .merge_predicate
                 .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
         sql.append(&on_clause_sql);
-        // return two sql 
+        // return two sql
         // TODO translator in sql builder to have same translations
         // Oder anstatt Alias Format -> Translator übergeben
         // Rückgabe 2 expressions -> resolve in hauptfunktion
         Ok(sql)  */
     }
 
-    pub fn build_delete_result<M>(
-        &mut self,
-        query: &Query<M>,
-    ) -> Result<BuildResult> {
+    pub fn build_delete<M>(&mut self, query: &Query<M>) -> Result<BuildResult> {
         let mut context = BuildContext::new();
         let root_mapper = self
             .sql_mapper_registry
             .mappers
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_owned()))?;
-        let alias_table = self
-            .alias_translator
-            .translate(&root_mapper.canonical_table_alias);
-        let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
-        let mut result = BuildResult::new(aliased_table);
+        /* let alias_table = self
+        .alias_translator
+        .translate(&root_mapper.canonical_table_alias); */
+        // let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
+        let mut result = BuildResult::new(SqlExpr::literal("DELETE"));
+
+        result.set_from(
+            root_mapper.table_name.to_owned(),
+            root_mapper.canonical_table_alias.to_owned(),
+        );
 
         self.build_where_clause(&query, &mut context, &mut result)?;
         self.build_join_clause(&mut context, &mut result)?;
 
         Ok(result)
     }
-    pub fn build_delete_sql<M>(
+    /*  pub fn build_delete_sql<M>(
         &mut self,
         query: &Query<M>,
         modified: &str,
@@ -296,25 +282,29 @@ impl<'a> SqlBuilder<'a> {
     ) -> Result<Sql> {
         let result = self.build_delete_result(query)?;
 
-        Ok(result.delete_sql())
-    }
+       // result.delete_sql().map_err( ToqlError::from)
+        result.to_sql().map_err( ToqlError::from)
+    } */
 
-    pub fn build_select_result<M>(
+    pub fn build_select<M>(
         &mut self,
         query_root_path: &str,
         query: &Query<M>,
-       
     ) -> Result<BuildResult> {
         let mut context = BuildContext::new();
         context.query_root_path = query_root_path.to_string();
-        let root_mapper = self.root_mapper()?; 
-              
-        let alias_table = self
+        let root_mapper = self.root_mapper()?;
+
+        /*  let alias_table = self
             .alias_translator
             .translate(&root_mapper.canonical_table_alias);
-            
-        let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
-        let mut result = BuildResult::new(aliased_table);
+
+        let aliased_table = format!("{} {}", root_mapper.table_name, alias_table); */
+        let mut result = BuildResult::new(SqlExpr::literal("SELECT"));
+        result.set_from(
+            root_mapper.table_name.to_owned(),
+            root_mapper.canonical_table_alias.to_owned(),
+        );
 
         self.build_where_clause(&query, &mut context, &mut result)?;
         self.build_select_clause(&query, &mut context, &mut result)?;
@@ -323,38 +313,31 @@ impl<'a> SqlBuilder<'a> {
         Ok(result)
     }
 
-    pub fn build_select_sql<M>(
+    /*  pub fn build_select<M>(
         &mut self,
         query_root_path: &str,
         query: &Query<M>,
-        modified: &str,
-        extra: &str,
-        format: AliasFormat,
-    ) -> Result<(Sql, Vec<bool>, HashSet<String>)> {
-        let result = self.build_select_result(query_root_path, query)?;
+    ) -> Result<BuildResult> {
+       self.build_select_result(query_root_path, query)?;
 
-        Ok((
-            result.select_sql(modified, extra),
-            result.selection_stream,
-            result.unmerged_paths,
-        ))
-    }
+        Ok(result)
+    } */
 
-    pub fn build_count_result<M>(
+    pub fn build_count<M>(
         &mut self,
         query_root_path: &str,
         query: &Query<M>,
-        format: AliasFormat,
     ) -> Result<BuildResult> {
         let mut context = BuildContext::new();
         context.query_root_path = query_root_path.to_string();
         let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
-        
-        let alias_table = self
-            .alias_translator
-            .translate(&root_mapper.canonical_table_alias);
-        let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
-        let mut result = BuildResult::new(aliased_table);
+
+        let mut result = BuildResult::new(SqlExpr::literal("SELECT COUNT(*)"));
+
+        result.set_from(
+            root_mapper.table_name.to_owned(),
+            root_mapper.canonical_table_alias.to_owned(),
+        );
 
         self.build_where_clause(&query, &mut context, &mut result)?;
         todo!();
@@ -363,18 +346,18 @@ impl<'a> SqlBuilder<'a> {
 
         Ok(result)
     }
-    pub fn build_count_sql<M>(
+    /*  pub fn build_count_sql<M>(
         &mut self,
         query_root_path: &str,
         query: &Query<M>,
         modified: &str,
         extra: &str,
-        format: AliasFormat,
+        mut alias_translator: &mut AliasTranslator,
     ) -> Result<Sql> {
-        let result = self.build_count_result(query_root_path, query, format)?;
+        let result = self.build_count_result(query_root_path, query, alias_translator)?;
 
-        Ok(result.count_sql())
-    }
+       result.count_sql(alias_translator).map_err( ToqlError::from)
+    } */
 
     fn mapper_for_path(&self, path: &Option<FieldPath>) -> Result<&SqlMapper> {
         let mut current_mapper = self
@@ -454,9 +437,10 @@ impl<'a> SqlBuilder<'a> {
 
         // Build join
         for r in join_tree.roots() {
-            let sql = &self.resolve_join(&FieldPath::from(&r), &join_tree, &mut build_context)?;
-            result.join_sql.append(sql);
-            result.join_sql.pop_literals(1); // Remove trailing whitespace
+            let expr: SqlExpr =
+                self.resolve_join(&FieldPath::from(&r), &join_tree, &mut build_context)?;
+            result.join_expr.extend(expr);
+            result.join_expr.pop_literals(1); // Remove trailing whitespace
         }
 
         Ok(())
@@ -466,10 +450,10 @@ impl<'a> SqlBuilder<'a> {
         canonical_path: &FieldPath,
         join_tree: &PathTree,
         build_context: &mut BuildContext,
-    ) -> Result<Sql> {
+    ) -> Result<SqlExpr> {
         //  let mapper_name= canonical_path.ancestor().unwrap_or(canonical_path.basename());
 
-        let mut join_sql = Sql::new();
+        let mut join_expr = SqlExpr::new();
 
         for nodes in join_tree.nodes(canonical_path.as_str()) {
             for n in nodes {
@@ -484,46 +468,40 @@ impl<'a> SqlBuilder<'a> {
                 let p = [&self.aux_params, &join.options.aux_params];
                 let aux_params = ParameterMap::new(&p);
 
-                let self_alias = self
+                /*  let self_alias = self
                     .alias_translator
                     .translate(canonical_path.as_str());
-                let other_alias = self.alias_translator.translate(n.as_str());
-                let sql = join.join_expression.resolve(
-                    &self_alias,
-                    Some(&other_alias),
-                    &aux_params,
-                    &[],
-                )?;
-                join_sql.append(&sql);
+                let other_alias = self.alias_translator.translate(n.as_str()); */
+                let resolver = Resolver::new()
+                    .with_self_alias(canonical_path.as_str())
+                    .with_other_alias(n.as_str());
 
-                let sql =
+                let join_e = resolver.resolve(&join.join_expression)?;
+                join_expr.extend(join_e);
+
+                let subjoin_expr =
                     self.resolve_join(&FieldPath::from(n.as_str()), join_tree, build_context)?;
-                if !sql.is_empty() {
-                    join_sql.push_literal(" (");
-                    join_sql.append(&sql);
-                    join_sql.push_literal(")");
+                if !subjoin_expr.is_empty() {
+                    join_expr.push_literal(" (".to_string());
+                    join_expr.extend(subjoin_expr);
+                    join_expr.push_literal(")".to_string());
                 }
 
-                join_sql.push_literal(" ON (");
+                join_expr.push_literal(" ON (".to_string());
 
-                let on_sql = join.on_expression.resolve(
-                    &self_alias,
-                    Some(&other_alias),
-                    &aux_params,
-                    &[],
-                )?;
+                let on_expr = resolver.resolve(&join.on_expression)?;
 
-                let sql = match &join.options.join_handler {
-                    Some(handler) => handler.build_on_predicate(on_sql, &aux_params)?,
-                    None => on_sql,
+                let on_expr = match &join.options.join_handler {
+                    Some(handler) => handler.build_on_predicate(on_expr, &aux_params)?,
+                    None => on_expr,
                 };
-                join_sql.append(&sql);
+                join_expr.extend(on_expr);
 
-                join_sql.push_literal(") ");
+                join_expr.push_literal(") ");
             }
         }
 
-        Ok(join_sql)
+        Ok(join_expr)
     }
 
     fn mapper_from_path(&self, canonical_path: &FieldPath) -> Result<&SqlMapper> {
@@ -585,24 +563,22 @@ impl<'a> SqlBuilder<'a> {
                                 return Err(SqlBuilderError::RoleRequired(role.to_string()).into());
                             }
                             let canonical_alias = self.canonical_alias(&relative_path)?;
-                            let alias = self.alias_translator.translate(&canonical_alias);
-                            let sql =
-                                mapped_field
-                                    .expression
-                                    .resolve(&alias, None, &aux_params, &[])?;
+                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
 
-                            let select_sql = mapped_field
+                            let field_expr = resolver.resolve(&mapped_field.expression)?;
+
+                            let select_expr = mapped_field
                                 .handler
-                                .build_select(sql, &aux_params)?
-                                .unwrap_or(Sql("NULL".to_string(), vec![]));
+                                .build_select(field_expr, &aux_params)?
+                                .unwrap_or(SqlExpr::new());
 
                             // Does filter apply
-                            if let Some(sql) = mapped_field.handler.build_filter(
-                                select_sql,
+                            if let Some(expr) = mapped_field.handler.build_filter(
+                                select_expr,
                                 field.filter.as_ref().unwrap(),
                                 &aux_params,
                             )? {
-                                result.where_sql.append(&sql);
+                                result.where_expr.extend(expr);
 
                                 if let (_, Some(path)) = FieldPath::split_basename(&field.name) {
                                     build_context.joined_paths.insert(path.as_str().to_string());
@@ -650,15 +626,19 @@ impl<'a> SqlBuilder<'a> {
                                 )),
                                 None => Cow::Borrowed(&mapper.canonical_table_alias),
                             }; */
-                            let alias = self.alias_translator.translate(&canonical_alias);
+                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
+
+                            let expr = resolver.resolve(&mapped_predicate.expression)?;
+
+                            /*   let alias = self.alias_translator.translate(&canonical_alias);
                             let sql = mapped_predicate.expression.resolve(
                                 &alias,
                                 None,
                                 &aux_params,
                                 &[],
-                            )?;
+                            )?; */
 
-                            result.where_sql.append(&sql);
+                            result.where_expr.extend(expr);
 
                             if let Some(p) = path {
                                 build_context.joined_paths.insert(p.as_str().to_string());
@@ -698,13 +678,14 @@ impl<'a> SqlBuilder<'a> {
         dbg!(&build_context.selected_paths);
 
         self.resolve_select(&None, query, build_context, result)?;
-        result.select_sql = build_context
-            .select_sql
-            .into_sql(&build_context.selected_placeholders);
-        if result.select_sql.is_empty() {
-            result.select_sql.push_literal("1");
+
+        /*  result.select_expr = build_context
+        .select_sql
+        .into_sql(&build_context.selected_placeholders); */
+        if result.select_expr.is_empty() {
+            result.select_expr.push_literal("1");
         } else {
-            result.select_sql.pop_literals(2); // Remove trailing ,
+            result.select_expr.pop_literals(2); // Remove trailing ,
         }
 
         Ok(())
@@ -762,17 +743,16 @@ impl<'a> SqlBuilder<'a> {
 
                     // Field is explicitly selected in query
                     if explicit_selection {
-                        let alias = self.alias_translator.translate(&canonical_alias);
-                        let select_sql =
-                            field_info
-                                .expression
-                                .resolve(&alias, None, &aux_params, &[])?;
-                        let select_sql =
-                            field_info.handler.build_select(select_sql, &aux_params)?;
+                        let resolver = Resolver::new().with_self_alias(&canonical_alias);
 
-                        if let Some(sql) = select_sql {
-                            build_context.select_sql.push_sql(sql);
-                            build_context.select_sql.push_literal(", ");
+                        let select_expr = resolver.resolve(&field_info.expression)?;
+
+                        let select_expr =
+                            field_info.handler.build_select(select_expr, &aux_params)?;
+
+                        if let Some(expr) = select_expr {
+                            build_context.select_expr.extend(expr);
+                            build_context.select_expr.push_literal(", ");
                             result.selection_stream.push(true);
                             any_selected = true;
                         } else {
@@ -783,16 +763,15 @@ impl<'a> SqlBuilder<'a> {
                     // TODO skip unrelated preseleted fields
                     else {
                         if field_info.options.preselect {
-                            let alias = self.alias_translator.translate(&canonical_alias);
-                            let select_sql =
-                                field_info
-                                    .expression
-                                    .resolve(&alias, None, &aux_params, &[])?;
-                            let select_sql =
-                                field_info.handler.build_select(select_sql, &aux_params)?;
-                            if let Some(sql) = select_sql {
+                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
+
+                            // let alias = self.alias_translator.translate(&canonical_alias);
+                            let select_expr = resolver.resolve(&field_info.expression)?;
+                            let select_expr =
+                                field_info.handler.build_select(select_expr, &aux_params)?;
+                            if let Some(expr) = select_expr {
                                 // keep optional sql statement
-                                build_context.select_sql.push_placeholder(ph_index, sql);
+                                build_context.select_expr.push_placeholder(ph_index, expr);
                             }
                         }
                         result.selection_stream.push(false);
@@ -829,33 +808,33 @@ impl<'a> SqlBuilder<'a> {
         }
         Ok(())
     }
-    fn resolve_select_none(
-        &self,
-        join_path: &Option<FieldPath>,
-        result: &mut BuildResult,
-    ) -> Result<()> {
-        use crate::sql_mapper::DeserializeType;
-        let mapper = self.mapper_for_path(&join_path)?;
-        let canonical_alias = join_path
-            .as_ref()
-            .map(|j| j.as_str())
-            .unwrap_or(&self.root_mapper);
+    /* fn resolve_select_none(
+           &self,
+           join_path: &Option<FieldPath>,
+           result: &mut BuildResult,
+       ) -> Result<()> {
+           use crate::sql_mapper::DeserializeType;
+           let mapper = self.mapper_for_path(&join_path)?;
+           let canonical_alias = join_path
+               .as_ref()
+               .map(|j| j.as_str())
+               .unwrap_or(&self.root_mapper);
 
-        for deserialization_type in &mapper.deserialize_order {
-            match deserialization_type {
-                DeserializeType::Field(_) => {
-                    result.selection_stream.push(false);
-                }
-                DeserializeType::Join(join) => {
-                    let new_join_path = format!("{}_{}", &canonical_alias, &join);
-                    self.resolve_select_none(&Some(FieldPath::from(&join)), result)?;
-                }
-                DeserializeType::Merge(_) => {}
-            }
-        }
-        Ok(())
-    }
-
+           for deserialization_type in &mapper.deserialize_order {
+               match deserialization_type {
+                   DeserializeType::Field(_) => {
+                       result.selection_stream.push(false);
+                   }
+                   DeserializeType::Join(join) => {
+                       let new_join_path = format!("{}_{}", &canonical_alias, &join);
+                       self.resolve_select_none(&Some(FieldPath::from(&join)), result)?;
+                   }
+                   DeserializeType::Merge(_) => {}
+               }
+           }
+           Ok(())
+       }
+    */
     fn selection_from_query<M>(
         &mut self,
         query: &Query<M>,
@@ -995,14 +974,14 @@ impl<'a> SqlBuilder<'a> {
 
         r
     }
-    fn root_field_path(root_path: &str) -> Option<FieldPath> {
-        if root_path.is_empty() {
-            None
-        } else {
-            Some(FieldPath::from(root_path))
-        }
-    }
-
+    /*   fn root_field_path(root_path: &str) -> Option<FieldPath> {
+           if root_path.is_empty() {
+               None
+           } else {
+               Some(FieldPath::from(root_path))
+           }
+       }
+    */
     /* pub fn merge_path(&self, path: &FieldPath) -> Result<Option<&str>> {
 
 

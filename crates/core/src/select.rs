@@ -1,8 +1,5 @@
 use crate::key::Keyed;
 
-
-
-
 /// Trait to select entities from database.
 /// This is mainly useful for copy or update operations but can also be useful for quick lookups.
 pub trait Select<T: Keyed> {
@@ -29,5 +26,3 @@ pub trait Select<T: Keyed> {
 
     fn select_many(&mut self, keys: &[<T as Keyed>::Key]) -> Result<Vec<T>, Self::Error>;
 }
-
-

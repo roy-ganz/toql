@@ -1,11 +1,10 @@
-use toql_sql_expr_parser::{PestSqlExprParser, Rule};
 use crate::pest::Parser;
+use toql_sql_expr_parser::{PestSqlExprParser, Rule};
 
-use crate::sql_expr::{SqlExpr, SqlExprToken};
 use crate::error::ToqlError;
+use crate::sql_expr::{SqlExpr, SqlExprToken};
 
 pub struct SqlExprParser;
-
 
 impl SqlExprParser {
     /// Method to parse a string
@@ -15,9 +14,7 @@ impl SqlExprParser {
         let pairs = PestSqlExprParser::parse(Rule::query, sql_expr)?;
 
         let mut tokens: Vec<SqlExprToken> = Vec::new();
-        
-      
-        
+
         for pair in pairs.flatten().into_iter() {
             let span = pair.clone().as_span();
             //   println!("Rule:    {:?}", pair.as_rule());
@@ -27,29 +24,21 @@ impl SqlExprParser {
                 Rule::literal => {
                     // If last token is literal append to that
                     if let Some(SqlExprToken::Literal(l)) = tokens.last_mut() {
-                        l.push_str( span.as_str());
+                        l.push_str(span.as_str());
                     } else {
-                        tokens.push(SqlExprToken::Literal( span.as_str().to_string()))
+                        tokens.push(SqlExprToken::Literal(span.as_str().to_string()))
                     }
-                },
-                Rule::quoted => {
-                    tokens.push(SqlExprToken::Literal( span.as_str().to_string()))
-                },
-                Rule::self_alias => {
-                    tokens.push(SqlExprToken::SelfAlias)
                 }
-                Rule::other_alias => {
-                    tokens.push(SqlExprToken::OtherAlias)
-                }
-                Rule::aux_param => {
-                    tokens.push(SqlExprToken::AuxParam( span.as_str().to_string()))
-                },
-               
+                Rule::quoted => tokens.push(SqlExprToken::Literal(span.as_str().to_string())),
+                Rule::self_alias => tokens.push(SqlExprToken::SelfAlias),
+                Rule::other_alias => tokens.push(SqlExprToken::OtherAlias),
+                Rule::aux_param => tokens.push(SqlExprToken::AuxParam(span.as_str().to_string())),
+
                 _ => {}
             }
         }
-       
-      //  println!("{:?}", query);
+
+        //  println!("{:?}", query);
         Ok(SqlExpr::from(tokens))
     }
 }

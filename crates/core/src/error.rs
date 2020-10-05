@@ -42,7 +42,7 @@ pub enum ToqlError {
     /// Toql failed to convert row value into struct field
     DeserializeError(String, String),
 
-     /// SQL Builder failed to turn Toql query into SQL query.
+    /// SQL Builder failed to turn Toql query into SQL query.
     SqlExprResolverError(ResolverError),
 }
 

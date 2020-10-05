@@ -13,24 +13,22 @@
 //! ```
 //!
 //! To avoid typing mistakes the Toql derive builds functions for all fields in a struct.
-//! 
+//!
 //! In the example above it would be possible to write
 //! `.and(Foobar::fields().bar().desc(2)` for a derived struct `Foobar`.
 //!
 //! Read the guide for more information on the query syntax or see (Query)[struct.Query.html]
 //!
 
-
 pub mod concatenation;
 pub mod field;
 pub mod field_filter;
 pub mod field_order;
 pub mod field_path;
-pub mod wildcard;
 pub mod predicate;
 pub mod query_with;
 pub mod selection;
-
+pub mod wildcard;
 
 use crate::query::selection::Selection;
 use std::collections::HashMap;
@@ -38,14 +36,10 @@ use std::collections::HashSet;
 use std::fmt;
 
 use concatenation::Concatenation;
-use wildcard::Wildcard;
-use predicate::Predicate;
 use field::Field;
+use predicate::Predicate;
 use query_with::QueryWith;
-
-
-
-
+use wildcard::Wildcard;
 
 #[derive(Clone, Debug)]
 pub(crate) enum QueryToken {
@@ -54,7 +48,7 @@ pub(crate) enum QueryToken {
     Wildcard(Wildcard),
     Field(Field),
     Predicate(Predicate),
-    Selection(Selection)
+    Selection(Selection),
 }
 
 impl From<&str> for QueryToken {
@@ -85,27 +79,27 @@ impl ToString for QueryToken {
 }
 
 /// A Query allows to create a Toql query programmatically or modify a parsed string query.
-/// 
-/// This is faster than the [QueryParser](../query_parser/struct.QueryParser.html) and cannot fail. 
+///
+/// This is faster than the [QueryParser](../query_parser/struct.QueryParser.html) and cannot fail.
 /// It should be used whenever possible.
-/// 
+///
 /// A query can be turned into SQL using the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 ///
 /// To build a big query simply add fields, wildcards ans other (sub)querries with [and()](struct.Query.html#method.and) resp. [or()](struct.Query.html#method.or) function.
 ///
 /// Watch out: Logical AND has precendence over OR. So `a OR b AND c` is the same as `a OR (b AND c)`.
-/// 
+///
 /// **Always parenthesize a user query if you add a permission filter to it**.
-/// 
+///
 /// Malicious users will try circumvent your permission filter with a simple OR clause at the beginning.
-/// Compare an evil query with a safe one: 
-/// 
-/// Evil: `(*, id nen); id, permission ne ""` 
-/// 
+/// Compare an evil query with a safe one:
+///
+/// Evil: `(*, id nen); id, permission ne ""`
+///
 /// Safe: `((*, id nen); id), permission ne ""`.
-/// 
+///
 /// In the evil query, the permission is ignored, because the predicate `id nen` is always true and returns all records.
-/// 
+///
 /// To parenthesize a query use the [parenthesize()](struct.Query.html#method.parenthesize) method.
 ///
 /// ``` ignore
@@ -114,18 +108,18 @@ impl ToString for QueryToken {
 ///
 /// assert_eq!("a eq 1; (b eq 3, c eq 2)", q2.to_string())
 /// ```
-/// 
+///
 /// For every fields of a struct the Toql derive generates fields.
 /// For a Toql derived struct it's possible to write
-/// 
+///
 /// ``` ignore
 /// let q1 = Query::wildcard().and(User::fields().addresses().street().eq("miller street")).and(UserKey(10));
 /// ```
-/// 
+///
 /// To modify q query with a custom struct see [QueryWith](struct.QueryWith.html)
-/// 
-/// 
-/// 
+///
+///
+///
 use crate::sql_arg::SqlArg;
 #[derive(Debug)]
 pub struct Query<M> {
@@ -141,16 +135,11 @@ pub struct Query<M> {
     pub where_predicate_params: Vec<SqlArg>, // Query params for additional sql restriction
     pub select_columns: Vec<String>,   // Additional select columns
 
-    pub join_stmts: Vec<String>, // Additional joins statements
+    pub join_stmts: Vec<String>,       // Additional joins statements
     pub join_stmt_params: Vec<SqlArg>, // Join params for additional sql restriction
-   // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
-   pub type_marker: std::marker::PhantomData<M>
+    // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
+    pub type_marker: std::marker::PhantomData<M>,
 }
-
-
-
-
-
 
 impl<M> Query<M> {
     /// Create a new empty query.
@@ -165,8 +154,7 @@ impl<M> Query<M> {
             select_columns: Vec::new(),
             join_stmts: Vec::new(),
             join_stmt_params: Vec::new(),
-            type_marker: std::marker::PhantomData
-          //  wildcard_scope: None
+            type_marker: std::marker::PhantomData, //  wildcard_scope: None
         }
     }
 
@@ -178,10 +166,9 @@ impl<M> Query<M> {
         query.into()
     }
 
-     /// Create a new query from another query.
-    pub fn clone_for_type<T>(&self) -> Query::<T>
-    {
-       Query::<T> {
+    /// Create a new query from another query.
+    pub fn clone_for_type<T>(&self) -> Query<T> {
+        Query::<T> {
             tokens: self.tokens.clone(),
             distinct: self.distinct.clone(),
             aux_params: self.aux_params.clone(),
@@ -190,36 +177,46 @@ impl<M> Query<M> {
             select_columns: self.select_columns.clone(),
             join_stmts: self.join_stmts.clone(),
             join_stmt_params: self.join_stmt_params.clone(),
-            type_marker: std::marker::PhantomData
-       }
+            type_marker: std::marker::PhantomData,
+        }
     }
-/// Create a new query from the path of another query.
- pub fn traverse<T>(&self, path:&str) -> Query<T> {
-
-        
-        let tokens = self.tokens.iter().filter_map(|t| {
-            match t {
-                QueryToken::Field(field) => { if field.name.starts_with(path) 
-                    { 
+    /// Create a new query from the path of another query.
+    pub fn traverse<T>(&self, path: &str) -> Query<T> {
+        let tokens = self
+            .tokens
+            .iter()
+            .filter_map(|t| match t {
+                QueryToken::Field(field) => {
+                    if field.name.starts_with(path) {
                         let mut field = field.clone();
-                        field.name = field.name.trim_start_matches(path).trim_start_matches('_').to_string();
+                        field.name = field
+                            .name
+                            .trim_start_matches(path)
+                            .trim_start_matches('_')
+                            .to_string();
                         Some(QueryToken::Field(field))
-                    } else {None} },
+                    } else {
+                        None
+                    }
+                }
                 QueryToken::Wildcard(wildcard) => {
                     if wildcard.path.starts_with(path) {
                         let mut wildcard = wildcard.clone();
-                        wildcard.path = wildcard.path.trim_start_matches(path).trim_start_matches('_').to_string();
+                        wildcard.path = wildcard
+                            .path
+                            .trim_start_matches(path)
+                            .trim_start_matches('_')
+                            .to_string();
                         Some(QueryToken::Wildcard(wildcard))
                     } else {
                         None
                     }
                 }
                 _ => None,
-            
-            }
-        }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
 
-       Query::<T> {
+        Query::<T> {
             tokens: tokens,
             distinct: self.distinct.clone(),
             aux_params: self.aux_params.clone(),
@@ -228,10 +225,9 @@ impl<M> Query<M> {
             select_columns: self.select_columns.clone(),
             join_stmts: self.join_stmts.clone(),
             join_stmt_params: self.join_stmt_params.clone(),
-            type_marker: std::marker::PhantomData
-       }
+            type_marker: std::marker::PhantomData,
+        }
     }
-
 
     /// Create a new query that select all top fields.
     pub fn wildcard() -> Self {
@@ -245,12 +241,11 @@ impl<M> Query<M> {
             select_columns: Vec::new(),
             join_stmts: Vec::new(),
             join_stmt_params: Vec::new(),
-            type_marker: std::marker::PhantomData
-          //  wildcard_scope: None
+            type_marker: std::marker::PhantomData, //  wildcard_scope: None
         }
     }
 
-     /// Wrap query with parentheses.
+    /// Wrap query with parentheses.
     pub fn parenthesize(mut self) -> Self {
         if self.tokens.is_empty() {
             return self;
@@ -259,7 +254,7 @@ impl<M> Query<M> {
             .insert(0, QueryToken::LeftBracket(Concatenation::And));
         self.tokens.push(QueryToken::RightBracket);
         self
-    } 
+    }
     /// Concatenate field or query with AND.
     pub fn and<T>(mut self, query: T) -> Self
     where
@@ -275,7 +270,8 @@ impl<M> Query<M> {
         T: Into<Query<M>>,
     {
         // All tokens are b
-        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::And));
+        self.tokens
+            .insert(0, QueryToken::LeftBracket(Concatenation::And));
         self.tokens.append(&mut query.into().tokens);
         self.tokens.push(QueryToken::RightBracket);
         self
@@ -287,36 +283,37 @@ impl<M> Query<M> {
         T: Into<Query<M>>,
     {
         // Change first token of query to concatenate with OR
-         let mut query = query.into();
-         match query.tokens.get_mut(0) {
-             Some(QueryToken::LeftBracket(c) ) => *c = Concatenation::Or,
-             Some(QueryToken::RightBracket ) =>  {},
-             Some(QueryToken::Field(f)) => f.concatenation = Concatenation::Or,
-             Some(QueryToken::Wildcard(w)) => w.concatenation = Concatenation::Or,
-             Some(QueryToken::Predicate(p)) => p.concatenation = Concatenation::Or,
-             Some(QueryToken::Selection(p)) => p.concatenation = Concatenation::Or,
-             None => {}
-         }
-/*         if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
-            *c = Concatenation::Or;
-        } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
-            field.concatenation = Concatenation::Or;
-        } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
-            wildcard.concatenation = Concatenation::Or;
-        } 
- */       
+        let mut query = query.into();
+        match query.tokens.get_mut(0) {
+            Some(QueryToken::LeftBracket(c)) => *c = Concatenation::Or,
+            Some(QueryToken::RightBracket) => {}
+            Some(QueryToken::Field(f)) => f.concatenation = Concatenation::Or,
+            Some(QueryToken::Wildcard(w)) => w.concatenation = Concatenation::Or,
+            Some(QueryToken::Predicate(p)) => p.concatenation = Concatenation::Or,
+            Some(QueryToken::Selection(p)) => p.concatenation = Concatenation::Or,
+            None => {}
+        }
+        /*         if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
+                   *c = Concatenation::Or;
+               } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
+                   field.concatenation = Concatenation::Or;
+               } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
+                   wildcard.concatenation = Concatenation::Or;
+               }
+        */
 
         self.tokens.append(&mut query.tokens);
-        
+
         self
     }
-     /// Concatenate field or query with AND.
+    /// Concatenate field or query with AND.
     pub fn or_parentized<T>(mut self, query: T) -> Self
     where
         T: Into<Query<M>>,
     {
         // All tokens are b
-        self.tokens.insert(0, QueryToken::LeftBracket(Concatenation::Or));
+        self.tokens
+            .insert(0, QueryToken::LeftBracket(Concatenation::Or));
         self.tokens.append(&mut query.into().tokens);
         self.tokens.push(QueryToken::RightBracket);
         self
@@ -328,11 +325,13 @@ impl<M> Query<M> {
     }
 
     /// Convenence method to add aux params
-    pub fn aux_param<S, A>(mut self, name: S, value: A) -> Self 
-    where A: Into<SqlArg>, S: Into<String>
+    pub fn aux_param<S, A>(mut self, name: S, value: A) -> Self
+    where
+        A: Into<SqlArg>,
+        S: Into<String>,
     {
-       self.aux_params.insert(name.into(), value.into());
-       self
+        self.aux_params.insert(name.into(), value.into());
+        self
     }
 
     /// Check if query contains path
@@ -345,7 +344,7 @@ impl<M> Query<M> {
             match t {
                 QueryToken::Field(field) => field.name.starts_with(pth),
                 QueryToken::Wildcard(wildcard) => {
-                    path.starts_with(&wildcard.path) ||  wildcard.path.starts_with(pth)
+                    path.starts_with(&wildcard.path) || wildcard.path.starts_with(pth)
                 }
                 _ => false,
             }
@@ -360,16 +359,11 @@ impl<M> Query<M> {
             let pth = p.as_str();
             match t {
                 QueryToken::Field(field) => field.name.starts_with(pth),
-                QueryToken::Wildcard(wildcard) => {
-                    wildcard.path.starts_with(pth)
-                }
+                QueryToken::Wildcard(wildcard) => wildcard.path.starts_with(pth),
                 _ => false,
             }
         })
     }
-
-   
-  
 }
 
 /// Asserts that the provided roles contains all required roles.
@@ -469,8 +463,3 @@ impl<M> From<&str> for Query<M> {
         q
     }
 }
-
-
- 
-
- 
