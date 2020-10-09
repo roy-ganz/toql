@@ -48,7 +48,7 @@ impl<'a> GeneratedMysqlKey<'a> {
                     })
                 }; */
                 self.mysql_deserialize_key.push(quote!(
-                    #rust_field_ident: (row.take_opt(*i).unwrap()
+                    #rust_field_ident: (row.get_opt(*i).unwrap()
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
                             )?, *i += 1).0
                 ));
@@ -61,7 +61,7 @@ impl<'a> GeneratedMysqlKey<'a> {
 
                 // Impl key from result row
                 self.mysql_forward_join_key.push(quote!(
-                   *i = < #rust_type_ident > ::forward_row(*i);
+                   *i = < #rust_type_ident > ::skip(*i);
                 ));
 
               
@@ -81,6 +81,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlKey<'a> {
         let rust_stuct_ident = &self.rust_struct.rust_struct_ident;
 
         let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
+        let struct_key_name = format!("{}Key", &rust_stuct_ident);
 
         let forward_key_columns = &self.forward_key_columns;
         let forward_key_joins = &self.forward_key_joins;
@@ -89,13 +90,25 @@ impl<'a> quote::ToTokens for GeneratedMysqlKey<'a> {
         let key = quote! {
 
 
-            impl toql :: mysql :: row:: FromResultRow < #struct_key_ident > for #struct_key_ident {
+    impl toql::from_row::FromRow<std::result::Result<toql::mysql::mysql::Row, toql::mysql::mysql::Error>> for #struct_key_ident {
+ 
 
+           type Error = toql::mysql::error::ToqlMySqlError;
+             fn skip(mut i : usize) -> usize {
+                i += #forward_key_columns ;
+                #(#forward_key_joins)*
+                i
+            }  
            
 
-            fn from_row_with_index<'a, I>( mut row : & mut toql::mysql::mysql :: Row , i : &mut usize, mut iter: &mut I)
+            fn from_row_with_index<'a, I> ( mut row : &std::result::Result<mysql::Row, toql::mysql::mysql::Error> , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_key_ident> 
-                where I: Iterator<Item = &'a bool>{
+                where I:   Iterator<Item = &'a bool> {
+
+                
+                    
+        let row : & mysql :: Row = row . as_ref() 
+        .map_err(| e | {  toql::error::ToqlError::DeserializeError(#struct_key_name.to_owned(), e.to_string())})? ;
 
                 Ok ( #struct_key_ident{
                     #(#mysql_deserialize_key),*

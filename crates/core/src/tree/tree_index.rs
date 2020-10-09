@@ -10,7 +10,7 @@ where
     Self: FromRow<R>,
 {
     fn index<'a, I>(
-        descendents: &Descendents<'a>,
+        descendents: &mut Descendents<'a>,
         field: &str,
         rows: I,
         index: &mut HashMap<u64, Vec<usize>>,

@@ -15,7 +15,11 @@ pub(crate) struct GeneratedToqlTree<'a> {
     dispatch_predicate_code: Vec<TokenStream>,
     dispatch_merge_key_code: Vec<TokenStream>,
     merge_columns_code: Vec<TokenStream>,
-    merge_predicate_code: Vec<TokenStream>
+    merge_predicate_code: Vec<TokenStream>,
+
+    index_type_bounds: Vec<TokenStream>,
+    dispatch_index_code: Vec<TokenStream>,
+    index_code: Vec<TokenStream>
    
 }
 
@@ -29,6 +33,10 @@ impl<'a> GeneratedToqlTree<'a> {
             dispatch_merge_key_code: Vec::new(),
             merge_columns_code: Vec::new(),
             merge_predicate_code: Vec::new(),
+
+            index_type_bounds: Vec::new(),
+            dispatch_index_code: Vec::new(),
+            index_code: Vec::new(),
         }
     }
 
@@ -61,8 +69,28 @@ impl<'a> GeneratedToqlTree<'a> {
                         }
                 )
                );
+
+               self.dispatch_index_code.push(
+                   quote!(
+                       self. #toql_field_name => { 
+                            <#rust_type_ident as toql::tree::tree_index::TreeIndex>::
+                            index(&#rust_field_ident # unwrap ,&mut descendents, &field, index)?
+                        }
+                )
+               );
             }
             FieldKind::Merge(merge) => {
+                self.dispatch_index_code.push(
+                   quote!(
+                       #toql_field_name => {
+                        for f in &self. #rust_field_ident #unwrap {
+                            <#rust_type_ident as toql::tree::tree_index::TreeIndex>::
+                            index(f, &mut descendents, &field, index)?
+                        }
+                       }
+                )
+               );
+
                 self.dispatch_predicate_code.push(
                    quote!(
                        #toql_field_name => {
@@ -127,7 +155,7 @@ impl<'a> GeneratedToqlTree<'a> {
                 self.merge_predicate_code.push(
                    quote!(
                        #toql_field_name => {
-                                let key = Keyed::try_get_key(&self)?;
+                                let key = << Self as toql :: key :: Keyed >::try_get_key(&self)?;
                                 let params =<< Self as toql :: key :: Keyed > :: Key as toql :: key :: Key > ::params(&key);
                                 let mut columns :Vec<toql::sql_expr::PredicateColumn> = Vec::new();
                                 #(#columns_code)*
@@ -136,6 +164,21 @@ impl<'a> GeneratedToqlTree<'a> {
                           
                 )
                );
+
+                let type_key_ident = Ident::new(&format!("{}Key", &field.rust_type_name), Span::call_site());
+                let struct_ident = self.struct_ident;
+                self.index_type_bounds.push(quote!(
+                    #type_key_ident : toql :: from_row :: FromRow < R >, 
+                    <#struct_ident as toql :: from_row :: FromRow < R >> :: Error : std::convert::From< < #type_key_ident as toql :: from_row :: FromRow < R >> :: Error>
+                    ));
+               self.index_code.push(
+                    quote!(
+                        #toql_field_name => {
+                            let fk = #type_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?;
+                            fk.hash(&mut s);
+                            },
+                    )
+                );
             }
             _ => {
                 
@@ -151,8 +194,13 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
 
         let dispatch_predicate_code = &self.dispatch_predicate_code;
         let dispatch_merge_key_code = &self.dispatch_merge_key_code;
+
         let merge_columns_code = &self.merge_columns_code;
         let merge_predicate_code = &self.merge_predicate_code;
+
+        let index_type_bounds = &self.index_type_bounds;
+        let dispatch_index_code = &self.dispatch_index_code;
+        let index_code = &self.index_code;
 
         let struct_key_ident = Ident::new(&format!("{}Key", &self.struct_ident), Span::call_site());
        
@@ -178,23 +226,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                             toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
                                     }
                                     }
-                                   /*  let key = toql::key::Keyed::try_get_key(self)?;
-                                    let columns = <#struct_key_ident as toql::key::Key>::columns();
-                                    let params =  <#struct_key_ident as toql::key::Key>::params(&key);
-
-                                    if columns.len() == 1 {
-                                        predicate.push_self_alias();
-                                        predicate.push_literal(".");
-                                        predicate.push_in_clause(columns.get(0).unwrap(), params.get(0).unwrap().to_owned());
-                                    
-                                    } else {
-                                        if !predicate.is_empty() {
-                                            predicate.push_literal(" OR ".to_string());
-                                        }
-                                        predicate.push_literal("(".to_string());
-                                        toql::key::predicate_expr(key);
-                                        predicate.push_literal(") ".to_string());
-                                    } */
+                                  
                                }
                         } 
                         Ok(())
@@ -254,18 +286,80 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                          
                 }
 
+  
 
                 impl<R> toql::tree::tree_index::TreeIndex<R> for #struct_ident 
-                where Self: toql::from_row::FromRow<R>
+                where Self: toql::from_row::FromRow<R>,
+                #struct_key_ident : toql :: from_row :: FromRow < R >,
+                <#struct_ident as toql :: from_row :: FromRow < R >> :: Error : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
+                <Self as toql :: from_row :: FromRow < R >>::Error: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>,
+                #(#index_type_bounds)*
+  
                 {
-                    fn index<'a>(&self,  descendents: &toql::query::field_path::Descendents<'a>, rows: &[R], index: &mut HashMap<u64,Vec<usize>>) 
-                        -> std::result::Result<(), <Self as toql::from_row::FromRow<R>>::Error> {
-                        /* use toql::from_row::FromRow;
-                        let mut i = 0;
-                        User::skip_row(&rows[0], &mut i)?; */
-                        
-                        Ok(())
-                    }
+                    fn index<'a, I>( descendents: &toql::query::field_path::Descendents<'a>, field: &str, 
+                                rows: I, index: &mut HashMap<u64,Vec<usize>>) 
+                        -> std::result::Result<(), <Self as toql::from_row::FromRow<R>>::Error>
+                         where I: IntoIterator<Item=R>
+                         {
+                          
+                        use toql::from_row::FromRow;
+                        use std::hash::Hash;
+                        use std::hash::Hasher;
+                        use std::collections::hash_map::DefaultHasher;
+
+                      match descendents.next() {
+                            
+                                Some(d) => { 
+                                    match d.as_str() {
+                                        #(#dispatch_index_code),* 
+                                        f @ _ => {
+                                            return Err(
+                                               toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()));
+                                        }
+                                    }
+                                },
+                                None => {
+                                   
+                                 
+                                     
+
+                                        let mut  i= 0;
+                                        let mut iter = std::iter::repeat(&true);
+                                        i = <#struct_ident as toql :: from_row :: FromRow<R>>::skip(i);
+                                        for (n, row) in rows.into_iter().enumerate() {
+                                            let mut s = DefaultHasher::new();
+                                            let pk =  #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?;
+                                            pk.hash(&mut s);
+                                            let pk_hash= s.finish();
+
+                                            let mut s = DefaultHasher::new();
+                                            let fh_hash = match field {
+                                               #(#index_code)*
+                                               
+                                                f @ _ => {
+                                                    return Err(
+                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()));
+                                                }
+
+                                            };
+                                            let fk_hash =  s.finish();
+                                    
+
+                                            index.entry(pk_hash)
+                                            .and_modify(|h| h.push(n))
+                                            .or_insert(vec![n]);
+                                        }
+                                
+                                        
+                                       
+                                    }
+                                   
+                                   
+                                
+                        }
+                        Ok(())  
+                    }  
+                      
                 }
     
         };
