@@ -297,7 +297,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
   
                 {
                     fn index<'a, I>( descendents: &toql::query::field_path::Descendents<'a>, field: &str, 
-                                rows: I, index: &mut HashMap<u64,Vec<usize>>) 
+                                rows: I, row_offset: usize, index: &mut HashMap<u64,Vec<usize>>) 
                         -> std::result::Result<(), <Self as toql::from_row::FromRow<R>>::Error>
                          where I: IntoIterator<Item=R>
                          {
@@ -320,20 +320,15 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                 },
                                 None => {
                                    
-                                 
-                                     
-
-                                        let mut  i= 0;
+                                        let mut  i= row_offset;
                                         let mut iter = std::iter::repeat(&true);
                                         i = <#struct_ident as toql :: from_row :: FromRow<R>>::skip(i);
                                         for (n, row) in rows.into_iter().enumerate() {
+                                          
+                                            #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
+                                          
                                             let mut s = DefaultHasher::new();
-                                            let pk =  #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?;
-                                            pk.hash(&mut s);
-                                            let pk_hash= s.finish();
-
-                                            let mut s = DefaultHasher::new();
-                                            let fh_hash = match field {
+                                            match field {
                                                #(#index_code)*
                                                
                                                 f @ _ => {
@@ -343,9 +338,8 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
 
                                             };
                                             let fk_hash =  s.finish();
-                                    
 
-                                            index.entry(pk_hash)
+                                            index.entry(fk_hash)
                                             .and_modify(|h| h.push(n))
                                             .or_insert(vec![n]);
                                         }

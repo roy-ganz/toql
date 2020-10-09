@@ -12,7 +12,7 @@ where
     fn index<'a, I>(
         descendents: &mut Descendents<'a>,
         field: &str,
-        rows: I,
+        rows: I, row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
     ) -> Result<(), <Self as FromRow<R>>::Error>
      where I: IntoIterator<Item=R>;

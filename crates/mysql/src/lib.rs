@@ -182,17 +182,21 @@ where
         dbg!(&sql);
          dbg!(&args);
 
+       
+       
         // Load form database
+        
         let args = crate::sql_arg::values_from_ref(&args);
         let query_results = mysql.conn.prep_exec(sql, args)?;
       
         // Build index
-          let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
+        let row_offset = result.selection_stream().iter().filter(|x| x == &&true).count();
+        let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
         let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
         let mut d = ancestor_path.descendents();
         let mut index: HashMap<u64, Vec<usize>>= HashMap::new();
         let iter = query_results.into_iter();
-            <T as TreeIndex<std::result::Result<Row, mysql::Error>>>::index(&mut d, field,  iter, &mut index)?;
+            <T as TreeIndex<std::result::Result<Row, mysql::Error>>>::index(&mut d, field,  iter, row_offset, &mut index)?;
         
 
         // Merge

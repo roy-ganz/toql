@@ -94,11 +94,11 @@ impl<'a> quote::ToTokens for GeneratedMysqlKey<'a> {
  
 
            type Error = toql::mysql::error::ToqlMySqlError;
-             fn skip(mut i : usize) -> usize {
+            /*  fn skip(mut i : usize) -> usize {
                 i += #forward_key_columns ;
                 #(#forward_key_joins)*
                 i
-            }  
+            }   */
            
 
             fn from_row_with_index<'a, I> ( mut row : &std::result::Result<mysql::Row, toql::mysql::mysql::Error> , i : &mut usize, mut iter: &mut I)
