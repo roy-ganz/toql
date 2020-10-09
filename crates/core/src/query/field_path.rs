@@ -32,8 +32,8 @@ impl<'a> FieldPath<'a> {
 
     pub fn relative_path(&self, root_path: &str) -> Option<FieldPath> {
         if self.0.starts_with(root_path) {
-            let t = self.0.trim_start_matches(root_path);
-            Some(FieldPath::from(t.trim_start_matches("_")))
+            let t = self.0.trim_start_matches(root_path).trim_start_matches("_");
+            Some(FieldPath::from(t))
         } else {
             None
         }
@@ -149,6 +149,13 @@ impl<'a> Iterator for Ancestor<'a> {
 pub struct Descendents<'a> {
     pos: usize,
     path: &'a str,
+}
+
+impl<'a> Descendents<'a> {
+
+    pub fn is_last(&self) -> bool {
+        self.pos == self.path.len()
+    }
 }
 
 impl<'a> Iterator for Descendents<'a> {

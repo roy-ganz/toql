@@ -17,7 +17,7 @@ pub struct BuildResult {
     pub(crate) canonical_table_alias: String, */
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
-
+    pub(crate) table_alias: String,
     pub(crate) selection_stream: Vec<bool>,
     pub(crate) unmerged_paths: HashSet<String>,
     pub(crate) verb_expr: SqlExpr,
@@ -33,6 +33,7 @@ impl BuildResult {
         BuildResult {
             /* table,
             canonical_table_alias, */
+            table_alias: String::new(),
             any_selected: false,
             distinct: false,
             unmerged_paths: HashSet::new(),
@@ -54,14 +55,19 @@ impl BuildResult {
         self.any_selected
     }
     pub fn push_select(&mut self, expr: SqlExpr) {
-        self.select_expr.push_separator(",".to_string());
+        self.select_expr.push_separator(", ".to_string());
         self.select_expr.extend(expr);
+    }
+    pub fn table_alias(&self) -> &String {
+        &self.table_alias
     }
 
     pub fn set_from(&mut self, table: String, canonical_alias: String) {
+        self.table_alias = canonical_alias.to_owned();
         self.from_expr.push_literal(table);
         self.from_expr.push_literal(" ");
-        self.from_expr.push_literal(canonical_alias);
+        self.from_expr.push_alias(canonical_alias);
+        
     }
 
     /*   pub fn push_join(&mut self, s: &str) {
@@ -99,17 +105,41 @@ impl BuildResult {
 
         let mut stmt = String::from(verb_sql.0);
         stmt.push(' ');
-        stmt.push_str(modifier);
+     
         if !modifier.is_empty() {
+            stmt.push_str(modifier);
             stmt.push(' ');
         }
-        stmt.push_str(&from_sql.0);
-        stmt.push(' ');
-        self.sql_body(&mut stmt, alias_translator)?;
+        stmt.push_str(&select_sql.0);
+        
+        if !self.from_expr.is_empty(){
+            stmt.push_str(" FROM ");
+            stmt.push_str(&from_sql.0);
+        }
+      
+       if !self.join_expr.is_empty() {
+            stmt.push(' ');
+            let join_sql = resolver.to_sql(&self.join_expr, alias_translator)?;
+            stmt.push_str(&join_sql.0);
+        }
+
+        if !self.where_expr.is_empty() {
+            stmt.push_str(" WHERE ");
+            let where_sql = resolver.to_sql(&self.where_expr, alias_translator)?;
+            stmt.push_str(&where_sql.0);
+        }
+
+        if !self.order_expr.is_empty() {
+            stmt.push_str(" ORDER BY ");
+            let order_sql = resolver.to_sql(&self.order_expr, alias_translator)?;
+            stmt.push_str(&order_sql.0);
+        }
+
         if !extra.is_empty() {
             stmt.push(' ');
+            stmt.push_str(extra);
         }
-        stmt.push_str(extra);
+       
 
         Ok(Sql(stmt, args))
     }
@@ -125,12 +155,12 @@ impl BuildResult {
     fn sql_body(&self, s: &mut String, alias_translator: &mut AliasTranslator) -> Result<()> {
         let resolver = Resolver::new();
 
-        s.push_str(" FROM ");
+      /*   s.push_str(" FROM ");
         let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
         s.push_str(&from_sql.0);
         /*   s.push_str(" ");
         s.push_str(&self.canonical_table_alias); // TODO translate */
-        s.push_str(" ");
+        s.push_str(" "); */
 
         if !self.join_expr.is_empty() {
             s.push(' ');

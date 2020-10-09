@@ -4,7 +4,7 @@
 //! the trait [Mutate](../toql_core/mutate/trait.Mutate.html).
 //!
 
-use mysql::prelude::GenericConnection;
+use mysql::{QueryResult, prelude::GenericConnection, Row};
 
 //use toql_core::mutate::collection_delta_sql;
 
@@ -14,7 +14,7 @@ use toql_core::key::Keyed;
 //use toql_core::load::{Load, Page};
 use toql_core::load::Page;
 use toql_core::mutate::{DiffSql, DuplicateStrategy, InsertDuplicate, InsertSql, UpdateSql};
-use toql_core::query::Query;
+use toql_core::query::{field_path::FieldPath, Query};
 
 use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
@@ -43,6 +43,7 @@ use crate::error::ToqlMySqlError;
 use toql_core::sql::Sql;
 use toql_core::sql_arg::SqlArg;
 use toql_core::tree::tree_predicate::TreePredicate;
+use toql_core::tree::{tree_index::TreeIndex, tree_keys::TreeKeys};
 use toql_core::{
     alias_translator::AliasTranslator, parameter::ParameterMap, sql_expr::resolver::Resolver,
     sql_mapper::mapped::Mapped,
@@ -56,7 +57,7 @@ fn load<T, B, C>(
     page: Option<Page>,
 ) -> Result<(Vec<T>, Option<(u32, u32)>)>
 where
-    T: Keyed + Mapped + row::FromResultRow<T> + TreePredicate,
+    T: Keyed + Mapped + row::FromResultRow<T> + TreePredicate + TreeKeys + TreeIndex<std::result::Result<Row, mysql::Error>>,
     B: Borrow<Query<T>>,
     <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
     C: GenericConnection,
@@ -66,6 +67,7 @@ where
     use toql_core::query::field_path::FieldPath;
     use toql_core::sql::Sql;
     use toql_core::sql_expr::SqlExpr;
+    
 
     //  let (r, _) =<Self as Load<T>>::load_many(self, query.borrow(),None)?;
 
@@ -80,11 +82,13 @@ where
         let unmerged = result.unmerged_paths().clone();
         let mut alias_translator = AliasTranslator::new(alias_format);
         let aux_params = [mysql.aux_params()];
-        let parameters = ParameterMap::new(&aux_params);
+        let aux_params = ParameterMap::new(&aux_params);
 
         let Sql(sql, args) = result
-            .to_sql(&parameters, &mut alias_translator)
+            .to_sql(&aux_params, &mut alias_translator)
             .map_err(ToqlError::from)?;
+
+        dbg!(&sql);
 
         let args = crate::sql_arg::values_from_ref(&args);
         let query_results = mysql.conn.prep_exec(sql, args)?;
@@ -93,33 +97,97 @@ where
         (entities, unmerged)
     };
 
-    // deserialize base entities
+   
 
-    // let index = 0;
-    //   let (entities, keys) = crate :: row :: from_query_result_with_primary_keys :: < T, <T as Keyed>::Key>(query_results, &selection_stream) ?;
-
-    let mut pending_paths: HashSet<&str> = HashSet::new();
+    // Merge all pending paths
+    let mut pending_paths: HashSet<String> = HashSet::new();
     for root_path in unmerged_paths {
+
+       
+     
+        
+
+        // Get merge JOIN with ON from mapper
         let mut builder = SqlBuilder::new(&ty, mysql.registry()); // Add alias format or translator to constructor
-                                                                  //  let  mut join_sql = builder.join_sql(&root_path, alias_format.to_owned())?;
-        let on_sql_expr = builder.merge_expr(&root_path)?; // builder kann predicate bringen, aber keine argumente (key values)
-        dbg!(on_sql_expr);
+        let mut result = builder.build_select(root_path.as_str(), query.borrow())?;
+        pending_paths = result.unmerged_paths().clone();
 
-        let mut sql_expr = SqlExpr::new();
-        let mut predicate_args: Vec<SqlArg> = Vec::new();
-        let path = FieldPath::from(root_path.as_str());
-        let ancestor_path = path.ancestor().unwrap_or(FieldPath::from("")); // We need predicate from ancestor node
+           let resolver = Resolver::new().with_self_alias(&result.table_alias());
+
+
+        // Get merge columns (primary key, merge key)
+        // and append to regular select columns
+         let mut col_expr = SqlExpr::new();
+         let (field, path) =  FieldPath::split_basename(&root_path);
+        let path = path.unwrap_or(FieldPath::from(""));
+        let mut d = path.descendents();
+        <T as TreeKeys>::keys(&mut d, field, &mut col_expr).map_err(ToqlError::from)?;
+        let col_expr = resolver.resolve(&col_expr).map_err(ToqlError::from)?;
+        println!("{}", &col_expr);
+        result.push_select(col_expr);
+
+
+        // Build merge join
+        // Get merge join and custom on predicate from mapper
+        let on_sql_expr = builder.merge_expr(&root_path)?; 
+
+        let (merge_join, merge_on) = {
+            let merge_resolver = Resolver::new().with_other_alias(&result.table_alias());
+           ( merge_resolver.resolve(&on_sql_expr.0).map_err(ToqlError::from)?,
+            merge_resolver.resolve(&on_sql_expr.1).map_err(ToqlError::from)?)
+        };
+        
+        println!("{} ON {}", merge_join,merge_on);
+        result.push_join(merge_join);
+        result.push_join(SqlExpr::literal("ON ("));
+        result.push_join(merge_on);
+       
+
+
+        // Get ON predicate from entity keys
+        let mut predicate_expr = SqlExpr::new();
+        let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
+        let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
         let mut d = ancestor_path.descendents();
+       
         for e in &entities {
-            e.predicate(&mut d, &mut sql_expr, &mut predicate_args)?;
+            e.predicate(&mut d, field, &mut predicate_expr).map_err(ToqlError::from)?;
         }
+        
+        let predicate_expr = {
+               let merge_resolver = Resolver::new().with_other_alias(&result.table_alias());
+               merge_resolver.resolve(&predicate_expr).map_err(ToqlError::from)?
+               };
+        result.push_join(SqlExpr::literal("AND "));
+        result.push_join(predicate_expr);
+        result.push_join(SqlExpr::literal(")"));
 
-        let p = [mysql.aux_params()];
-        let aux_params = ParameterMap::new(&p);
-        let resolver = Resolver::new().with_self_alias(&path.as_str());
-        let sql = resolver.resolve(&sql_expr).map_err(ToqlError::from)?;
 
-        dbg!(sql);
+        // Build SQL query statement
+        let mut alias_translator = AliasTranslator::new(mysql.alias_format());
+        let aux_params = [mysql.aux_params()];
+        let aux_params = ParameterMap::new(&aux_params);
+        let Sql(sql, args) = result.to_sql(&aux_params, &mut alias_translator).map_err(ToqlError::from)?;
+        dbg!(&sql);
+         dbg!(&args);
+
+        // Load form database
+        let args = crate::sql_arg::values_from_ref(&args);
+        let query_results = mysql.conn.prep_exec(sql, args)?;
+      
+        // Build index
+          let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
+        let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
+        let mut d = ancestor_path.descendents();
+        let mut index: HashMap<u64, Vec<usize>>= HashMap::new();
+        let iter = query_results.into_iter();
+            <T as TreeIndex<std::result::Result<Row, mysql::Error>>>::index(&d, field,  iter, &mut index);
+        
+
+        // Merge
+
+        // Rotate merged fields
+         
 
         // Load entities
 
@@ -684,7 +752,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
     pub fn load_one<T, B>(&mut self, query: B) -> Result<T>
     where
-        T: Keyed + Mapped + row::FromResultRow<T> + TreePredicate,
+        T: Keyed + Mapped + row::FromResultRow<T> + TreePredicate + TreeKeys + TreeIndex<std::result::Result<Row, mysql::Error>>,
         B: Borrow<Query<T>>,
         <T as Keyed>::Key: row::FromResultRow<<T as Keyed>::Key>,
     {
@@ -707,7 +775,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         T: toql_core::key::Keyed
             + toql_core::sql_mapper::mapped::Mapped
             + row::FromResultRow<T>
-            + toql_core::tree::tree_predicate::TreePredicate,
+            + TreePredicate + TreeKeys + TreeIndex<std::result::Result<Row, mysql::Error>>,
         B: Borrow<Query<T>>,
         <T as toql_core::key::Keyed>::Key: row::FromResultRow<<T as toql_core::key::Keyed>::Key>,
     {
@@ -722,7 +790,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
     pub fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
-        T: Keyed + Mapped + row::FromResultRow<T> + TreePredicate,
+        T: Keyed + Mapped + row::FromResultRow<T> + TreePredicate + TreeKeys +TreeIndex<std::result::Result<Row, mysql::Error>>,
         B: Borrow<Query<T>>,
         <T as Keyed>::Key: row::FromResultRow<<T as Keyed>::Key>,
     {

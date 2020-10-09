@@ -38,7 +38,7 @@ pub(crate) mod join;
 pub(crate) mod merge;
 pub(crate) mod predicate;
 
-use heck::MixedCase;
+use heck::{CamelCase, MixedCase};
 
 use crate::sql_mapper::join_options::JoinOptions;
 use crate::sql_mapper::predicate_options::PredicateOptions;
@@ -422,7 +422,7 @@ where {
         self.joins.insert(
             toql_path.clone().into(),
             Join {
-                joined_mapper: joined_mapper.to_mixed_case(),
+                joined_mapper: joined_mapper.to_camel_case(),
                 join_expression,
                 on_expression,
                 options,
@@ -483,7 +483,7 @@ where {
         self.merges.insert(
             toql_path.into(),
             merge::Merge {
-                merged_mapper: merged_mapper.to_mixed_case(),
+                merged_mapper: merged_mapper.to_camel_case(),
                 merge_join,
                 merge_predicate,
             },

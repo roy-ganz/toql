@@ -1,4 +1,4 @@
-use super::resolver_error::ResolverError;
+use super::{PredicateColumn, resolver_error::ResolverError};
 use crate::{
     alias::AliasFormat,
     alias_translator::AliasTranslator,
@@ -46,19 +46,10 @@ impl<'a> Resolver<'a> {
         self.arguments = Some(arguments);
         self
     }
-    /*   pub fn with_alias_translator(mut self, alias_translator: &'a AliasTranslator) ->  Self{
-        self.alias_translator= Some(alias_translator);
-        self
-    } */
-
+    
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
         let mut tokens = Vec::new();
-        let mut arg_iter = if self.arguments.is_some() {
-            Some(self.arguments.unwrap())
-        } else {
-            None
-        };
-
+       
         for token in sql_expr.tokens() {
             tokens.push(self.resolve_token(token)?.into_owned())
         }
@@ -75,6 +66,15 @@ impl<'a> Resolver<'a> {
         let mut args: Vec<SqlArg> = Vec::new();
 
         for unresolved_token in &sql_expr.tokens {
+            
+            if let SqlExprToken::Placeholder(number, expr)  = unresolved_token {
+                if self.placeholders.map(|p|p.contains(number)).unwrap_or(false) {
+                    let sql: Sql = self.to_sql(expr, alias_translator)?; 
+                    stmt.push_str(&sql.0);
+                    args.extend(sql.1);           
+                }
+            }
+           
             let mut token = self.resolve_token(unresolved_token)?;
             Self::token_to_sql(token.to_mut(), alias_translator, &mut stmt, &mut args)?;
         }
@@ -116,7 +116,46 @@ impl<'a> Resolver<'a> {
                     .ok_or(ResolverError::ArgumentMissing)?;
 
                 Ok(Cow::Owned(SqlExprToken::Arg(arg.to_owned())))
-            }
+            },
+             SqlExprToken::Predicate{columns, args}  if self.self_alias.is_some() || self.other_alias.is_some()=> {
+                // TODO optimise so that arguments are not copied
+                // maybe take self instead of &self
+                
+                let mut changed_columns : Vec<PredicateColumn> = Vec::new();
+                let mut changed = false;
+                for c in columns {
+                   changed_columns.push(match c {
+                        PredicateColumn::SelfAliased(a) => { 
+                            changed =true;
+                            if self.self_alias.is_some() {
+                                PredicateColumn::Literal(self.self_alias.unwrap().to_owned())
+                            } else {
+                                PredicateColumn::SelfAliased(a.to_owned())
+                            }
+                           
+                        }
+                        PredicateColumn::OtherAliased(a) => {
+                            changed =true;
+                            if self.self_alias.is_some() {
+                                PredicateColumn::Literal(self.other_alias.unwrap().to_owned())
+                            } else {
+                                PredicateColumn::OtherAliased(a.to_owned())
+                            }
+                            
+                        }
+                        PredicateColumn::Literal(l) => { PredicateColumn::Literal(l.to_owned())}
+                    });
+                }
+               
+               if changed  {
+                    Ok(Cow::Owned(SqlExprToken::Predicate{columns:changed_columns, args: args.to_owned()}))
+               } else {
+                   // Pattern bindings are unstable, so we can't return Cow::Borrowed(token)
+                    Ok(Cow::Owned(SqlExprToken::Predicate{columns: columns.to_owned(), args: args.to_owned()}))
+               }
+
+               
+            },
             tok @ _ => Ok(Cow::Borrowed(tok)),
         }
     }
@@ -127,8 +166,7 @@ impl<'a> Resolver<'a> {
         stmt: &mut String,
         args: &mut Vec<SqlArg>,
     ) -> std::result::Result<(), ResolverError> {
-        let mut aliased = false;
-
+       
         match token {
             SqlExprToken::SelfAlias => return Err(ResolverError::UnresolvedSelfAlias),
             SqlExprToken::OtherAlias => return Err(ResolverError::UnresolvedOtherAlias),
@@ -137,20 +175,16 @@ impl<'a> Resolver<'a> {
                 return Err(ResolverError::UnresolvedAuxParameter(name.to_owned()))
             }
 
-            SqlExprToken::Placeholder(number, expr) => todo!(),
+            SqlExprToken::Placeholder(_number, _expr) => {/* Skip placeholder expression*/},
 
             SqlExprToken::Literal(lit) => {
-                if aliased && !lit.starts_with(' ') {
-                    stmt.push('.');
-                    aliased = false;
-                }
                 stmt.push_str(&lit)
             }
 
             SqlExprToken::Alias(canonical_alias) => {
                 let alias = alias_translator.translate(canonical_alias);
                 stmt.push_str(&alias);
-                aliased = true
+               
             }
 
             SqlExprToken::Arg(arg) => {
@@ -158,29 +192,77 @@ impl<'a> Resolver<'a> {
                 args.push(arg.to_owned());
             }
 
-            SqlExprToken::InClause { column, args: ars } => match args.len() {
-                0 => { /* Omit statement without any args */ }
+           /*  SqlExprToken::InClause { column, args: a } => match a.len() {
+                0 => { return Err(ResolverError::ArgumentMissing) }
                 1 => {
-                    if aliased && !column.starts_with(' ') {
-                        stmt.push('.');
-                        aliased = false;
-                    }
                     stmt.push_str(column);
                     stmt.push_str(" =  ?");
-                    args.push(ars.get(0).unwrap().to_owned());
+                    args.push(a.get(0).unwrap().to_owned());
                 }
-                _ => {
-                    if aliased && !column.starts_with(' ') {
-                        stmt.push('.');
-                        aliased = false;
-                    }
+                _ => { 
+                    stmt.push_str(column);
                     stmt.push_str(" IN (");
-                    for a in ars {
+                    for a in a {
                         stmt.push_str("?,");
                         args.push(a.to_owned());
                     }
                     stmt.pop();
                     stmt.push_str(")");
+                }
+            }, */
+            SqlExprToken::Predicate { columns, args: a } => match columns.len() {
+                0 => { /* Omit statement if no columns are provied */ }
+                1 => {
+                    let col = match columns.get(0).unwrap() {
+                        PredicateColumn::SelfAliased(_) => {return Err(ResolverError::UnresolvedSelfAlias)}
+                        PredicateColumn::OtherAliased(_) => {return Err(ResolverError::UnresolvedOtherAlias)}
+                        PredicateColumn::Literal(l) => { l}
+                    };
+                    stmt.push_str(col);
+                    match a.len()  {
+                        0 =>  {
+                            return Err(ResolverError::ArgumentMissing)
+                        }
+                        1 =>{
+                         stmt.push_str(" =  ?");
+                         args.push(a.get(0).unwrap().to_owned());
+                        }
+                        _ =>  {
+                            stmt.push_str(" IN (?");
+                            for _ in 1..a.len() {
+                                stmt.push_str(", ?");
+                            }
+                            stmt.push_str(")");
+                            args.extend(a.to_owned());
+
+                        }
+                    }
+                }
+                _ => { 
+                    for ar in a {
+                        for c in columns {
+                            let c = match c {
+                                PredicateColumn::SelfAliased(_) => {return Err(ResolverError::UnresolvedSelfAlias)}
+                                PredicateColumn::OtherAliased(_) => {return Err(ResolverError::UnresolvedOtherAlias)}
+                                PredicateColumn::Literal(l) => { l}
+                            };
+                            stmt.push_str(c );
+                            stmt.push_str(" = ? AND ");
+                            args.push(ar.to_owned());
+                            }
+                            // Remove ' AND '
+                            stmt.pop();
+                            stmt.pop();
+                            stmt.pop();
+                            stmt.pop();
+                            stmt.pop();
+                            stmt.push_str(" OR ");
+                    }
+                    // Remove ' OR '
+                    stmt.pop();
+                    stmt.pop();
+                    stmt.pop();
+                    stmt.pop();
                 }
             },
         }

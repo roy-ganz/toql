@@ -11,7 +11,7 @@ pub(crate) struct BuildContext {
     pub(crate) all_fields_selected: bool,
 
     pub(crate) current_placeholder: u16,
-    pub(crate) select_expr: SqlExpr,
+  //  pub(crate) select_expr: SqlExpr,
     pub(crate) selected_placeholders: HashSet<u16>,
 }
 
@@ -24,7 +24,7 @@ impl BuildContext {
             selected_fields: HashSet::new(),
             all_fields_selected: true,
             current_placeholder: 0,
-            select_expr: SqlExpr::new(),
+          //  select_expr: SqlExpr::new(),
             selected_placeholders: HashSet::new(),
         }
     }

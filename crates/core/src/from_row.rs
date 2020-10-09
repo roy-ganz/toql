@@ -5,8 +5,9 @@ use std::result::Result;
 pub trait FromRow<R> {
     type Error;
 
+    fn skip(i: usize) -> usize;
     // Read row values into struct, starting from index `i`.
-    fn from_row_with_index<'a, I>(row: &R, i: &mut usize, iter: &I) -> Result<(), Self::Error>
+    fn from_row_with_index<'a, I>(row: &R, i: &mut usize, iter: &mut I) -> Result<Self, Self::Error>
     where
         I: Iterator<Item = &'a bool>,
         Self: std::marker::Sized;
