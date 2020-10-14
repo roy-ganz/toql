@@ -9,11 +9,10 @@ pub trait TreeIndex<R>
 where
     Self: FromRow<R>,
 {
-    fn index<'a, I>(
+    fn index<'a>(
         descendents: &mut Descendents<'a>,
         field: &str,
-        rows: I, row_offset: usize,
+        rows: &[R], row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
-    ) -> Result<(), <Self as FromRow<R>>::Error>
-     where I: IntoIterator<Item=R>;
+    ) -> Result<(), <Self as FromRow<R>>::Error>;
 }
