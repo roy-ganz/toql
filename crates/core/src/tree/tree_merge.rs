@@ -28,14 +28,13 @@ impl<R> RowIndex<R> for &Vec<R> {
 // R is database specific row
 // Trait is implemented for structs that can deserialize from rows
 pub trait TreeMerge<R, E>
-where
-    Self: FromRow<R>,
 {
     fn merge<'a>(
         &mut self,
         descendents: &mut Descendents<'a>,
         field: &str,
         rows: &[R],
+        index: &HashMap<u64, Vec<usize>>,
         selection_stream: &Vec<bool>
     ) -> Result<(), E>;
    

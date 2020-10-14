@@ -5,14 +5,14 @@ use std::result::Result;
 
 // R is database specific row
 // Trait is implemented for structs that can deserialize from rows
-pub trait TreeIndex<R>
-where
-    Self: FromRow<R>,
+pub trait TreeIndex<R, E>
 {
+ 
+    
     fn index<'a>(
         descendents: &mut Descendents<'a>,
         field: &str,
         rows: &[R], row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
-    ) -> Result<(), <Self as FromRow<R>>::Error>;
+    ) -> Result<(), E>;
 }

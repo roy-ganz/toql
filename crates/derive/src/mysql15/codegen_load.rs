@@ -713,7 +713,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
 
            // impl toql :: mysql :: row:: FromResultRow < #struct_ident > for #struct_ident {
 
-            impl toql::from_row::FromRow<std::result::Result<toql::mysql::mysql::Row, toql::mysql::mysql::Error>> for #struct_ident {
+            impl toql::from_row::FromRow<toql::mysql::mysql::Row> for #struct_ident {
  
              type Error = toql::mysql::error::ToqlMySqlError;
             /*  fn skip(mut i : usize) -> usize {
@@ -722,14 +722,14 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
                 i
             }   */
 
-            fn from_row_with_index<'a, I> ( mut row : &std::result::Result<mysql::Row, toql::mysql::mysql::Error> , i : &mut usize, mut iter: &mut I)
+            fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_ident> 
                 where I:   Iterator<Item = &'a bool> {
 
 
                             
-        let row : & mysql :: Row = row . as_ref() 
-            .map_err(| e | {  toql::error::ToqlError::DeserializeError(#struct_name.to_owned(), e.to_string())})? ;
+      /*   let row : & mysql :: Row = row . as_ref() 
+            .map_err(| e | {  toql::error::ToqlError::DeserializeError(#struct_name.to_owned(), e.to_string())})? ; */
 
        
                 Ok ( #struct_ident {

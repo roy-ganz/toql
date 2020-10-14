@@ -69,12 +69,12 @@ fn load<T, B, C>(
     page: Option<Page>,
 ) -> Result<(Vec<T>, Option<(u32, u32)>)>
 where
-    T: Keyed + Mapped +  FromRow<std::result::Result<Row, mysql::Error>> + TreePredicate + TreeKeys 
-    + TreeIndex<std::result::Result<Row, mysql::Error>> + TreeMerge<std::result::Result<Row, mysql::Error>, ToqlMySqlError>,
+    T: Keyed + Mapped +  FromRow<Row> + TreePredicate + TreeKeys 
+    + TreeIndex<Row, ToqlMySqlError> + TreeMerge<Row, ToqlMySqlError>,
     B: Borrow<Query<T>>,
-    <T as toql_core::key::Keyed>::Key:  FromRow<std::result::Result<Row, mysql::Error>>,
+    <T as toql_core::key::Keyed>::Key:  FromRow<Row>,
     C: GenericConnection,
-    ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<std::result::Result<mysql::Row, mysql::error::Error>>>::Error>
+    ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>
 {
     use std::collections::HashSet;
     use toql_core::key::Keyed;
@@ -89,7 +89,7 @@ where
 
     let ty = <T as Mapped>::type_name();
 
-    let (entities, unmerged_paths) = {
+    let (mut entities, unmerged_paths) = {
         let mut builder = SqlBuilder::new(&ty, mysql.registry());
         let result = builder.build_select("", query.borrow())?;
 
@@ -110,19 +110,21 @@ where
             crate::row::from_query_result::<T>(query_results, &result.selection_stream())?;  */
        // let mut entities: Vec<T> = Vec::new();   
  
-         let entities: std::result::Result<Vec<T>, _ > = query_results.into_iter().map(|r| {
+         let mut entities :Vec<T>= Vec::new();
+         for r in  query_results{
+             let r = r?;
               let mut iter = result.selection_stream().iter();
               let mut i = 0usize;
-             <T as toql_core::from_row::FromRow< std :: result :: Result < mysql :: Row, mysql :: Error >>>::from_row_with_index(&r, &mut i,  &mut iter)
+             entities.push(<T as toql_core::from_row::FromRow< mysql :: Row>>::from_row_with_index(&r, &mut i,  &mut iter)?);
              // load primary key too
              // return tuple
-        })
-            .collect();       
+        }
+           
         
         (entities, unmerged)
     };
 
-   let mut entities = entities.map_err(ToqlMySqlError::from)?;
+   //let mut entities = entities.map_err(ToqlMySqlError::from)?;
    
 
     // Merge all pending paths
@@ -217,15 +219,18 @@ where
 
         let mut rows = Vec::with_capacity(100); 
         println!("affected rows {}", query_results.affected_rows());
-                
-        rows.extend( query_results); // Stream into Vec
+
+        for q in query_results {        
+            rows.push( q?); // Stream into Vec
+
+        }
 
        
-        <T as TreeIndex<std::result::Result<Row, mysql::Error>>>::index(&mut d, field,  &rows, row_offset, &mut index)?;
+        <T as TreeIndex<Row, ToqlMySqlError>>::index(&mut d, field,  &rows, row_offset, &mut index)?;
         
         // Merge into entities
         for e in &mut entities {
-                <T as TreeMerge<_,ToqlMySqlError>>::merge(e, &mut d, field,  &rows, result.selection_stream())?;
+                <T as TreeMerge<_,ToqlMySqlError>>::merge(e, &mut d, field,  &rows, &index, result.selection_stream())?;
         }
 
         
@@ -802,12 +807,12 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Returns a struct or a [ToqlMySqlError](../toql_core/error/enum.ToqlMySqlError.html) if no struct was found _NotFound_ or more than one _NotUnique_.
     pub fn load_one<T, B>(&mut self, query: B) -> Result<T>
     where
-        T: Keyed + Mapped + FromRow<std::result::Result<Row, mysql::Error>> 
-        + TreePredicate + TreeKeys + TreeIndex<std::result::Result<Row, mysql::Error>> 
-        + TreeMerge<std::result::Result<Row, mysql::Error>, ToqlMySqlError>,
+        T: Keyed + Mapped + FromRow<Row> 
+        + TreePredicate + TreeKeys + TreeIndex<Row, ToqlMySqlError> 
+        + TreeMerge<Row, ToqlMySqlError>,
         B: Borrow<Query<T>>,
-        <T as Keyed>::Key:  FromRow<std::result::Result<Row, mysql::Error>>,
-        ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<std::result::Result<mysql::Row, mysql::error::Error>>>::Error>
+        <T as Keyed>::Key:  FromRow<Row>,
+        ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>
     {
         // <Self as Load<T>>::load_one(self, query.borrow())
         let (mut e, _) = load(self, query.borrow(), Some(Page::Uncounted(0, 2)))?;
@@ -827,13 +832,13 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     where
         T: toql_core::key::Keyed
             + toql_core::sql_mapper::mapped::Mapped
-            + FromRow<std::result::Result<Row, mysql::Error>>
+            + FromRow<Row>
             + TreePredicate + TreeKeys 
-            + TreeIndex<std::result::Result<Row, mysql::Error>>
-            + TreeMerge<std::result::Result<Row, mysql::Error>, ToqlMySqlError>,
+            + TreeIndex<Row,ToqlMySqlError>
+            + TreeMerge<Row, ToqlMySqlError>,
         B: Borrow<Query<T>>,
-        <T as toql_core::key::Keyed>::Key:  FromRow<std::result::Result<Row, mysql::Error>>,
-        ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<std::result::Result<mysql::Row, mysql::error::Error>>>::Error>
+        <T as toql_core::key::Keyed>::Key:  FromRow<Row>,
+        ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>
     {
         let (entities, _) = load(self, query, None)?;
         Ok(entities)
@@ -846,13 +851,13 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
     pub fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
-        T: Keyed + Mapped +  FromRow<std::result::Result<Row, mysql::Error>> 
+        T: Keyed + Mapped +  FromRow<Row> 
         + TreePredicate + TreeKeys 
-        + TreeIndex<std::result::Result<Row, mysql::Error>>
-        + TreeMerge<std::result::Result<Row, mysql::Error>, ToqlMySqlError>,
+        + TreeIndex<Row, ToqlMySqlError>
+        + TreeMerge<Row, ToqlMySqlError>,
         B: Borrow<Query<T>>,
-        <T as Keyed>::Key: FromRow<std::result::Result<Row, mysql::Error>>,
-        ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<std::result::Result<mysql::Row, mysql::error::Error>>>::Error>,
+        <T as Keyed>::Key: FromRow<Row>,
+        ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
         
 
     {

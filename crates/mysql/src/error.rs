@@ -1,6 +1,6 @@
 use mysql::Error;
 /// MySQL failed to run the SQL query. For feature `mysql`
-use toql_core::error::ToqlError;
+use toql_core::{sql_builder::sql_builder_error::SqlBuilderError, error::ToqlError};
 
 #[derive(Debug)]
 pub enum ToqlMySqlError {
@@ -16,6 +16,11 @@ impl From<Error> for ToqlMySqlError {
 impl From<ToqlError> for ToqlMySqlError {
     fn from(err: ToqlError) -> ToqlMySqlError {
         ToqlMySqlError::ToqlError(err)
+    }
+}
+impl From<SqlBuilderError> for ToqlMySqlError {
+    fn from(err: SqlBuilderError) -> ToqlMySqlError {
+        ToqlMySqlError::ToqlError(err.into())
     }
 }
 
