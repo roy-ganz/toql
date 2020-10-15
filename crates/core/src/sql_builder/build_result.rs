@@ -26,6 +26,7 @@ pub struct BuildResult {
     pub(crate) join_expr: SqlExpr,
     pub(crate) where_expr: SqlExpr,
     pub(crate) order_expr: SqlExpr,
+    pub(crate) selected_placeholders: HashSet<u16>,
 }
 
 impl BuildResult {
@@ -44,6 +45,7 @@ impl BuildResult {
             from_expr: SqlExpr::new(),
             where_expr: SqlExpr::new(),
             order_expr: SqlExpr::new(),
+            selected_placeholders: HashSet::new()
         }
     }
     /// Returns true if no field is neither selected nor filtered.
@@ -60,6 +62,9 @@ impl BuildResult {
     }
     pub fn table_alias(&self) -> &String {
         &self.table_alias
+    }
+    pub fn selected_placeholders(&self) -> &HashSet<u16> {
+        &self.selected_placeholders
     }
 
     pub fn set_from(&mut self, table: String, canonical_alias: String) {
@@ -89,7 +94,7 @@ impl BuildResult {
         modifier: &str,
         extra: &str,
     ) -> Result<Sql> {
-        let resolver = Resolver::new().with_aux_params(aux_params);
+        let resolver = Resolver::new().with_aux_params(aux_params).with_placeholders(&self.selected_placeholders);
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
         let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
         let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
@@ -329,6 +334,29 @@ impl BuildResult {
     }
     pub fn unmerged_paths(&self) -> &HashSet<String> {
         &self.unmerged_paths
+    }
+
+    pub fn update_selections_from_placeholders(&mut self) {
+           Self::selection_from_token(&self.selected_placeholders, &mut self.selection_stream, &self.select_expr);
+    }
+
+    fn selection_from_token(selected_placeholders: &HashSet<u16>, selection_stream: &mut Vec<bool>, expr: &SqlExpr) {
+         use crate::sql_expr::SqlExprToken;
+
+        for token in expr.tokens() {
+            match token {
+                SqlExprToken::Placeholder(number, expr, sel) => {
+                    if selected_placeholders.contains(number) {
+                        if let Some(p) = selection_stream.get_mut(*sel) {
+                            *p = true;
+                        }
+                    }
+                    Self::selection_from_token(selected_placeholders, selection_stream, expr);
+                },
+                _ => {}
+
+            }
+        }
     }
 
     /*  pub(crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {

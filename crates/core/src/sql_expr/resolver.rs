@@ -46,6 +46,10 @@ impl<'a> Resolver<'a> {
         self.arguments = Some(arguments);
         self
     }
+    pub fn with_placeholders(mut self, placeholders: &'a HashSet<u16>) -> Self {
+        self.placeholders = Some(placeholders);
+        self
+    }
     
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
         let mut tokens = Vec::new();
@@ -67,7 +71,7 @@ impl<'a> Resolver<'a> {
 
         for unresolved_token in &sql_expr.tokens {
             
-            if let SqlExprToken::Placeholder(number, expr)  = unresolved_token {
+            if let SqlExprToken::Placeholder(number, expr, _)  = unresolved_token {
                 if self.placeholders.map(|p|p.contains(number)).unwrap_or(false) {
                     let sql: Sql = self.to_sql(expr, alias_translator)?; 
                     stmt.push_str(&sql.0);
@@ -175,7 +179,7 @@ impl<'a> Resolver<'a> {
                 return Err(ResolverError::UnresolvedAuxParameter(name.to_owned()))
             }
 
-            SqlExprToken::Placeholder(_number, _expr) => {/* Skip placeholder expression*/},
+            SqlExprToken::Placeholder(_number, _expr, _selection) => {/* Skip placeholder expression*/},
 
             SqlExprToken::Literal(lit) => {
                 stmt.push_str(&lit)

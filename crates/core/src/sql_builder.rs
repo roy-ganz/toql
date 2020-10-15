@@ -816,8 +816,10 @@ impl<'a> SqlBuilder<'a> {
                             result.selection_stream.push(false);
                         }
                     }
-                    // Field may have preselection
-                    // TODO skip unrelated preseleted fields
+                    // Field may be preselected (implicit selection)
+                    // Add those fields with placeholder number into expression.
+                    // If any other field is explicitly selected, select also placeholder number to include 
+                    // expression in final Sql.
                     else {
                         if field_info.options.preselect {
                             let resolver = Resolver::new().with_self_alias(&canonical_alias);
@@ -826,9 +828,10 @@ impl<'a> SqlBuilder<'a> {
                             let select_expr = resolver.resolve(&field_info.expression)?;
                             let select_expr =
                                 field_info.handler.build_select(select_expr, &aux_params)?;
-                            if let Some(expr) = select_expr {
-                                // keep optional sql statement
-                                result.select_expr.push_placeholder(ph_index, expr);
+                            
+                            if let Some(mut expr) = select_expr {
+                                expr.push_literal(", ");
+                                result.select_expr.push_placeholder(ph_index, expr, result.selection_stream.len() );
                             }
                         }
                         result.selection_stream.push(false);
@@ -861,7 +864,8 @@ impl<'a> SqlBuilder<'a> {
         }
 
         if any_selected {
-            build_context.selected_placeholders.insert(ph_index);
+            // TODO Maybe evaluate placeholders here
+            result.selected_placeholders.insert(ph_index);
         }
         Ok(())
     }

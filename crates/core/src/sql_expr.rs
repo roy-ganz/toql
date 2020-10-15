@@ -23,7 +23,7 @@ pub enum SqlExprToken {
     Alias(String),
     //InClause { column: String, args: Vec<SqlArg> },
     Predicate { columns: Vec<PredicateColumn>, args: Vec<SqlArg> },
-    Placeholder(u16, SqlExpr),
+    Placeholder(u16, SqlExpr, usize),
 }
 
 #[derive(Debug, Clone)]
@@ -56,8 +56,8 @@ impl SqlExpr {
         }
     }
 
-    pub fn push_placeholder(&mut self, number: u16, expr: SqlExpr) -> &mut Self {
-        self.tokens.push(SqlExprToken::Placeholder(number, expr));
+    pub fn push_placeholder(&mut self, number: u16, expr: SqlExpr, selection_position: usize) -> &mut Self {
+        self.tokens.push(SqlExprToken::Placeholder(number, expr, selection_position));
         self
     }
 
@@ -140,29 +140,7 @@ impl SqlExpr {
 
     }
 
-   /*  pub fn push_in_clause(&mut self, column: &str, arg: SqlArg) -> &mut Self {
-        
-        if let Some(SqlExprToken::InClause {
-            column: in_column,
-            args,
-        }) = self.tokens.last_mut()
-        {
-            if in_column == column {
-                args.push(arg);
-            } else {
-                self.tokens.push(SqlExprToken::InClause {
-                    column: column.to_string(),
-                    args: vec![arg],
-                });
-            }
-        } else {
-            self.tokens.push(SqlExprToken::InClause {
-                column: column.to_string(),
-                args: vec![arg],
-            });
-        }
-        self
-    } */
+  
 
     pub fn extend(&mut self, expr: SqlExpr) -> &mut Self {
         self.tokens.extend(expr.tokens);
@@ -198,7 +176,7 @@ impl fmt::Display for SqlExprToken {
             SqlExprToken::Alias(a) => {write!(f, "{}", a)}
            // SqlExprToken::InClause { column, args: _ } => {write!(f, "{} IN (..TODO..)", column )}
             SqlExprToken::Predicate { columns:_, args: _ } => {write!(f,"ToDo" )}
-            SqlExprToken::Placeholder(n, e) => {write!(f, "|{}:", n)?; e.fmt(f)?; write!(f, "|")}
+            SqlExprToken::Placeholder(n, e, _) => {write!(f, "|{}:", n)?; e.fmt(f)?; write!(f, "|")}
         }
     }
 }

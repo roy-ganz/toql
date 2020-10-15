@@ -171,12 +171,12 @@ impl<'a> GeneratedToqlTree<'a> {
                    quote!(
                        #toql_field_name => {
                             // Primary key
-                            for col in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
+                            /* for col in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
                                 key_expr.push_self_alias();
                                 key_expr.push_literal(".");
                                 key_expr.push_alias(col);
                                 key_expr.push_literal(", ");
-                            }
+                            } */
                            #(#columns_merge)*
                        }
                 )
@@ -338,14 +338,14 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                      match field {
                                         #(#merge_columns_code),*
                                         
-                                        "" => {
+                                       /*  "" => {
                                             for col in <#struct_key_ident as toql::key::Key>::columns() {
                                                 key_expr.push_self_alias();
                                                 key_expr.push_literal(".");
                                                 key_expr.push_alias(col);
                                                 key_expr.push_literal(", ");
                                             }
-                                        }, 
+                                        },  */
                                         f @ _ => {
                                             return Err(
                                                 toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()));

@@ -2,6 +2,10 @@ pub use toql_core::sql_expr::SqlExpr;
 pub use toql_core::sql_arg::SqlArg;
 pub use toql_core::error::Result;
 pub use toql_core::error::ToqlError;
+pub use toql_core::field_handler::FieldHandler;
+pub use toql_core::join_handler::JoinHandler;
+
+use toql::query_builder::query; // query!()
 
 /* 
 pub use toql_core::alias;
