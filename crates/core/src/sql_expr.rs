@@ -66,6 +66,16 @@ impl SqlExpr {
         self
     }
 
+    /* fn ends_with(token : &SqlExprToken, lit: &str) -> bool {
+        match token {
+         
+            SqlExprToken::Literal(l) => {l.ends_with(lit)}
+            SqlExprToken::Placeholder(_, e, _) => { e.tokens.last().map(|t|Self::ends_with(t, lit)).unwrap_or(false) }
+            _ => false
+        }
+
+    } */
+
     pub fn push_separator(&mut self, lit: impl Into<String>) -> &mut Self {
         if let Some(SqlExprToken::Literal(l)) = self.tokens.last_mut() {
             let lit = lit.into();

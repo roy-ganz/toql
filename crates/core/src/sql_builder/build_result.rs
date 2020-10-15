@@ -58,7 +58,6 @@ impl BuildResult {
         self.any_selected
     }
     pub fn push_select(&mut self, expr: SqlExpr) {
-        self.select_expr.push_separator(", ".to_string());
         self.select_expr.extend(expr);
     }
     pub fn table_alias(&self) -> &String {

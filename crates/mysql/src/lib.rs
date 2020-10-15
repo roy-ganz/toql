@@ -225,7 +225,7 @@ where
 
             // Build index
             let row_offset = result
-                .selection_stream().count_selected();
+                .selection_stream().count_selected() -1 ; // Array starts from 0
                 
             let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
 

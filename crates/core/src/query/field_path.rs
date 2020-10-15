@@ -1,7 +1,14 @@
 use std::borrow::Cow;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldPath<'a>(Cow<'a, str>);
+
+impl<'a> Default for FieldPath<'a> {
+    fn default() -> Self {
+       FieldPath(Cow::Owned(String::from("")))
+    }
+}
+
 
 impl<'a> FieldPath<'a> {
     pub fn split_basename(path_with_basename: &str) -> (&str, Option<FieldPath>) {
@@ -19,12 +26,22 @@ impl<'a> FieldPath<'a> {
         FieldPath(Cow::Borrowed(path))
     }
 
-    pub fn prefix(&self, prefix: &'a str) -> Self {
+    pub fn prepend(&self, head: &'a str) -> Self {
         let path = format!(
             "{}{}{}",
-            prefix,
+            head,
             if self.0.is_empty() { "" } else { "_" },
             self.0.as_ref()
+        );
+
+        FieldPath(Cow::Owned(path))
+    }
+    pub fn append(&self, tail: &'a str) -> Self {
+        let path = format!(
+            "{}{}{}",
+            self.0.as_ref(),
+            if self.0.is_empty() { "" } else { "_" },
+            tail,
         );
 
         FieldPath(Cow::Owned(path))

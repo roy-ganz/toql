@@ -185,24 +185,36 @@ impl<'a> GeneratedToqlMapper<'a> {
                         .collect::<Vec<_>>();
                         quote!( [ #(String::from(#other_columns)),* ])
                 };
-                let on_predicate = &join_attrs.on_sql;
-                let join_predicate = quote!(& {
+                let on_predicate = if let Some( on ) = &join_attrs.on_sql {
+                    quote!(t.extend(toql::sql_expr_parser::SqlExprParser::parse(#on)?))
+                } else {
+                    quote!(t.pop_literals(5)) // Remove unneeded ' AND '
+                };
+                let join_predicate = quote!( 
                      #col_array .iter()
-                    .map(|other_column| {
+                    .for_each(|other_column| {
                         #default_self_column_code;
                         let self_column= #columns_map_code;
-                        format!("{} = {}",  &self_column,&other_column)
-                    }).collect::<Vec<String>>().join(" AND ")
-                }
-                    , #on_predicate);
+                        t.push_self_alias();
+                        t.push_literal(".");
+                        t.push_literal(self_column);
+                        t.push_literal(" = ");
+                        t.push_other_alias();
+                        t.push_literal(".");
+                        t.push_literal(other_column);
+                        t.push_literal(" AND ");
+                    });
+                     #on_predicate
+                     
+                     );
                           
 
                 let join_statement = if field.number_of_options == 0
                     || (field.number_of_options == 1 && field.preselect == false)
                 {
-                   format!("JOIN {} ...", &sql_join_table_name)
+                   format!("JOIN {} ", &sql_join_table_name)
                 } else {
-                    format!("LEFT JOIN {} ...", &sql_join_table_name)
+                    format!("LEFT JOIN {} ", &sql_join_table_name)
                 };
 
                 let preselect_ident = if field.preselect || (field.number_of_options == 0) {
@@ -238,9 +250,14 @@ impl<'a> GeneratedToqlMapper<'a> {
 
                 self.field_mappings.push(quote! {
 
-                    mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
+                    /* mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
                     toql::sql_expr_parser::SqlExprParser::parse(#join_statement)?, 
                     toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?,
+                     toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
+                    ); */
+                    mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
+                    {let mut t = toql::sql_expr::SqlExpr::literal(#join_statement); t.push_other_alias(); t }, 
+                    { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
                      toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
                     );
 

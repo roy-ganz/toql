@@ -1,12 +1,12 @@
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Select {
     Explicit,
     Implicit,
     None
 }
 
-
+#[derive(Debug)]
 pub struct SelectStream {
     stream: Vec<Select>
 }

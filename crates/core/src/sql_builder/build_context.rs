@@ -2,7 +2,7 @@ use crate::sql_expr::SqlExpr;
 use std::collections::HashSet;
 
 pub(crate) struct BuildContext {
-    pub(crate) query_root_path: String,
+    pub(crate) query_home_path: String,
 
     pub(crate) joined_paths: HashSet<String>,
 
@@ -18,7 +18,7 @@ pub(crate) struct BuildContext {
 impl BuildContext {
     pub fn new() -> Self {
         BuildContext {
-            query_root_path: "".to_string(),
+            query_home_path: "".to_string(),
             joined_paths: HashSet::new(),
             selected_paths: HashSet::new(),
             selected_fields: HashSet::new(),

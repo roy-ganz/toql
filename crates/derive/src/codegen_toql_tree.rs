@@ -399,9 +399,10 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                         let mut  i= row_offset;
                                         for (n, row) in rows.into_iter().enumerate() {
                                             let mut iter = std::iter::repeat(&Select::Explicit);
-                                            #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
+                                            let fk = #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
                                           
                                             let mut s = DefaultHasher::new();
+                                            fk.hash(&mut s);
                                            /*  match field {
                                                #(#index_code)*
                                                
@@ -477,7 +478,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                         let h = s.finish();
                                         let default_vec: Vec<usize>= Vec::new();
                                         let row_numbers : &Vec<usize> = index.get(&h).unwrap_or(&default_vec);
-                                        let  n = selection_stream.count_selected();
+                                        let  n = selection_stream.count_selected() - 1;
                                         
                                         match field {
                                             #(#merge_code)*
