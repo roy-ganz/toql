@@ -103,7 +103,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlKey<'a> {
 
             fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_key_ident> 
-                where I:   Iterator<Item = &'a bool> {
+                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
 
                 
                     

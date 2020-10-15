@@ -36,6 +36,7 @@
 //!
 pub mod sql_builder_error;
 pub mod wildcard_scope;
+pub mod select_stream;
 
 pub(crate) mod build_context;
 pub(crate) mod build_result;
@@ -64,6 +65,7 @@ use crate::{
 };
 use path_tree::PathTree;
 use std::borrow::Cow;
+use select_stream::Select;
 
 enum MapperOrMerge<'a> {
     Mapper(&'a SqlMapper),
@@ -755,6 +757,8 @@ impl<'a> SqlBuilder<'a> {
         build_context: &mut BuildContext,
         result: &mut BuildResult,
     ) -> Result<()> {
+    
+
         let mapper = self.mapper_for_path(&join_path)?;
 
         let p = [&self.aux_params, &query.aux_params];
@@ -810,10 +814,10 @@ impl<'a> SqlBuilder<'a> {
                         if let Some(expr) = select_expr {
                             result.select_expr.extend(expr);
                             result.select_expr.push_literal(", ");
-                            result.selection_stream.push(true);
+                            result.selection_stream.push(Select::Explicit);
                             any_selected = true;
                         } else {
-                            result.selection_stream.push(false);
+                            result.selection_stream.push(Select::None);
                         }
                     }
                     // Field may be preselected (implicit selection)
@@ -834,14 +838,14 @@ impl<'a> SqlBuilder<'a> {
                                 result.select_expr.push_placeholder(ph_index, expr, result.selection_stream.len() );
                             }
                         }
-                        result.selection_stream.push(false);
+                        result.selection_stream.push(Select::None);
                     }
                 }
                 DeserializeType::Join(join) => {
                     //   let new_join_path= format!("{}_{}", &canonical_alias, &join);
 
                     if build_context.selected_paths.contains(join) {
-                        result.selection_stream.push(true);
+                        result.selection_stream.push(Select::Explicit);
                         // self.resolve_select(&Some(FieldPath::from(&new_join_path)), query, build_context, result)?;
                         self.resolve_select(
                             &Some(FieldPath::from(&join)),
@@ -850,7 +854,7 @@ impl<'a> SqlBuilder<'a> {
                             result,
                         )?;
                     } else {
-                        result.selection_stream.push(false);
+                        result.selection_stream.push(Select::None);
                         //self.resolve_select_none(&Some(FieldPath::from(&new_join_path)), result)?;
                         //self.resolve_select_none(&Some(FieldPath::from(&join)), result)?;
                     }

@@ -94,7 +94,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     if field.number_of_options > 0 {
                         self.mysql_deserialize_fields.push(quote!(
                             #rust_field_ident : {
-                                if iter.next().map(ToOwned::to_owned).unwrap_or(false) {
+                                if iter.next().unwrap_or(&Select::None) != &Select::None {
                                    
                                     row.get_opt( (*i,  *i += 1).0).unwrap()
                                         .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
@@ -108,8 +108,8 @@ impl<'a> GeneratedMysqlLoad<'a> {
                     else {
                         self.mysql_deserialize_fields.push(quote!(
                             #rust_field_ident : {
-                                if iter.next().map(ToOwned::to_owned).unwrap_or(false) == false {
-                                     return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected `true` but got `false`")).into());
+                                if iter.next().unwrap_or(&Select::None) == &Select::None{
+                                     return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
                                 }
                               
                                 row.get_opt((*i,  *i += 1).0).unwrap()
@@ -725,7 +725,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
 
             fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_ident> 
-                where I:   Iterator<Item = &'a bool> {
+                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
+
+                    use toql::sql_builder::select_stream::Select;
 
 
                             

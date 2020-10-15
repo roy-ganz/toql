@@ -233,7 +233,7 @@ impl<'a> GeneratedToqlTree<'a> {
                              #toql_field_name  => {
                                 for row_number in row_numbers {
                                             let mut i = n;
-                                            let mut iter = std::iter::repeat(&true);
+                                            let mut iter = std::iter::repeat(&Select::Explicit);
                                             let row: & $row_type = &rows[*row_number];
                                             let fk = #struct_key_ident::from_row_with_index(&row, &mut i, &mut iter)?;
                                             if fk ==  pk {
@@ -381,6 +381,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                         use std::hash::Hash;
                         use std::hash::Hasher;
                         use std::collections::hash_map::DefaultHasher;
+                         use toql::sql_builder::select_stream::Select;
 
                       match descendents.next() {
                             
@@ -397,11 +398,11 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                    
                                         let mut  i= row_offset;
                                         for (n, row) in rows.into_iter().enumerate() {
-                                            let mut iter = std::iter::repeat(&true);
+                                            let mut iter = std::iter::repeat(&Select::Explicit);
                                             #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
                                           
                                             let mut s = DefaultHasher::new();
-                                            match field {
+                                           /*  match field {
                                                #(#index_code)*
                                                
                                                 f @ _ => {
@@ -409,7 +410,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                                         toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
                                                 }
 
-                                            };
+                                            }; */
                                             let fk_hash =  s.finish();
 
                                             index.entry(fk_hash)
@@ -446,7 +447,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
   
                 {
                     fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str, 
-                                rows: &[$row_type], index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &Vec<bool>) 
+                                rows: &[$row_type], index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream) 
                         -> std::result::Result<(), $error_type>
                         
                          {
@@ -455,6 +456,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                         use std::hash::Hash;
                         use std::hash::Hasher;
                         use std::collections::hash_map::DefaultHasher;
+                        use toql::sql_builder::select_stream::Select;
 
                       match descendents.next() {
                             
@@ -475,7 +477,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                         let h = s.finish();
                                         let default_vec: Vec<usize>= Vec::new();
                                         let row_numbers : &Vec<usize> = index.get(&h).unwrap_or(&default_vec);
-                                        let  n = selection_stream.iter().filter(|b| **b == true).count();
+                                        let  n = selection_stream.count_selected();
                                         
                                         match field {
                                             #(#merge_code)*

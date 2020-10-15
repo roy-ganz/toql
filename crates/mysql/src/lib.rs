@@ -225,10 +225,8 @@ where
 
             // Build index
             let row_offset = result
-                .selection_stream()
-                .iter()
-                .filter(|x| x == &&true)
-                .count();
+                .selection_stream().count_selected();
+                
             let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
 
             let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());

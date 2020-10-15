@@ -1,4 +1,5 @@
 use std::result::Result;
+use crate::sql_builder::select_stream::Select;
 
 /// Trait to convert result row into structs.
 /// This is implements by Toql Derive for all dervied structs.
@@ -9,6 +10,6 @@ pub trait FromRow<R> {
     // Read row values into struct, starting from index `i`.
     fn from_row_with_index<'a, I>(row: &R, i: &mut usize, iter: &mut I) -> Result<Self, Self::Error>
     where
-        I: Iterator<Item = &'a bool>,
+        I: Iterator<Item = &'a Select>,
         Self: std::marker::Sized;
 }

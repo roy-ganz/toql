@@ -1,4 +1,4 @@
-use crate::{from_row::FromRow, query::field_path::Descendents};
+use crate::{from_row::FromRow, query::field_path::Descendents, sql_builder::select_stream::SelectStream};
 use std::{ops::Index, collections::HashMap};
 
 
@@ -35,7 +35,7 @@ pub trait TreeMerge<R, E>
         field: &str,
         rows: &[R],
         index: &HashMap<u64, Vec<usize>>,
-        selection_stream: &Vec<bool>
+        selection_stream: &SelectStream
     ) -> Result<(), E>;
    
 }

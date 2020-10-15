@@ -9,6 +9,7 @@ use crate::{
     sql_expr::{resolver::Resolver, SqlExpr},
 };
 use std::collections::HashSet;
+use super::select_stream::SelectStream;
 //use crate::sql_arg::SqlArg;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
@@ -18,7 +19,7 @@ pub struct BuildResult {
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
     pub(crate) table_alias: String,
-    pub(crate) selection_stream: Vec<bool>,
+    pub(crate) selection_stream:  SelectStream,
     pub(crate) unmerged_paths: HashSet<String>,
     pub(crate) verb_expr: SqlExpr,
     pub(crate) select_expr: SqlExpr,
@@ -38,7 +39,7 @@ impl BuildResult {
             any_selected: false,
             distinct: false,
             unmerged_paths: HashSet::new(),
-            selection_stream: Vec::new(),
+            selection_stream: SelectStream::new(),
             verb_expr: verb,
             select_expr: SqlExpr::new(),
             join_expr: SqlExpr::new(),
@@ -329,7 +330,7 @@ impl BuildResult {
 
     } */
 
-    pub fn selection_stream(&self) -> &Vec<bool> {
+    pub fn selection_stream(&self) -> &SelectStream {
         &self.selection_stream
     }
     pub fn unmerged_paths(&self) -> &HashSet<String> {
@@ -340,18 +341,20 @@ impl BuildResult {
            Self::selection_from_token(&self.selected_placeholders, &mut self.selection_stream, &self.select_expr);
     }
 
-    fn selection_from_token(selected_placeholders: &HashSet<u16>, selection_stream: &mut Vec<bool>, expr: &SqlExpr) {
+    fn selection_from_token(selected_placeholders: &HashSet<u16>, select_stream: &mut SelectStream, expr: &SqlExpr) {
          use crate::sql_expr::SqlExprToken;
+         use super::select_stream::Select;
 
         for token in expr.tokens() {
             match token {
                 SqlExprToken::Placeholder(number, expr, sel) => {
                     if selected_placeholders.contains(number) {
-                        if let Some(p) = selection_stream.get_mut(*sel) {
+                        select_stream.change(*sel, Select::Implicit)
+                       /*  if let Some(p) = selection_stream.get_mut(*sel) {
                             *p = true;
-                        }
+                        } */
                     }
-                    Self::selection_from_token(selected_placeholders, selection_stream, expr);
+                    Self::selection_from_token(selected_placeholders, select_stream, expr);
                 },
                 _ => {}
 
