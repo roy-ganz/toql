@@ -706,6 +706,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
         let regular_fields = self.regular_fields;
         let forward_joins = &self.forward_joins;
 
+     
         let mysql = quote!(
 
          //   #loader
@@ -739,6 +740,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
             }
             }
 
+          
+        
 
         );
 

@@ -186,7 +186,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         quote!( [ #(String::from(#other_columns)),* ])
                 };
                 let on_predicate = &join_attrs.on_sql;
-                let join_predicate = quote!(&format!( "{}{}", {
+                let join_predicate = quote!(& {
                      #col_array .iter()
                     .map(|other_column| {
                         #default_self_column_code;
@@ -194,7 +194,7 @@ impl<'a> GeneratedToqlMapper<'a> {
                         format!("{} = {}",  &self_column,&other_column)
                     }).collect::<Vec<String>>().join(" AND ")
                 }
-                    , #on_predicate));
+                    , #on_predicate);
                           
 
                 let join_statement = if field.number_of_options == 0

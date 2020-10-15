@@ -290,6 +290,9 @@ impl quote::ToTokens for Toql {
         #[cfg(feature = "mysql15")]
         let mut mysql15_load = crate::mysql15::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
 
+           #[cfg(feature = "mysql15")]
+        let mut mysql15_tree = crate::mysql15::codegen_tree::GeneratedMysqlTree::from_toql(&rust_struct);
+
 
         #[cfg(feature = "mysql15")]
         let mut mysql15_insert = crate::mysql15::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct);
@@ -423,6 +426,9 @@ impl quote::ToTokens for Toql {
 
                     #[cfg(feature = "mysql15")]
                     tokens.extend(quote!(#mysql15_load));
+
+                    #[cfg(feature = "mysql15")]
+                    tokens.extend(quote!(#mysql15_tree));
 
                     #[cfg(feature = "mysql15")]
                     tokens.extend(quote!(#mysql15_key));

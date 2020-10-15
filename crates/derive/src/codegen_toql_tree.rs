@@ -69,47 +69,49 @@ impl<'a> GeneratedToqlTree<'a> {
                
                self.dispatch_predicate_code.push(
                    quote!(
-                       self. #toql_field_name => { 
+                      #toql_field_name => { 
                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            predicate(&#rust_field_ident # unwrap ,&mut descendents, &field, key_expr)?
+                            predicate(&  self. #rust_field_ident # unwrap ,&mut descendents, &field, predicate)?
                         }
                 )
                );
 
                self.dispatch_index_code.push(
                    quote!(
-                       self. #toql_field_name => { 
-                            <#rust_type_ident as toql::tree::tree_index::TreeIndex>::
-                            index(&#rust_field_ident # unwrap ,&mut descendents, &field,rows, row_offset, index)?
+                        #toql_field_name => { 
+                            <#rust_type_ident as toql::tree::tree_index::TreeIndex<$row_type,$error_type>>::
+                            index(&mut descendents, &field,rows, row_offset, index)?
                         }
                 )
                );
-
-              /*  self.dispatch_merge_code.push(
-                   quote!(
-                       #toql_field_name => {
-                        for f in &mut self. #rust_field_ident #unwrap {
-                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R,E>>::
-                            merge(f, &mut descendents, &field, rows, index, selection_stream)?
-                        }
-                       }
-                )
-               ); 
-                 self.merge_type_bounds.push(quote!(
-                    #type_key_ident : toql :: from_row :: FromRow < R >, 
-                    E : std::convert::From< < #type_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
+                self.index_type_bounds.push(quote!(
                     #rust_type_ident : toql :: from_row :: FromRow < R >, 
                     E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
                     ));
 
-               */
+                self.dispatch_merge_code.push(
+                   quote!(
+                       #toql_field_name => {
+                        
+                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
+                            merge(&mut self. #rust_field_ident #unwrap, &mut descendents, &field, rows, index, selection_stream)?
+                    
+                       }
+                )
+               ); 
+                self.merge_type_bounds.push(quote!(
+                    #rust_type_ident : toql :: from_row :: FromRow < R >, 
+                    E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
+                    ));
+
+               
             }
             FieldKind::Merge(merge) => {
                 self.dispatch_index_code.push(
                    quote!(
                        #toql_field_name => {
-                             <#rust_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
-                            index(&mut descendents, field, index)?
+                             <#rust_type_ident as toql::tree::tree_index::TreeIndex<$row_type,$error_type>>::
+                            index(&mut descendents, &field,rows, row_offset, index)?
                         /* for f in &self. #rust_field_ident #unwrap {
                             <#rust_type_ident as toql::tree::tree_index::TreeIndex>::
                             index(f, &mut descendents, &field, index)?
@@ -121,7 +123,7 @@ impl<'a> GeneratedToqlTree<'a> {
                    quote!(
                        #toql_field_name => {
                         for f in &mut self. #rust_field_ident #unwrap {
-                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R,E>>::
+                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
                             merge(f, &mut descendents, &field, rows, index, selection_stream)?
                         }
                        }
@@ -229,18 +231,20 @@ impl<'a> GeneratedToqlTree<'a> {
                     quote!(
                        
                              #toql_field_name  => {
-                    let mut i = selection_stream.iter().filter(|b| **b == true).count();
-                    for row in rows {
-                        let mut iter= std::iter::repeat(&true);
-                        let fk =  #struct_key_ident ::from_row_with_index(row, &mut i, &mut iter)?;
-                        if fk == self.try_get_key()? {
-                            let mut i = 0;
-                            let mut iter = selection_stream.iter();
-                            let e = #rust_type_ident ::from_row_with_index(row, &mut i, &mut iter)?;
-                            self.user_languages.push(e);
-                        }
-                    }
-                },
+                                for row_number in row_numbers {
+                                            let mut i = n;
+                                            let mut iter = std::iter::repeat(&true);
+                                            let row: & $row_type = &rows[*row_number];
+                                            let fk = #struct_key_ident::from_row_with_index(&row, &mut i, &mut iter)?;
+                                            if fk ==  pk {
+                                                let mut i = 0;
+                                                let mut iter = selection_stream.iter();
+                                                let e =
+                                                    #rust_type_ident::from_row_with_index(&row, &mut i, &mut iter)?;
+                                                self.user_languages.push(e);
+                                            }
+                                        }
+                                },
                     )
                 );
             }
@@ -271,6 +275,8 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
         let merge_code = &self.merge_code;
 
         let struct_key_ident = Ident::new(&format!("{}Key", &self.struct_ident), Span::call_site());
+        let macro_name_index = Ident::new(&format!("toql_tree_index_{}", &self.struct_ident), Span::call_site());
+        let macro_name_merge = Ident::new(&format!("toql_tree_merge_{}", &self.struct_ident), Span::call_site());
        
        let mods =  quote! {
                 impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
@@ -354,19 +360,20 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                          
                 }
 
-  
-
-                impl<R, E> toql::tree::tree_index::TreeIndex<R, E> for #struct_ident 
-                where Self: toql::from_row::FromRow<R>,
+               macro_rules! #macro_name_index {
+                // `()` indicates that the macro takes no argument.
+                ($row_type: ty, $error_type: ty) => {
+                 impl toql::tree::tree_index::TreeIndex<$row_type, $error_type> for #struct_ident 
+               /*  where Self: toql::from_row::FromRow<R>,
                 #struct_key_ident : toql :: from_row :: FromRow < R >,
                 E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
-                E: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>,
-                #(#index_type_bounds)*
+                E: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>, */
+             //   #(#index_type_bounds)*
   
                 {
                     fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str, 
-                                rows: &[R], row_offset: usize, index: &mut HashMap<u64,Vec<usize>>) 
-                        -> std::result::Result<(), E>
+                                rows: &[$row_type], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>) 
+                        -> std::result::Result<(), $error_type>
                         
                          {
                           
@@ -421,21 +428,29 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                     }  
                       
                 }
-                impl<R, E> toql::tree::tree_merge::TreeMerge<R, E> for #struct_ident 
-                where Self: toql::from_row::FromRow<R>,
+                };
+            }
+
+ macro_rules! #macro_name_merge {
+                // `()` indicates that the macro takes no argument.
+                ($row_type: ty, $error_type: ty) => {
+                
+                
+                impl toql::tree::tree_merge::TreeMerge<$row_type, $error_type> for #struct_ident 
+               /*  where Self: toql::from_row::FromRow<R>,
                 #struct_key_ident : toql :: from_row :: FromRow < R >,
                 E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
                 E: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>,
                 E: std::convert ::From<toql :: error ::  ToqlError>,
-                #(#merge_type_bounds)*
+                #(#merge_type_bounds)* */
   
                 {
                     fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str, 
-                                rows: &[R], index: &HashMap<u64,Vec<usize>>, selection_stream: &Vec<bool>) 
-                        -> std::result::Result<(), E>
+                                rows: &[$row_type], index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &Vec<bool>) 
+                        -> std::result::Result<(), $error_type>
                         
                          {
-                          
+                        use toql::key::Keyed;
                         use toql::from_row::FromRow;
                         use std::hash::Hash;
                         use std::hash::Hasher;
@@ -453,28 +468,24 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                     }
                                 },
                                 None => {
-                                   
-                                        let mut  i= 0;
-                                       
-                                        for (n, row) in rows.into_iter().enumerate() {
-                                           let mut iter = std::iter::repeat(&true);
-                                            #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
-                                          
-                                           
-                                            match field {
-                                               #(#merge_code)*
-                                               
-                                                f @ _ => {
-                                                    return Err(
-                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
-                                                }
 
-                                            };
-                                            
-                                           
-                                        }
-                                
+                                        let pk = self.try_get_key()?;
+                                        let mut s = DefaultHasher::new();
+                                        pk.hash(&mut s);
+                                        let h = s.finish();
+                                        let default_vec: Vec<usize>= Vec::new();
+                                        let row_numbers : &Vec<usize> = index.get(&h).unwrap_or(&default_vec);
+                                        let  n = selection_stream.iter().filter(|b| **b == true).count();
                                         
+                                        match field {
+                                            #(#merge_code)*
+                                            
+                                            f @ _ => {
+                                                return Err(
+                                                    toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                            }
+
+                                        };
                                        
                                     }
                                    
@@ -485,6 +496,8 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                     }  
                       
                 }
+                }
+ }
     
         };
 
