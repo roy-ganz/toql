@@ -1,9 +1,8 @@
-
 #[derive(Debug, PartialEq)]
 pub enum Select {
     Query,
     Preselect,
-    None
+    None,
 }
 
 /*
@@ -15,37 +14,31 @@ each join gets an additional selection. For the number of columns take `column_c
 */
 #[derive(Debug)]
 pub struct SelectStream {
-    stream: Vec<Select>
+    stream: Vec<Select>,
 }
 
 impl SelectStream {
-
-      pub fn new() -> Self{
-        Self { stream : Vec::new()}
-
+    pub fn new() -> Self {
+        Self { stream: Vec::new() }
     }
 
-  /*   pub fn count_selected(&self) -> usize {
+    /*   pub fn count_selected(&self) -> usize {
         self.stream.iter().filter(|s| s!= &&Select::None).count()
     } */
 
     pub fn change(&mut self, pos: usize, select: Select) {
-
         if let Some(p) = self.stream.get_mut(pos) {
             *p = select;
         }
     }
     pub fn push(&mut self, selection: Select) {
         self.stream.push(selection);
-
     }
     pub fn len(&mut self) -> usize {
         self.stream.len()
-
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_,Select> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Select> {
         self.stream.iter()
     }
-
 }

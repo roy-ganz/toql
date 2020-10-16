@@ -1,7 +1,6 @@
-
+use crate::error::ToqlError;
 use crate::query::field_path::Descendents;
 use crate::sql_expr::SqlExpr;
-use crate:: error :: ToqlError;
 
 pub trait TreePredicate {
     fn predicate<'a>(

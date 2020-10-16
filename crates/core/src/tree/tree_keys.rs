@@ -1,9 +1,8 @@
 use crate::query::field_path::Descendents;
+use crate::{sql_builder::sql_builder_error::SqlBuilderError, sql_expr::SqlExpr};
 use std::result::Result;
-use crate::{sql_expr::SqlExpr, sql_builder::sql_builder_error::SqlBuilderError};
 
-pub trait TreeKeys
-{
+pub trait TreeKeys {
     fn keys<'a>(
         descendents: &mut Descendents<'a>,
         field: &str,

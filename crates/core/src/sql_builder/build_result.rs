@@ -1,6 +1,7 @@
 //!
 //! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
+use super::select_stream::SelectStream;
 use crate::{
     alias_translator::AliasTranslator, parameter::ParameterMap, sql_expr::resolver_error::Result,
 };
@@ -9,7 +10,6 @@ use crate::{
     sql_expr::{resolver::Resolver, SqlExpr},
 };
 use std::collections::HashSet;
-use super::select_stream::SelectStream;
 //use crate::sql_arg::SqlArg;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
@@ -19,7 +19,7 @@ pub struct BuildResult {
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
     pub(crate) table_alias: String,
-    pub(crate) selection_stream:  SelectStream,
+    pub(crate) selection_stream: SelectStream,
     pub(crate) unmerged_paths: HashSet<String>,
     pub(crate) verb_expr: SqlExpr,
     pub(crate) select_expr: SqlExpr,
@@ -48,7 +48,7 @@ impl BuildResult {
             where_expr: SqlExpr::new(),
             order_expr: SqlExpr::new(),
             selected_placeholders: HashSet::new(),
-            column_counter: 0
+            column_counter: 0,
         }
     }
     /// Returns true if no field is neither selected nor filtered.
@@ -77,7 +77,6 @@ impl BuildResult {
         self.from_expr.push_literal(table);
         self.from_expr.push_literal(" ");
         self.from_expr.push_alias(canonical_alias);
-        
     }
 
     /*   pub fn push_join(&mut self, s: &str) {
@@ -99,7 +98,9 @@ impl BuildResult {
         modifier: &str,
         extra: &str,
     ) -> Result<Sql> {
-        let resolver = Resolver::new().with_aux_params(aux_params).with_placeholders(&self.selected_placeholders);
+        let resolver = Resolver::new()
+            .with_aux_params(aux_params)
+            .with_placeholders(&self.selected_placeholders);
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
         let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
         let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
@@ -115,19 +116,19 @@ impl BuildResult {
 
         let mut stmt = String::from(verb_sql.0);
         stmt.push(' ');
-     
+
         if !modifier.is_empty() {
             stmt.push_str(modifier);
             stmt.push(' ');
         }
         stmt.push_str(&select_sql.0);
-        
-        if !self.from_expr.is_empty(){
+
+        if !self.from_expr.is_empty() {
             stmt.push_str(" FROM ");
             stmt.push_str(&from_sql.0);
         }
-      
-       if !self.join_expr.is_empty() {
+
+        if !self.join_expr.is_empty() {
             stmt.push(' ');
             let join_sql = resolver.to_sql(&self.join_expr, alias_translator)?;
             stmt.push_str(&join_sql.0);
@@ -149,7 +150,6 @@ impl BuildResult {
             stmt.push(' ');
             stmt.push_str(extra);
         }
-       
 
         Ok(Sql(stmt, args))
     }
@@ -165,7 +165,7 @@ impl BuildResult {
     fn sql_body(&self, s: &mut String, alias_translator: &mut AliasTranslator) -> Result<()> {
         let resolver = Resolver::new();
 
-      /*   s.push_str(" FROM ");
+        /*   s.push_str(" FROM ");
         let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
         s.push_str(&from_sql.0);
         /*   s.push_str(" ");
@@ -342,12 +342,22 @@ impl BuildResult {
     }
 
     pub fn resolve_placeholders(&mut self) {
-           Self::selection_from_token(&self.selected_placeholders, &mut self.selection_stream, &self.select_expr, &mut self.column_counter);
+        Self::selection_from_token(
+            &self.selected_placeholders,
+            &mut self.selection_stream,
+            &self.select_expr,
+            &mut self.column_counter,
+        );
     }
 
-    fn selection_from_token(selected_placeholders: &HashSet<u16>, select_stream: &mut SelectStream, expr: &SqlExpr, column_counter: &mut usize) {
-         use crate::sql_expr::SqlExprToken;
-         use super::select_stream::Select;
+    fn selection_from_token(
+        selected_placeholders: &HashSet<u16>,
+        select_stream: &mut SelectStream,
+        expr: &SqlExpr,
+        column_counter: &mut usize,
+    ) {
+        use super::select_stream::Select;
+        use crate::sql_expr::SqlExprToken;
 
         for token in expr.tokens() {
             match token {
@@ -356,10 +366,14 @@ impl BuildResult {
                         select_stream.change(*sel, Select::Preselect);
                         *column_counter += 1;
                     }
-                    Self::selection_from_token(selected_placeholders, select_stream, expr, column_counter);
-                },
+                    Self::selection_from_token(
+                        selected_placeholders,
+                        select_stream,
+                        expr,
+                        column_counter,
+                    );
+                }
                 _ => {}
-
             }
         }
     }

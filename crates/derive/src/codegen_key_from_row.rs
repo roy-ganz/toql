@@ -48,7 +48,7 @@ impl<'a> GeneratedKeyFromRow<'a> {
                     })
                 }; */
                 self.mysql_deserialize_key.push(quote!(
-                    #rust_field_ident: (col_get!(row, *i)
+                    #rust_field_ident: ($col_get!(row, *i)
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
                             )?, *i += 1).0
                 ));

@@ -53,14 +53,11 @@ use toql_core::{
 
 use crate::sql_arg::{values_from, values_from_ref};
 
-
-
-
 fn load_top<T, B, C>(
     mysql: &mut MySql<C>,
     query: &B,
     page: Option<Page>,
-) ->  Result<(Vec<T>, HashSet<String>)>
+) -> Result<(Vec<T>, HashSet<String>)>
 where
     T: Keyed
         + Mapped
@@ -80,7 +77,6 @@ where
 
     let ty = <T as Mapped>::type_name();
 
-   
     let mut builder = SqlBuilder::new(&ty, mysql.registry());
     let result = builder.build_select("", query.borrow())?;
 
@@ -89,21 +85,25 @@ where
     let aux_params = [mysql.aux_params()];
     let aux_params = ParameterMap::new(&aux_params);
 
-    let  extra = match page {
-        Some(Page::Counted(start, number_of_records)) => Cow::Owned(format!("LIMIT {},{}", start, number_of_records)),
-        Some(Page::Uncounted( start, number_of_records)) => Cow::Owned(format!("LIMIT {},{}", start, number_of_records)),
-        None => Cow::Borrowed("")
+    let extra = match page {
+        Some(Page::Counted(start, number_of_records)) => {
+            Cow::Owned(format!("LIMIT {},{}", start, number_of_records))
+        }
+        Some(Page::Uncounted(start, number_of_records)) => {
+            Cow::Owned(format!("LIMIT {},{}", start, number_of_records))
+        }
+        None => Cow::Borrowed(""),
     };
 
     let Sql(sql, args) = result
-        .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator,"", extra.borrow() )
+        .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", extra.borrow())
         .map_err(ToqlError::from)?;
 
     dbg!(&sql);
 
     let args = crate::sql_arg::values_from_ref(&args);
     let query_results = mysql.conn.prep_exec(sql, args)?;
-    
+
     let mut entities: Vec<T> = Vec::new();
     for r in query_results {
         let r = r?;
@@ -114,20 +114,17 @@ where
                 &r, &mut i, &mut iter,
             )?,
         );
-       
     }
 
-        Ok((entities, unmerged))
-    
+    Ok((entities, unmerged))
 }
-
 
 fn load_and_merge<T, B, C>(
     mysql: &mut MySql<C>,
     query: &B,
     entities: &mut Vec<T>,
     unmerged_paths: &HashSet<String>,
-) ->  Result<HashSet<String>>
+) -> Result<HashSet<String>>
 where
     T: Keyed
         + Mapped
@@ -136,7 +133,7 @@ where
         + TreeKeys
         + TreeIndex<Row, ToqlMySqlError>
         + TreeMerge<Row, ToqlMySqlError>,
-      
+
     B: Borrow<Query<T>>,
     <T as toql_core::key::Keyed>::Key: FromRow<Row>,
     C: GenericConnection,
@@ -148,124 +145,117 @@ where
     let mut pending_paths = HashSet::new();
 
     for root_path in unmerged_paths {
-            // Get merge JOIN with ON from mapper
-            let mut builder = SqlBuilder::new(&ty, mysql.registry()); // Add alias format or translator to constructor
-            let mut result = builder.build_select(root_path.as_str(), query.borrow())?;
-            pending_paths = result.unmerged_paths().clone();
+        // Get merge JOIN with ON from mapper
+        let mut builder = SqlBuilder::new(&ty, mysql.registry()); // Add alias format or translator to constructor
+        let mut result = builder.build_select(root_path.as_str(), query.borrow())?;
+        pending_paths = result.unmerged_paths().clone();
 
-            let resolver = Resolver::new()
-            .with_self_alias(&result.table_alias());
-          
+        let resolver = Resolver::new().with_self_alias(&result.table_alias());
 
-            // Get merge column (merge key)
-            // and append to regular select columns
-            let mut col_expr = SqlExpr::new();
-            let (field, path) = FieldPath::split_basename(&root_path);
-            let path = path.unwrap_or(FieldPath::from(""));
-            let mut d = path.descendents();
-            <T as TreeKeys>::keys(&mut d, field, &mut col_expr).map_err(ToqlError::from)?;
-            let col_expr = resolver.resolve(&col_expr).map_err(ToqlError::from)?;
-            println!("{}", &col_expr);
-            result.push_select(SqlExpr::literal(", "));
-            result.push_select(col_expr);
+        // Get merge column (merge key)
+        // and append to regular select columns
+        let mut col_expr = SqlExpr::new();
+        let (field, path) = FieldPath::split_basename(&root_path);
+        let path = path.unwrap_or(FieldPath::from(""));
+        let mut d = path.descendents();
+        <T as TreeKeys>::keys(&mut d, field, &mut col_expr).map_err(ToqlError::from)?;
+        let col_expr = resolver.resolve(&col_expr).map_err(ToqlError::from)?;
+        println!("{}", &col_expr);
+        result.push_select(SqlExpr::literal(", "));
+        result.push_select(col_expr);
 
-            // Build merge join
-            // Get merge join and custom on predicate from mapper
-            let on_sql_expr = builder.merge_expr(&root_path)?;
+        // Build merge join
+        // Get merge join and custom on predicate from mapper
+        let on_sql_expr = builder.merge_expr(&root_path)?;
 
-            let (merge_join, merge_on) = {
-                let merge_resolver = Resolver::new().with_other_alias(&result.table_alias());
-                (
-                    merge_resolver
-                        .resolve(&on_sql_expr.0)
-                        .map_err(ToqlError::from)?,
-                    merge_resolver
-                        .resolve(&on_sql_expr.1)
-                        .map_err(ToqlError::from)?,
-                )
-            };
-
-            println!("{} ON {}", merge_join, merge_on);
-            result.push_join(merge_join);
-            result.push_join(SqlExpr::literal("ON ("));
-            result.push_join(merge_on);
-
-            // Get ON predicate from entity keys
-            let mut predicate_expr = SqlExpr::new();
-            let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
-            let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
-            let mut d = ancestor_path.descendents();
-
-            for e in entities.iter() {
-                TreePredicate::predicate(e, &mut d, field, &mut predicate_expr)
-                    .map_err(ToqlError::from)?;
-            }
-
-            let predicate_expr = {
-                let merge_resolver = Resolver::new().with_other_alias(&result.table_alias());
+        let (merge_join, merge_on) = {
+            let merge_resolver = Resolver::new().with_other_alias(&result.table_alias());
+            (
                 merge_resolver
-                    .resolve(&predicate_expr)
-                    .map_err(ToqlError::from)?
-            };
-            result.push_join(SqlExpr::literal("AND "));
-            result.push_join(predicate_expr);
-            result.push_join(SqlExpr::literal(")"));
+                    .resolve(&on_sql_expr.0)
+                    .map_err(ToqlError::from)?,
+                merge_resolver
+                    .resolve(&on_sql_expr.1)
+                    .map_err(ToqlError::from)?,
+            )
+        };
 
-            // Build SQL query statement
-           
+        println!("{} ON {}", merge_join, merge_on);
+        result.push_join(merge_join);
+        result.push_join(SqlExpr::literal("ON ("));
+        result.push_join(merge_on);
 
-            let mut alias_translator = AliasTranslator::new(mysql.alias_format());
-            let aux_params = [mysql.aux_params()];
-            let aux_params = ParameterMap::new(&aux_params);
-            let Sql(sql, args) = result
-                .to_sql(&aux_params, &mut alias_translator)
+        // Get ON predicate from entity keys
+        let mut predicate_expr = SqlExpr::new();
+        let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
+        let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
+        let mut d = ancestor_path.descendents();
+
+        for e in entities.iter() {
+            TreePredicate::predicate(e, &mut d, field, &mut predicate_expr)
                 .map_err(ToqlError::from)?;
-            dbg!(&sql);
-            dbg!(&args);
-
-            // Load form database
-
-            let args = crate::sql_arg::values_from_ref(&args);
-            let query_results = mysql.conn.prep_exec(sql, args)?;
-
-            // Build index
-            let row_offset = result.column_counter();
-                
-                
-            let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
-
-            let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
-            let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
-            let mut d = ancestor_path.descendents();
-
-            // TODO Batch process rows
-            // TODO Introduce traits that do not need copy to vec
-            let mut rows = Vec::with_capacity(100);
-         
-            for q in query_results {
-                rows.push(q?); // Stream into Vec
-            }
-
-            <T as TreeIndex<Row, ToqlMySqlError>>::index(
-                &mut d, field, &rows, row_offset, &mut index,
-            )?;
-            println!("{:?}", result.selection_stream());
-
-            // Merge into entities
-            for e in  entities.iter_mut() {
-                <T as TreeMerge<_, ToqlMySqlError>>::merge(
-                    e,
-                    &mut d,
-                    field,
-                    &rows,
-                    row_offset,
-                    &index,
-                    result.selection_stream(),
-                )?;
-            }
         }
-        Ok(pending_paths)
 
+        let predicate_expr = {
+            let merge_resolver = Resolver::new().with_other_alias(&result.table_alias());
+            merge_resolver
+                .resolve(&predicate_expr)
+                .map_err(ToqlError::from)?
+        };
+        result.push_join(SqlExpr::literal("AND "));
+        result.push_join(predicate_expr);
+        result.push_join(SqlExpr::literal(")"));
+
+        // Build SQL query statement
+
+        let mut alias_translator = AliasTranslator::new(mysql.alias_format());
+        let aux_params = [mysql.aux_params()];
+        let aux_params = ParameterMap::new(&aux_params);
+        let Sql(sql, args) = result
+            .to_sql(&aux_params, &mut alias_translator)
+            .map_err(ToqlError::from)?;
+        dbg!(&sql);
+        dbg!(&args);
+
+        // Load form database
+
+        let args = crate::sql_arg::values_from_ref(&args);
+        let query_results = mysql.conn.prep_exec(sql, args)?;
+
+        // Build index
+        let row_offset = result.column_counter();
+
+        let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
+
+        let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
+        let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
+        let mut d = ancestor_path.descendents();
+
+        // TODO Batch process rows
+        // TODO Introduce traits that do not need copy to vec
+        let mut rows = Vec::with_capacity(100);
+
+        for q in query_results {
+            rows.push(q?); // Stream into Vec
+        }
+
+        <T as TreeIndex<Row, ToqlMySqlError>>::index(&mut d, field, &rows, row_offset, &mut index)?;
+        println!("{:?}", result.selection_stream());
+
+        // Merge into entities
+        for e in entities.iter_mut() {
+            <T as TreeMerge<_, ToqlMySqlError>>::merge(
+                e,
+                &mut d,
+                field,
+                &rows,
+                row_offset,
+                &index,
+                result.selection_stream(),
+            )?;
+        }
+    }
+    Ok(pending_paths)
 }
 
 fn load<T, B, C>(
@@ -286,9 +276,8 @@ where
     C: GenericConnection,
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
-  
     let (mut entities, mut unmerged_paths) = load_top(mysql, &query, page)?;
-    
+
     loop {
         let mut pending_paths = load_and_merge(mysql, &query, &mut entities, &unmerged_paths)?;
 
@@ -581,7 +570,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         })
     }
 
-   /*  /// Updates difference of many tuples that contain an outdated and current struct..
+    /*  /// Updates difference of many tuples that contain an outdated and current struct..
     /// This will updated struct fields and foreign keys from joins.
     /// Collections in a struct will be inserted, updated or deleted.
     /// Nested fields themself will not automatically be updated.

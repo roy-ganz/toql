@@ -22,7 +22,10 @@ pub enum SqlExprToken {
     Arg(SqlArg),
     Alias(String),
     //InClause { column: String, args: Vec<SqlArg> },
-    Predicate { columns: Vec<PredicateColumn>, args: Vec<SqlArg> },
+    Predicate {
+        columns: Vec<PredicateColumn>,
+        args: Vec<SqlArg>,
+    },
     Placeholder(u16, SqlExpr, usize),
 }
 
@@ -52,12 +55,22 @@ impl SqlExpr {
     }
     pub fn aliased_column(column_name: String) -> Self {
         SqlExpr {
-            tokens: vec![SqlExprToken::SelfAlias, SqlExprToken::Literal(".".to_string()), SqlExprToken::Literal(column_name)],
+            tokens: vec![
+                SqlExprToken::SelfAlias,
+                SqlExprToken::Literal(".".to_string()),
+                SqlExprToken::Literal(column_name),
+            ],
         }
     }
 
-    pub fn push_placeholder(&mut self, number: u16, expr: SqlExpr, selection_position: usize) -> &mut Self {
-        self.tokens.push(SqlExprToken::Placeholder(number, expr, selection_position));
+    pub fn push_placeholder(
+        &mut self,
+        number: u16,
+        expr: SqlExpr,
+        selection_position: usize,
+    ) -> &mut Self {
+        self.tokens
+            .push(SqlExprToken::Placeholder(number, expr, selection_position));
         self
     }
 
@@ -68,7 +81,7 @@ impl SqlExpr {
 
     /* fn ends_with(token : &SqlExprToken, lit: &str) -> bool {
         match token {
-         
+
             SqlExprToken::Literal(l) => {l.ends_with(lit)}
             SqlExprToken::Placeholder(_, e, _) => { e.tokens.last().map(|t|Self::ends_with(t, lit)).unwrap_or(false) }
             _ => false
@@ -120,37 +133,27 @@ impl SqlExpr {
         self.tokens.is_empty()
     }
 
-    pub fn push_predicate(&mut self, columns: Vec<PredicateColumn>, args: Vec<SqlArg>) -> &mut Self {
-
+    pub fn push_predicate(
+        &mut self,
+        columns: Vec<PredicateColumn>,
+        args: Vec<SqlArg>,
+    ) -> &mut Self {
         // Append args to last predicate if they have the same columns
         if let Some(SqlExprToken::Predicate {
             columns: c,
-            args: a
+            args: a,
         }) = self.tokens.last_mut()
         {
-
-         
             if c.iter().eq(&columns) {
                 a.extend(args);
             } else {
-                self.tokens.push(SqlExprToken::Predicate {
-                     columns,
-                args
-                });
+                self.tokens.push(SqlExprToken::Predicate { columns, args });
             }
-
-
         } else {
-        self.tokens.push(SqlExprToken::Predicate {
-                columns,
-                args
-            });
+            self.tokens.push(SqlExprToken::Predicate { columns, args });
         }
         self
-
     }
-
-  
 
     pub fn extend(&mut self, expr: SqlExpr) -> &mut Self {
         self.tokens.extend(expr.tokens);
@@ -163,30 +166,33 @@ impl SqlExpr {
 
 impl fmt::Display for SqlExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        
         for t in &self.tokens {
-             write!(f, "{}", t)?;
+            write!(f, "{}", t)?;
         }
         Ok(())
     }
 }
 
-
-
 impl fmt::Display for SqlExprToken {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        
         match self {
-            SqlExprToken::SelfAlias => {  write!(f, "..")}
-            SqlExprToken::OtherAlias => { write!(f, "...")}
-            SqlExprToken::AuxParam(name) => {write!(f, "<{}>", name)}
-            SqlExprToken::UnresolvedArg => {write!(f, "?")}
-            SqlExprToken::Literal(l) => {write!(f, "{}", l)}
-            SqlExprToken::Arg(a) => {write!(f, "{}", a.to_string())}
-            SqlExprToken::Alias(a) => {write!(f, "{}", a)}
-           // SqlExprToken::InClause { column, args: _ } => {write!(f, "{} IN (..TODO..)", column )}
-            SqlExprToken::Predicate { columns:_, args: _ } => {write!(f,"ToDo" )}
-            SqlExprToken::Placeholder(n, e, _) => {write!(f, "|{}:", n)?; e.fmt(f)?; write!(f, "|")}
+            SqlExprToken::SelfAlias => write!(f, ".."),
+            SqlExprToken::OtherAlias => write!(f, "..."),
+            SqlExprToken::AuxParam(name) => write!(f, "<{}>", name),
+            SqlExprToken::UnresolvedArg => write!(f, "?"),
+            SqlExprToken::Literal(l) => write!(f, "{}", l),
+            SqlExprToken::Arg(a) => write!(f, "{}", a.to_string()),
+            SqlExprToken::Alias(a) => write!(f, "{}", a),
+            // SqlExprToken::InClause { column, args: _ } => {write!(f, "{} IN (..TODO..)", column )}
+            SqlExprToken::Predicate {
+                columns: _,
+                args: _,
+            } => write!(f, "ToDo"),
+            SqlExprToken::Placeholder(n, e, _) => {
+                write!(f, "|{}:", n)?;
+                e.fmt(f)?;
+                write!(f, "|")
+            }
         }
     }
 }

@@ -1,8 +1,9 @@
-use crate::{from_row::FromRow, query::field_path::Descendents, sql_builder::select_stream::SelectStream};
-use std::{ops::Index, collections::HashMap};
+use crate::{
+    from_row::FromRow, query::field_path::Descendents, sql_builder::select_stream::SelectStream,
+};
+use std::{collections::HashMap, ops::Index};
 
-
- /* pub trait RowIndex<R> {
+/* pub trait RowIndex<R> {
 
     fn get_row(&self, pos:usize) -> Option<&R>;
 
@@ -10,25 +11,24 @@ use std::{ops::Index, collections::HashMap};
 
 impl<R> RowIndex<R> for Vec<R> {
 
-    
+
     fn get_row(&self, pos:usize) -> Option<&R> {
        self.get(pos)
-    } 
+    }
 
-} 
+}
 impl<R> RowIndex<R> for &Vec<R> {
 
-    
+
     fn get_row(&self, pos:usize) -> Option<&R> {
        self.get(pos)
-    } 
+    }
 
 }  */
 
 // R is database specific row
 // Trait is implemented for structs that can deserialize from rows
-pub trait TreeMerge<R, E>
-{
+pub trait TreeMerge<R, E> {
     fn merge<'a>(
         &mut self,
         descendents: &mut Descendents<'a>,
@@ -36,7 +36,6 @@ pub trait TreeMerge<R, E>
         rows: &[R],
         row_offset: usize,
         index: &HashMap<u64, Vec<usize>>,
-        selection_stream: &SelectStream
+        selection_stream: &SelectStream,
     ) -> Result<(), E>;
-   
 }

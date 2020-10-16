@@ -95,9 +95,9 @@ impl<'a> GeneratedEntityFromRow<'a> {
                         self.mysql_deserialize_fields.push(quote!(
                             #rust_field_ident : {
                                 if iter.next().unwrap_or(&Select::None) != &Select::None {
-                                   
-                                    row.get_opt( (*i,  *i += 1).0).unwrap()
-                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                                    ($col_get!(row, *i)
+                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
+                                    *i += 1).0
                                 } else {
                                     None
                                 }
@@ -112,8 +112,9 @@ impl<'a> GeneratedEntityFromRow<'a> {
                                      return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
                                 }
                               
-                                row.get_opt((*i,  *i += 1).0).unwrap()
-                                    .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
+                               ($col_get!(row, *i)
+                                    .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?,
+                                *i += 1).0
                             }
                         ));
                     }
@@ -166,9 +167,9 @@ impl<'a> GeneratedEntityFromRow<'a> {
                                     #rust_field_ident : {
                                         
                                           if iter.next().unwrap_or(&Select::None) != &Select::None {
-                                            if row.get_opt::<bool,_>(*i).unwrap()
-                                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
-                                                == false {
+                                              let j : bool = $col_get!(row, *i)
+                                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?;
+                                            if j == false {
                                                 *i += 1;  // Step over discriminator field
                                                 Some(None)
                                             } else {
@@ -186,9 +187,9 @@ impl<'a> GeneratedEntityFromRow<'a> {
                                         if iter.next().unwrap_or(&Select::None) == &Select::None {
                                             return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
                                         }
-                                        if row.get_opt::<bool,_>(*i).unwrap()
-                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
-                                        == false {
+                                        let j : bool = $col_get!(row, *i)
+                                        .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?;
+                                       if j  == false {
                                             None
                                         } else {
                                             Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?)

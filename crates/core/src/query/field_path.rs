@@ -5,10 +5,9 @@ pub struct FieldPath<'a>(Cow<'a, str>);
 
 impl<'a> Default for FieldPath<'a> {
     fn default() -> Self {
-       FieldPath(Cow::Owned(String::from("")))
+        FieldPath(Cow::Owned(String::from("")))
     }
 }
-
 
 impl<'a> FieldPath<'a> {
     pub fn split_basename(path_with_basename: &str) -> (&str, Option<FieldPath>) {
@@ -169,7 +168,6 @@ pub struct Descendents<'a> {
 }
 
 impl<'a> Descendents<'a> {
-
     pub fn is_last(&self) -> bool {
         self.pos == self.path.len()
     }

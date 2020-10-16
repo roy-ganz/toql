@@ -46,5 +46,4 @@ pub mod tree;
 
 pub mod join;
 
-
 pub use log; // Reexport for generated code from Toql derive

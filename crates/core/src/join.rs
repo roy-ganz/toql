@@ -1,9 +1,6 @@
-
-
-
 pub enum Join<K: crate::key::Keyed> {
     Key(K::Key),
-    Entity(K)
+    Entity(K),
 }
 
 /*

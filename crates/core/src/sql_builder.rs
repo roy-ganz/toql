@@ -34,9 +34,9 @@
 //!  - The first pass will query all users with the user mapper and will ignore the path *phones_*.
 //!  - The second pass will only build the query for the path *phones_* with the help of the phone mapper.
 //!
+pub mod select_stream;
 pub mod sql_builder_error;
 pub mod wildcard_scope;
-pub mod select_stream;
 
 pub(crate) mod build_context;
 pub(crate) mod build_result;
@@ -64,8 +64,8 @@ use crate::{
     sql_expr::{resolver::Resolver, SqlExpr},
 };
 use path_tree::PathTree;
-use std::borrow::Cow;
 use select_stream::Select;
+use std::borrow::Cow;
 
 enum MapperOrMerge<'a> {
     Mapper(&'a SqlMapper),
@@ -74,8 +74,8 @@ enum MapperOrMerge<'a> {
 
 /// The Sql builder to build normal queries and count queries.
 pub struct SqlBuilder<'a> {
-    root_mapper: String,      // root type 
-    home_mapper: String,    // home mapper, depends on query root
+    root_mapper: String, // root type
+    home_mapper: String, // home mapper, depends on query root
     sql_mapper_registry: &'a SqlMapperRegistry,
     roles: HashSet<String>,
     aux_params: HashMap<String, SqlArg>, // Aux params used for all queries with this builder instance, contains typically config or auth data
@@ -195,8 +195,10 @@ impl<'a> SqlBuilder<'a> {
     } */
     pub fn merge_expr(&self, field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
         // let mut sql = SqlExpr::new();
-        let mut current_mapper = self.sql_mapper_registry.get(&self.root_mapper)
-        .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
+        let mut current_mapper = self
+            .sql_mapper_registry
+            .get(&self.root_mapper)
+            .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
         let (basename, ancestor_path) = FieldPath::split_basename(field_path);
 
         let canonical_table_alias = &current_mapper.canonical_table_alias;
@@ -219,7 +221,7 @@ impl<'a> SqlBuilder<'a> {
         }
 
         // Build canonical alias
-      /*   let self_alias = ancestor_path
+        /*   let self_alias = ancestor_path
             .unwrap_or(FieldPath::from(""))
             .prefix(&canonical_table_alias);
 
@@ -228,15 +230,18 @@ impl<'a> SqlBuilder<'a> {
         // Get merge join statement and on predicate
         let merge = current_mapper.merge(basename).ok_or(ToqlError::NotFound)?;
 
-       /*  let resolver = Resolver::new()
-            .with_self_alias(&self_alias.as_str())
-            .with_other_alias(&other_alias.as_str()); */
+        /*  let resolver = Resolver::new()
+        .with_self_alias(&self_alias.as_str())
+        .with_other_alias(&other_alias.as_str()); */
 
-      /*   let join_expr = resolver.resolve(&merge.merge_join)?;
+        /*   let join_expr = resolver.resolve(&merge.merge_join)?;
         let on_expr = resolver.resolve(&merge.merge_predicate)?;
 
         Ok((join_expr, on_expr)) */
-         Ok((merge.merge_join.to_owned(), merge.merge_predicate.to_owned()))
+        Ok((
+            merge.merge_join.to_owned(),
+            merge.merge_predicate.to_owned(),
+        ))
 
         /* let join_clause_sql =
             merge
@@ -420,7 +425,6 @@ impl<'a> SqlBuilder<'a> {
         Ok(MapperOrMerge::Mapper(current_mapper))
     }
     fn set_home_mapper_for_path(&mut self, path: &Option<FieldPath>) -> Result<()> {
-      
         if let Some(path) = path {
             let mut current_type: &str = &self.root_mapper;
             let mut current_mapper = self
@@ -446,11 +450,9 @@ impl<'a> SqlBuilder<'a> {
                     return Err(ToqlError::MapperMissing(p.to_string()));
                 }
             }
-          
+
             self.home_mapper = current_type.to_string();
-        
         }
-        
 
         Ok(())
     }
@@ -469,10 +471,9 @@ impl<'a> SqlBuilder<'a> {
         // [user address] =[]
 
         let mut join_tree = PathTree::new();
-        let home_path = self.home_mapper.to_mixed_case(); 
+        let home_path = self.home_mapper.to_mixed_case();
 
         for selectect_path in &build_context.joined_paths {
-           
             // Add home path for tree
             let canonical_path = FieldPath::from(&selectect_path).prepend(&home_path);
             join_tree.insert(&canonical_path);
@@ -500,18 +501,16 @@ impl<'a> SqlBuilder<'a> {
         join_tree: &PathTree,
         build_context: &mut BuildContext,
     ) -> Result<SqlExpr> {
-        
         //  let mapper_name= canonical_path.ancestor().unwrap_or(canonical_path.basename());
         use heck::MixedCase;
 
         let mut join_expr = SqlExpr::new();
-        let home_path = self.home_mapper.to_mixed_case(); 
-        let relative_path =  canonical_path.relative_path(&home_path);
+        let home_path = self.home_mapper.to_mixed_case();
+        let relative_path = canonical_path.relative_path(&home_path);
         let mapper = self.mapper_for_path(&relative_path)?;
         for nodes in join_tree.nodes(canonical_path.as_str()) {
             for n in nodes {
                 //let mapper = self.mapper_from_path(canonical_path)?;
-               
 
                 let (basename, _) = FieldPath::split_basename(n);
 
@@ -756,22 +755,19 @@ impl<'a> SqlBuilder<'a> {
         query: &Query<M>,
         build_context: &mut BuildContext,
         result: &mut BuildResult,
-        ph_index : u16
+        ph_index: u16,
     ) -> Result<()> {
-                
         use heck::MixedCase;
 
-        let mapper = self.mapper_for_path(&query_path)?; 
+        let mapper = self.mapper_for_path(&query_path)?;
 
         let p = [&self.aux_params, &query.aux_params];
         let aux_params = ParameterMap::new(&p);
         let canonical_alias = self.canonical_alias(query_path)?;
-              
 
         let mut any_selected = false;
 
         dbg!(&query_path);
-       
 
         for deserialization_type in &mapper.deserialize_order {
             match deserialization_type {
@@ -817,55 +813,57 @@ impl<'a> SqlBuilder<'a> {
                         } else {
                             result.selection_stream.push(Select::None);
                         }
-                       
                     }
                     // Field may be preselected (implicit selection)
                     // Add those fields with placeholder number into expression.
-                    // If any other field is explicitly selected, select also placeholder number to include 
+                    // If any other field is explicitly selected, select also placeholder number to include
                     // expression in final Sql.
                     else if field_info.options.preselect {
-                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                        let resolver = Resolver::new().with_self_alias(&canonical_alias);
 
-                            // let alias = self.alias_translator.translate(&canonical_alias);
-                            let select_expr = resolver.resolve(&field_info.expression)?;
-                            let select_expr =
-                                field_info.handler.build_select(select_expr, &aux_params)?;
-                            
-                            if let Some(mut expr) = select_expr {
-                                expr.push_literal(", ");
-                                // Use result as placeholder 
-                                
-                                result.select_expr.push_placeholder(ph_index, expr, result.selection_stream.len() );
-                                // Selection stream and column counter will be updated at the end 
-                                // when the placeholders are resolved
-                                // Assume by default placeholder is not selected
-                                result.selection_stream.push(Select::None);
-                            } else {
-                             // Column / expression is not selected
-                             result.selection_stream.push(Select::None);
-                            }
-                           
+                        // let alias = self.alias_translator.translate(&canonical_alias);
+                        let select_expr = resolver.resolve(&field_info.expression)?;
+                        let select_expr =
+                            field_info.handler.build_select(select_expr, &aux_params)?;
+
+                        if let Some(mut expr) = select_expr {
+                            expr.push_literal(", ");
+                            // Use result as placeholder
+
+                            result.select_expr.push_placeholder(
+                                ph_index,
+                                expr,
+                                result.selection_stream.len(),
+                            );
+                            // Selection stream and column counter will be updated at the end
+                            // when the placeholders are resolved
+                            // Assume by default placeholder is not selected
+                            result.selection_stream.push(Select::None);
+                        } else {
+                            // Column / expression is not selected
+                            result.selection_stream.push(Select::None);
+                        }
                     } else {
                         result.selection_stream.push(Select::None);
                     }
-                    
                 }
                 DeserializeType::Join(joined_path) => {
-                   
-
-                     let join_info = mapper
+                    let join_info = mapper
                         .join(joined_path)
                         .ok_or(SqlBuilderError::JoinMissing(joined_path.to_string()))?;
-                    
- 
+
                     if build_context.selected_paths.contains(joined_path) {
-                        result.selection_stream.push(Select::Query);  // Query selected join
-                        // join path is the same as to query path
+                        result.selection_stream.push(Select::Query); // Query selected join
+                                                                     // join path is the same as to query path
                         let home_query_path = FieldPath::default();
-                        let next_query_path = query_path.as_ref()
-                                            .unwrap_or(&home_query_path).append(joined_path);
+                        let next_query_path = query_path
+                            .as_ref()
+                            .unwrap_or(&home_query_path)
+                            .append(joined_path);
                         any_selected = true;
-                        build_context.joined_paths.insert(next_query_path.to_string());
+                        build_context
+                            .joined_paths
+                            .insert(next_query_path.to_string());
 
                         dbg!(&next_query_path);
                         self.resolve_select(
@@ -873,32 +871,32 @@ impl<'a> SqlBuilder<'a> {
                             query,
                             build_context,
                             result,
-                            ph_index + 1
+                            ph_index + 1,
                         )?;
-                        
                     } else if join_info.options.preselect {
-                         let home_query_path = FieldPath::default();
-                         let path = joined_path.to_mixed_case();
-                         let next_query_path = query_path.as_ref()
-                                        .unwrap_or(&home_query_path).append(path.as_str());
+                        let home_query_path = FieldPath::default();
+                        let path = joined_path.to_mixed_case();
+                        let next_query_path = query_path
+                            .as_ref()
+                            .unwrap_or(&home_query_path)
+                            .append(path.as_str());
 
                         dbg!(&next_query_path);
                         any_selected = true;
-                        build_context.joined_paths.insert(next_query_path.to_string());
+                        build_context
+                            .joined_paths
+                            .insert(next_query_path.to_string());
                         result.selection_stream.push(Select::Preselect); // Preselected join
-                     
 
-                         self.resolve_select(
+                        self.resolve_select(
                             &Some(next_query_path),
                             query,
                             build_context,
                             result,
-                            ph_index + 1 
+                            ph_index + 1,
                         )?;
-                    }
-                    
-                    else {
-                        result.selection_stream.push(Select::None); // No Join 
+                    } else {
+                        result.selection_stream.push(Select::None); // No Join
                     }
                 }
                 DeserializeType::Merge(merge) => {
@@ -915,7 +913,7 @@ impl<'a> SqlBuilder<'a> {
         }
         Ok(())
     }
-    
+
     fn selection_from_query<M>(
         &mut self,
         query: &Query<M>,

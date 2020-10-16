@@ -1,6 +1,6 @@
 use mysql::Error;
 /// MySQL failed to run the SQL query. For feature `mysql`
-use toql_core::{sql_builder::sql_builder_error::SqlBuilderError, error::ToqlError};
+use toql_core::{error::ToqlError, sql_builder::sql_builder_error::SqlBuilderError};
 
 #[derive(Debug)]
 pub enum ToqlMySqlError {

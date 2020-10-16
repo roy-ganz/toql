@@ -373,8 +373,7 @@ impl quote::ToTokens for Toql {
                     #[cfg(feature = "mysql15")]
                     toql_entity_from_row.add_mysql_deserialize(&f);
 
-                    #[cfg(feature = "mysql15")]
-                    toql_key_from_row.add_key_deserialize(&f)?;
+                   
 
                    
                    /*  if result.is_err() {
