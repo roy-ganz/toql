@@ -34,6 +34,7 @@ pub trait TreeMerge<R, E>
         descendents: &mut Descendents<'a>,
         field: &str,
         rows: &[R],
+        row_offset: usize,
         index: &HashMap<u64, Vec<usize>>,
         selection_stream: &SelectStream
     ) -> Result<(), E>;

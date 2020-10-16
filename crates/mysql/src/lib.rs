@@ -224,8 +224,8 @@ where
             let query_results = mysql.conn.prep_exec(sql, args)?;
 
             // Build index
-            let row_offset = result
-                .selection_stream().count_selected() -1 ; // Array starts from 0
+            let row_offset = result.column_counter();
+                
                 
             let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
 
@@ -245,6 +245,7 @@ where
             <T as TreeIndex<Row, ToqlMySqlError>>::index(
                 &mut d, field, &rows, row_offset, &mut index,
             )?;
+            println!("{:?}", result.selection_stream());
 
             // Merge into entities
             for e in  entities.iter_mut() {
@@ -253,6 +254,7 @@ where
                     &mut d,
                     field,
                     &rows,
+                    row_offset,
                     &index,
                     result.selection_stream(),
                 )?;

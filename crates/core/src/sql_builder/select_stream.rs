@@ -6,6 +6,10 @@ pub enum Select {
     None
 }
 
+/*
+// Select stream memorizes which columns and joins are selected. 
+The selections can either be explicit from the query or implicit from 
+*/
 #[derive(Debug)]
 pub struct SelectStream {
     stream: Vec<Select>
@@ -18,9 +22,9 @@ impl SelectStream {
 
     }
 
-    pub fn count_selected(&self) -> usize {
+  /*   pub fn count_selected(&self) -> usize {
         self.stream.iter().filter(|s| s!= &&Select::None).count()
-    }
+    } */
 
     pub fn change(&mut self, pos: usize, select: Select) {
 

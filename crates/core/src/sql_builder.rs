@@ -833,6 +833,7 @@ impl<'a> SqlBuilder<'a> {
                         } else {
                             result.selection_stream.push(Select::None);
                         }
+                        result.column_counter += 1;
                     }
                     // Field may be preselected (implicit selection)
                     // Add those fields with placeholder number into expression.
@@ -851,6 +852,7 @@ impl<'a> SqlBuilder<'a> {
                                 expr.push_literal(", ");
                                 result.select_expr.push_placeholder(ph_index, expr, result.selection_stream.len() );
                             }
+                            result.column_counter += 1;
                         }
                         result.selection_stream.push(Select::None);
                     }

@@ -165,7 +165,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         quote!(
                                     #rust_field_ident : {
                                         
-                                          if  iter . next() . map(ToOwned :: to_owned) .unwrap_or(false) {
+                                          if iter.next().unwrap_or(&Select::None) != &Select::None {
                                             if row.get_opt::<bool,_>(*i).unwrap()
                                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                                 == false {
@@ -183,7 +183,9 @@ impl<'a> GeneratedMysqlLoad<'a> {
                         1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
                                 quote!(
                                     #rust_field_ident : {
-                                    
+                                        if iter.next().unwrap_or(&Select::None) == &Select::None {
+                                            return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
+                                        }
                                         if row.get_opt::<bool,_>(*i).unwrap()
                                         .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string()))?
                                         == false {
@@ -197,8 +199,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                         quote!(
                                         #rust_field_ident : {
                                         
-                                            if row.columns_ref()[*i].column_type() == mysql::consts::ColumnType::MYSQL_TYPE_NULL {
-                                                //*i = < #rust_type_ident > ::forward_row(*i); 
+                                            if  iter.next().unwrap_or(&Select::None) == &Select::None {
                                                 None
                                             } else {
                                             Some(< #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?)
@@ -207,7 +208,11 @@ impl<'a> GeneratedMysqlLoad<'a> {
                                     ),
                         _ =>   //    T                                 -> Selected Join -> InnerJoin
                         quote!(
-                            #rust_field_ident :  < #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?
+                            #rust_field_ident : { 
+                                 if iter.next().unwrap_or(&Select::None) == &Select::None {
+                                     return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
+                                }
+                                < #rust_type_ident > :: from_row_with_index ( & mut row , i, iter )?}
                         )
                     }
                 );

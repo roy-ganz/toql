@@ -28,6 +28,7 @@ pub struct BuildResult {
     pub(crate) where_expr: SqlExpr,
     pub(crate) order_expr: SqlExpr,
     pub(crate) selected_placeholders: HashSet<u16>,
+    pub(crate) column_counter: usize,
 }
 
 impl BuildResult {
@@ -46,7 +47,8 @@ impl BuildResult {
             from_expr: SqlExpr::new(),
             where_expr: SqlExpr::new(),
             order_expr: SqlExpr::new(),
-            selected_placeholders: HashSet::new()
+            selected_placeholders: HashSet::new(),
+            column_counter: 0
         }
     }
     /// Returns true if no field is neither selected nor filtered.
@@ -62,6 +64,9 @@ impl BuildResult {
     }
     pub fn table_alias(&self) -> &String {
         &self.table_alias
+    }
+    pub fn column_counter(&self) -> usize {
+        self.column_counter
     }
     pub fn selected_placeholders(&self) -> &HashSet<u16> {
         &self.selected_placeholders

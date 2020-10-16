@@ -94,7 +94,7 @@ impl<'a> GeneratedToqlTree<'a> {
                        #toql_field_name => {
                         
                             <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
-                            merge(&mut self. #rust_field_ident #unwrap, &mut descendents, &field, rows, index, selection_stream)?
+                            merge(&mut self. #rust_field_ident #unwrap, &mut descendents, &field, rows, row_offset, index, selection_stream)?
                     
                        }
                 )
@@ -124,7 +124,7 @@ impl<'a> GeneratedToqlTree<'a> {
                        #toql_field_name => {
                         for f in &mut self. #rust_field_ident #unwrap {
                             <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
-                            merge(f, &mut descendents, &field, rows, index, selection_stream)?
+                            merge(f, &mut descendents, &field, rows, row_offset, index, selection_stream)?
                         }
                        }
                 )
@@ -448,7 +448,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
   
                 {
                     fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str, 
-                                rows: &[$row_type], index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream) 
+                                rows: &[$row_type],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream) 
                         -> std::result::Result<(), $error_type>
                         
                          {
@@ -478,7 +478,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                         let h = s.finish();
                                         let default_vec: Vec<usize>= Vec::new();
                                         let row_numbers : &Vec<usize> = index.get(&h).unwrap_or(&default_vec);
-                                        let  n = selection_stream.count_selected() - 1;
+                                        let  n = row_offset;
                                         
                                         match field {
                                             #(#merge_code)*
