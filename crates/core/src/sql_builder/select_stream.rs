@@ -1,14 +1,17 @@
 
 #[derive(Debug, PartialEq)]
 pub enum Select {
-    Explicit,
-    Implicit,
+    Query,
+    Preselect,
     None
 }
 
 /*
-// Select stream memorizes which columns and joins are selected. 
-The selections can either be explicit from the query or implicit from 
+SelectStream memorizes which columns and joins are selected and is needed for the deserialization trait FromRow.
+The selections can either come from the query or the preselections from the mapping.
+The number of selections does not correspond with the number of selected columns / expressions, because
+each join gets an additional selection. For the number of columns take `column_counter` from  `BuildResult`.
+
 */
 #[derive(Debug)]
 pub struct SelectStream {

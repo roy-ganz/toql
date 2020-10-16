@@ -233,7 +233,7 @@ impl<'a> GeneratedToqlTree<'a> {
                              #toql_field_name  => {
                                 for row_number in row_numbers {
                                             let mut i = n;
-                                            let mut iter = std::iter::repeat(&Select::Explicit);
+                                            let mut iter = std::iter::repeat(&Select::Query);
                                             let row: & $row_type = &rows[*row_number];
                                             let fk = #struct_key_ident::from_row_with_index(&row, &mut i, &mut iter)?;
                                             if fk ==  pk {
@@ -398,7 +398,7 @@ impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
                                    
                                         let mut  i= row_offset;
                                         for (n, row) in rows.into_iter().enumerate() {
-                                            let mut iter = std::iter::repeat(&Select::Explicit);
+                                            let mut iter = std::iter::repeat(&Select::Query);
                                             let fk = #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
                                           
                                             let mut s = DefaultHasher::new();

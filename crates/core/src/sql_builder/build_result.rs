@@ -341,11 +341,11 @@ impl BuildResult {
         &self.unmerged_paths
     }
 
-    pub fn update_selections_from_placeholders(&mut self) {
-           Self::selection_from_token(&self.selected_placeholders, &mut self.selection_stream, &self.select_expr);
+    pub fn resolve_placeholders(&mut self) {
+           Self::selection_from_token(&self.selected_placeholders, &mut self.selection_stream, &self.select_expr, &mut self.column_counter);
     }
 
-    fn selection_from_token(selected_placeholders: &HashSet<u16>, select_stream: &mut SelectStream, expr: &SqlExpr) {
+    fn selection_from_token(selected_placeholders: &HashSet<u16>, select_stream: &mut SelectStream, expr: &SqlExpr, column_counter: &mut usize) {
          use crate::sql_expr::SqlExprToken;
          use super::select_stream::Select;
 
@@ -353,12 +353,10 @@ impl BuildResult {
             match token {
                 SqlExprToken::Placeholder(number, expr, sel) => {
                     if selected_placeholders.contains(number) {
-                        select_stream.change(*sel, Select::Implicit)
-                       /*  if let Some(p) = selection_stream.get_mut(*sel) {
-                            *p = true;
-                        } */
+                        select_stream.change(*sel, Select::Preselect);
+                        *column_counter += 1;
                     }
-                    Self::selection_from_token(selected_placeholders, select_stream, expr);
+                    Self::selection_from_token(selected_placeholders, select_stream, expr, column_counter);
                 },
                 _ => {}
 

@@ -153,7 +153,7 @@ where
             .with_self_alias(&result.table_alias());
           
 
-            // Get merge columns (primary key, merge key)
+            // Get merge column (merge key)
             // and append to regular select columns
             let mut col_expr = SqlExpr::new();
             let (field, path) = FieldPath::split_basename(&root_path);
@@ -162,6 +162,7 @@ where
             <T as TreeKeys>::keys(&mut d, field, &mut col_expr).map_err(ToqlError::from)?;
             let col_expr = resolver.resolve(&col_expr).map_err(ToqlError::from)?;
             println!("{}", &col_expr);
+            result.push_select(SqlExpr::literal(", "));
             result.push_select(col_expr);
 
             // Build merge join
@@ -207,7 +208,7 @@ where
             result.push_join(SqlExpr::literal(")"));
 
             // Build SQL query statement
-            result.update_selections_from_placeholders();
+           
 
             let mut alias_translator = AliasTranslator::new(mysql.alias_format());
             let aux_params = [mysql.aux_params()];
@@ -236,8 +237,7 @@ where
             // TODO Batch process rows
             // TODO Introduce traits that do not need copy to vec
             let mut rows = Vec::with_capacity(100);
-            println!("affected rows {}", query_results.affected_rows());
-
+         
             for q in query_results {
                 rows.push(q?); // Stream into Vec
             }
