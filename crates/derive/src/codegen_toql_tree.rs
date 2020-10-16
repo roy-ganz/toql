@@ -56,22 +56,37 @@ impl<'a> GeneratedToqlTree<'a> {
     
 
         // Handle key predicate and parameters
-         let unwrap = match field.number_of_options {
+                 let unwrap = match field.number_of_options {
                     1 => quote!(.as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
                     0 => quote!(),
                     _ => quote!(.as_ref().unwrap().as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
                 };
 
+                let refer = match field.number_of_options {
+                    0 => quote!(&),
+                    _ => quote!(),
+                };
+                 let unwrap_mut = match field.number_of_options {
+                    1 => quote!(.as_mut().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
+                    0 => quote!(),
+                    _ => quote!(.as_mut().unwrap().as_mut().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
+                };
+
+                let refer_mut = match field.number_of_options {
+                    0 => quote!(&mut),
+                    _ => quote!(),
+                };
+
 
         match &field.kind {
-            FieldKind::Join(join_attrs) => {
+            FieldKind::Join(_join_attrs) => {
 
                
                self.dispatch_predicate_code.push(
                    quote!(
                       #toql_field_name => { 
                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            predicate(&  self. #rust_field_ident # unwrap ,&mut descendents, &field, predicate)?
+                            predicate(#refer  self. #rust_field_ident # unwrap ,&mut descendents, &field, predicate)?
                         }
                 )
                );
@@ -94,7 +109,7 @@ impl<'a> GeneratedToqlTree<'a> {
                        #toql_field_name => {
                         
                             <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
-                            merge(&mut self. #rust_field_ident #unwrap, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                            merge(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, &field, rows, row_offset, index, selection_stream)?
                     
                        }
                 )
@@ -112,17 +127,13 @@ impl<'a> GeneratedToqlTree<'a> {
                        #toql_field_name => {
                              <#rust_type_ident as toql::tree::tree_index::TreeIndex<$row_type,$error_type>>::
                             index(&mut descendents, &field,rows, row_offset, index)?
-                        /* for f in &self. #rust_field_ident #unwrap {
-                            <#rust_type_ident as toql::tree::tree_index::TreeIndex>::
-                            index(f, &mut descendents, &field, index)?
-                        } */
                        }
                 )
                );
                 self.dispatch_merge_code.push(
                    quote!(
                        #toql_field_name => {
-                        for f in &mut self. #rust_field_ident #unwrap {
+                        for f in #refer_mut self. #rust_field_ident #unwrap_mut {
                             <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
                             merge(f, &mut descendents, &field, rows, row_offset, index, selection_stream)?
                         }
@@ -133,7 +144,7 @@ impl<'a> GeneratedToqlTree<'a> {
                 self.dispatch_predicate_code.push(
                    quote!(
                        #toql_field_name => {
-                        for f in &self. #rust_field_ident #unwrap {
+                        for f in #refer self. #rust_field_ident #unwrap {
                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
                             predicate(f, &mut descendents, &field, predicate)?
                         }

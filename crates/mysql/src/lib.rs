@@ -30,6 +30,7 @@ use std::collections::{HashMap, HashSet};
 //pub mod diff;
 //pub mod insert;
 pub mod row;
+pub mod access;
 //pub mod select;
 pub use mysql; // Reexport for derive produced code
 
