@@ -238,6 +238,15 @@ impl<'a> GeneratedToqlTree<'a> {
                             },
                     )
                 );
+                let merge_push = if field.number_of_options > 0 {
+                    quote!( if self. #rust_field_name .is_none() {
+                            self. #rust_field_name = Some(Vec::new())};
+                            self. #rust_field_name .as_mut().unwrap() .push(e); 
+                    )
+                } else {
+                    quote!(self. #rust_field_name .push(e);)
+                };
+
                self.merge_code.push(
                     quote!(
                        
@@ -250,9 +259,8 @@ impl<'a> GeneratedToqlTree<'a> {
                                             if fk ==  pk {
                                                 let mut i = 0;
                                                 let mut iter = selection_stream.iter();
-                                                let e =
-                                                    #rust_type_ident::from_row_with_index(&row, &mut i, &mut iter)?;
-                                                self.user_languages.push(e);
+                                                let e = #rust_type_ident::from_row_with_index(&row, &mut i, &mut iter)?;
+                                                #merge_push
                                             }
                                         }
                                 },
