@@ -8,7 +8,7 @@ use proc_macro2::TokenStream;
 use std::collections::HashSet;
 use syn::Ident;
 
-pub(crate) struct GeneratedToqlDelup<'a> {
+pub(crate) struct CodegenUpdate<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
     table_alias :String,
@@ -24,9 +24,9 @@ pub(crate) struct GeneratedToqlDelup<'a> {
     struct_insdel_roles: &'a HashSet<String>,
 }
 
-impl<'a> GeneratedToqlDelup<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlDelup {
-        GeneratedToqlDelup {
+impl<'a> CodegenUpdate<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenUpdate {
+        CodegenUpdate {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
             table_alias : toql.sql_table_alias.to_owned(),
@@ -414,7 +414,7 @@ impl<'a> GeneratedToqlDelup<'a> {
         }
     }
 }
-impl<'a> quote::ToTokens for GeneratedToqlDelup<'a> {
+impl<'a> quote::ToTokens for CodegenUpdate<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
 

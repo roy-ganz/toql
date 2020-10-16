@@ -13,7 +13,7 @@ use crate::sane::MergeColumn;
 use crate::sane::Struct;
 use std::collections::HashMap;
 
-pub(crate) struct GeneratedEntityFromRow<'a> {
+pub(crate) struct CodegenEntityFromRow<'a> {
     rust_struct: &'a Struct,
 
     mysql_deserialize_fields: Vec<TokenStream>,
@@ -28,8 +28,8 @@ pub(crate) struct GeneratedEntityFromRow<'a> {
     wildcard_scope_code : TokenStream
 }
 
-impl<'a> GeneratedEntityFromRow<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedEntityFromRow {
+impl<'a> CodegenEntityFromRow<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenEntityFromRow {
 
 
         let wildcard_scope_code = if let Some(wildcard) = &toql.wildcard {
@@ -50,7 +50,7 @@ impl<'a> GeneratedEntityFromRow<'a> {
             quote!( let wildcard_scope = toql::sql_builder::wildcard_scope::WildcardScope::All; )
         };
 
-        GeneratedEntityFromRow {
+        CodegenEntityFromRow {
             rust_struct: &toql,
             mysql_deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
@@ -701,7 +701,7 @@ impl<'a> GeneratedEntityFromRow<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedEntityFromRow<'a> {
+impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
         let struct_name = &self.rust_struct.rust_struct_name;

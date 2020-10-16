@@ -5,7 +5,7 @@ use crate::sane::{FieldKind, SqlTarget, Struct};
 use proc_macro2::TokenStream;
 use darling::{Error, Result};
 
-pub(crate) struct GeneratedToqlMapper<'a> {
+pub(crate) struct CodegenMapper<'a> {
     rust_struct: &'a Struct,
     field_mappings: Vec<TokenStream>,
     merge_fields: Vec<crate::sane::Field>,
@@ -14,8 +14,8 @@ pub(crate) struct GeneratedToqlMapper<'a> {
     
 }
 
-impl<'a> GeneratedToqlMapper<'a> {
-    pub(crate) fn from_toql(rust_struct: &'a Struct) -> GeneratedToqlMapper {
+impl<'a> CodegenMapper<'a> {
+    pub(crate) fn from_toql(rust_struct: &'a Struct) -> CodegenMapper {
         let mut field_mappings: Vec<TokenStream> = Vec::new();
 
         
@@ -83,7 +83,7 @@ impl<'a> GeneratedToqlMapper<'a> {
             quote!( )
         };  */
 
-        GeneratedToqlMapper {
+        CodegenMapper {
             rust_struct,
             field_mappings,
             merge_fields: Vec::new(),
@@ -383,7 +383,7 @@ impl<'a> GeneratedToqlMapper<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedToqlMapper<'a> {
+impl<'a> quote::ToTokens for CodegenMapper<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
         let struct_name = &self.rust_struct.rust_struct_name;

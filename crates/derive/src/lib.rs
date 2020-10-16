@@ -46,13 +46,9 @@ use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 
 mod annot;
-mod codegen_toql_delup;
-mod codegen_toql_key;
-mod codegen_toql_mapper;
-mod codegen_toql_query_fields;
-mod codegen_toql_tree;
-mod codegen_key_from_row;
-mod codegen_entity_from_row;
+
+mod toql;
+
 /* 
 #[cfg(feature = "mysqldb15")]
 mod codegen_mysql_load;

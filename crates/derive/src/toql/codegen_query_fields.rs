@@ -5,7 +5,7 @@ use heck::SnakeCase;
 
 use crate::sane::{FieldKind, Struct};
 
-pub(crate) struct GeneratedToqlQueryFields<'a> {
+pub(crate) struct CodegenQueryFields<'a> {
     rust_struct: &'a Struct,
     rust_struct_visibility: &'a syn::Visibility,
     builder_fields_struct: Ident,
@@ -14,8 +14,8 @@ pub(crate) struct GeneratedToqlQueryFields<'a> {
     key_composite_predicates: Vec<TokenStream>,
 }
 
-impl<'a> GeneratedToqlQueryFields<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlQueryFields {
+impl<'a> CodegenQueryFields<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenQueryFields {
 
         let mut builder_fields : Vec<TokenStream> = Vec::new();
 
@@ -34,7 +34,7 @@ impl<'a> GeneratedToqlQueryFields<'a> {
 
         }
 
-        GeneratedToqlQueryFields {
+        CodegenQueryFields {
             rust_struct: &toql,
             rust_struct_visibility: &toql.rust_struct_visibility,
 
@@ -105,7 +105,7 @@ impl<'a> GeneratedToqlQueryFields<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedToqlQueryFields<'a> {
+impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let rust_struct_visibility = self.rust_struct_visibility;
         let builder_fields_struct = &self.builder_fields_struct;

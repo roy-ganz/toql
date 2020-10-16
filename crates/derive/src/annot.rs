@@ -1,10 +1,10 @@
-use crate::codegen_toql_delup::GeneratedToqlDelup;
-use crate::codegen_toql_key::GeneratedToqlKey;
-use crate::codegen_toql_tree::GeneratedToqlTree;
-use crate::codegen_toql_mapper::GeneratedToqlMapper;
-use crate::codegen_toql_query_fields::GeneratedToqlQueryFields;
-use crate::codegen_key_from_row::GeneratedKeyFromRow;
-use crate::codegen_entity_from_row::GeneratedEntityFromRow;
+use crate::toql::codegen_update::CodegenUpdate;
+use crate::toql::codegen_key::CodegenKey;
+use crate::toql::codegen_tree::CodegenTree;
+use crate::toql::codegen_mapper::CodegenMapper;
+use crate::toql::codegen_query_fields::CodegenQueryFields;
+use crate::toql::codegen_key_from_row::CodegenKeyFromRow;
+use crate::toql::codegen_entity_from_row::CodegenEntityFromRow;
 use crate::string_set::StringSet;
 
 use syn::GenericArgument::Type;
@@ -283,13 +283,13 @@ impl quote::ToTokens for Toql {
         //println!("DARLING = {:?}", self);
 
         let rust_struct = crate::sane::Struct::create(&self);
-        let mut toql_mapper = GeneratedToqlMapper::from_toql(&rust_struct);
-        let mut toql_query_fields = GeneratedToqlQueryFields::from_toql(&rust_struct);
-        let mut toql_delup = GeneratedToqlDelup::from_toql(&rust_struct);
-        let mut toql_key = GeneratedToqlKey::from_toql(&rust_struct);
-        let mut toql_tree = GeneratedToqlTree::from_toql(&rust_struct);
-        let mut toql_key_from_row = GeneratedKeyFromRow::from_toql(&rust_struct);
-        let mut toql_entity_from_row = GeneratedEntityFromRow::from_toql(&rust_struct);
+        let mut toql_mapper = CodegenMapper::from_toql(&rust_struct);
+        let mut toql_query_fields = CodegenQueryFields::from_toql(&rust_struct);
+        let mut toql_delup = CodegenUpdate::from_toql(&rust_struct);
+        let mut toql_key = CodegenKey::from_toql(&rust_struct);
+        let mut toql_tree = CodegenTree::from_toql(&rust_struct);
+        let mut toql_key_from_row = CodegenKeyFromRow::from_toql(&rust_struct);
+        let mut toql_entity_from_row = CodegenEntityFromRow::from_toql(&rust_struct);
 
        /*  #[cfg(feature = "mysql15")]
         let mut mysql15_load = crate::mysql15::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
@@ -302,7 +302,7 @@ impl quote::ToTokens for Toql {
         let mut mysql15_insert = crate::mysql15::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct);
 
         #[cfg(feature = "mysql15")]
-        let mut mysql15_macros = crate::mysql15::codegen_macros::GeneratedMysqlMacros::from_toql(&rust_struct);
+        let mut mysql15_macros = crate::mysql15::codegen_macros::CodegenMacros::from_toql(&rust_struct);
 
         let Toql {
             vis: _,

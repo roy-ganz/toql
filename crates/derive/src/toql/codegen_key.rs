@@ -2,7 +2,7 @@ use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::{Span, TokenStream};
 use syn::Ident;
 
-pub(crate) struct GeneratedToqlKey<'a> {
+pub(crate) struct CodegenKey<'a> {
     rust_struct: &'a crate::sane::Struct,
     key_columns_code: Vec<TokenStream>,
     key_inverse_columns_code: Vec<TokenStream>,
@@ -29,9 +29,9 @@ pub(crate) struct GeneratedToqlKey<'a> {
     
 }
 
-impl<'a> GeneratedToqlKey<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlKey {
-        GeneratedToqlKey {
+impl<'a> CodegenKey<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenKey {
+        CodegenKey {
             rust_struct: &toql,
             key_columns_code: Vec::new(),
             key_inverse_columns_code: Vec::new(),
@@ -273,7 +273,7 @@ impl<'a> GeneratedToqlKey<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedToqlKey<'a> {
+impl<'a> quote::ToTokens for CodegenKey<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let vis = &self.rust_struct.rust_struct_visibility;
         let rust_stuct_ident = &self.rust_struct.rust_struct_ident;

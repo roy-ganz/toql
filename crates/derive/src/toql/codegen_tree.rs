@@ -8,7 +8,7 @@ use proc_macro2::{Span, TokenStream};
 use std::collections::HashSet;
 use syn::Ident;
 
-pub(crate) struct GeneratedToqlTree<'a> {
+pub(crate) struct CodegenTree<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
     
@@ -26,9 +26,9 @@ pub(crate) struct GeneratedToqlTree<'a> {
    
 }
 
-impl<'a> GeneratedToqlTree<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedToqlTree {
-        GeneratedToqlTree {
+impl<'a> CodegenTree<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenTree {
+        CodegenTree {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
             
@@ -275,7 +275,7 @@ impl<'a> GeneratedToqlTree<'a> {
 
     }
 }
-impl<'a> quote::ToTokens for GeneratedToqlTree<'a> {
+impl<'a> quote::ToTokens for CodegenTree<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
 

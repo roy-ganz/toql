@@ -2,7 +2,7 @@ use crate::sane::FieldKind;
 use proc_macro2::{Span, TokenStream};
 use syn::Ident;
 
-pub(crate) struct GeneratedKeyFromRow<'a> {
+pub(crate) struct CodegenKeyFromRow<'a> {
     rust_struct: &'a crate::sane::Struct,
 
     forward_key_columns: usize,
@@ -11,9 +11,9 @@ pub(crate) struct GeneratedKeyFromRow<'a> {
     mysql_forward_join_key: Vec<TokenStream>,
 }
 
-impl<'a> GeneratedKeyFromRow<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedKeyFromRow {
-        GeneratedKeyFromRow {
+impl<'a> CodegenKeyFromRow<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenKeyFromRow {
+        CodegenKeyFromRow {
             rust_struct: &toql,
             forward_key_columns: 0,
             forward_key_joins: Vec::new(),
@@ -75,7 +75,7 @@ impl<'a> GeneratedKeyFromRow<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedKeyFromRow<'a> {
+impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let _vis = &self.rust_struct.rust_struct_visibility;
         let rust_stuct_ident = &self.rust_struct.rust_struct_ident;

@@ -2,14 +2,14 @@
 use proc_macro2::{Span};
 use syn::Ident;
 
-pub(crate) struct GeneratedMysqlMacros<'a> {
+pub(crate) struct CodegenMacros<'a> {
     rust_struct: &'a crate::sane::Struct,
 
 }
 
-impl<'a> GeneratedMysqlMacros<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlMacros {
-        GeneratedMysqlMacros {
+impl<'a> CodegenMacros<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenMacros {
+        CodegenMacros {
             rust_struct: &toql,
         }
     }
@@ -17,7 +17,7 @@ impl<'a> GeneratedMysqlMacros<'a> {
 
    
 
-impl<'a> quote::ToTokens for GeneratedMysqlMacros<'a> {
+impl<'a> quote::ToTokens for CodegenMacros<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
      
         let rust_struct_ident = &self.rust_struct.rust_struct_ident;
