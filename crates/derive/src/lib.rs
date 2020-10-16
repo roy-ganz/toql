@@ -51,13 +51,17 @@ mod codegen_toql_key;
 mod codegen_toql_mapper;
 mod codegen_toql_query_fields;
 mod codegen_toql_tree;
-mod codegen_from_row_key;
-
+mod codegen_key_from_row;
+mod codegen_entity_from_row;
+/* 
 #[cfg(feature = "mysqldb15")]
 mod codegen_mysql_load;
 
 #[cfg(feature = "mysqldb15")]
-mod codegen_mysql_key;
+mod codegen_mysql_key; */
+
+#[cfg(feature = "mysqldb15")]
+mod codegen_mysql_macros;
 /* 
 #[cfg(feature = "mysqldb15")]
 mod codegen_mysql_select;

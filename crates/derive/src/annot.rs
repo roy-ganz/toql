@@ -3,7 +3,8 @@ use crate::codegen_toql_key::GeneratedToqlKey;
 use crate::codegen_toql_tree::GeneratedToqlTree;
 use crate::codegen_toql_mapper::GeneratedToqlMapper;
 use crate::codegen_toql_query_fields::GeneratedToqlQueryFields;
-use crate::codegen_from_row_key::GeneratedFromRowKey;
+use crate::codegen_key_from_row::GeneratedKeyFromRow;
+use crate::codegen_entity_from_row::GeneratedEntityFromRow;
 use crate::string_set::StringSet;
 
 use syn::GenericArgument::Type;
@@ -287,20 +288,21 @@ impl quote::ToTokens for Toql {
         let mut toql_delup = GeneratedToqlDelup::from_toql(&rust_struct);
         let mut toql_key = GeneratedToqlKey::from_toql(&rust_struct);
         let mut toql_tree = GeneratedToqlTree::from_toql(&rust_struct);
-        let mut toql_key_from_row = GeneratedFromRowKey::from_toql(&rust_struct);
+        let mut toql_key_from_row = GeneratedKeyFromRow::from_toql(&rust_struct);
+        let mut toql_entity_from_row = GeneratedEntityFromRow::from_toql(&rust_struct);
 
-        #[cfg(feature = "mysql15")]
+       /*  #[cfg(feature = "mysql15")]
         let mut mysql15_load = crate::mysql15::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
 
            #[cfg(feature = "mysql15")]
         let mut mysql15_tree = crate::mysql15::codegen_tree::GeneratedMysqlTree::from_toql(&rust_struct);
-
+ */
 
         #[cfg(feature = "mysql15")]
         let mut mysql15_insert = crate::mysql15::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct);
 
         #[cfg(feature = "mysql15")]
-        let mut mysql15_key = crate::mysql15::codegen_key::GeneratedMysqlKey::from_toql(&rust_struct);
+        let mut mysql15_macros = crate::mysql15::codegen_macros::GeneratedMysqlMacros::from_toql(&rust_struct);
 
         let Toql {
             vis: _,
@@ -341,7 +343,7 @@ impl quote::ToTokens for Toql {
                 if !skip_load {
                     if field.skip {
                         #[cfg(feature = "mysql15")]
-                        mysql15_load.add_mysql_deserialize_skip_field(&f);
+                        toql_entity_from_row.add_mysql_deserialize_skip_field(&f);
                         continue;
                     }
                     toql_mapper.add_field_mapping(&f)?;
@@ -362,17 +364,17 @@ impl quote::ToTokens for Toql {
                         toql_mapper.add_merge_function(&f);
 
                         #[cfg(feature = "mysql15")]
-                        mysql15_load.add_ignored_path(&f);
+                        toql_entity_from_row.add_ignored_path(&f);
 
                         #[cfg(feature = "mysql15")]
-                        mysql15_load.add_path_loader(&f);
+                        toql_entity_from_row.add_path_loader(&f);
                     }
 
                     #[cfg(feature = "mysql15")]
-                    mysql15_load.add_mysql_deserialize(&f);
+                    toql_entity_from_row.add_mysql_deserialize(&f);
 
                     #[cfg(feature = "mysql15")]
-                    mysql15_key.add_key_deserialize(&f)?;
+                    toql_key_from_row.add_key_deserialize(&f)?;
 
                    
                    /*  if result.is_err() {
@@ -408,7 +410,7 @@ impl quote::ToTokens for Toql {
             /*  #[cfg(feature = "mysql15")]
             mysql_select.build_merge();  SELECT on signle table only*/
             #[cfg(feature = "mysql15")]
-            mysql15_load.build_merge();
+            toql_entity_from_row.build_merge();
 
             Ok(())
         };
@@ -423,6 +425,7 @@ impl quote::ToTokens for Toql {
                 tokens.extend(quote!(#toql_tree));
 
                 tokens.extend(quote!(#toql_key_from_row));
+                tokens.extend(quote!(#toql_entity_from_row));
 
                 if !skip_query_builder {
                     tokens.extend(quote!(#toql_query_fields));
@@ -431,14 +434,14 @@ impl quote::ToTokens for Toql {
                 if !skip_load {
                     tokens.extend(quote!(#toql_mapper));
 
-                    #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_load));
+                  /*   #[cfg(feature = "mysql15")]
+                    tokens.extend(quote!(#mysql15_load)); */
 
                     #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_tree));
+                    tokens.extend(quote!(#mysql15_macros));
 
-                    #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_key));
+                  /*   #[cfg(feature = "mysql15")]
+                    tokens.extend(quote!(#mysql15_key)); */
 
                    
                 }

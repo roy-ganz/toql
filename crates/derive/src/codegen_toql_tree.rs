@@ -239,12 +239,12 @@ impl<'a> GeneratedToqlTree<'a> {
                     )
                 );
                 let merge_push = if field.number_of_options > 0 {
-                    quote!( if self. #rust_field_name .is_none() {
-                            self. #rust_field_name = Some(Vec::new())};
-                            self. #rust_field_name .as_mut().unwrap() .push(e); 
+                    quote!( if self. #rust_field_ident .is_none() {
+                            self. #rust_field_ident = Some(Vec::new())};
+                            self. #rust_field_ident .as_mut().unwrap() .push(e); 
                     )
                 } else {
-                    quote!(self. #rust_field_name .push(e);)
+                    quote!(self. #rust_field_ident .push(e);)
                 };
 
                self.merge_code.push(

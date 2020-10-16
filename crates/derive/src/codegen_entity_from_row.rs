@@ -13,7 +13,7 @@ use crate::sane::MergeColumn;
 use crate::sane::Struct;
 use std::collections::HashMap;
 
-pub(crate) struct GeneratedMysqlLoad<'a> {
+pub(crate) struct GeneratedEntityFromRow<'a> {
     rust_struct: &'a Struct,
 
     mysql_deserialize_fields: Vec<TokenStream>,
@@ -28,8 +28,8 @@ pub(crate) struct GeneratedMysqlLoad<'a> {
     wildcard_scope_code : TokenStream
 }
 
-impl<'a> GeneratedMysqlLoad<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlLoad {
+impl<'a> GeneratedEntityFromRow<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedEntityFromRow {
 
 
         let wildcard_scope_code = if let Some(wildcard) = &toql.wildcard {
@@ -50,7 +50,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
             quote!( let wildcard_scope = toql::sql_builder::wildcard_scope::WildcardScope::All; )
         };
 
-        GeneratedMysqlLoad {
+        GeneratedEntityFromRow {
             rust_struct: &toql,
             mysql_deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
@@ -700,7 +700,7 @@ impl<'a> GeneratedMysqlLoad<'a> {
     }
 }
 
-impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
+impl<'a> quote::ToTokens for GeneratedEntityFromRow<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
         let struct_name = &self.rust_struct.rust_struct_name;
@@ -711,6 +711,7 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
         let regular_fields = self.regular_fields;
         let forward_joins = &self.forward_joins;
 
+        let macro_name = Ident::new(&format!("toql_entity_from_row_{}", &struct_ident), Span::call_site());
      
         let mysql = quote!(
 
@@ -718,6 +719,9 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
 
 
            // impl toql :: mysql :: row:: FromResultRow < #struct_ident > for #struct_ident {
+
+            macro_rules! #macro_name {
+                        ($row_type: ty, $col_get: ident) => {
 
             impl toql::from_row::FromRow<toql::mysql::mysql::Row> for #struct_ident {
  
@@ -744,6 +748,8 @@ impl<'a> quote::ToTokens for GeneratedMysqlLoad<'a> {
                     #(#mysql_deserialize_fields),*
 
                 })
+            }
+            }
             }
             }
 

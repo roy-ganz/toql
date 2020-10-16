@@ -1,15 +1,15 @@
-use crate::sane::FieldKind;
-use proc_macro2::{Span, TokenStream};
+
+use proc_macro2::{Span};
 use syn::Ident;
 
-pub(crate) struct GeneratedMysqlTree<'a> {
+pub(crate) struct GeneratedMysqlMacros<'a> {
     rust_struct: &'a crate::sane::Struct,
 
 }
 
-impl<'a> GeneratedMysqlTree<'a> {
-    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlTree {
-        GeneratedMysqlTree {
+impl<'a> GeneratedMysqlMacros<'a> {
+    pub(crate) fn from_toql(toql: &crate::sane::Struct) -> GeneratedMysqlMacros {
+        GeneratedMysqlMacros {
             rust_struct: &toql,
         }
     }
@@ -17,7 +17,7 @@ impl<'a> GeneratedMysqlTree<'a> {
 
    
 
-impl<'a> quote::ToTokens for GeneratedMysqlTree<'a> {
+impl<'a> quote::ToTokens for GeneratedMysqlMacros<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
      
         let rust_struct_ident = &self.rust_struct.rust_struct_ident;
