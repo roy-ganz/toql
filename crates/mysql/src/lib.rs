@@ -50,7 +50,7 @@ use toql_core::sql::Sql;
 use toql_core::sql_arg::SqlArg;
 use toql_core::tree::tree_predicate::TreePredicate;
 use toql_core::tree::{
-    tree_index::TreeIndex, tree_insert::TreeInsert, tree_keys::TreeKeys, tree_merge::TreeMerge,
+    tree_index::TreeIndex, tree_insert::TreeInsert, tree_keys::TreeKeys, tree_merge::TreeMerge, tree_identity::TreeIdentity,
 };
 use toql_core::{
     alias_translator::AliasTranslator,
@@ -516,12 +516,12 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn insert_many<T, Q>(&mut self, paths: Paths, entities: &[Q]) -> Result<u64>
+    pub fn insert_many<T, Q>(&mut self, paths: Paths, entities: &mut [Q]) -> Result<u64>
     where
-        T: TreeInsert + Mapped,
+        T: TreeInsert + Mapped + TreeIdentity,
         Q: BorrowMut<T>,
     {
-        use toql_core::sql_expr::SqlExpr;
+      
 
         let registry = self.registry();
         let ty = <T as Mapped>::type_name();
@@ -547,6 +547,23 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let params = values_from(insert_values);
         let mut stmt = self.conn().prepare(&insert_stmt)?;
         let res = stmt.execute(params)?;
+
+        if res.affected_rows() == 0 {
+            return Ok(0);
+        }
+
+        if <T as toql_core::tree::tree_identity::TreeIdentity>::auto_id() {
+            let mut id: u64 =  res.last_insert_id(); // first id
+            let home_path = FieldPath::default();
+            let mut descendents= home_path.descendents();
+            for  e in entities.iter_mut() {
+                {
+                let e_mut = e.borrow_mut();
+                <T as toql_core::tree::tree_identity::TreeIdentity>::set_id( e_mut, &mut descendents,  id)?;
+                }
+            id += 1;
+            }
+        }
 
         // set new key
         //let mut d =root_path.descendents();
@@ -592,9 +609,9 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
     pub fn insert_one<T>(&mut self, paths: Paths, entity: &mut T) -> Result<u64>
     where
-        T: TreeInsert + Mapped,
+        T: TreeInsert + Mapped + TreeIdentity,
     {
-        self.insert_many::<T, _>(paths, &[entity])
+        self.insert_many::<T, _>(paths, &mut [entity])
     }
 
     /// Insert one struct.

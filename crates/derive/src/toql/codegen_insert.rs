@@ -139,7 +139,7 @@ impl<'a> CodegenInsert<'a> {
                                 2 => {quote!(
                                     #toql_field_name => { 
                                          if let Some(f) = &mut self. #rust_field_ident .as_ref() {
-                                              if let Some(f) = f .as_ref()() {
+                                              if let Some(f) = f .as_ref() {
                                                 <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
                                                 values(f, &mut descendents, values)?
                                             }

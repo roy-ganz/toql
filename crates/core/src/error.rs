@@ -4,7 +4,7 @@
 //!
 
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::{sql_expr::resolver_error::ResolverError, sql_mapper::SqlMapperError, sql_arg::TryFromSqlArgError};
+use crate::{sql_expr::resolver_error::ResolverError, sql_mapper::SqlMapperError, sql_arg::error::TryFromSqlArgError};
 use std::fmt;
 
 use pest::error::Error as PestError;

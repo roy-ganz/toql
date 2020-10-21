@@ -3,13 +3,13 @@
 *
 */
 
-use crate::sane::{FieldKind, SqlTarget, MergeColumn};
+use crate::sane::{FieldKind, Struct, MergeColumn};
 use proc_macro2::{Span, TokenStream};
 use std::collections::HashSet;
 use syn::Ident;
 
 pub(crate) struct CodegenTree<'a> {
-    struct_ident: &'a Ident,
+    rust_struct: &'a Struct,
     sql_table_name: String,
     
     dispatch_predicate_code: Vec<TokenStream>,
@@ -25,14 +25,17 @@ pub(crate) struct CodegenTree<'a> {
     merge_code: Vec<TokenStream>,
 
     dispatch_identity_code: Vec<TokenStream>,
-    identity_code: Vec<TokenStream>
+    identity_code: Vec<TokenStream>,
+
+    number_of_keys: u8
+
    
 }
 
 impl<'a> CodegenTree<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenTree {
         CodegenTree {
-            struct_ident: &toql.rust_struct_ident,
+            rust_struct: &toql,
             sql_table_name: toql.sql_table_name.to_owned(),
             
             dispatch_predicate_code: Vec::new(),
@@ -48,6 +51,8 @@ impl<'a> CodegenTree<'a> {
             merge_code: Vec::new(),
             dispatch_identity_code: Vec::new(),
             identity_code: Vec::new(),
+
+            number_of_keys: 0
         }
     }
 
@@ -84,7 +89,12 @@ impl<'a> CodegenTree<'a> {
 
 
         match &field.kind {
-            FieldKind::Join(_join_attrs) => {
+             FieldKind::Regular(field_attrs) => {
+                 if field_attrs.key {self.number_of_keys += 1;}
+             },
+            FieldKind::Join(join_attrs) => {
+
+                if join_attrs.key {self.number_of_keys += 1;}
 
                
                self.dispatch_predicate_code.push(
@@ -177,7 +187,7 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
                             for f in #refer self. #rust_field_ident #unwrap_mut {
-                                <#rust_type_ident as toql::tree::tree_identity:TreeIdentity>::
+                                <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::
                                 set_id(f, &mut descendents, field, id)?
                             }
                         }                       
@@ -240,7 +250,7 @@ impl<'a> CodegenTree<'a> {
                );
 
                 let type_key_ident = Ident::new(&format!("{}Key", &field.rust_type_name), Span::call_site());
-                let struct_ident = self.struct_ident;
+                let struct_ident = &self.rust_struct.rust_struct_ident;
                 let struct_key_ident = Ident::new(&format!("{}Key", &struct_ident), Span::call_site());
 
                 self.index_type_bounds.push(quote!(
@@ -336,7 +346,8 @@ impl<'a> CodegenTree<'a> {
 }
 impl<'a> quote::ToTokens for CodegenTree<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let struct_ident = self.struct_ident;
+        let struct_ident =  &self.rust_struct.rust_struct_ident;
+        
 
         let dispatch_predicate_code = &self.dispatch_predicate_code;
         let dispatch_merge_key_code = &self.dispatch_merge_key_code;
@@ -353,17 +364,49 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let merge_code = &self.merge_code;
 
         let dispatch_identity_code = &self.dispatch_identity_code;
-        let identity_code = &self.identity_code;
+        let identity_set_merges_key_code = &self.identity_code;
 
-        let struct_key_ident = Ident::new(&format!("{}Key", &self.struct_ident), Span::call_site());
-        let macro_name_index = Ident::new(&format!("toql_tree_index_{}", &self.struct_ident), Span::call_site());
-        let macro_name_merge = Ident::new(&format!("toql_tree_merge_{}", &self.struct_ident), Span::call_site());
+        let struct_key_ident = Ident::new(&format!("{}Key", &self.rust_struct.rust_struct_ident), Span::call_site());
+        let macro_name_index = Ident::new(&format!("toql_tree_index_{}", &self.rust_struct.rust_struct_ident), Span::call_site());
+        let macro_name_merge = Ident::new(&format!("toql_tree_merge_{}", &self.rust_struct.rust_struct_ident), Span::call_site());
+
+        let struct_name = &self.rust_struct.rust_struct_name;
+
+        let identity_set_self_key_code= if self.number_of_keys > 1 {
+            quote!(
+                return Err(toql::sql_builder :: sql_builder_error :: SqlBuilderError :: KeyMismatch(id.to_string(), #struct_name .to_string()).into()) ;
+            )
+        }else {
+            quote!(
+             let key = #struct_key_ident::from(id);
+               self.try_set_key(key)?;
+            )
+        };
        
+       let identity_set_key = if self.rust_struct.skip_auto_key {
+           quote!()
+       }else {
+           quote!( #identity_set_self_key_code
+                   #(#identity_set_merges_key_code)*)
+       };
+       
+       let identity_auto_id_code = if  self.number_of_keys > 1 ||self.rust_struct.skip_auto_key {
+           quote!(true)
+       }else {
+           quote!( false)
+       };
+
+        
+
+
        let mods =  quote! {
 
                 impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
+                 fn auto_id() -> bool {
+                     #identity_auto_id_code
+                 }    
                  fn set_id < 'a >(&mut self, mut descendents : & mut toql :: query :: field_path ::
-                        Descendents < 'a >, field : & str, id: u64) 
+                        Descendents < 'a >, id: u64) 
                             -> std :: result :: Result < (), toql::error::ToqlError > 
                 {
                          match descendents.next() {
@@ -375,9 +418,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                     }
                                },
                                None => {
-                                   let key = #struct_key_ident::from(id);
-                                   self.try_set_key(key)?;
-                                   #(#identity_code)*
+                                 #identity_set_key
                                }
                         } 
                         Ok(())
@@ -611,7 +652,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
         log::debug!(
             "Source code for `{}`:\n{}",
-            self.struct_ident,
+            self.rust_struct.rust_struct_ident,
             mods.to_string()
         );
         tokens.extend(mods);

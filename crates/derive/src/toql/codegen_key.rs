@@ -162,7 +162,7 @@ impl<'a> CodegenKey<'a> {
                 }
                 let try_from_setters_index = syn::Index::from(self.try_from_setters.len());
                 self.try_from_setters
-                    .push(quote!(self. #rust_field_ident = args
+                    .push(quote!( #rust_field_ident : args
                                 .get(#try_from_setters_index)
                                 .ok_or(toql::error::ToqlError::ValueMissing( #rust_field_name.to_string()))?
                                 .try_into()?));   // Better Error 
@@ -265,7 +265,7 @@ impl<'a> CodegenKey<'a> {
                 let try_from_setters_index = syn::Index::from(self.try_from_setters.len());
                 // TODO setter for join
                 self.try_from_setters
-                .push(quote!(self. #rust_field_ident = args
+                .push(quote!( #rust_field_ident : args
                             .get(#try_from_setters_index)
                             .ok_or(toql::error::ToqlError::ValueMissing( #rust_field_name.to_string()))?
                             .try_into()?));   // Better Error 
@@ -498,12 +498,16 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                 }
             }
 
-            impl std::convert::TryFrom<Vec<SqlArg>> for #struct_key_ident
+            impl std::convert::TryFrom<Vec< toql::sql_arg::SqlArg>> for #struct_key_ident
             {
                 type Error = toql::error::ToqlError;
-                fn try_from(args: Vec<SqlArg) -> toql::error::Result<Self> {
-                   #( #try_from_setters),*
-                  Ok(())
+                fn try_from(args: Vec< toql::sql_arg::SqlArg>) -> toql::error::Result<Self> {
+                    use std::convert::TryInto;
+
+                   Ok(#struct_key_ident {
+                       #( #try_from_setters),*
+                   })
+                  
                 }
             }
 

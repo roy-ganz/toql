@@ -21,6 +21,9 @@ pub enum SqlBuilderError {
     QueryParamInvalid(String, String),
     /// A predicate requires more arguments, than the toql q uery provided, contains the predicate.
     PredicateArgumentMissing(String),
+
+    /// An key cannot be set, because type is wrong or key is composite key
+    KeyMismatch(String, String),
 }
 
 impl fmt::Display for SqlBuilderError {
@@ -32,6 +35,7 @@ impl fmt::Display for SqlBuilderError {
             SqlBuilderError::JoinMissing(ref s) => write!(f, "join `{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
+            SqlBuilderError::KeyMismatch(ref t, ref s) => write!(f, "Key with value `{}` does not match key of `{}` ", t, s),
             SqlBuilderError::QueryParamMissing(ref s) => {
                 write!(f, "query parameter `{}` is missing ", s)
             }
