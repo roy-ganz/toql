@@ -545,7 +545,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                             #(#key_params_code)*
                          }
 
-                        Ok(Some(Sql(update_stmt, params)))
+                        Ok(Some(toql::sql::Sql(update_stmt, params)))
 
                     }
                 }

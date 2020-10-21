@@ -22,7 +22,10 @@ pub(crate) struct CodegenTree<'a> {
     index_code: Vec<TokenStream>,
     merge_type_bounds: Vec<TokenStream>,
     dispatch_merge_code: Vec<TokenStream>,
-    merge_code: Vec<TokenStream>
+    merge_code: Vec<TokenStream>,
+
+    dispatch_identity_code: Vec<TokenStream>,
+    identity_code: Vec<TokenStream>
    
 }
 
@@ -43,6 +46,8 @@ impl<'a> CodegenTree<'a> {
             merge_type_bounds: Vec::new(),
             dispatch_merge_code: Vec::new(),
             merge_code: Vec::new(),
+            dispatch_identity_code: Vec::new(),
+            identity_code: Vec::new(),
         }
     }
 
@@ -119,6 +124,15 @@ impl<'a> CodegenTree<'a> {
                     E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
                     ));
 
+                self.dispatch_identity_code.push(
+                   quote!(
+                       #toql_field_name => {
+                            <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::
+                            set_id(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, field, id)?
+                        }                       
+                )
+               );
+
                
             }
             FieldKind::Merge(merge) => {
@@ -156,6 +170,16 @@ impl<'a> CodegenTree<'a> {
                        #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_keys::TreeKeys>::
                             keys(&mut descendents, field, key_expr)?
+                        }                       
+                )
+               );
+                self.dispatch_identity_code.push(
+                   quote!(
+                       #toql_field_name => {
+                            for f in #refer self. #rust_field_ident #unwrap_mut {
+                                <#rust_type_ident as toql::tree::tree_identity:TreeIdentity>::
+                                set_id(f, &mut descendents, field, id)?
+                            }
                         }                       
                 )
                );
@@ -266,6 +290,41 @@ impl<'a> CodegenTree<'a> {
                                 },
                     )
                 );
+
+                let mut skip_identity_code = false;
+                let mut columns_code = Vec::new();
+                     
+                     for c in &merge.columns {
+                         match &c.other {
+                             MergeColumn::Aliased(_) => { skip_identity_code = true} 
+                             MergeColumn::Unaliased(name) => {
+                                 columns_code.push(quote!(
+                                      if c == #name {
+                                    let p = ps.get_mut(i).unwrap();
+                                    *p = SqlArg::from(id);
+                                }
+                                 ));
+                             }
+                         }
+                       
+                     }
+                    if !skip_identity_code {
+                        self.identity_code.push(
+                            quote!(
+                                for e in #refer self. #rust_field_ident #unwrap {
+                                    let key = e.try_get_key()?;
+                                    let ps = toql::key::Key::params(&key);
+                                    let cs = <#type_key_ident as toql::key::Key>::columns();
+                                    for  (i, c) in cs.iter().enumerate() {
+                                       #(#columns_code)*
+                                    }
+                                    let key = <#type_key_ident as std::convert::TryFrom<_>>::try_from(ps)?;
+                                    e.try_set_key(key)?;
+                                }
+                            )
+                            
+                        )
+                    }
             }
             _ => {
                 
@@ -293,11 +352,38 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let dispatch_merge_code = &self.dispatch_merge_code;
         let merge_code = &self.merge_code;
 
+        let dispatch_identity_code = &self.dispatch_identity_code;
+        let identity_code = &self.identity_code;
+
         let struct_key_ident = Ident::new(&format!("{}Key", &self.struct_ident), Span::call_site());
         let macro_name_index = Ident::new(&format!("toql_tree_index_{}", &self.struct_ident), Span::call_site());
         let macro_name_merge = Ident::new(&format!("toql_tree_merge_{}", &self.struct_ident), Span::call_site());
        
        let mods =  quote! {
+
+                impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
+                 fn set_id < 'a >(&mut self, mut descendents : & mut toql :: query :: field_path ::
+                        Descendents < 'a >, field : & str, id: u64) 
+                            -> std :: result :: Result < (), toql::error::ToqlError > 
+                {
+                         match descendents.next() {
+                               Some(d) => match d.as_str() {
+                                   #(#dispatch_identity_code),* 
+                                   f @ _ => {
+                                        return Err(
+                                            toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                    }
+                               },
+                               None => {
+                                   let key = #struct_key_ident::from(id);
+                                   self.try_set_key(key)?;
+                                   #(#identity_code)*
+                               }
+                        } 
+                        Ok(())
+                    }
+               }
+
                 impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
                     fn predicate<'a>(&self,  mut descendents: &mut toql::query::field_path::Descendents<'a>, 
                     field: &str,

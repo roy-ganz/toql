@@ -14,6 +14,7 @@ pub mod select;
 pub mod sql;
 pub mod sql_arg;
 pub mod to_query;
+pub mod paths;
 
 #[macro_use]
 pub mod log_helper;

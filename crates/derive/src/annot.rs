@@ -5,6 +5,7 @@ use crate::toql::codegen_mapper::CodegenMapper;
 use crate::toql::codegen_query_fields::CodegenQueryFields;
 use crate::toql::codegen_key_from_row::CodegenKeyFromRow;
 use crate::toql::codegen_entity_from_row::CodegenEntityFromRow;
+use crate::toql::codegen_insert::CodegenInsert;
 use crate::string_set::StringSet;
 
 use syn::GenericArgument::Type;
@@ -290,6 +291,7 @@ impl quote::ToTokens for Toql {
         let mut toql_tree = CodegenTree::from_toql(&rust_struct);
         let mut toql_key_from_row = CodegenKeyFromRow::from_toql(&rust_struct);
         let mut toql_entity_from_row = CodegenEntityFromRow::from_toql(&rust_struct);
+        let mut toql_insert = CodegenInsert::from_toql(&rust_struct);
 
        /*  #[cfg(feature = "mysql15")]
         let mut mysql15_load = crate::mysql15::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
@@ -386,9 +388,11 @@ impl quote::ToTokens for Toql {
                 // Select is considered part of mutation functionality (Copy)
                 if !skip_mut {
                     toql_delup.add_delup_field(&f);
+                
+                    toql_insert.add_tree_insert(&f);
 
-                    #[cfg(feature = "mysql15")]
-                    mysql15_insert.add_insert_field(&f);
+                   /*  #[cfg(feature = "mysql15")]
+                    mysql15_insert.add_insert_field(&f); */
 
                  
                 }
@@ -446,10 +450,11 @@ impl quote::ToTokens for Toql {
                 }
 
                 if !skip_mut {
+                    tokens.extend(quote!(#toql_insert));
                     tokens.extend(quote!(#toql_delup));
 
-                    #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_insert));
+                   /*  #[cfg(feature = "mysql15")]
+                    tokens.extend(quote!(#mysql15_insert)); */
                   
                 }
 

@@ -188,6 +188,12 @@ where {
         M::map(&mut m, "", &M::table_alias())?;
         Ok(m)
     }
+    pub fn joined_mapper(&self, name: &str) -> Option<String> {
+        self.join(name).map(|j| j.joined_mapper.to_owned())
+    }
+    pub fn merged_mapper(&self, name: &str) -> Option<String> {
+        self.merge(name).map(|m| m.merged_mapper.to_owned())
+    }
 
     pub(crate) fn join(&self, name: &str) -> Option<&Join> {
         self.joins.get(name)

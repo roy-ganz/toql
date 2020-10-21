@@ -1,4 +1,11 @@
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use std::convert::TryInto;
+
+
+
+#[derive(Debug)]
+pub struct TryFromSqlArgError(pub SqlArg);
+
 
 #[derive(Clone, Debug)]
 pub enum SqlArg {
@@ -86,21 +93,76 @@ impl ToString for SqlArg {
         }
     }
 }
-
-/*   impl Display for SqlArg {
-
-    fn to_string(&self) -> String {
-
-        match self {
-        SqlArg::U64(t) => t.to_string(),
-        SqlArg::I64(t) => t.to_string(),
-        SqlArg::F64(t) => t.to_string(),
-        SqlArg::Str(t) => format!("'{}'", t),
-        SqlArg::Bool(t) => t.to_string(),
-        SqlArg::Null() => "NULL".to_string(),
-        }
+/* 
+impl TryInto<Option<u32>> for &SqlArg {
+    type Error = TryFromSqlArgError;
+    fn try_into(self) -> Result<Option<u32>, Self::Error> {
+       
+       if self.is_null() {
+           Ok(None)
+       } else {
+        let v =  self. get_u64().ok_or(TryFromSqlArgError(self.to_owned()))?;
+        <u32 as std::convert::TryFrom<_>>::try_from(v)
+        .map(|v| Some(v))
+        .map_err(|_|TryFromSqlArgError(self.to_owned()))
+       }
     }
-} */
+}  */
+
+
+
+macro_rules! try_into_unsigned {
+       ($($type:ty),+) => {
+        $(
+             impl TryInto<$type> for SqlArg {
+                 type Error = TryFromSqlArgError;
+                 fn try_into(self) -> Result<$type, Self::Error> {
+                    let v =  self. get_u64().ok_or(TryFromSqlArgError(self.to_owned()))?;
+                    <$type as std::convert::TryFrom<_>>::try_from(v)
+                        .map_err(|_|TryFromSqlArgError(self.to_owned()))
+                }
+             }
+             impl TryInto<$type> for &SqlArg {
+                 type Error = TryFromSqlArgError;
+                 fn try_into(self) -> Result<$type, Self::Error> {
+                    let v =  self. get_u64().ok_or(TryFromSqlArgError(self.to_owned()))?;
+                    <$type as std::convert::TryFrom<_>>::try_from(v)
+                        .map_err(|_|TryFromSqlArgError(self.to_owned()))
+                }
+             }
+             impl TryInto<Option<$type>> for SqlArg {
+                type Error = TryFromSqlArgError;
+                fn try_into(self) -> Result<Option<$type>, Self::Error> {
+                
+                if self.is_null() {
+                    Ok(None)
+                } else {
+                    let v =  self. get_u64().ok_or(TryFromSqlArgError(self.to_owned()))?;
+                    <$type as std::convert::TryFrom<_>>::try_from(v)
+                    .map(|v| Some(v))
+                    .map_err(|_|TryFromSqlArgError(self.to_owned()))
+                }
+                }
+            } 
+             impl TryInto<Option<$type>> for &SqlArg {
+                type Error = TryFromSqlArgError;
+                fn try_into(self) -> Result<Option<$type>, Self::Error> {
+                
+                if self.is_null() {
+                    Ok(None)
+                } else {
+                    let v =  self. get_u64().ok_or(TryFromSqlArgError(self.to_owned()))?;
+                    <$type as std::convert::TryFrom<_>>::try_from(v)
+                    .map(|v| Some(v))
+                    .map_err(|_|TryFromSqlArgError(self.to_owned()))
+                }
+                }
+            } 
+        )+
+        };
+    }
+
+try_into_unsigned!(u64, u32, u16, u8);
 
 macro_rules! from_float {
        ($($type:ty),+) => {

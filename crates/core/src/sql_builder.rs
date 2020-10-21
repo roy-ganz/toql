@@ -851,6 +851,9 @@ impl<'a> SqlBuilder<'a> {
                     let join_info = mapper
                         .join(joined_path)
                         .ok_or(SqlBuilderError::JoinMissing(joined_path.to_string()))?;
+                    let joined_alias = FieldPath::from(canonical_alias.as_str()).append(joined_path);
+
+                    let resolver = Resolver::new().with_self_alias(&canonical_alias).with_other_alias(joined_alias.as_str());
 
                     if build_context.selected_paths.contains(joined_path) {
                         result.selection_stream.push(Select::Query); // Query selected join
@@ -864,6 +867,14 @@ impl<'a> SqlBuilder<'a> {
                         build_context
                             .joined_paths
                             .insert(next_query_path.to_string());
+
+                            if let Some(d) = &join_info.options.discriminator {
+                                result.select_expr.extend(
+                                   resolver.resolve( d)?,
+                                );
+                                result.select_expr.extend(SqlExpr::literal(", "));
+                                result.column_counter += 1;
+                            }
 
                         dbg!(&next_query_path);
                         self.resolve_select(
@@ -886,7 +897,21 @@ impl<'a> SqlBuilder<'a> {
                         build_context
                             .joined_paths
                             .insert(next_query_path.to_string());
-                        result.selection_stream.push(Select::Preselect); // Preselected join
+                        result.selection_stream.push(Select::None); // Preselected join // Changed from Select::Preselect
+
+                        // Selectable left joins - Option<Option<T> - have a discrimiator expression to distinguish
+                        // between no selection - None -  and  selected NULL join - Some(None).
+                        if let Some(d) = &join_info.options.discriminator {
+                            let mut e = resolver.resolve( d)?;
+                            e.extend( SqlExpr::literal(", "));
+
+                            // Each placeholder increments the column countrer
+                            result.select_expr.push_placeholder(
+                                ph_index + 1,
+                                    e,
+                                result.selection_stream.len() -1 , // No extra selection stream data for discriminator, reuse previous (Select::Preselect) 
+                            );
+                        }
 
                         self.resolve_select(
                             &Some(next_query_path),

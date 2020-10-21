@@ -6,33 +6,19 @@ pub trait FilterArg {
 
 impl FilterArg for &str {
     fn to_sql(&self) -> String {
+        // TODO Escape ' with ''
          self.to_string()
-        /* let mut s = String::from("'");
-        // TODO escape for sql
-        s.push_str(*self);
-        s.push('\'');
-        s */
     }
 }
 // TODO combine with above
 impl FilterArg for String {
     fn to_sql(&self) -> String {
          self.to_string()
-      /*   let mut s = String::from("'");
-        // TODO escape for sql
-        s.push_str(self);
-        s.push('\'');
-        s */
     }
 }
 impl FilterArg for &String {
     fn to_sql(&self) -> String {
         self.to_string()
-       /*  let mut s = String::from("'");
-        // TODO escape for sql
-        s.push_str(self.as_str());
-        s.push('\'');
-        s */
     }
 }
 

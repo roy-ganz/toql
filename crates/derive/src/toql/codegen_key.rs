@@ -23,9 +23,11 @@ pub(crate) struct CodegenKey<'a> {
 
     key_constr_code:Vec<TokenStream>,
 
+
     sql_arg_code : Option<TokenStream>,
-    slice_to_query_code : Option<TokenStream>
+    slice_to_query_code : Option<TokenStream>,
     
+    try_from_setters:Vec<TokenStream>,
     
 }
 
@@ -53,7 +55,9 @@ impl<'a> CodegenKey<'a> {
 
             key_constr_code: Vec::new(),
             sql_arg_code : None,
-            slice_to_query_code : None
+            slice_to_query_code : None,
+            
+            try_from_setters: Vec::new(),
           
         }
     }
@@ -121,18 +125,7 @@ impl<'a> CodegenKey<'a> {
 
                         } else { None };
 
-                    // sql predicate trait 
-                   // let column_format = format!("{{}}.{} = ? AND ", column);
-                    /* self.partial_key_sql_predicates.push( quote!(
-                        if let Some(v) = &self.#rust_field_ident {
-                            predicate.push_str( &format!(#column_format, alias));
-                            params.push(toql::sql_arg::SqlArg::from(v));
-                        }
-                    ));
-                     self.key_sql_predicates.push( quote!(
-                            predicate.push_str( &format!(#column_format, alias));
-                            params.push( toql::sql_arg::SqlArg::from(&self. #rust_field_ident));
-                    )); */
+                   
 
                 } else {
                     // TODO Raise error
@@ -154,7 +147,7 @@ impl<'a> CodegenKey<'a> {
 
                   //  let index = syn::Index::from(self.key_types.len() - 1);
                     self.key_setters
-                        .push(quote!(self. #rust_field_ident = Some( key . #rust_field_ident  ) ))
+                        .push(quote!(self. #rust_field_ident = Some( key . #rust_field_ident  ) ));
                 } else {
                     self.key_fields
                         .push(quote!(self. #rust_field_ident .to_owned()));
@@ -164,9 +157,15 @@ impl<'a> CodegenKey<'a> {
                    // let index = syn::Index::from(self.key_types.len() - 1);
 
                     self.key_setters
-                        .push(quote!(self. #rust_field_ident = key . #rust_field_ident))
-                }
+                        .push(quote!(self. #rust_field_ident = key . #rust_field_ident));
 
+                }
+                let try_from_setters_index = syn::Index::from(self.try_from_setters.len());
+                self.try_from_setters
+                    .push(quote!(self. #rust_field_ident = args
+                                .get(#try_from_setters_index)
+                                .ok_or(toql::error::ToqlError::ValueMissing( #rust_field_name.to_string()))?
+                                .try_into()?));   // Better Error 
                 
                // let key_index = syn::Index::from(self.key_fields.len() - 1);
 
@@ -262,6 +261,14 @@ impl<'a> CodegenKey<'a> {
                                     < #rust_type_ident as toql::key::Keyed>::try_set_key(&mut self. #rust_field_ident,key . #rust_field_ident)?
                             ));
                 }
+
+                let try_from_setters_index = syn::Index::from(self.try_from_setters.len());
+                // TODO setter for join
+                self.try_from_setters
+                .push(quote!(self. #rust_field_ident = args
+                            .get(#try_from_setters_index)
+                            .ok_or(toql::error::ToqlError::ValueMissing( #rust_field_name.to_string()))?
+                            .try_into()?));   // Better Error 
             }
             _ => {}
         }
@@ -371,6 +378,8 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
     let toql_eq_foreign_predicates = &self.toql_eq_foreign_predicates;
     let slice_to_query_code = &self.slice_to_query_code;
     let sql_arg_code = &self.sql_arg_code;   
+
+    let try_from_setters = &self.try_from_setters;   
 
         let key = quote! {
 
@@ -486,6 +495,15 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                 type Error = toql::error::ToqlError;
                 fn try_from(entity: #rust_stuct_ident) -> toql::error::Result<Self> {
                     <#rust_stuct_ident as toql::key::Keyed>::try_get_key(&entity)
+                }
+            }
+
+            impl std::convert::TryFrom<Vec<SqlArg>> for #struct_key_ident
+            {
+                type Error = toql::error::ToqlError;
+                fn try_from(args: Vec<SqlArg) -> toql::error::Result<Self> {
+                   #( #try_from_setters),*
+                  Ok(())
                 }
             }
 

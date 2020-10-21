@@ -61,6 +61,7 @@ pub use toql_core::sql;
 pub use toql_core::sql_arg;
 pub use toql_core::sql_expr;
 pub use toql_core::sql_expr_parser;
+pub use toql_core::paths;
 
 pub use toql_core::log_sql; // Export macro
 pub use toql_core::ok_or_fail; // Export macro

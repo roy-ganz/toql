@@ -18,14 +18,18 @@ use toql_core::query::{field_path::FieldPath, Query};
 use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
 use toql_core::error::ToqlError;
-use toql_core::sql_builder::SqlBuilder;
+use toql_core::sql_builder::{sql_builder_error::SqlBuilderError, SqlBuilder};
 
 use core::borrow::Borrow;
 use toql_core::alias::AliasFormat;
 use toql_core::log_sql;
 
 use crate::row::FromResultRow;
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::BorrowMut,
+    collections::{HashMap, HashSet},
+};
+use toql_core::paths::Paths;
 
 //pub mod diff;
 //pub mod insert;
@@ -45,10 +49,15 @@ use crate::error::ToqlMySqlError;
 use toql_core::sql::Sql;
 use toql_core::sql_arg::SqlArg;
 use toql_core::tree::tree_predicate::TreePredicate;
-use toql_core::tree::{tree_index::TreeIndex, tree_keys::TreeKeys, tree_merge::TreeMerge};
+use toql_core::tree::{
+    tree_index::TreeIndex, tree_insert::TreeInsert, tree_keys::TreeKeys, tree_merge::TreeMerge,
+};
 use toql_core::{
-    alias_translator::AliasTranslator, from_row::FromRow, parameter::ParameterMap,
-    sql_expr::resolver::Resolver, sql_mapper::mapped::Mapped,
+    alias_translator::AliasTranslator,
+    from_row::FromRow,
+    parameter::ParameterMap,
+    sql_expr::resolver::Resolver,
+    sql_mapper::{mapped::Mapped, SqlMapper},
 };
 
 use crate::sql_arg::{values_from, values_from_ref};
@@ -404,23 +413,170 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         &self.aux_params
     }
 
+    fn build_top_insert_sql<T, Q>(&self, entities: &[Q]) -> Result<Sql>
+    where
+        T: Mapped + TreeInsert,
+        Q: BorrowMut<T>,
+    {
+        use toql_core::sql_expr::SqlExpr;
+
+        let ty = <T as Mapped>::type_name();
+        let root_path = FieldPath::default();
+        let mut d = root_path.descendents();
+        let mut values_expr = SqlExpr::new();
+
+        let columns_expr = <T as TreeInsert>::columns(&mut d)?;
+        for e in entities {
+            <T as TreeInsert>::values(e.borrow(), &mut d, &mut values_expr)?;
+        }
+
+        let mapper = self
+            .registry
+            .mappers
+            .get(&ty)
+            .ok_or(ToqlError::MapperMissing(ty.to_owned()))?;
+        let mut alias_translator = AliasTranslator::new(self.alias_format());
+        let aux_params = [self.aux_params()];
+        let aux_params = ParameterMap::new(&aux_params);
+
+        let resolver = Resolver::new()
+            .with_aux_params(&aux_params)
+            .with_self_alias(&mapper.canonical_table_alias);
+        let columns_sql = resolver
+            .to_sql(&columns_expr, &mut alias_translator)
+            .map_err(ToqlError::from)?;
+        let values_sql = resolver
+            .to_sql(&columns_expr, &mut alias_translator)
+            .map_err(ToqlError::from)?;
+
+        let mut insert_stmt = String::from("INSERT INTO ");
+        insert_stmt.push_str("FROM ");
+        insert_stmt.push_str(&mapper.table_name);
+
+        insert_stmt.push_str(&columns_sql.0);
+        insert_stmt.push_str(" VALUES ");
+        insert_stmt.push_str(&values_sql.0);
+
+        Ok(Sql(insert_stmt, values_sql.1))
+    }
+    fn build_insert_tree<T>(
+        &self,
+        paths: &[&str],
+        joins: &mut Vec<Vec<String>>,
+        merges: &mut Vec<String>,
+    ) -> Result<()>
+    where
+        T: Mapped,
+    {
+        let ty = <T as Mapped>::type_name();
+        for path in paths {
+            let mut home_path = FieldPath::from("");
+            let field_path = FieldPath::from(path);
+            let steps = field_path.step();
+            let children = field_path.children();
+            let mut level = 0;
+            let mut mapper = self
+                .registry
+                .mappers
+                .get(&ty)
+                .ok_or(ToqlError::MapperMissing(ty.to_owned()))?;
+
+            for (d, c) in steps.zip(children) {
+                if let Some(j) = mapper.joined_mapper(c.as_str()) {
+                    if joins.len() <= level {
+                        joins.push(Vec::new());
+                    }
+
+                    // let rel = d.relative_path(home_path.as_str()).unwrap_or(FieldPath::default());
+                    joins.get_mut(level).unwrap().push(d.as_str().to_string());
+                    level += 1;
+                    mapper = self
+                        .registry
+                        .mappers
+                        .get(&j)
+                        .ok_or(ToqlError::MapperMissing(j.to_owned()))?;
+                } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
+                    level = 0;
+                    merges.push(d.as_str().to_string());
+                    home_path = d;
+                    mapper = self
+                        .registry
+                        .mappers
+                        .get(&m)
+                        .ok_or(ToqlError::MapperMissing(m.to_owned()))?;
+                } else {
+                    return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned()).into());
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Insert one struct.
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn insert_one<T>(&mut self, entity: &T) -> Result<u64>
+    pub fn insert_many<T, Q>(&mut self, paths: Paths, entities: &[Q]) -> Result<u64>
     where
-        T: InsertSql,
+        T: TreeInsert + Mapped,
+        Q: BorrowMut<T>,
     {
-        let sql = <T as InsertSql>::insert_one_sql(entity, &self.roles, "", "")?;
-        execute_insert_sql(sql, self.conn)
+        use toql_core::sql_expr::SqlExpr;
+
+        let registry = self.registry();
+        let ty = <T as Mapped>::type_name();
+        //let sql = <T as InsertSql>::insert_one_sql(entity, &self.roles, "", "")?;
+        //execute_insert_sql(sql, self.conn)
+
+        // Build up execution tree
+        // Path `a_b_merge1_c_d_merge2_e` becomes
+        // [0] = [a, c, e]
+        // [1] = [a_b, c_d]
+        // [m] = [merge1, merge2]
+        // Then execution order is [1], [0], [m]
+
+        // TODO should be possible to impl with &str
+        let mut joins: Vec<Vec<String>> = Vec::new();
+        let mut merges: Vec<String> = Vec::new();
+
+        self.build_insert_tree::<T>(&paths.0, &mut joins, &mut merges)?;
+
+        // Execute root
+        let Sql(insert_stmt, insert_values) = self.build_top_insert_sql::<T, _>(entities)?;
+
+        let params = values_from(insert_values);
+        let mut stmt = self.conn().prepare(&insert_stmt)?;
+        let res = stmt.execute(params)?;
+
+        // set new key
+        //let mut d =root_path.descendents();
+        //    <T as TreeKey>::set_key(d, res.last_insert_id())?;
+
+        // Execute inserts
+        for l in (0..joins.len()).rev() {
+            for p in joins.get(l).unwrap() {
+                dbg!(p);
+                /*
+                // insert
+                <T as TreeInsert>::columns()?;
+                <T as TreeInsert>::values()?;
+                // Execute
+
+                // set keys
+                <T as TreeKey>::is_auto()?;
+                <T as TreeKey>::set_key()?;
+                */
+            }
+        }
+
+        Ok(0)
     }
 
     /// Insert a collection of structs.
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id
-    pub fn insert_many<T, Q>(&mut self, entities: &[Q]) -> Result<u64>
+    /* pub fn insert_many<T, Q>(&mut self, entities: &[Q]) -> Result<u64>
     where
         T: InsertSql,
         Q: Borrow<T>,
@@ -432,7 +588,15 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         } else {
             0
         })
+    } */
+
+    pub fn insert_one<T>(&mut self, paths: Paths, entity: &mut T) -> Result<u64>
+    where
+        T: TreeInsert + Mapped,
+    {
+        self.insert_many::<T, _>(paths, &[entity])
     }
+
     /// Insert one struct.
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
