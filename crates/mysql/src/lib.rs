@@ -34,6 +34,7 @@ use toql_core::paths::Paths;
 //pub mod diff;
 //pub mod insert;
 pub mod row;
+pub mod insert;
 
 #[macro_use]
 pub mod access;
@@ -419,6 +420,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         Q: BorrowMut<T>,
     {
         use toql_core::sql_expr::SqlExpr;
+        
 
         let ty = <T as Mapped>::type_name();
         let root_path = FieldPath::default();
@@ -462,7 +464,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     fn build_insert_tree<T>(
         &self,
         paths: &[&str],
-        joins: &mut Vec<Vec<String>>,
+        joins: &mut Vec<HashSet<String>>,
         merges: &mut Vec<String>,
     ) -> Result<()>
     where
@@ -484,11 +486,11 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             for (d, c) in steps.zip(children) {
                 if let Some(j) = mapper.joined_mapper(c.as_str()) {
                     if joins.len() <= level {
-                        joins.push(Vec::new());
+                        joins.push(HashSet::new());
                     }
 
                     // let rel = d.relative_path(home_path.as_str()).unwrap_or(FieldPath::default());
-                    joins.get_mut(level).unwrap().push(d.as_str().to_string());
+                    joins.get_mut(level).unwrap().insert(d.as_str().to_string());
                     level += 1;
                     mapper = self
                         .registry
@@ -516,18 +518,13 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn insert_many<T, Q>(&mut self, paths: Paths, entities: &mut [Q]) -> Result<u64>
+    pub fn insert_many<T, Q>(&mut self, paths: Paths, mut entities: &mut [Q]) -> Result<u64>
     where
         T: TreeInsert + Mapped + TreeIdentity,
         Q: BorrowMut<T>,
     {
       
-
-        let registry = self.registry();
-        let ty = <T as Mapped>::type_name();
-        //let sql = <T as InsertSql>::insert_one_sql(entity, &self.roles, "", "")?;
-        //execute_insert_sql(sql, self.conn)
-
+       
         // Build up execution tree
         // Path `a_b_merge1_c_d_merge2_e` becomes
         // [0] = [a, c, e]
@@ -536,7 +533,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         // Then execution order is [1], [0], [m]
 
         // TODO should be possible to impl with &str
-        let mut joins: Vec<Vec<String>> = Vec::new();
+        let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: Vec<String> = Vec::new();
 
         self.build_insert_tree::<T>(&paths.0, &mut joins, &mut merges)?;
@@ -545,6 +542,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let Sql(insert_stmt, insert_values) = self.build_top_insert_sql::<T, _>(entities)?;
 
         let params = values_from(insert_values);
+        {
         let mut stmt = self.conn().prepare(&insert_stmt)?;
         let res = stmt.execute(params)?;
 
@@ -561,30 +559,56 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 let e_mut = e.borrow_mut();
                 <T as toql_core::tree::tree_identity::TreeIdentity>::set_id( e_mut, &mut descendents,  id)?;
                 }
-            id += 1;
+                id += 1;
             }
         }
+        }
 
-        // set new key
-        //let mut d =root_path.descendents();
-        //    <T as TreeKey>::set_key(d, res.last_insert_id())?;
+     
 
         // Execute inserts
         for l in (0..joins.len()).rev() {
             for p in joins.get(l).unwrap() {
                 dbg!(p);
-                /*
-                // insert
-                <T as TreeInsert>::columns()?;
-                <T as TreeInsert>::values()?;
+                 let path = FieldPath::from(&p);
+                let mut descendents = path.descendents();
+                let Sql(insert_stmt, insert_values) = 
+                {
+                    let aux_params = [self.aux_params()];
+                    let aux_params = ParameterMap::new(&aux_params);
+                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut descendents, "", "")
+                }?;
+                
                 // Execute
+                let params = values_from(insert_values);
+                let mut stmt = self.conn().prepare(&insert_stmt)?;
+                let res = stmt.execute(params)?;
 
                 // set keys
-                <T as TreeKey>::is_auto()?;
-                <T as TreeKey>::set_key()?;
-                */
+                let path = FieldPath::from(&p);
+               let mut descendents = path.descendents();
+               crate::insert::set_tree_identity( res.last_insert_id(), &mut entities, &mut descendents)?;
             }
         }
+          for p in merges {
+                dbg!(&p);
+                let path = FieldPath::from(&p);
+                let mut descendents = path.descendents();
+                let Sql(insert_stmt, insert_values) = {
+                    let aux_params = [self.aux_params()];
+                    let aux_params = ParameterMap::new(&aux_params);
+                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut descendents, "", "")
+                    }?;
+                
+                // Execute
+                let params = values_from(insert_values);
+                let mut stmt = self.conn().prepare(&insert_stmt)?;
+                stmt.execute(params)?;
+                
+                // Merges must not contain auto value as identity, skip set_tree_identity
+        }
+
+        
 
         Ok(0)
     }
