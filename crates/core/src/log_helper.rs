@@ -5,7 +5,7 @@ macro_rules! log_sql {
         $crate::log::info!("SQL `{}` with params {:?}", $s, $p)
     };
     ($s:expr) => {
-        $crate::log::info!("Unsafe SQL `{}`", $s.unsafe_sql())
+        $crate::log::info!("SQL `{}`", $s.to_unsafe_string())
     };
 }
 

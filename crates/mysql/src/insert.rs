@@ -147,7 +147,7 @@ use crate::MySql;
         }
         Ok(())
     }
-    pub(crate) fn build_insert_sql<T, Q>( mappers: &HashMap<String, SqlMapper>, alias_format: AliasFormat, aux_params: &ParameterMap, entities: &[Q], mut path: &mut Descendents, modifier: &str, extra: &str) -> toql_core::error::Result<Sql>
+    pub(crate) fn build_insert_sql<T, Q>( mappers: &HashMap<String, SqlMapper>, alias_format: AliasFormat, aux_params: &ParameterMap, entities: &[Q], path: &FieldPath, modifier: &str, extra: &str) -> toql_core::error::Result<Sql>
     where
         T: Mapped + TreeInsert,
         Q: BorrowMut<T>,
@@ -157,17 +157,30 @@ use crate::MySql;
         let ty = <T as Mapped>::type_name();
       
         let mut values_expr = SqlExpr::new();
-
-        let columns_expr = <T as TreeInsert>::columns(&mut path)?;
+        let mut d = path.descendents();
+        let columns_expr = <T as TreeInsert>::columns(&mut d)?;
         for e in entities {
-            <T as TreeInsert>::values(e.borrow(), &mut path, &mut values_expr)?;
+             let mut d = path.descendents();
+            <T as TreeInsert>::values(e.borrow(), &mut d, &mut values_expr)?;
         }
 
-        let mapper = 
+        
+        let mut mapper = 
             mappers
             .get(&ty)
             .ok_or(ToqlError::MapperMissing(ty.to_owned()))?;
         let mut alias_translator = AliasTranslator::new(alias_format);
+
+        // Walk down mappers
+        for d in path.descendents(){
+            let mapper_name = 
+                 mapper.joined_mapper(d.as_str()).or( mapper.merged_mapper(d.as_str()));
+           let mapper_name =  mapper_name.ok_or(ToqlError::MapperMissing(d.as_str().to_owned()))?;
+            mapper = 
+                mappers
+                .get(&mapper_name)
+                .ok_or(ToqlError::MapperMissing(mapper_name.to_owned()))?;
+        }
       
 
         let resolver = Resolver::new()
@@ -177,20 +190,22 @@ use crate::MySql;
             .to_sql(&columns_expr, &mut alias_translator)
             .map_err(ToqlError::from)?;
         let values_sql = resolver
-            .to_sql(&columns_expr, &mut alias_translator)
+            .to_sql(&values_expr, &mut alias_translator)
             .map_err(ToqlError::from)?;
 
         let mut insert_stmt = String::from("INSERT INTO ");
-        insert_stmt.push_str("FROM ");
         insert_stmt.push_str(&mapper.table_name);
-
+            insert_stmt.push_str(" ");
         insert_stmt.push_str(&columns_sql.0);
         insert_stmt.push_str(" VALUES ");
         insert_stmt.push_str(&values_sql.0);
 
+        insert_stmt.pop(); // Remove ', '
+        insert_stmt.pop();
+
         Ok(Sql(insert_stmt, values_sql.1))
     }
-    fn build_insert_tree<T>(
+    pub fn build_insert_tree<T>(
         mappers: &HashMap<String, SqlMapper>,
         paths: &[&str],
         joins: &mut Vec<HashSet<String>>,
@@ -201,7 +216,6 @@ use crate::MySql;
     {
         let ty = <T as Mapped>::type_name();
         for path in paths {
-            let mut home_path = FieldPath::from("");
             let field_path = FieldPath::from(path);
             let steps = field_path.step();
             let children = field_path.children();
@@ -226,7 +240,6 @@ use crate::MySql;
                 } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
                     level = 0;
                     merges.push(d.as_str().to_string());
-                    home_path = d;
                     mapper = mappers
                         .get(&m)
                         .ok_or(ToqlError::MapperMissing(m.to_owned()))?;

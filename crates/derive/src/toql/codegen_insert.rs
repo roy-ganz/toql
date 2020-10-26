@@ -61,8 +61,7 @@ impl<'a> CodegenInsert<'a> {
                 match regular_attrs.sql_target {
                     SqlTarget::Column(ref sql_column) => self
                         .insert_columns_code
-                                .push(quote!(   e.push_self_alias();
-                                            e.push_literal(".");
+                                .push(quote!(  
                                             e.push_literal(#sql_column);
                                             e.push_literal(", ");
                                 )),
@@ -170,8 +169,6 @@ impl<'a> CodegenInsert<'a> {
                      for other_column in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
                             #default_self_column_code;
                             let self_column = #columns_map_code;
-                            e.push_self_alias();
-                            e.push_literal(".");
                             e.push_literal(self_column);
                             e.push_literal(", ");
                      }
@@ -330,7 +327,10 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                     }
                                },
                                None => {
+                                   e.push_literal("(");
                                    #(#insert_columns_code)* 
+                                   e.pop_literals(2);
+                                   e.push_literal(")");
                                }
                         } 
                         Ok(e)
@@ -350,7 +350,10 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                                 }
                                         },
                                         None => {
+                                            values.push_literal("(");
                                             #(#insert_values_code)* 
+                                            values.pop_literals(2);
+                                            values.push_literal("), ");
                                         }
                                     } 
                                     Ok(())   

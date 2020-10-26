@@ -4,7 +4,7 @@ use crate::sql_arg::SqlArg;
 pub struct Sql(pub String, pub Vec<SqlArg>);
 
 impl Sql {
-    pub fn unsafe_sql(&self) -> String {
+    pub fn to_unsafe_string(&self) -> String {
         // Replace every ? with param
         let mut params = self.1.iter();
 

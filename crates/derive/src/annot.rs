@@ -258,7 +258,7 @@ pub struct Toql {
     #[darling(default)]
     pub skip_load: bool,
     #[darling(default)]
-    pub skip_auto_key: bool,
+    pub auto_key: bool,
     #[darling(default)]
     pub skip_select: bool,
     #[darling(default)]
@@ -318,7 +318,7 @@ impl quote::ToTokens for Toql {
             alias: _,
             skip_mut,
             skip_load,
-            skip_auto_key,
+            auto_key,
             skip_select,
             skip_query_builder,
             serde_key: _,

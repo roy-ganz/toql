@@ -25,7 +25,7 @@ pub(crate) struct CodegenTree<'a> {
     merge_code: Vec<TokenStream>,
 
     dispatch_identity_code: Vec<TokenStream>,
-    identity_code: Vec<TokenStream>,
+    identity_set_merges_key_code: Vec<TokenStream>,
 
     number_of_keys: u8
 
@@ -50,7 +50,7 @@ impl<'a> CodegenTree<'a> {
             dispatch_merge_code: Vec::new(),
             merge_code: Vec::new(),
             dispatch_identity_code: Vec::new(),
-            identity_code: Vec::new(),
+            identity_set_merges_key_code: Vec::new(),
 
             number_of_keys: 0
         }
@@ -138,7 +138,7 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::
-                            set_id(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, field, id)?
+                            set_id(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, id)?
                         }                       
                 )
                );
@@ -188,7 +188,7 @@ impl<'a> CodegenTree<'a> {
                        #toql_field_name => {
                             for f in #refer self. #rust_field_ident #unwrap_mut {
                                 <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::
-                                set_id(f, &mut descendents, field, id)?
+                                set_id(f, &mut descendents,  id)?
                             }
                         }                       
                 )
@@ -202,8 +202,8 @@ impl<'a> CodegenTree<'a> {
                            ));}
                        MergeColumn::Unaliased(u) => {  columns_merge.push(quote!(
                            key_expr.push_self_alias();
-                              key_expr.push.push_literal(".");
-                                 key_expr.push.push_literal(#u);
+                              key_expr.push_literal(".");
+                                 key_expr.push_literal(#u);
 
                            ));}
                    }
@@ -228,13 +228,15 @@ impl<'a> CodegenTree<'a> {
                );
 
                let mut columns_code : Vec<TokenStream> = Vec::new();
-               for c in &merge.columns {
-                   columns_code.push(match &c.other {
-                       MergeColumn::Aliased(a) => { quote!( columns.push(  toql :: sql_expr :: PredicateColumn::Literal(#a .to_owned())); )}
-                       MergeColumn::Unaliased(a) => {quote!( columns.push(  toql :: sql_expr :: PredicateColumn::SelfAliased(#a .to_owned())); )}
-                   });
-               }
 
+              
+                    for c in &merge.columns {
+                        columns_code.push(match &c.other {
+                            MergeColumn::Aliased(a) => { quote!( columns.push(  toql :: sql_expr :: PredicateColumn::Literal(#a .to_owned())); )}
+                            MergeColumn::Unaliased(a) => {quote!( columns.push(  toql :: sql_expr :: PredicateColumn::SelfAliased(#a .to_owned())); )}
+                        });
+                    }
+                
                 
                 self.merge_predicate_code.push(
                    quote!(
@@ -303,7 +305,17 @@ impl<'a> CodegenTree<'a> {
 
                 let mut skip_identity_code = false;
                 let mut columns_code = Vec::new();
-                     
+
+                if merge.columns.is_empty() {
+                    let rust_struct_name = &self.rust_struct.rust_struct_name;
+                    let name = format!("{}_",&heck::SnakeCase::to_snake_case(rust_struct_name.as_str()));
+                    columns_code.push(quote!(
+                                      if c.starts_with(#name)  {
+                                        let p = ps.get_mut(i).unwrap();
+                                        *p = SqlArg::from(id);
+                                    }
+                                 ));
+                } else {
                      for c in &merge.columns {
                          match &c.other {
                              MergeColumn::Aliased(_) => { skip_identity_code = true} 
@@ -318,12 +330,13 @@ impl<'a> CodegenTree<'a> {
                          }
                        
                      }
+                }
                     if !skip_identity_code {
-                        self.identity_code.push(
+                        self.identity_set_merges_key_code.push(
                             quote!(
-                                for e in #refer self. #rust_field_ident #unwrap {
+                                for e in #refer self. #rust_field_ident #unwrap_mut {
                                     let key = e.try_get_key()?;
-                                    let ps = toql::key::Key::params(&key);
+                                    let mut ps = toql::key::Key::params(&key);
                                     let cs = <#type_key_ident as toql::key::Key>::columns();
                                     for  (i, c) in cs.iter().enumerate() {
                                        #(#columns_code)*
@@ -364,7 +377,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let merge_code = &self.merge_code;
 
         let dispatch_identity_code = &self.dispatch_identity_code;
-        let identity_set_merges_key_code = &self.identity_code;
+        let identity_set_merges_key_code = &self.identity_set_merges_key_code;
 
         let struct_key_ident = Ident::new(&format!("{}Key", &self.rust_struct.rust_struct_ident), Span::call_site());
         let macro_name_index = Ident::new(&format!("toql_tree_index_{}", &self.rust_struct.rust_struct_ident), Span::call_site());
@@ -383,14 +396,14 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             )
         };
        
-       let identity_set_key = if self.rust_struct.skip_auto_key {
-           quote!()
-       }else {
-           quote!( #identity_set_self_key_code
+       let identity_set_key = if self.rust_struct.auto_key {
+            quote!( #identity_set_self_key_code
                    #(#identity_set_merges_key_code)*)
+       }else {
+           quote!()
        };
        
-       let identity_auto_id_code = if  self.number_of_keys > 1 ||self.rust_struct.skip_auto_key {
+       let identity_auto_id_code = if  self.number_of_keys == 1 && self.rust_struct.auto_key {
            quote!(true)
        }else {
            quote!( false)

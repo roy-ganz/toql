@@ -105,14 +105,15 @@ where
         None => Cow::Borrowed(""),
     };
 
-    let Sql(sql, args) = result
+    let sql = result
         .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", extra.borrow())
         .map_err(ToqlError::from)?;
-
-    dbg!(&sql);
+    
+    log_sql!(&sql);
+    let Sql(sql_stmt, args) = sql;
 
     let args = crate::sql_arg::values_from_ref(&args);
-    let query_results = mysql.conn.prep_exec(sql, args)?;
+    let query_results = mysql.conn.prep_exec(sql_stmt, args)?;
 
     let mut entities: Vec<T> = Vec::new();
     for r in query_results {
@@ -414,7 +415,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         &self.aux_params
     }
 
-    fn build_top_insert_sql<T, Q>(&self, entities: &[Q]) -> Result<Sql>
+   /*  fn build_top_insert_sql<T, Q>(&self, entities: &[Q]) -> Result<Sql>
     where
         T: Mapped + TreeInsert,
         Q: BorrowMut<T>,
@@ -460,8 +461,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         insert_stmt.push_str(&values_sql.0);
 
         Ok(Sql(insert_stmt, values_sql.1))
-    }
-    fn build_insert_tree<T>(
+    } */
+    /* fn build_insert_tree<T>(
         &self,
         paths: &[&str],
         joins: &mut Vec<HashSet<String>>,
@@ -472,7 +473,6 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     {
         let ty = <T as Mapped>::type_name();
         for path in paths {
-            let mut home_path = FieldPath::from("");
             let field_path = FieldPath::from(path);
             let steps = field_path.step();
             let children = field_path.children();
@@ -500,7 +500,6 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
                     level = 0;
                     merges.push(d.as_str().to_string());
-                    home_path = d;
                     mapper = self
                         .registry
                         .mappers
@@ -512,7 +511,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             }
         }
         Ok(())
-    }
+    } */
 
     /// Insert one struct.
     ///
@@ -536,49 +535,64 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: Vec<String> = Vec::new();
 
-        self.build_insert_tree::<T>(&paths.0, &mut joins, &mut merges)?;
+         crate::insert::build_insert_tree::<T>(&self.registry.mappers, &paths.0, &mut joins, &mut merges)?;
 
-        // Execute root
-        let Sql(insert_stmt, insert_values) = self.build_top_insert_sql::<T, _>(entities)?;
+        // Insert root
+        let sql = 
+                {
+                    let aux_params = [self.aux_params()];
+                    let aux_params = ParameterMap::new(&aux_params);
+                    let home_path = FieldPath::default();
+                    
+                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &home_path, "", "")
+                }?;
+
+        log_sql!(&sql);
+        dbg!(sql.to_unsafe_string());
+        let Sql(insert_stmt, insert_values) = sql;
 
         let params = values_from(insert_values);
         {
-        let mut stmt = self.conn().prepare(&insert_stmt)?;
-        let res = stmt.execute(params)?;
+            let mut stmt = self.conn().prepare(&insert_stmt)?;
+            let res = stmt.execute(params)?;
 
-        if res.affected_rows() == 0 {
-            return Ok(0);
-        }
-
-        if <T as toql_core::tree::tree_identity::TreeIdentity>::auto_id() {
-            let mut id: u64 =  res.last_insert_id(); // first id
-            let home_path = FieldPath::default();
-            let mut descendents= home_path.descendents();
-            for  e in entities.iter_mut() {
-                {
-                let e_mut = e.borrow_mut();
-                <T as toql_core::tree::tree_identity::TreeIdentity>::set_id( e_mut, &mut descendents,  id)?;
-                }
-                id += 1;
+            if res.affected_rows() == 0 {
+                return Ok(0);
             }
-        }
+
+            if <T as toql_core::tree::tree_identity::TreeIdentity>::auto_id() {
+                let mut id: u64 =  res.last_insert_id(); // first id
+                let home_path = FieldPath::default();
+                let mut descendents= home_path.descendents();
+                for  e in entities.iter_mut() {
+                    {
+                    let e_mut = e.borrow_mut();
+                    <T as toql_core::tree::tree_identity::TreeIdentity>::set_id( e_mut, &mut descendents,  id)?;
+                    }
+                    id += 1;
+                }
+            }
         }
 
      
 
-        // Execute inserts
+        // Insert joins and merges
         for l in (0..joins.len()).rev() {
             for p in joins.get(l).unwrap() {
-                dbg!(p);
-                 let path = FieldPath::from(&p);
-                let mut descendents = path.descendents();
-                let Sql(insert_stmt, insert_values) = 
+              
+                 let mut path = FieldPath::from(&p);
+                
+                let sql = 
                 {
                     let aux_params = [self.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
-                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut descendents, "", "")
+                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut path, "", "")
                 }?;
-                
+
+                log_sql!(&sql);
+                dbg!(sql.to_unsafe_string());
+                let Sql(insert_stmt, insert_values) = sql;
+                                
                 // Execute
                 let params = values_from(insert_values);
                 let mut stmt = self.conn().prepare(&insert_stmt)?;
@@ -591,14 +605,18 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             }
         }
           for p in merges {
-                dbg!(&p);
+              
                 let path = FieldPath::from(&p);
-                let mut descendents = path.descendents();
-                let Sql(insert_stmt, insert_values) = {
+              
+                let sql = {
                     let aux_params = [self.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
-                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut descendents, "", "")
+                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &path, "", "")
                     }?;
+
+                log_sql!(&sql);
+                dbg!(sql.to_unsafe_string());
+                let Sql(insert_stmt, insert_values) = sql;
                 
                 // Execute
                 let params = values_from(insert_values);

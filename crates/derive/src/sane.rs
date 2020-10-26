@@ -28,7 +28,7 @@ pub struct Struct {
     pub upd_roles: HashSet<String>,
     pub wildcard: Option<HashSet<String>>,
     pub count_filter: Option<HashSet<String>>,
-    pub skip_auto_key: bool
+    pub auto_key: bool
 }
 
 impl Struct {
@@ -63,7 +63,7 @@ impl Struct {
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
             wildcard: toql.wildcard.as_ref().map(|e|e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
             count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
-            skip_auto_key: toql.skip_auto_key
+            auto_key: toql.auto_key
         }
     }
 }

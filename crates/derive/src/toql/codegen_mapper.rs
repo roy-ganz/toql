@@ -357,17 +357,81 @@ impl<'a> CodegenMapper<'a> {
                 let toql_field_name = &field.toql_field_name;
                 let sql_merge_mapper_name = &field.rust_type_name;
 
-                // simple join statement or custom join statement
-                let join_statement= &merge_attrs.join_sql; 
+               
+               
+                let join_statement= if let Some(custom_join) = &merge_attrs.join_sql {
+                    quote!(toql::sql_expr_parser::SqlExprParser::parse(#custom_join)?)
+                } else {
+                    let table_name = &merge_attrs.sql_join_table_name;
+                   quote!(  
+                        toql::sql_expr::SqlExpr::from(vec![
+                        toql::sql_expr::SqlExprToken::Literal("JOIN ".to_string()),
+                        toql::sql_expr::SqlExprToken::Literal(#table_name.to_string()),
+                        toql::sql_expr::SqlExprToken::Literal(" ".to_string()),
+                        toql::sql_expr::SqlExprToken::OtherAlias
+                       ])
+                     )
+                   };
 
-                // From keys or custom predicate
-                
-                let join_predicate= &merge_attrs.on_sql; // from on predicate or 
+              
+                // Build join predicate
+                // - use custom predicate if provided
+                // - build from columns, if provided
+                // - build from key, if columns are missing
+              
+                let join_predicate=  if let Some(custom_on) = &merge_attrs.on_sql {
+                     quote!( toql::sql_expr_parser::SqlExprParser::parse( #custom_on)?)
+                } else {
+
+                    if merge_attrs.columns.is_empty() {
+                        let type_key_ident = syn::Ident::new(&format!("{}Key", &field.rust_type_name), proc_macro2::Span::call_site());
+                        quote!(  { 
+                            let mut tokens: Vec<toql::sql_expr::SqlExprToken>= Vec::new();
+                                <#type_key_ident as toql::key::Key>::columns().iter()
+                                .zip(<#type_key_ident as toql::key::Key>::default_inverse_columns()).for_each(|(t,o)| {
+                                tokens.extend(vec![toql::sql_expr::SqlExprToken::SelfAlias,
+                                toql::sql_expr::SqlExprToken::Literal(".".to_string()),
+                                toql::sql_expr::SqlExprToken::Literal(t.to_string()),
+                                toql::sql_expr::SqlExprToken::Literal(" = ".to_string()),
+                                toql::sql_expr::SqlExprToken::OtherAlias,
+                                toql::sql_expr::SqlExprToken::Literal(".".to_string()),
+                                toql::sql_expr::SqlExprToken::Literal(o.to_string())
+                                ].into_iter())});
+                                toql::sql_expr::SqlExpr::from(tokens)
+                            })
+                    } else {
+                     let mut default_join_predicate : Vec<TokenStream> = Vec::new();
+                     default_join_predicate.push(quote!(  let mut t =  toql::sql_expr::SqlExpr::new();));
+                        for m in &merge_attrs.columns {
+                            let this_column = &m.this;
+                            default_join_predicate.push( quote!( 
+                                        t.push_self_alias(); 
+                                        t.push_literal("."); 
+                                        t.push_literal(#this_column); 
+                                        t.push_literal(" = ") )); 
+                            match &m.other {
+                                crate::sane::MergeColumn::Aliased(a) => {
+                                    default_join_predicate.push( quote!( t.push_literal(#a)));
+                                }
+                                crate::sane::MergeColumn::Unaliased(u) => {
+                                    default_join_predicate.push( quote!( 
+                                        t.push_other_alias(); 
+                                        t.push_literal("."); 
+                                        t.push_literal(#u); 
+                                        t.push_literal(" AND ") ))
+                                }
+                            }
+                        }
+                        default_join_predicate.push( quote!(t.pop_literals(5); t));
+                        
+                        quote!(#(#default_join_predicate)*)
+                    }
+                    };
 
                 self.field_mappings.push(quote! {
                         mapper.map_merge(#toql_field_name, #sql_merge_mapper_name, 
-                            toql::sql_expr_parser::SqlExprParser::parse(#join_statement)?, 
-                            toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?
+                           {#join_statement}, 
+                            { #join_predicate }
                             );
                 });
                     
