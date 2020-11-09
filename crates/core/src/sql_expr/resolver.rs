@@ -132,20 +132,21 @@ impl<'a> Resolver<'a> {
 
                 let mut changed_columns: Vec<PredicateColumn> = Vec::new();
                 let mut changed = false;
+
                 for c in columns {
                     changed_columns.push(match c {
                         PredicateColumn::SelfAliased(a) => {
                             changed = true;
                             if self.self_alias.is_some() {
-                                PredicateColumn::Literal(self.self_alias.unwrap().to_owned())
+                                PredicateColumn::Literal(format!("{}.{}",self.self_alias.unwrap(), a))
                             } else {
                                 PredicateColumn::SelfAliased(a.to_owned())
                             }
                         }
                         PredicateColumn::OtherAliased(a) => {
                             changed = true;
-                            if self.self_alias.is_some() {
-                                PredicateColumn::Literal(self.other_alias.unwrap().to_owned())
+                            if self.other_alias.is_some() {
+                                PredicateColumn::Literal(format!("{}.{}",self.other_alias.unwrap(), a))
                             } else {
                                 PredicateColumn::OtherAliased(a.to_owned())
                             }

@@ -10,7 +10,9 @@ pub(crate) struct CodegenMapper<'a> {
     field_mappings: Vec<TokenStream>,
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
-    count_filter_code: TokenStream
+    count_filter_code: TokenStream,
+    key_fields: bool,
+   
     
 }
 
@@ -88,7 +90,8 @@ impl<'a> CodegenMapper<'a> {
             field_mappings,
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
-            count_filter_code
+            count_filter_code,
+            key_fields: true,
         }
     }
 
@@ -109,6 +112,17 @@ impl<'a> CodegenMapper<'a> {
                 let sql_join_mapper_name = &field.rust_type_name;
 
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
+
+                if join_attrs.key {
+                    if self.key_fields == false {
+                          return Err(darling::Error::custom(
+                                "Key must be the first fields in a struct. Move your field.".to_string(),
+                            )
+                        .with_span(&field.rust_field_ident));
+                    } 
+                } else {
+                           self.key_fields = false;
+                }
                 
 
                // self.field_mappings.push(quote!( )); // use Toql field name to build join alias (prevents underscore in name)))
@@ -280,6 +294,17 @@ impl<'a> CodegenMapper<'a> {
             }
             FieldKind::Regular(regular_attrs) => {
                 let toql_field_name = &field.toql_field_name;
+
+                if regular_attrs.key {
+                    if self.key_fields == false {
+                          return Err(darling::Error::custom(
+                                "Key must be the first fields in a struct. Move your field.".to_string(),
+                            )
+                        .with_span(&field.rust_field_ident));
+                    } 
+                } else {
+                           self.key_fields = false;
+                }
               /*   let countfilter_ident = if regular_attrs.count_filter {
                     quote!( .count_filter(true))
                 } else {
@@ -362,13 +387,14 @@ impl<'a> CodegenMapper<'a> {
                 let join_statement= if let Some(custom_join) = &merge_attrs.join_sql {
                     quote!(toql::sql_expr_parser::SqlExprParser::parse(#custom_join)?)
                 } else {
-                    let table_name = &merge_attrs.sql_join_table_name;
+                    //let table_name = &merge_attrs.sql_join_table_name;
+                    let table_name = &self.rust_struct.sql_table_name;
                    quote!(  
                         toql::sql_expr::SqlExpr::from(vec![
                         toql::sql_expr::SqlExprToken::Literal("JOIN ".to_string()),
                         toql::sql_expr::SqlExprToken::Literal(#table_name.to_string()),
                         toql::sql_expr::SqlExprToken::Literal(" ".to_string()),
-                        toql::sql_expr::SqlExprToken::OtherAlias
+                        toql::sql_expr::SqlExprToken::SelfAlias
                        ])
                      )
                    };
@@ -384,19 +410,22 @@ impl<'a> CodegenMapper<'a> {
                 } else {
 
                     if merge_attrs.columns.is_empty() {
-                        let type_key_ident = syn::Ident::new(&format!("{}Key", &field.rust_type_name), proc_macro2::Span::call_site());
+                        let self_key_ident = syn::Ident::new(&format!("{}Key", &self.rust_struct.rust_struct_name), proc_macro2::Span::call_site());
+                       // let type_key_ident = syn::Ident::new(&format!("{}Key", &field.rust_type_name), proc_macro2::Span::call_site());
                         quote!(  { 
                             let mut tokens: Vec<toql::sql_expr::SqlExprToken>= Vec::new();
-                                <#type_key_ident as toql::key::Key>::columns().iter()
-                                .zip(<#type_key_ident as toql::key::Key>::default_inverse_columns()).for_each(|(t,o)| {
+                                <#self_key_ident as toql::key::Key>::columns().iter()
+                                .zip(<#self_key_ident as toql::key::Key>::default_inverse_columns()).for_each(|(t,o)| {
                                 tokens.extend(vec![toql::sql_expr::SqlExprToken::SelfAlias,
                                 toql::sql_expr::SqlExprToken::Literal(".".to_string()),
                                 toql::sql_expr::SqlExprToken::Literal(t.to_string()),
                                 toql::sql_expr::SqlExprToken::Literal(" = ".to_string()),
                                 toql::sql_expr::SqlExprToken::OtherAlias,
                                 toql::sql_expr::SqlExprToken::Literal(".".to_string()),
-                                toql::sql_expr::SqlExprToken::Literal(o.to_string())
+                                toql::sql_expr::SqlExprToken::Literal(o.to_string()),
+                                toql::sql_expr::SqlExprToken::Literal( " AND ".to_string())
                                 ].into_iter())});
+                                tokens.pop(); // ' AND '
                                 toql::sql_expr::SqlExpr::from(tokens)
                             })
                     } else {
@@ -457,6 +486,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
 
         let field_mappings = &self.field_mappings;
         let count_filter_code = &self.count_filter_code;
+        
        
         let builder = quote!(
 
@@ -472,7 +502,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                 fn table_alias() -> String {
                     String::from(#sql_table_alias)
                 }
-                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str, canonical_sql_alias: &str) -> toql::error::Result<()>{
+                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str) -> toql::error::Result<()>{
                   /*   if toql_path.is_empty() {
                         mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
                     } */

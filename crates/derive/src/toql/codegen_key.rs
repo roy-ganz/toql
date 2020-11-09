@@ -263,12 +263,10 @@ impl<'a> CodegenKey<'a> {
                 }
 
                 let try_from_setters_index = syn::Index::from(self.try_from_setters.len());
-                // TODO setter for join
                 self.try_from_setters
-                .push(quote!( #rust_field_ident : args
-                            .get(#try_from_setters_index)
-                            .ok_or(toql::error::ToqlError::ValueMissing( #rust_field_name.to_string()))?
-                            .try_into()?));   // Better Error 
+                .push(quote!( #rust_field_ident : 
+                                        <#rust_type_ident as toql::key::Keyed>::Key::try_from(Vec::from(&args[ #try_from_setters_index..]))?
+             )); 
             }
             _ => {}
         }

@@ -10,6 +10,7 @@ use syn::Ident;
 
 pub(crate) struct CodegenInsert<'a> {
     struct_ident: &'a Ident,
+    auto_key: bool,
     sql_table_name: String,
     duplicate: bool,
 
@@ -25,6 +26,7 @@ impl<'a> CodegenInsert<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenInsert {
         CodegenInsert {
             struct_ident: &toql.rust_struct_ident,
+             auto_key: toql.auto_key.to_owned(),
             sql_table_name: toql.sql_table_name.to_owned(),
             duplicate: false,
             
@@ -55,7 +57,7 @@ impl<'a> CodegenInsert<'a> {
 
         match &field.kind {
              FieldKind::Regular(ref regular_attrs) => {
-                if regular_attrs.key {return;}
+                if regular_attrs.key  && self.auto_key == true {return;}
 
                 
                 match regular_attrs.sql_target {
@@ -121,6 +123,7 @@ impl<'a> CodegenInsert<'a> {
 
             FieldKind::Join(join_attrs) => {
 
+                if join_attrs.key  && self.auto_key == true {return;}
                 // todo join columns
 
                self.dispatch_columns_code.push(
@@ -248,7 +251,7 @@ impl<'a> CodegenInsert<'a> {
                                     quote!(
                                         
                                         &toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(&self. #rust_field_ident)?)
-                                        .for_each(|a| {values.push_arg(a); values.push_literal(", " );});
+                                       .into_iter() .for_each(|a| {values.push_arg(a); values.push_literal(", " );});
                                       
                                    )
                                 }

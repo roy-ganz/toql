@@ -66,7 +66,8 @@ impl<'a> CodegenKeyFromRow<'a> {
 
               
                 self.mysql_deserialize_key.push(quote!(
-                    #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i. iter /*#increment*/)?
+                    
+                    #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i, iter /*#increment*/)?
                 ));
             }
             _ => {}
