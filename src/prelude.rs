@@ -5,6 +5,7 @@ pub use toql_core::error::ToqlError;
 pub use toql_core::field_handler::FieldHandler;
 pub use toql_core::join_handler::JoinHandler;
 pub use toql_core::paths::Paths;
+pub use toql_core::fields::Fields;
 
 use toql::query_builder::query; // query!()
 

@@ -147,7 +147,10 @@ use crate::MySql;
         }
         Ok(())
     }
-    pub(crate) fn build_insert_sql<T, Q>( mappers: &HashMap<String, SqlMapper>, alias_format: AliasFormat, aux_params: &ParameterMap, entities: &[Q], path: &FieldPath, modifier: &str, extra: &str) -> toql_core::error::Result<Sql>
+    pub(crate) fn build_insert_sql<T, Q>( mappers: &HashMap<String, SqlMapper>, 
+        alias_format: AliasFormat, aux_params: &ParameterMap, entities: &[Q], 
+            path: &FieldPath, modifier: &str, extra: &str) 
+            -> toql_core::error::Result<Sql>
     where
         T: Mapped + TreeInsert,
         Q: BorrowMut<T>,

@@ -15,6 +15,7 @@ pub mod sql;
 pub mod sql_arg;
 pub mod to_query;
 pub mod paths;
+pub mod fields;
 
 #[macro_use]
 pub mod log_helper;

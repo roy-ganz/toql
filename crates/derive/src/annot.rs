@@ -288,7 +288,7 @@ impl quote::ToTokens for Toql {
         let rust_struct = crate::sane::Struct::create(&self);
         let mut toql_mapper = CodegenMapper::from_toql(&rust_struct);
         let mut toql_query_fields = CodegenQueryFields::from_toql(&rust_struct);
-        let mut toql_delup = CodegenUpdate::from_toql(&rust_struct);
+        let mut toql_update = CodegenUpdate::from_toql(&rust_struct);
         let mut toql_key = CodegenKey::from_toql(&rust_struct);
         let mut toql_tree = CodegenTree::from_toql(&rust_struct);
         let mut toql_key_from_row = CodegenKeyFromRow::from_toql(&rust_struct);
@@ -390,7 +390,7 @@ impl quote::ToTokens for Toql {
                 // Generate insert/delete/update functionality
                 // Select is considered part of mutation functionality (Copy)
                 if !skip_mut {
-                    toql_delup.add_delup_field(&f);
+                    toql_update.add_tree_update(&f);
                 
                     toql_insert.add_tree_insert(&f);
 
@@ -454,7 +454,7 @@ impl quote::ToTokens for Toql {
 
                 if !skip_mut {
                     tokens.extend(quote!(#toql_insert));
-                    tokens.extend(quote!(#toql_delup));
+                    tokens.extend(quote!(#toql_update));
 
                    /*  #[cfg(feature = "mysql15")]
                     tokens.extend(quote!(#mysql15_insert)); */
