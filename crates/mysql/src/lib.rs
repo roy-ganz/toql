@@ -614,7 +614,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Returns the last generated id.
     pub fn update_many<T, Q>(&mut self, fields: Fields, entities: &mut [Q]) -> Result<()>
     where
-        T: TreeUpdate + Mapped + TreeIdentity + TreePredicate,
+        T: TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert,
         Q: BorrowMut<T>,
     {
       use toql_core::sql_expr::{SqlExpr, PredicateColumn};
@@ -701,6 +701,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let table_alias= <T as Mapped> ::table_alias();
         for merge in merges {
 
+            let merge_path = FieldPath::from(&merge);
+
             let (base, path) = FieldPath::split_basename(&merge);
 
             // Build delete sql
@@ -727,17 +729,20 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             dbg!(sql.to_unsafe_string());
             execute_update_delete_sql(sql, self.conn)?;
 
-            // Update keys (TODO)
-         /*    for e in  entities.iter_mut(){
-                let mut descendents = FieldPath::from(&merge).descendents();
-                let e: &mut T = e.borrow_mut();
-                <T as TreeIdentity>::set_id(e, &mut descendents, 0)?;
-            } */
+            // Update association keys
+            for e in  entities.iter_mut(){
+                let mut descendents = merge_path.descendents();
+                <T as TreeIdentity>::set_id(e.borrow_mut(), &mut descendents, 0)?;
+            } 
 
+            // Insert 
+            let aux_params = [self.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params);
+            let sql = crate::insert::build_insert_sql( &self.registry().mappers, 
+                     self.alias_format(), &aux_params, entities, &merge_path, "","")?;
             
-
-
-
+            dbg!(sql.to_unsafe_string());
+            execute_update_delete_sql(sql, self.conn)?;
         }
 
         Ok(())
@@ -825,7 +830,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
     pub fn update_one< T>(&mut self, fields: Fields, entity: &mut T) -> Result<()>
     where
-        T: TreeUpdate +  Mapped + TreeIdentity + TreePredicate,
+        T: TreeUpdate +  Mapped + TreeIdentity + TreePredicate + TreeInsert,
        
     {
         
