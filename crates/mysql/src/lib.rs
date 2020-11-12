@@ -439,9 +439,9 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         // TODO should be possible to impl with &str
         let mut joins: Vec<HashSet<String>> = Vec::new();
-        let mut merges: Vec<String> = Vec::new();
+        let mut merges: HashSet<String> = HashSet::new();
 
-         crate::insert::build_insert_tree::<T>(&self.registry.mappers, &paths.0, &mut joins, &mut merges)?;
+         crate::insert::build_insert_tree::<T, _>(&self.registry.mappers, &paths.0, &mut joins, &mut merges)?;
 
         // Insert root
         let sql = 
@@ -452,7 +452,10 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     
                     crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &home_path, "", "")
                 }?;
-
+        if sql.is_none() {
+            return Ok(0);
+        }
+        let sql = sql.unwrap();
         log_sql!(&sql);
         dbg!(sql.to_unsafe_string());
         let Sql(insert_stmt, insert_values) = sql;
@@ -494,7 +497,10 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     let aux_params = ParameterMap::new(&aux_params);
                     crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut path, "", "")
                 }?;
-
+                if sql.is_none() {
+                    break;
+                }
+                let sql = sql.unwrap();
                 log_sql!(&sql);
                 dbg!(sql.to_unsafe_string());
                 let Sql(insert_stmt, insert_values) = sql;
@@ -519,7 +525,10 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     let aux_params = ParameterMap::new(&aux_params);
                     crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &path, "", "")
                     }?;
-
+                if sql.is_none() {
+                    break;
+                }
+                let sql = sql.unwrap();
                 log_sql!(&sql);
                 dbg!(sql.to_unsafe_string());
                 let Sql(insert_stmt, insert_values) = sql;
@@ -629,20 +638,13 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         // TODO should be possible to impl with &str
         let mut joins: Vec<HashSet<String>> = Vec::new();
-        let mut merges: Vec<String> = Vec::new();
+        let mut merges: HashSet<String> = HashSet::new();
         let mut path_fields: HashMap<String, HashSet<String>> = HashMap::new();
 
-        let paths = Vec::new();
-        for f in fields.0 {
-            let (base, path )  = FieldPath::split_basename(f);
-            let p = path.unwrap_or_default();
-            if path_fields.get(p.as_str()).is_none() {
-                path_fields.insert(p.as_str().to_string(), HashSet::new());
-            }
-            path_fields.get_mut(p.as_str()).unwrap().insert(base.to_string());
-        }
-
-         crate::insert::build_insert_tree::<T>(&self.registry.mappers, &paths, &mut joins, &mut merges)?;
+        let mut paths = Vec::new();
+       
+        crate::insert::split_basename( &fields, &mut path_fields, &mut paths);
+        crate::insert::build_insert_tree::<T, _>(&self.registry.mappers, &paths, &mut joins, &mut merges)?;
         
         let sqls = 
                 {
@@ -650,7 +652,6 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     let home_path = FieldPath::default();
                     let default_home_fields=  HashSet::new();
                     let home_fields=  path_fields.get(home_path.as_str()).unwrap_or(&default_home_fields);
-                    let canonical_table_alias = <T as Mapped>::table_alias();
                     
                     crate::update::build_update_sql::<T, _>(
                     self.alias_format(), 
@@ -675,7 +676,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 let sqls = 
                 {
                   
-                    let default_path_fields=  HashSet::new();
+                    let default_path_fields=  HashSet::new(); // No fields
                     let path_fields=  path_fields.get(path).unwrap_or(&default_path_fields);
                     let field_path =  FieldPath::from(path);
                     crate::update::build_update_sql::<T, _>(
@@ -698,20 +699,16 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         // Delete existing merges and insert new merges
        
-        let table_alias= <T as Mapped> ::table_alias();
         for merge in merges {
-
-            let merge_path = FieldPath::from(&merge);
-
-            let (base, path) = FieldPath::split_basename(&merge);
-
+          
             // Build delete sql
-            let merge_path = path.unwrap_or(FieldPath::default());
+            let (_, parent_path) = FieldPath::split_basename(&merge); // parent path for key
+            let parent_path = parent_path.unwrap_or(FieldPath::default());
             let entity = entities.get(0).unwrap().borrow();
-            let columns = <T as TreePredicate>::columns(entity,&mut merge_path.descendents())?;
+            let columns = <T as TreePredicate>::columns(entity,&mut parent_path.descendents())?;
             let mut args = Vec::new();
             for e in entities.iter(){
-                <T as TreePredicate>::args(e.borrow(), &mut merge_path.descendents(), &mut args)?;
+                <T as TreePredicate>::args(e.borrow(), &mut parent_path.descendents(), &mut args)?;
             }
             let columns = columns.into_iter().map(|c| PredicateColumn::SelfAliased(c)).collect::<Vec<_>>();
         
@@ -719,7 +716,9 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             let mut key_predicate :SqlExpr = SqlExpr::new();
             key_predicate.push_predicate(columns, args);
 
-            let mut sql_builder = SqlBuilder::new(&table_alias, self.registry());
+            let merge_path = FieldPath::from(&merge);
+            let type_name= <T as Mapped> ::type_name();
+            let mut sql_builder = SqlBuilder::new(&type_name, self.registry());
             let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate)?;
             
             let mut alias_translator = AliasTranslator::new(self.alias_format());
@@ -731,7 +730,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
             // Update association keys
             for e in  entities.iter_mut(){
-                let mut descendents = merge_path.descendents();
+                let mut descendents = parent_path.descendents();
                 <T as TreeIdentity>::set_id(e.borrow_mut(), &mut descendents, 0)?;
             } 
 
@@ -740,9 +739,10 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             let aux_params = ParameterMap::new(&aux_params);
             let sql = crate::insert::build_insert_sql( &self.registry().mappers, 
                      self.alias_format(), &aux_params, entities, &merge_path, "","")?;
-            
+            if let Some(sql) = sql {
             dbg!(sql.to_unsafe_string());
             execute_update_delete_sql(sql, self.conn)?;
+            }
         }
 
         Ok(())

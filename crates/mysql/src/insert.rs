@@ -2,7 +2,7 @@
 
 use toql_core::{tree::{tree_insert::TreeInsert, tree_identity::TreeIdentity}, query::field_path::{FieldPath, Descendents}, sql::Sql, sql_mapper::{SqlMapper, mapped::Mapped}, error::ToqlError, alias_translator::AliasTranslator, alias::AliasFormat, sql_expr::resolver::Resolver, sql_builder::sql_builder_error::SqlBuilderError};
 use std::{collections::HashMap, borrow::BorrowMut};
-use toql_core::{paths::Paths, parameter::ParameterMap};
+use toql_core::{paths::Paths, parameter::ParameterMap, fields::Fields};
 use crate::sql_arg::values_from;
 use crate::error::Result;
 use std::collections::HashSet;
@@ -150,7 +150,7 @@ use crate::MySql;
     pub(crate) fn build_insert_sql<T, Q>( mappers: &HashMap<String, SqlMapper>, 
         alias_format: AliasFormat, aux_params: &ParameterMap, entities: &[Q], 
             path: &FieldPath, modifier: &str, extra: &str) 
-            -> toql_core::error::Result<Sql>
+            -> toql_core::error::Result<Option<Sql>>
     where
         T: Mapped + TreeInsert,
         Q: BorrowMut<T>,
@@ -166,7 +166,9 @@ use crate::MySql;
              let mut d = path.descendents();
             <T as TreeInsert>::values(e.borrow(), &mut d, &mut values_expr)?;
         }
-
+        if values_expr.is_empty() {
+            return Ok(None);
+        }
         
         let mut mapper = 
             mappers
@@ -206,20 +208,37 @@ use crate::MySql;
         insert_stmt.pop(); // Remove ', '
         insert_stmt.pop();
 
-        Ok(Sql(insert_stmt, values_sql.1))
+        Ok(Some(Sql(insert_stmt, values_sql.1)))
     }
-    pub fn build_insert_tree<T>(
+    pub fn split_basename( fields: &Fields, path_basenames:  &mut HashMap<String, HashSet<String>>, paths: &mut Vec<String>) {
+        for f in fields.0 {
+            let (base, path )  = FieldPath::split_basename(f);
+            let p = path.unwrap_or_default();
+            if path_basenames.get(p.as_str()).is_none() {
+                path_basenames.insert(p.as_str().to_string(), HashSet::new());
+            }
+            path_basenames.get_mut(p.as_str()).unwrap().insert(base.to_string());
+           
+            paths.push(p.to_string());
+           
+        }
+
+    }
+
+
+
+    pub fn build_insert_tree<T, S: AsRef<str>>(
         mappers: &HashMap<String, SqlMapper>,
-        paths: &[&str],
+        paths: &[S],
         joins: &mut Vec<HashSet<String>>,
-        merges: &mut Vec<String>,
+        merges: &mut HashSet<String>,
     ) -> Result<()>
     where
         T: Mapped,
     {
         let ty = <T as Mapped>::type_name();
         for path in paths {
-            let field_path = FieldPath::from(path);
+            let field_path = FieldPath::from(path.as_ref());
             let steps = field_path.step();
             let children = field_path.children();
             let mut level = 0;
@@ -242,7 +261,7 @@ use crate::MySql;
                         .ok_or(ToqlError::MapperMissing(j.to_owned()))?;
                 } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
                     level = 0;
-                    merges.push(d.as_str().to_string());
+                    merges.insert(d.as_str().to_string());
                     mapper = mappers
                         .get(&m)
                         .ok_or(ToqlError::MapperMissing(m.to_owned()))?;

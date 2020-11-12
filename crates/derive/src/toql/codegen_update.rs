@@ -109,7 +109,7 @@ impl<'a> CodegenUpdate<'a> {
                             self.update_set_code.push(quote!(
                                 #role_assert {
                                     if  self. #rust_field_ident .is_some() 
-                                        && (fields.is_empty() || fields.contains( #toql_field_name)){
+                                        && (fields.contains("*") || fields.contains( #toql_field_name)){
                                             #column_set
                                     }
                                 }
@@ -125,7 +125,7 @@ impl<'a> CodegenUpdate<'a> {
                         if !regular_attrs.key {
                             self.update_set_code.push(quote!(
                             #role_assert {
-                                 if fields.is_empty() || fields.contains( #toql_field_name) {
+                                 if fields.contains("*") || fields.contains( #toql_field_name) {
                                     #column_set
                                  }
                             }
@@ -245,7 +245,8 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");
                                             let key = <Self as toql::key::Keyed>::try_get_key(&self)?;
-                                            expr.extend(toql::key::predicate_expr(key));
+                                            let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
+                                            expr.extend( resolver.resolve(&toql::key::predicate_expr(key))?); 
                                             exprs.push(expr);
                                         }
                                     }

@@ -269,10 +269,7 @@ impl<'a> SqlBuilder<'a> {
             .mappers
             .get(&self.home_mapper)
             .ok_or(ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
-        /* let alias_table = self
-        .alias_translator
-        .translate(&root_mapper.canonical_table_alias); */
-        // let aliased_table = format!("{} {}", root_mapper.table_name, alias_table);
+       
         let mut result = BuildResult::new(SqlExpr::literal("DELETE"));
 
         result.set_from(
@@ -285,6 +282,8 @@ impl<'a> SqlBuilder<'a> {
 
         Ok(result)
     }
+
+    //TODO move function itno separate unit
     pub fn build_merge_delete(&mut self, merge_path: &FieldPath, key_predicate: SqlExpr) -> Result<SqlExpr> {
        
         let root_mapper = self
@@ -304,12 +303,19 @@ impl<'a> SqlBuilder<'a> {
 
         let merge = base_mapper.merge(merge_field).ok_or(SqlBuilderError::FieldMissing(merge_field.to_string()))?;
 
+        let merge_mapper= self.sql_mapper_registry.mappers.get(&merge.merged_mapper)
+                    .ok_or(ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
+
         let mut delete_expr = SqlExpr::new();
 
-        delete_expr.push_literal("DELETE FROM ");
-        delete_expr.push_literal(&base_mapper.table_name);
-        delete_expr.push_self_alias();
-        delete_expr.push_literal(" JOIN ");
+        // Mysql specific
+        delete_expr.push_literal("DELETE ");
+        delete_expr.push_other_alias();
+        delete_expr.push_literal(" FROM ");
+        delete_expr.push_literal(&merge_mapper.table_name);
+        delete_expr.push_literal(" ");
+        delete_expr.push_other_alias();
+        delete_expr.push_literal(" ");
         delete_expr.extend(merge.merge_join.clone());
         delete_expr.push_literal(" ON ");
         delete_expr.extend(merge.merge_predicate.clone());
