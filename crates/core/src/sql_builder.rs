@@ -285,18 +285,45 @@ impl<'a> SqlBuilder<'a> {
 
         Ok(result)
     }
-    /*  pub fn build_delete_sql<M>(
-        &mut self,
-        query: &Query<M>,
-        modified: &str,
-        extra: &str,
-    ) -> Result<Sql> {
-        let result = self.build_delete_result(query)?;
+    pub fn build_merge_delete(&mut self, merge_path: &FieldPath, key_predicate: SqlExpr) -> Result<SqlExpr> {
+       
+        let root_mapper = self
+            .sql_mapper_registry
+            .mappers
+            .get(&self.home_mapper)
+            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
-       // result.delete_sql().map_err( ToqlError::from)
-        result.to_sql().map_err( ToqlError::from)
-    } */
+        let (merge_field, base_path) = FieldPath::split_basename(merge_path.as_str());
 
+
+        let base_mapper = self.mapper_for_path(&base_path)?;
+
+        let root_path = FieldPath::from(&root_mapper.canonical_table_alias);
+        let path = base_path.unwrap_or(root_path);
+        let (self_field, _) = FieldPath::split_basename(path.as_str());
+
+        let merge = base_mapper.merge(merge_field).ok_or(SqlBuilderError::FieldMissing(merge_field.to_string()))?;
+
+        let mut delete_expr = SqlExpr::new();
+
+        delete_expr.push_literal("DELETE FROM ");
+        delete_expr.push_literal(&base_mapper.table_name);
+        delete_expr.push_self_alias();
+        delete_expr.push_literal(" JOIN ");
+        delete_expr.extend(merge.merge_join.clone());
+        delete_expr.push_literal(" ON ");
+        delete_expr.extend(merge.merge_predicate.clone());
+        delete_expr.push_literal(" WHERE ");
+        delete_expr.extend(key_predicate);
+
+        let merge_field= format!("{}_{}",self_field, merge_field);
+        let resolver = Resolver::new()
+            .with_self_alias(self_field)
+            .with_other_alias(&merge_field);
+        
+        resolver.resolve(&delete_expr).map_err(ToqlError::from)
+    }
+  
     pub fn build_select<M>(
         &mut self,
         query_home_path: &str,
@@ -374,7 +401,7 @@ impl<'a> SqlBuilder<'a> {
        result.count_sql(alias_translator).map_err( ToqlError::from)
     } */
 
-    fn mapper_for_path(&self, query_path: &Option<FieldPath>) -> Result<&SqlMapper> {
+    pub fn mapper_for_path(&self, query_path: &Option<FieldPath>) -> Result<&SqlMapper> {
         let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.home_mapper)

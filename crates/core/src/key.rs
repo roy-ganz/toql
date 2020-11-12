@@ -157,6 +157,7 @@ pub fn predicate_expr<K: Key>(key: K) -> SqlExpr {
             expr.push_literal(" AND ".to_string());
         }
         expr.push_self_alias();
+        expr.push_literal(".");
         expr.push_literal(c);
         expr.push_literal(" = ".to_string());
         expr.push_arg(params.next().unwrap_or(SqlArg::Null()));

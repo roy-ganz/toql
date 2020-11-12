@@ -48,6 +48,7 @@ impl SqlExpr {
     pub fn new() -> Self {
         SqlExpr { tokens: Vec::new() }
     }
+    
     pub fn literal(lit: impl Into<String>) -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::Literal(lit.into())],

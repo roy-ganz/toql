@@ -12,6 +12,7 @@ pub(crate) struct CodegenUpdate<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
     table_alias :String,
+    sql_table_alias: String,
 
   
 
@@ -28,6 +29,7 @@ impl<'a> CodegenUpdate<'a> {
         CodegenUpdate {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
+            sql_table_alias : toql.sql_table_alias.to_owned(),
             table_alias : toql.sql_table_alias.to_owned(),
 
             update_set_code: Vec::new(),
@@ -43,6 +45,7 @@ impl<'a> CodegenUpdate<'a> {
         let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
          let toql_field_name= &field.toql_field_name;
+         let sql_table_alias = &self.sql_table_alias;
 
         let unwrap = match field.number_of_options {
                     1 => quote!(.as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
@@ -77,11 +80,12 @@ impl<'a> CodegenUpdate<'a> {
 
                     let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
                             quote!(
-                                    expr.push_self_alias();
+                                    expr.push_alias(#sql_table_alias);
                                             expr.push_literal(".");
                                             expr.push_literal(#sql_column);
                                             expr.push_literal(" = ");
                                             expr.push_arg(toql::sql_arg::SqlArg::from(self . #rust_field_ident.as_ref().unwrap()));
+                                            expr.push_literal(", ");
                                     )
                         } else {
                           quote!()
@@ -192,6 +196,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
         let mods = {
            
             let sql_table_name = &self.sql_table_name;
+            let sql_table_alias = &self.sql_table_alias;
 
             let upd_role_test = if self.struct_upd_roles.is_empty() {
                 quote!()
@@ -231,14 +236,18 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         let mut expr = toql::sql_expr::SqlExpr::new();
                                         expr.push_literal("UPDATE ");
                                         expr.push_literal(#sql_table_name);
-                                        expr.push_self_alias();
+                                         expr.push_literal(" ");
+                                        expr.push_alias(#sql_table_alias);
                                         expr.push_literal(" SET ");
+                                        let tokens = expr.tokens().len();
                                         #(#update_set_code)*
-
-                                        expr.push_literal(" WHERE ");
-                                        let key = <Self as toql::key::Keyed>::try_get_key(&self)?;
-                                        expr.extend(toql::key::predicate_expr(key));
-                                        exprs.push(expr);
+                                        expr.pop_literals(", ");
+                                        if expr.tokens().len() > tokens {
+                                            expr.push_literal(" WHERE ");
+                                            let key = <Self as toql::key::Keyed>::try_get_key(&self)?;
+                                            expr.extend(toql::key::predicate_expr(key));
+                                            exprs.push(expr);
+                                        }
                                     }
                                 };
                               

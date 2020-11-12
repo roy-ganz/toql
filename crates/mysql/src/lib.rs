@@ -59,7 +59,7 @@ use toql_core::{
     alias_translator::AliasTranslator,
     from_row::FromRow,
     parameter::ParameterMap,
-    sql_expr::resolver::Resolver,
+    sql_expr::{PredicateColumn, resolver::Resolver},
     sql_mapper::{mapped::Mapped, SqlMapper},
 };
 
@@ -612,11 +612,12 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn update_many<T, Q>(&mut self, fields: Fields, entities: &[Q]) -> Result<()>
+    pub fn update_many<T, Q>(&mut self, fields: Fields, entities: &mut [Q]) -> Result<()>
     where
-        T: TreeUpdate + Mapped + TreeIdentity,
-        Q: Borrow<T>,
+        T: TreeUpdate + Mapped + TreeIdentity + TreePredicate,
+        Q: BorrowMut<T>,
     {
+      use toql_core::sql_expr::{SqlExpr, PredicateColumn};
       
        
         // Build up execution tree
@@ -643,20 +644,16 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
          crate::insert::build_insert_tree::<T>(&self.registry.mappers, &paths, &mut joins, &mut merges)?;
         
-
-        // Update joins
         let sqls = 
                 {
-                    let aux_params = [self.aux_params()];
-                    let aux_params = ParameterMap::new(&aux_params);
+                  
                     let home_path = FieldPath::default();
                     let default_home_fields=  HashSet::new();
                     let home_fields=  path_fields.get(home_path.as_str()).unwrap_or(&default_home_fields);
                     let canonical_table_alias = <T as Mapped>::table_alias();
                     
-                    crate::update::build_update_sql::<T, _>(&canonical_table_alias, 
+                    crate::update::build_update_sql::<T, _>(
                     self.alias_format(), 
-                    &aux_params, 
                     entities,
                      &home_path, 
                     home_fields,
@@ -664,16 +661,89 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                      "", "")
                 }?;
 
-        for sql in sqls {
-            log_sql!(&sql);
-            dbg!(sql.to_unsafe_string());
-            let Sql(update_stmt, update_values) = sql;
+            // Update base  entities
+            for sql in sqls {
+                dbg!(sql.to_unsafe_string());
+                execute_update_delete_sql(sql, self.conn)?;
+            }
+           
+       
+  
+       for i in 0..joins.len() {
+           for paths in joins.get(i) {
+               for path in paths{
+                let sqls = 
+                {
+                  
+                    let default_path_fields=  HashSet::new();
+                    let path_fields=  path_fields.get(path).unwrap_or(&default_path_fields);
+                    let field_path =  FieldPath::from(path);
+                    crate::update::build_update_sql::<T, _>(
+                    self.alias_format(), 
+                    entities,
+                    &field_path, 
+                    path_fields,
+                    self.roles(),
+                     "", "")
+                }?;
 
-            let params = values_from(update_values);
-            // execute
+            // Update joins
+            for sql in sqls {
+                dbg!(sql.to_unsafe_string());
+                execute_update_delete_sql(sql, self.conn)?;
+            }
+           }
+           }
+       }
+
+        // Delete existing merges and insert new merges
+       
+        let table_alias= <T as Mapped> ::table_alias();
+        for merge in merges {
+
+            let (base, path) = FieldPath::split_basename(&merge);
+
+            // Build delete sql
+            let merge_path = path.unwrap_or(FieldPath::default());
+            let entity = entities.get(0).unwrap().borrow();
+            let columns = <T as TreePredicate>::columns(entity,&mut merge_path.descendents())?;
+            let mut args = Vec::new();
+            for e in entities.iter(){
+                <T as TreePredicate>::args(e.borrow(), &mut merge_path.descendents(), &mut args)?;
+            }
+            let columns = columns.into_iter().map(|c| PredicateColumn::SelfAliased(c)).collect::<Vec<_>>();
+        
+            // Construct sql
+            let mut key_predicate :SqlExpr = SqlExpr::new();
+            key_predicate.push_predicate(columns, args);
+
+            let mut sql_builder = SqlBuilder::new(&table_alias, self.registry());
+            let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate)?;
+            
+            let mut alias_translator = AliasTranslator::new(self.alias_format());
+            let resolver = Resolver::new();
+            let sql = resolver.to_sql(&delete_expr, &mut alias_translator).map_err(ToqlError::from)?;
+
+            dbg!(sql.to_unsafe_string());
+            execute_update_delete_sql(sql, self.conn)?;
+
+            // Update keys (TODO)
+         /*    for e in  entities.iter_mut(){
+                let mut descendents = FieldPath::from(&merge).descendents();
+                let e: &mut T = e.borrow_mut();
+                <T as TreeIdentity>::set_id(e, &mut descendents, 0)?;
+            } */
+
+            
+
+
+
         }
+
         Ok(())
     }
+
+  
 
     /// Delete a struct.
     ///
@@ -753,12 +823,13 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Returns the number of updated rows.
     ///
 
-    pub fn update_one<T>(&mut self, fields: Fields, entity: &T) -> Result<()>
+    pub fn update_one< T>(&mut self, fields: Fields, entity: &mut T) -> Result<()>
     where
-        T: TreeUpdate +  Mapped + TreeIdentity
+        T: TreeUpdate +  Mapped + TreeIdentity + TreePredicate,
+       
     {
         
-       self.update_many::<T,_>(fields, &[entity])
+       self.update_many::<T,_>(fields, &mut [entity])
     }
 
     /// Counts the number of rows that match the query predicate.
