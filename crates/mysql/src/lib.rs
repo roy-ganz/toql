@@ -445,7 +445,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: HashSet<String> = HashSet::new();
 
-        toql_core::backend::insert::build_insert_tree::<T, _>(
+        toql_core::backend::insert::plan_insert_exec::<T, _>(
             &self.registry.mappers,
             &paths.list,
             &mut joins,
@@ -595,88 +595,53 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         T: TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert,
         Q: BorrowMut<T>,
     {
-        use toql_core::sql_expr::{PredicateColumn, SqlExpr};
+        use toql_core::sql_expr::SqlExpr;
         use toql_core::tree::tree_identity::IdentityAction;
 
-        // Build up execution tree
-        // Path `a_b_merge1_c_d_merge2_e` becomes
-        // [0] = [a, c, e]
-        // [1] = [a_b, c_d]
-        // [m] = [merge1, merge2]
-        // Then execution order is [1], [0], [m]
-
         // TODO should be possible to impl with &str
-        let mut joins: Vec<HashSet<String>> = Vec::new();
-        let mut merges: HashSet<String> = HashSet::new();
-        let mut path_fields: HashMap<String, HashSet<String>> = HashMap::new();
+        let mut joins: HashMap<String, HashSet<String>> = HashMap::new();
+        let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
+        
 
-        let mut paths = Vec::new();
+      
 
-        toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
-        toql_core::backend::insert::build_insert_tree::<T, _>(
+      //  toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
+        toql_core::backend::update::plan_update_exec::<T, _>(
             &self.registry.mappers,
-            &paths,
+            &fields.list,
             &mut joins,
             &mut merges,
         )?;
 
-        let sqls = {
-            let home_path = FieldPath::default();
-            let default_home_fields = HashSet::new();
-            let home_fields = path_fields
-                .get(home_path.as_str())
-                .unwrap_or(&default_home_fields);
 
-            toql_core::backend::update::build_update_sql::<T, _>(
-                self.alias_format(),
-                entities,
-                &home_path,
-                home_fields,
-                self.roles(),
-                "",
-                "",
-            )
-        }?;
+        for (path, fields) in joins {
+            let sqls = {
+               
+                let field_path = FieldPath::from(&path);
+                toql_core::backend::update::build_update_sql::<T, _>(
+                    self.alias_format(),
+                    entities,
+                    &field_path,
+                    &fields,
+                    self.roles(),
+                    "",
+                    "",
+                )
+            }?;
 
-        // Update base  entities
-        for sql in sqls {
-            dbg!(sql.to_unsafe_string());
-            execute_update_delete_sql(sql, self.conn)?;
-        }
-
-        for i in 0..joins.len() {
-            for paths in joins.get(i) {
-                for path in paths {
-                    let sqls = {
-                        let default_path_fields = HashSet::new(); // No fields
-                        let path_fields = path_fields.get(path).unwrap_or(&default_path_fields);
-                        let field_path = FieldPath::from(path);
-                        toql_core::backend::update::build_update_sql::<T, _>(
-                            self.alias_format(),
-                            entities,
-                            &field_path,
-                            path_fields,
-                            self.roles(),
-                            "",
-                            "",
-                        )
-                    }?;
-
-                    // Update joins
-                    for sql in sqls {
-                        dbg!(sql.to_unsafe_string());
-                        execute_update_delete_sql(sql, self.conn)?;
-                    }
-                }
+            // Update joins
+            for sql in sqls {
+                dbg!(sql.to_unsafe_string());
+                execute_update_delete_sql(sql, self.conn)?;
             }
         }
 
         // Delete existing merges and insert new merges
 
-        for merge in merges {
+        for (path, fields) in merges {
             // Build delete sql
-            let (_, parent_path) = FieldPath::split_basename(&merge); // parent path for key
-            let parent_path = parent_path.unwrap_or(FieldPath::default());
+            
+            let parent_path = FieldPath::from(&path);
             let entity = entities.get(0).unwrap().borrow();
             let columns = <T as TreePredicate>::columns(entity, &mut parent_path.descendents())?;
             let mut args = Vec::new();
@@ -692,41 +657,47 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             let mut key_predicate: SqlExpr = SqlExpr::new();
             key_predicate.push_predicate(columns, args);
 
-            let merge_path = FieldPath::from(&merge);
-            let type_name = <T as Mapped>::type_name();
-            let mut sql_builder = SqlBuilder::new(&type_name, self.registry());
-            let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate)?;
+            for merge in fields {
+                let merge_path = FieldPath::from(&merge);
+                let type_name = <T as Mapped>::type_name();
+                let mut sql_builder = SqlBuilder::new(&type_name, self.registry());
+                let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate.to_owned())?;
 
-            let mut alias_translator = AliasTranslator::new(self.alias_format());
-            let resolver = Resolver::new();
-            let sql = resolver
-                .to_sql(&delete_expr, &mut alias_translator)
-                .map_err(ToqlError::from)?;
+                let mut alias_translator = AliasTranslator::new(self.alias_format());
+                let resolver = Resolver::new();
+                let sql = resolver
+                    .to_sql(&delete_expr, &mut alias_translator)
+                    .map_err(ToqlError::from)?;
 
-            dbg!(sql.to_unsafe_string());
-            execute_update_delete_sql(sql, self.conn)?;
-
-            // Update association keys
-            for e in entities.iter_mut() {
-                let mut descendents = parent_path.descendents();
-                <T as TreeIdentity>::set_id(e.borrow_mut(), &mut descendents, IdentityAction::Refresh)?;
-            }
-
-            // Insert
-            let aux_params = [self.aux_params()];
-            let aux_params = ParameterMap::new(&aux_params);
-            let sql = toql_core::backend::insert::build_insert_sql(
-                &self.registry().mappers,
-                self.alias_format(),
-                &aux_params,
-                entities,
-                &merge_path,
-                "",
-                "",
-            )?;
-            if let Some(sql) = sql {
                 dbg!(sql.to_unsafe_string());
                 execute_update_delete_sql(sql, self.conn)?;
+
+                // Update association keys
+                for e in entities.iter_mut() {
+                    let mut descendents = parent_path.descendents();
+                    <T as TreeIdentity>::set_id(
+                        e.borrow_mut(),
+                        &mut descendents,
+                        IdentityAction::Refresh,
+                    )?;
+                }
+
+                // Insert
+                let aux_params = [self.aux_params()];
+                let aux_params = ParameterMap::new(&aux_params);
+                let sql = toql_core::backend::insert::build_insert_sql(
+                    &self.registry().mappers,
+                    self.alias_format(),
+                    &aux_params,
+                    entities,
+                    &merge_path,
+                    "",
+                    "",
+                )?;
+                if let Some(sql) = sql {
+                    dbg!(sql.to_unsafe_string());
+                    execute_update_delete_sql(sql, self.conn)?;
+                }
             }
         }
 

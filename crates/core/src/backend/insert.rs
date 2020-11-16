@@ -110,7 +110,7 @@ use std::collections::HashSet;
 
 
 
-    pub fn build_insert_tree<T, S: AsRef<str>>(
+    pub fn plan_insert_exec<T, S: AsRef<str>>(
         mappers: &HashMap<String, SqlMapper>,
         paths: &[S],
         joins: &mut Vec<HashSet<String>>,

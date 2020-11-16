@@ -41,7 +41,7 @@ impl Wildcard {
                 );
             }
         }
-        // Remove optional trainling *
+        // Remove optional trailing *
         if path.ends_with("*") {
             path.pop();
         }
