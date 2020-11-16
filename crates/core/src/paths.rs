@@ -1,23 +1,20 @@
 use std::marker::PhantomData;
 
-pub struct Paths<'a, T>{
-    pub list: &'a [&'a str],
+pub struct Paths<T>{
+    pub list: Vec<String>,
     marker: PhantomData<T>
 }
  
-impl<'a, T> Paths<'a, T> {
+impl<T> Paths< T> {
    
-    pub const ROOT : &'a [&'static str] = &[];
-
     pub fn root() -> Self {
-        Self::from(Self::ROOT)
+        Self::from(vec![])
     }
 
-    pub fn from(fields: &'a [&'a str]) -> Self {
+    pub fn from(fields: Vec<String>) -> Self {
         Paths {
             list: fields,
             marker: PhantomData
         }
     }
-       
 } 

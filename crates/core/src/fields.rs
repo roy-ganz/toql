@@ -1,19 +1,19 @@
 use std::marker::PhantomData;
 
-pub struct Fields<'a, T>{
-    pub list: &'a [&'a str],
+pub struct Fields<T>{
+    pub list: Vec<String>,
     marker: PhantomData<T>
 }
  
-impl<'a, T> Fields<'a, T> {
+impl< T> Fields< T> {
    
-    pub const WILDCARD : &'a [&'static str] = &["*"];
+    
 
     pub fn wildcard() -> Self {
-        Self::from(Self::WILDCARD)
+        Self::from(vec!["*".to_string()])
     }
 
-    pub fn from(fields: &'a [&'a str]) -> Self {
+    pub fn from(fields: Vec<String>) -> Self {
         Fields {
             list: fields,
             marker: PhantomData

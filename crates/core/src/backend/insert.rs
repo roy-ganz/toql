@@ -93,7 +93,7 @@ use std::collections::HashSet;
 
         Ok(Some(Sql(insert_stmt, values_sql.1)))
     }
-    pub fn split_basename( fields: &[&str], path_basenames:  &mut HashMap<String, HashSet<String>>, paths: &mut Vec<String>) {
+    pub fn split_basename( fields: &[String], path_basenames:  &mut HashMap<String, HashSet<String>>, paths: &mut Vec<String>) {
         for f in fields {
             let (base, path )  = FieldPath::split_basename(f);
             let p = path.unwrap_or_default();

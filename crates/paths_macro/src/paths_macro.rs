@@ -88,7 +88,7 @@ fn evaluate_pair(
                         quote!( . #name ())
                     })
                     .collect::<Vec<_>>();
-                methods.push(  quote!(toql::insert_path::InsertPath::as_path( & #struct_type::fields() #(#method_names)*  )))
+                methods.push(  quote!(toql::insert_path::InsertPath::into_path(  #struct_type::fields() #(#method_names)*  )))
             }
             _ => {}
         }
@@ -96,7 +96,7 @@ fn evaluate_pair(
 
    
    Ok(quote!(
-        Paths::<#struct_type>::from(&[#(#methods),* ])
+        Paths::<#struct_type>::from(vec![#(#methods),* ])
     ))
     
 

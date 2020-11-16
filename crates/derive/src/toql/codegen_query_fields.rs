@@ -153,15 +153,15 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
                 } */
 
             impl toql::update_field::UpdateField for #builder_fields_struct {
-                fn as_field<'a>(&'a self) -> &'a str {
-                self.0.as_str()
+                fn into_field<'a>(self) -> String {
+                    self.0
                 }
 
             }
-            
+
             impl toql::insert_path::InsertPath for #builder_fields_struct {
-                fn as_path<'a>(&'a self) -> &'a str {
-                self.0.as_str()
+                fn into_path<'a>(self) -> String {
+                self.0
                 }
 
             }
