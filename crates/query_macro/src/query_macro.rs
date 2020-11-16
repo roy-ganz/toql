@@ -20,15 +20,15 @@ enum TokenType {
 }
 
 #[derive(Debug)]
-pub struct QueryBuilder {
+pub struct QueryMacro {
     pub ident: Ident,
     pub query: LitStr,
     pub arguments: Punctuated<Expr, Token![,]>,
 }
 
-impl Parse for QueryBuilder {
+impl Parse for QueryMacro {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(QueryBuilder {
+        Ok(QueryMacro {
             ident: { (input.parse()?, input.parse::<Token![,]>()?).0 },
             query: input.parse()?,
             arguments: {

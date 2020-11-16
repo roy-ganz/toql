@@ -151,6 +151,21 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
                         toql::query::QueryPredicate::predicate(self, "")
                     }
                 } */
+
+            impl toql::update_field::UpdateField for #builder_fields_struct {
+                fn as_field<'a>(&'a self) -> &'a str {
+                self.0.as_str()
+                }
+
+            }
+            
+            impl toql::insert_path::InsertPath for #builder_fields_struct {
+                fn as_path<'a>(&'a self) -> &'a str {
+                self.0.as_str()
+                }
+
+            }
+
             impl toql::query_fields::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;
 

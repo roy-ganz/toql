@@ -241,7 +241,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         expr.push_literal(" SET ");
                                         let tokens = expr.tokens().len();
                                         #(#update_set_code)*
-                                        expr.pop_literals(", ");
+                                        expr.pop_literals(2);
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");
                                             let key = <Self as toql::key::Keyed>::try_get_key(&self)?;

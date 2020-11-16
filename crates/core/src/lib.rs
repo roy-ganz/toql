@@ -47,5 +47,8 @@ pub mod sql_mapper_registry;
 pub mod tree;
 
 pub mod join;
+pub mod backend;
+pub mod update_field;
+pub mod insert_path;
 
 pub use log; // Reexport for generated code from Toql derive

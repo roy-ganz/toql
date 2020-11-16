@@ -29,14 +29,14 @@ use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},
 };
-use toql_core::paths::Paths;
 use toql_core::fields::Fields;
+use toql_core::paths::Paths;
 
 //pub mod diff;
 //pub mod insert;
 pub mod row;
-pub mod insert;
-pub mod update;
+//pub mod insert;
+//pub mod update;
 
 #[macro_use]
 pub mod access;
@@ -53,13 +53,14 @@ use toql_core::sql::Sql;
 use toql_core::sql_arg::SqlArg;
 use toql_core::tree::tree_predicate::TreePredicate;
 use toql_core::tree::{
-    tree_index::TreeIndex, tree_insert::TreeInsert, tree_keys::TreeKeys, tree_merge::TreeMerge, tree_identity::TreeIdentity, tree_update::TreeUpdate,
+    tree_identity::TreeIdentity, tree_index::TreeIndex, tree_insert::TreeInsert,
+    tree_keys::TreeKeys, tree_merge::TreeMerge, tree_update::TreeUpdate,
 };
 use toql_core::{
     alias_translator::AliasTranslator,
     from_row::FromRow,
     parameter::ParameterMap,
-    sql_expr::{PredicateColumn, resolver::Resolver},
+    sql_expr::{resolver::Resolver, PredicateColumn},
     sql_mapper::{mapped::Mapped, SqlMapper},
 };
 
@@ -109,7 +110,7 @@ where
     let sql = result
         .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", extra.borrow())
         .map_err(ToqlError::from)?;
-    
+
     log_sql!(&sql);
     let Sql(sql_stmt, args) = sql;
 
@@ -150,13 +151,17 @@ where
     C: GenericConnection,
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
-    use toql_core::sql_expr::SqlExpr;
     use toql_core::sql_expr::PredicateColumn;
+    use toql_core::sql_expr::SqlExpr;
 
     let ty = <T as Mapped>::type_name();
     let mut pending_paths = HashSet::new();
 
-    let mapper = mysql.registry().mappers.get(&ty).ok_or(ToqlError::MapperMissing(ty.clone()))?;
+    let mapper = mysql
+        .registry()
+        .mappers
+        .get(&ty)
+        .ok_or(ToqlError::MapperMissing(ty.clone()))?;
     let merge_base_alias = mapper.canonical_table_alias.clone();
 
     for root_path in unmerged_paths {
@@ -164,8 +169,8 @@ where
         let mut builder = SqlBuilder::new(&ty, mysql.registry()); // Add alias format or translator to constructor
         let mut result = builder.build_select(root_path.as_str(), query.borrow())?;
         pending_paths = result.unmerged_paths().clone();
-       
-        let other_alias=  result.table_alias().clone();
+
+        let other_alias = result.table_alias().clone();
 
         // Build merge join
         // Get merge join and custom on predicate from mapper
@@ -173,8 +178,8 @@ where
 
         let (merge_join, merge_on) = {
             let merge_resolver = Resolver::new()
-            .with_self_alias(&merge_base_alias)
-            .with_other_alias(&result.table_alias());
+                .with_self_alias(&merge_base_alias)
+                .with_other_alias(&result.table_alias());
             (
                 merge_resolver
                     .resolve(&on_sql_expr.0)
@@ -196,21 +201,23 @@ where
         let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
         let mut d = ancestor_path.descendents();
 
-        let columns =  TreePredicate::columns(entities.get(0).unwrap(), &mut d )
-                .map_err(ToqlError::from)?;
+        let columns =
+            TreePredicate::columns(entities.get(0).unwrap(), &mut d).map_err(ToqlError::from)?;
 
         let mut args = Vec::new();
         for e in entities.iter() {
-            TreePredicate::args(e, &mut d, &mut args)
-                .map_err(ToqlError::from)?;
+            TreePredicate::args(e, &mut d, &mut args).map_err(ToqlError::from)?;
         }
-        let predicate_columns= columns.into_iter().map(|c| PredicateColumn::SelfAliased(c)).collect::<Vec<_>>();
-        predicate_expr.push_predicate(predicate_columns , args);
+        let predicate_columns = columns
+            .into_iter()
+            .map(|c| PredicateColumn::SelfAliased(c))
+            .collect::<Vec<_>>();
+        predicate_expr.push_predicate(predicate_columns, args);
 
         let predicate_expr = {
             let merge_resolver = Resolver::new()
-            .with_self_alias(&merge_base_alias)
-            .with_other_alias(other_alias.as_str());
+                .with_self_alias(&merge_base_alias)
+                .with_other_alias(other_alias.as_str());
             merge_resolver
                 .resolve(&predicate_expr)
                 .map_err(ToqlError::from)?
@@ -236,8 +243,7 @@ where
         let query_results = mysql.conn.prep_exec(sql, args)?;
 
         // Build index
-       // let row_offset = result.column_counter();
-      
+        // let row_offset = result.column_counter();
 
         let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
 
@@ -418,18 +424,16 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         &self.aux_params
     }
 
-
     /// Insert one struct.
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn insert_many<T, Q>(&mut self, paths: Paths, mut entities: &mut [Q]) -> Result<u64>
+    pub fn insert_many<T, Q>(&mut self, paths: Paths<T>, mut entities: &mut [Q]) -> Result<u64>
     where
         T: TreeInsert + Mapped + TreeIdentity,
         Q: BorrowMut<T>,
     {
-      
-       
+        use toql_core::tree::tree_identity::IdentityAction;
         // Build up execution tree
         // Path `a_b_merge1_c_d_merge2_e` becomes
         // [0] = [a, c, e]
@@ -441,17 +445,29 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: HashSet<String> = HashSet::new();
 
-         crate::insert::build_insert_tree::<T, _>(&self.registry.mappers, &paths.0, &mut joins, &mut merges)?;
+        toql_core::backend::insert::build_insert_tree::<T, _>(
+            &self.registry.mappers,
+            &paths.list,
+            &mut joins,
+            &mut merges,
+        )?;
 
         // Insert root
-        let sql = 
-                {
-                    let aux_params = [self.aux_params()];
-                    let aux_params = ParameterMap::new(&aux_params);
-                    let home_path = FieldPath::default();
-                    
-                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &home_path, "", "")
-                }?;
+        let sql = {
+            let aux_params = [self.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params);
+            let home_path = FieldPath::default();
+
+            toql_core::backend::insert::build_insert_sql::<T, _>(
+                &self.registry().mappers,
+                self.alias_format(),
+                &aux_params,
+                entities,
+                &home_path,
+                "",
+                "",
+            )
+        }?;
         if sql.is_none() {
             return Ok(0);
         }
@@ -470,32 +486,40 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             }
 
             if <T as toql_core::tree::tree_identity::TreeIdentity>::auto_id() {
-                let mut id: u64 =  res.last_insert_id(); // first id
+                let mut id: u64 = res.last_insert_id(); // first id
                 let home_path = FieldPath::default();
-                let mut descendents= home_path.descendents();
-                for  e in entities.iter_mut() {
+                let mut descendents = home_path.descendents();
+                for e in entities.iter_mut() {
                     {
-                    let e_mut = e.borrow_mut();
-                    <T as toql_core::tree::tree_identity::TreeIdentity>::set_id( e_mut, &mut descendents,  id)?;
+                        let e_mut = e.borrow_mut();
+                        <T as toql_core::tree::tree_identity::TreeIdentity>::set_id(
+                            e_mut,
+                            &mut descendents,
+                            IdentityAction::Set(vec![SqlArg::U64(id)]),
+                        )?;
                     }
                     id += 1;
                 }
             }
         }
 
-     
-
         // Insert joins and merges
         for l in (0..joins.len()).rev() {
             for p in joins.get(l).unwrap() {
-              
-                 let mut path = FieldPath::from(&p);
-                
-                let sql = 
-                {
+                let mut path = FieldPath::from(&p);
+
+                let sql = {
                     let aux_params = [self.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
-                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &mut path, "", "")
+                    toql_core::backend::insert::build_insert_sql::<T, _>(
+                        &self.registry().mappers,
+                        self.alias_format(),
+                        &aux_params,
+                        entities,
+                        &mut path,
+                        "",
+                        "",
+                    )
                 }?;
                 if sql.is_none() {
                     break;
@@ -504,7 +528,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 log_sql!(&sql);
                 dbg!(sql.to_unsafe_string());
                 let Sql(insert_stmt, insert_values) = sql;
-                                
+
                 // Execute
                 let params = values_from(insert_values);
                 let mut stmt = self.conn().prepare(&insert_stmt)?;
@@ -512,123 +536,68 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
                 // set keys
                 let path = FieldPath::from(&p);
-               let mut descendents = path.descendents();
-               crate::insert::set_tree_identity( res.last_insert_id(), &mut entities, &mut descendents)?;
+                let mut descendents = path.descendents();
+                toql_core::backend::insert::set_tree_identity(
+                    res.last_insert_id(),
+                    &mut entities,
+                    &mut descendents,
+                )?;
             }
         }
-          for p in merges {
-              
-                let path = FieldPath::from(&p);
-              
-                let sql = {
-                    let aux_params = [self.aux_params()];
-                    let aux_params = ParameterMap::new(&aux_params);
-                    crate::insert::build_insert_sql::<T, _>(&self.registry().mappers, self.alias_format(), &aux_params, entities, &path, "", "")
-                    }?;
-                if sql.is_none() {
-                    break;
-                }
-                let sql = sql.unwrap();
-                log_sql!(&sql);
-                dbg!(sql.to_unsafe_string());
-                let Sql(insert_stmt, insert_values) = sql;
-                
-                // Execute
-                let params = values_from(insert_values);
-                let mut stmt = self.conn().prepare(&insert_stmt)?;
-                stmt.execute(params)?;
-                
-                // Merges must not contain auto value as identity, skip set_tree_identity
-        }
+        for p in merges {
+            let path = FieldPath::from(&p);
 
-        
+            let sql = {
+                let aux_params = [self.aux_params()];
+                let aux_params = ParameterMap::new(&aux_params);
+                toql_core::backend::insert::build_insert_sql::<T, _>(
+                    &self.registry().mappers,
+                    self.alias_format(),
+                    &aux_params,
+                    entities,
+                    &path,
+                    "",
+                    "",
+                )
+            }?;
+            if sql.is_none() {
+                break;
+            }
+            let sql = sql.unwrap();
+            log_sql!(&sql);
+            dbg!(sql.to_unsafe_string());
+            let Sql(insert_stmt, insert_values) = sql;
+
+            // Execute
+            let params = values_from(insert_values);
+            let mut stmt = self.conn().prepare(&insert_stmt)?;
+            stmt.execute(params)?;
+
+            // Merges must not contain auto value as identity, skip set_tree_identity
+        }
 
         Ok(0)
     }
 
-    /// Insert a collection of structs.
-    ///
-    /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
-    /// Returns the last generated id
-    /* pub fn insert_many<T, Q>(&mut self, entities: &[Q]) -> Result<u64>
-    where
-        T: InsertSql,
-        Q: Borrow<T>,
-    {
-        let sql = <T as InsertSql>::insert_many_sql(&entities, &self.roles, "", "")?;
-
-        Ok(if let Some(sql) = sql {
-            execute_insert_sql(sql, self.conn)?
-        } else {
-            0
-        })
-    } */
-
-    pub fn insert_one<T>(&mut self, paths: Paths, entity: &mut T) -> Result<u64>
+    pub fn insert_one<T>(&mut self, paths: Paths<T>, entity: &mut T) -> Result<u64>
     where
         T: TreeInsert + Mapped + TreeIdentity,
     {
         self.insert_many::<T, _>(paths, &mut [entity])
     }
-/* 
+
     /// Insert one struct.
     ///
     /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
     /// Returns the last generated id.
-    pub fn insert_dup_one<T>(&mut self, entity: &T, strategy: DuplicateStrategy) -> Result<u64>
-    where
-        T: InsertSql + InsertDuplicate,
-    {
-        let (modifier, extra) = match strategy {
-            DuplicateStrategy::Skip => ("INGNORE", ""),
-            DuplicateStrategy::Update => ("", "ON DUPLICATE UPDATE"),
-            DuplicateStrategy::Fail => ("", ""),
-        };
-
-        let sql = <T as InsertSql>::insert_one_sql(entity, &self.roles, modifier, extra)?;
-
-        execute_insert_sql(sql, self.conn)
-    }
-
-    /// Insert a collection of structs.
-    ///
-    /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
-    /// Returns the last generated id
-    pub fn insert_dup_many<T, Q>(
-        &mut self,
-        entities: &[Q],
-        strategy: DuplicateStrategy,
-    ) -> Result<u64>
-    where
-        T: InsertSql + InsertDuplicate,
-        Q: Borrow<T>,
-    {
-        let (modifier, extra) = match strategy {
-            DuplicateStrategy::Skip => ("INGNORE", ""),
-            DuplicateStrategy::Update => ("", "ON DUPLICATE UPDATE"),
-            DuplicateStrategy::Fail => ("", ""),
-        };
-        let sql = <T as InsertSql>::insert_many_sql(&entities, &self.roles, modifier, extra)?;
-
-        Ok(if let Some(sql) = sql {
-            execute_insert_sql(sql, self.conn)?
-        } else {
-            0
-        })
-    } */
-
-     /// Insert one struct.
-    ///
-    /// Skip fields in struct that are auto generated with `#[toql(skip_inup)]`.
-    /// Returns the last generated id.
-    pub fn update_many<T, Q>(&mut self, fields: Fields, entities: &mut [Q]) -> Result<()>
+    pub fn update_many<T, Q>(&mut self, fields: Fields<T>, entities: &mut [Q]) -> Result<()>
     where
         T: TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert,
         Q: BorrowMut<T>,
     {
-      use toql_core::sql_expr::{SqlExpr, PredicateColumn};
-      
-       
+        use toql_core::sql_expr::{PredicateColumn, SqlExpr};
+        use toql_core::tree::tree_identity::IdentityAction;
+
         // Build up execution tree
         // Path `a_b_merge1_c_d_merge2_e` becomes
         // [0] = [a, c, e]
@@ -642,113 +611,127 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut path_fields: HashMap<String, HashSet<String>> = HashMap::new();
 
         let mut paths = Vec::new();
-       
-        crate::insert::split_basename( &fields, &mut path_fields, &mut paths);
-        crate::insert::build_insert_tree::<T, _>(&self.registry.mappers, &paths, &mut joins, &mut merges)?;
-        
-        let sqls = 
-                {
-                  
-                    let home_path = FieldPath::default();
-                    let default_home_fields=  HashSet::new();
-                    let home_fields=  path_fields.get(home_path.as_str()).unwrap_or(&default_home_fields);
-                    
-                    crate::update::build_update_sql::<T, _>(
-                    self.alias_format(), 
-                    entities,
-                     &home_path, 
-                    home_fields,
-                    self.roles(),
-                     "", "")
-                }?;
 
-            // Update base  entities
-            for sql in sqls {
-                dbg!(sql.to_unsafe_string());
-                execute_update_delete_sql(sql, self.conn)?;
-            }
-           
-       
-  
-       for i in 0..joins.len() {
-           for paths in joins.get(i) {
-               for path in paths{
-                let sqls = 
-                {
-                  
-                    let default_path_fields=  HashSet::new(); // No fields
-                    let path_fields=  path_fields.get(path).unwrap_or(&default_path_fields);
-                    let field_path =  FieldPath::from(path);
-                    crate::update::build_update_sql::<T, _>(
-                    self.alias_format(), 
-                    entities,
-                    &field_path, 
-                    path_fields,
-                    self.roles(),
-                     "", "")
-                }?;
+        toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
+        toql_core::backend::insert::build_insert_tree::<T, _>(
+            &self.registry.mappers,
+            &paths,
+            &mut joins,
+            &mut merges,
+        )?;
 
-            // Update joins
-            for sql in sqls {
-                dbg!(sql.to_unsafe_string());
-                execute_update_delete_sql(sql, self.conn)?;
+        let sqls = {
+            let home_path = FieldPath::default();
+            let default_home_fields = HashSet::new();
+            let home_fields = path_fields
+                .get(home_path.as_str())
+                .unwrap_or(&default_home_fields);
+
+            toql_core::backend::update::build_update_sql::<T, _>(
+                self.alias_format(),
+                entities,
+                &home_path,
+                home_fields,
+                self.roles(),
+                "",
+                "",
+            )
+        }?;
+
+        // Update base  entities
+        for sql in sqls {
+            dbg!(sql.to_unsafe_string());
+            execute_update_delete_sql(sql, self.conn)?;
+        }
+
+        for i in 0..joins.len() {
+            for paths in joins.get(i) {
+                for path in paths {
+                    let sqls = {
+                        let default_path_fields = HashSet::new(); // No fields
+                        let path_fields = path_fields.get(path).unwrap_or(&default_path_fields);
+                        let field_path = FieldPath::from(path);
+                        toql_core::backend::update::build_update_sql::<T, _>(
+                            self.alias_format(),
+                            entities,
+                            &field_path,
+                            path_fields,
+                            self.roles(),
+                            "",
+                            "",
+                        )
+                    }?;
+
+                    // Update joins
+                    for sql in sqls {
+                        dbg!(sql.to_unsafe_string());
+                        execute_update_delete_sql(sql, self.conn)?;
+                    }
+                }
             }
-           }
-           }
-       }
+        }
 
         // Delete existing merges and insert new merges
-       
+
         for merge in merges {
-          
             // Build delete sql
             let (_, parent_path) = FieldPath::split_basename(&merge); // parent path for key
             let parent_path = parent_path.unwrap_or(FieldPath::default());
             let entity = entities.get(0).unwrap().borrow();
-            let columns = <T as TreePredicate>::columns(entity,&mut parent_path.descendents())?;
+            let columns = <T as TreePredicate>::columns(entity, &mut parent_path.descendents())?;
             let mut args = Vec::new();
-            for e in entities.iter(){
+            for e in entities.iter() {
                 <T as TreePredicate>::args(e.borrow(), &mut parent_path.descendents(), &mut args)?;
             }
-            let columns = columns.into_iter().map(|c| PredicateColumn::SelfAliased(c)).collect::<Vec<_>>();
-        
+            let columns = columns
+                .into_iter()
+                .map(|c| PredicateColumn::SelfAliased(c))
+                .collect::<Vec<_>>();
+
             // Construct sql
-            let mut key_predicate :SqlExpr = SqlExpr::new();
+            let mut key_predicate: SqlExpr = SqlExpr::new();
             key_predicate.push_predicate(columns, args);
 
             let merge_path = FieldPath::from(&merge);
-            let type_name= <T as Mapped> ::type_name();
+            let type_name = <T as Mapped>::type_name();
             let mut sql_builder = SqlBuilder::new(&type_name, self.registry());
             let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate)?;
-            
+
             let mut alias_translator = AliasTranslator::new(self.alias_format());
             let resolver = Resolver::new();
-            let sql = resolver.to_sql(&delete_expr, &mut alias_translator).map_err(ToqlError::from)?;
+            let sql = resolver
+                .to_sql(&delete_expr, &mut alias_translator)
+                .map_err(ToqlError::from)?;
 
             dbg!(sql.to_unsafe_string());
             execute_update_delete_sql(sql, self.conn)?;
 
             // Update association keys
-            for e in  entities.iter_mut(){
+            for e in entities.iter_mut() {
                 let mut descendents = parent_path.descendents();
-                <T as TreeIdentity>::set_id(e.borrow_mut(), &mut descendents, 0)?;
-            } 
+                <T as TreeIdentity>::set_id(e.borrow_mut(), &mut descendents, IdentityAction::Refresh)?;
+            }
 
-            // Insert 
+            // Insert
             let aux_params = [self.aux_params()];
             let aux_params = ParameterMap::new(&aux_params);
-            let sql = crate::insert::build_insert_sql( &self.registry().mappers, 
-                     self.alias_format(), &aux_params, entities, &merge_path, "","")?;
+            let sql = toql_core::backend::insert::build_insert_sql(
+                &self.registry().mappers,
+                self.alias_format(),
+                &aux_params,
+                entities,
+                &merge_path,
+                "",
+                "",
+            )?;
             if let Some(sql) = sql {
-            dbg!(sql.to_unsafe_string());
-            execute_update_delete_sql(sql, self.conn)?;
+                dbg!(sql.to_unsafe_string());
+                execute_update_delete_sql(sql, self.conn)?;
             }
         }
 
         Ok(())
     }
-
-  
 
     /// Delete a struct.
     ///
@@ -801,7 +784,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             execute_update_delete_sql(sql, self.conn)
         }
     }
-/* 
+    /*
     /// Update a collection of structs.
     ///
     /// Optional fields with value `None` are not updated. See guide for details.
@@ -828,13 +811,11 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Returns the number of updated rows.
     ///
 
-    pub fn update_one< T>(&mut self, fields: Fields, entity: &mut T) -> Result<()>
+    pub fn update_one<T>(&mut self, fields: Fields<T>, entity: &mut T) -> Result<()>
     where
-        T: TreeUpdate +  Mapped + TreeIdentity + TreePredicate + TreeInsert,
-       
+        T: TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert,
     {
-        
-       self.update_many::<T,_>(fields, &mut [entity])
+        self.update_many::<T, _>(fields, &mut [entity])
     }
 
     /// Counts the number of rows that match the query predicate.

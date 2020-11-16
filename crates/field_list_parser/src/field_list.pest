@@ -1,0 +1,15 @@
+
+
+name =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
+field_path = @{ name ~ ("_" ~ name)* }
+
+wildcard_path= @{field_path ~ "_"}
+wildcard = @{ (field_path ~ "_")? ~ "*" }
+
+separator = { "," }
+
+expr = { (wildcard | field_path ) ~ (separator ~ (wildcard | field_path))*}
+query = { SOI ~ expr? ~ EOI }
+
+WHITESPACE = _{ " " }
+

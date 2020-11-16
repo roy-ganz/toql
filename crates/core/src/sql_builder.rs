@@ -308,6 +308,7 @@ impl<'a> SqlBuilder<'a> {
 
         let mut delete_expr = SqlExpr::new();
 
+        // TODO move into backend
         // Mysql specific
         delete_expr.push_literal("DELETE ");
         delete_expr.push_other_alias();
@@ -316,7 +317,7 @@ impl<'a> SqlBuilder<'a> {
         delete_expr.push_literal(" ");
         delete_expr.push_other_alias();
         delete_expr.push_literal(" ");
-        delete_expr.extend(merge.merge_join.clone());
+        delete_expr.extend(merge.merge_join.clone()); // Maybe conctruct custom join for postgres
         delete_expr.push_literal(" ON ");
         delete_expr.extend(merge.merge_predicate.clone());
         delete_expr.push_literal(" WHERE ");

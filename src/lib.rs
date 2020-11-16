@@ -77,9 +77,14 @@ pub use toql_core::sql_mapper;
 pub use toql_core::sql_mapper_registry;
 pub use toql_core::to_query;
 pub use toql_core::tree;
+pub use toql_core::backend;
+pub use toql_core::update_field;
+pub use toql_core::insert_path;
 
 pub use toql_derive as derive;
-pub use toql_query_builder as query_builder;
+pub use toql_query_macro as query_macro;
+pub use toql_fields_macro as fields_macro;
+pub use toql_paths_macro as paths_macro;
 
 pub use toql_core::log; // Reexport for derive
 
