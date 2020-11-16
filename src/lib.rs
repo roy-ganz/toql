@@ -80,6 +80,7 @@ pub use toql_core::tree;
 pub use toql_core::backend;
 pub use toql_core::update_field;
 pub use toql_core::insert_path;
+pub use toql_core::join;
 
 pub use toql_derive as derive;
 pub use toql_query_macro as query_macro;
