@@ -6,7 +6,6 @@ pub(crate) struct CodegenKeyFromRow<'a> {
     rust_struct: &'a crate::sane::Struct,
 
     forward_key_columns: usize,
-    forward_key_joins: Vec<TokenStream>,
     mysql_deserialize_key: Vec<TokenStream>,
     mysql_forward_join_key: Vec<TokenStream>,
 }
@@ -16,7 +15,6 @@ impl<'a> CodegenKeyFromRow<'a> {
         CodegenKeyFromRow {
             rust_struct: &toql,
             forward_key_columns: 0,
-            forward_key_joins: Vec::new(),
             mysql_deserialize_key: Vec::new(),
             mysql_forward_join_key: Vec::new(),
         }

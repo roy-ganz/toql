@@ -1,9 +1,9 @@
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{Error, Expr, Ident, Lit, LitStr, Result, Token};
+use syn::{ Expr, Ident,  LitStr, Result, Token};
 
 use heck::SnakeCase;
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{ TokenStream};
 use toql_query_parser::PestQueryParser;
 
 use pest::Parser;

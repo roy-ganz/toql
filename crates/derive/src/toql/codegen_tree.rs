@@ -5,12 +5,11 @@
 
 use crate::sane::{FieldKind, MergeColumn, Struct};
 use proc_macro2::{Span, TokenStream};
-use std::collections::HashSet;
 use syn::Ident;
 
 pub(crate) struct CodegenTree<'a> {
     rust_struct: &'a Struct,
-    sql_table_name: String,
+    
 
     dispatch_predicate_args_code: Vec<TokenStream>,
     dispatch_predicate_columns_code: Vec<TokenStream>,
@@ -36,8 +35,7 @@ impl<'a> CodegenTree<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenTree {
         CodegenTree {
             rust_struct: &toql,
-            sql_table_name: toql.sql_table_name.to_owned(),
-
+           
             dispatch_predicate_args_code: Vec::new(),
             dispatch_predicate_columns_code: Vec::new(),
 
@@ -403,7 +401,7 @@ impl<'a> CodegenTree<'a> {
                         }
                 }
             }
-            _ => {}
+         
         };
     }
 }
@@ -413,16 +411,9 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
         let dispatch_predicate_args_code = &self.dispatch_predicate_args_code;
         let dispatch_predicate_columns_code = &self.dispatch_predicate_columns_code;
-        let dispatch_merge_key_code = &self.dispatch_merge_key_code;
-
-        let merge_columns_code = &self.merge_columns_code;
-        let merge_predicate_code = &self.merge_predicate_code;
-
-        let index_type_bounds = &self.index_type_bounds;
+      
         let dispatch_index_code = &self.dispatch_index_code;
-        let index_code = &self.index_code;
-
-        let merge_type_bounds = &self.merge_type_bounds;
+      
         let dispatch_merge_code = &self.dispatch_merge_code;
         let merge_code = &self.merge_code;
 
@@ -442,7 +433,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             Span::call_site(),
         );
 
-        let struct_name = &self.rust_struct.rust_struct_name;
+       
 
         let identity_set_self_key_code = 
             quote!(

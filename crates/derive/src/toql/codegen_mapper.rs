@@ -3,7 +3,7 @@ use quote::quote;
 use crate::sane::{FieldKind, SqlTarget, Struct};
 
 use proc_macro2::TokenStream;
-use darling::{Error, Result};
+use darling::{ Result};
 
 pub(crate) struct CodegenMapper<'a> {
     rust_struct: &'a Struct,

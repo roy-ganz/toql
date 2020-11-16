@@ -1,6 +1,6 @@
 use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
-use syn::{Error, Expr, Ident, Lit, LitStr, Result, Token};
+
+use syn::{ Ident,  LitStr, Result, Token};
 
 use heck::SnakeCase;
 use proc_macro2::{Span, TokenStream};
@@ -10,14 +10,6 @@ use pest::Parser;
 
 use toql_field_list_parser::Rule;
 
-#[derive(Debug)]
-enum TokenType {
-    Field,
-    Wildcard,
-    Predicate,
-    Query,
-    Unknown,
-}
 
 #[derive(Debug)]
 pub struct FieldsMacro {

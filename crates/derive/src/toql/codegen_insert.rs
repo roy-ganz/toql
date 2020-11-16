@@ -3,15 +3,15 @@
 *
 */
 
-use crate::sane::{FieldKind, SqlTarget, MergeColumn};
-use proc_macro2::{Span, TokenStream};
-use std::collections::HashSet;
+use crate::sane::{FieldKind, SqlTarget};
+use proc_macro2::{ TokenStream};
+
 use syn::Ident;
 
 pub(crate) struct CodegenInsert<'a> {
     struct_ident: &'a Ident,
     auto_key: bool,
-    sql_table_name: String,
+  
     duplicate: bool,
 
     dispatch_columns_code: Vec<TokenStream>,
@@ -27,7 +27,7 @@ impl<'a> CodegenInsert<'a> {
         CodegenInsert {
             struct_ident: &toql.rust_struct_ident,
              auto_key: toql.auto_key.to_owned(),
-            sql_table_name: toql.sql_table_name.to_owned(),
+         
             duplicate: false,
             
             dispatch_columns_code: Vec::new(),
@@ -45,7 +45,6 @@ impl<'a> CodegenInsert<'a> {
         }
         
         let rust_field_ident = &field.rust_field_ident;
-        let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
         let toql_field_name= &field.toql_field_name;
         
@@ -263,7 +262,7 @@ impl<'a> CodegenInsert<'a> {
             
                
             }
-            FieldKind::Merge(merge) => {
+            FieldKind::Merge(_merge) => {
                 
                 // TODO throw error if we dispatch dispatch beyond first merge
                 self.dispatch_columns_code.push(
@@ -299,9 +298,7 @@ impl<'a> CodegenInsert<'a> {
                    
                );
             }
-            _ => {
-                
-            }
+           
         };
 
 

@@ -20,47 +20,26 @@ pub(crate) struct CodegenEntityFromRow<'a> {
     path_loaders: Vec<TokenStream>,
     ignored_paths: Vec<TokenStream>,
 
-    forward_joins: Vec<TokenStream>,
+    
     regular_fields: usize, // Impl for mysql::row::ColumnIndex,
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
     merge_field_getter: HashMap<String, TokenStream>,
-    wildcard_scope_code : TokenStream
+    
 }
 
 impl<'a> CodegenEntityFromRow<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenEntityFromRow {
-
-
-        let wildcard_scope_code = if let Some(wildcard) = &toql.wildcard {
-
-                let inserts = wildcard.iter()
-                    .map(|w| quote!(
-                            scopes.insert(#w .to_string());
-                            )
-                        )
-                    .collect::<Vec<_>>();
-
-              quote!(
-                  let mut scopes : std::collections::HashSet<String> = std::collections::HashSet::new();
-                   #(#inserts)*                
-                  let wildcard_scope = toql::sql_builder::wildcard_scope::WildcardScope::Only(scopes);
-              )
-        } else {
-            quote!( let wildcard_scope = toql::sql_builder::wildcard_scope::WildcardScope::All; )
-        };
 
         CodegenEntityFromRow {
             rust_struct: &toql,
             mysql_deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
             ignored_paths: Vec::new(),
-            forward_joins: Vec::new(),
             regular_fields: 0,
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
             merge_field_getter: HashMap::new(),
-            wildcard_scope_code
         }
     }
 
@@ -246,209 +225,7 @@ impl<'a> CodegenEntityFromRow<'a> {
         self.merge_fields.push(field.clone());
     }
 
-    pub(crate) fn loader_functions(&self) -> proc_macro2::TokenStream {
-      
-
-        let struct_ident = &self.rust_struct.rust_struct_ident;
-        let struct_name = &self.rust_struct.rust_struct_name;
-        let path_loaders = &self.path_loaders;
-        let ignored_paths = &self.ignored_paths;
-        let struct_key_ident = Ident::new(&format!("{}Key", struct_ident), Span::call_site());
-        let load_dependencies_from_mysql = if path_loaders.is_empty() {
-            quote!(
-            )
-        } else {
-            quote!(
-                fn load_dependencies(&mut self, mut entities: &mut Vec< #struct_ident>,mut entity_keys: & Vec< #struct_key_ident >,
-                query: &toql::query::Query<#struct_ident>, 
-                wildcard_scope: &toql::sql_builder::wildcard_scope::WildcardScope,
-             )
-                -> Result<(), toql::mysql::error::ToqlMySqlError>
-                {
-                  
-                    if entities.is_empty() {
-                        return Ok(());
-                    }
-                    #(#path_loaders)*
-                    Ok(())
-                }
-            )
-        };
-
-        let optional_add_primary_keys = if self.merge_fields.is_empty() {
-            quote!( Vec::new())
-        } else {
-            quote!(
-                 <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|c|{
-                    mapper.aliased_column(&<#struct_ident as toql::sql_mapper::mapped::Mapped>::table_alias(),&c)
-                    }).collect::<Vec<_>>()
-                 
-            )
-        };
-
-        let from_query_result = if self.merge_fields.is_empty() {
-            quote!(
-                let mut entities = toql::mysql::row::from_query_result::< #struct_ident, _ >(entities_stmt, selection_stream)?;
-            )
-        } else {
-            quote!(
-            let (mut entities, keys) = toql::mysql::row::from_query_result_with_primary_keys::<#struct_ident,_, #struct_key_ident>(entities_stmt, selection_stream)?;
-            )
-        };
-
-        let optional_load_merges = if self.merge_fields.is_empty() {
-            quote!()
-        } else {
-            quote!(
-            self.load_dependencies(&mut entities, &keys, &query, &wildcard_scope)?;
-            )
-        };
-        
-
-        let wildcard_scope_code = &self.wildcard_scope_code;
-        quote!(
-
-            impl<'a, T: toql::mysql::mysql::prelude::GenericConnection + 'a> toql::load::Load<#struct_ident> for toql::mysql::MySql<'a,T>
-            {
-                type Error = toql :: mysql::error::ToqlMySqlError;
-
-                fn load_one(&mut self, query: &toql::query::Query<#struct_ident>)
-                    -> Result<# struct_ident, toql :: mysql::error:: ToqlMySqlError>
-
-                {
-                 
-                   // let mapper = self.registry().mappers.get( #struct_name).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-
-              //      #wildcard_scope_code
-
-                  let columns :Vec<String> = #optional_add_primary_keys;
-
-                    let result = toql::sql_builder::SqlBuilder::new( #struct_name, self.registry())
-          //               #(#ignored_paths)*
-                        .build_select_result("", &query, self.alias_format())?;
-                    
-                    let sql = result.select_sql_with_additional_columns("", "LIMIT 0, 2",&columns);
-                    let selection_stream = result.selection_stream();
-
-                     toql::log_sql!(&sql);
-
-                    let args = toql::mysql::sql_arg::values_from_ref(&sql.1);
-                    let entities_stmt = self.conn().prep_exec(sql.0, args)?;
-
-                    #from_query_result
-
-                    if entities.len() > 1 {
-                        return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotUnique));
-                    } else if entities.is_empty() {
-                        return Err(toql::mysql::error::ToqlMySqlError::ToqlError(toql::error::ToqlError::NotFound));
-                    }
-
-                    #optional_load_merges
-                    Ok(entities.pop().unwrap())
-                }
-
-
-                fn load_many( &mut self, query: &toql::query::Query<#struct_ident>,
-
-                
-                page: Option<toql::load::Page>)
-                -> Result<(std::vec::Vec< #struct_ident >, Option<(u32, u32)>), toql :: mysql::error:: ToqlMySqlError>
-                {
-                   
-
-                    let mut count = false;
-                 
-                    let sql_page : String= match page {
-                        None => String::from(""),
-                        Some(toql::load::Page::Counted(f, m)) =>  {count = true; format!("LIMIT {}, {}", f, m)},
-                        Some(toql::load::Page::Uncounted(f, m)) =>  {count = false;format!("LIMIT {}, {}", f, m)},
-                    };
-
-                    #wildcard_scope_code
-
-                 /*    let mapper = self.registry().mappers.get( #struct_name)
-                            .ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?; */
-                    // load base entities
-
-                    let hint = String::from( if count {"SQL_CALC_FOUND_ROWS" }else{""});
-
-                 
-                    let columns :Vec<String>= #optional_add_primary_keys;
-
-                    let result = toql::sql_builder::SqlBuilder::new(#struct_name, self.registry())
-                    .with_roles( self.roles().clone())
-                      //   #(#ignored_paths)*
-                      //  .scope_wildcard(&wildcard_scope)
-                        .build_select_result("", &query, self.alias_format())?;
-          
-                        let sql = result.select_sql_with_additional_columns( &hint, &sql_page, &columns);
-                        let selection_stream = result.selection_stream();
-       
-                    toql::log_sql!(&sql);
-
-
-                   // toql::log_sql!(toql::mysql::sql_from_query_result( &result, &hint, sql_page.to_owned()), result.query_params());
-                    let args = toql::mysql::sql_arg::values_from_ref(&sql.1);
-                    let entities_stmt = self.conn().prep_exec(sql.0, args)?;
-                    #from_query_result
-                    
-                    let mut count_result = None;
-
-                    // Get count values
-                    if count {
-                                let total_count = {
-                                     toql::log_sql!("SELECT FOUND_ROWS();", Vec::<String>::new());
-                                    let r = self.conn().query("SELECT FOUND_ROWS();")?;
-                                    r.into_iter().next().unwrap().unwrap().get(0).unwrap()
-                                };
-                                let filtered_count = {
-                            /*   let mapper = self.registry() // Get new mapper because slef is mut borrowed by self.conn()
-                                        .mappers
-                                        .get( #struct_name)
-                                        .ok_or(toql::error::ToqlError::MapperMissing(String::from("User")))?; */
-
-
-                                    let sql = toql::sql_builder::SqlBuilder::new( #struct_name, self.registry())
-                                    .with_roles(self.roles().clone())
-                                    //#(#ignored_paths)*
-                                    .build_count_sql("", &query, "", "", self.alias_format())?;
-                            
-                                    toql::log_sql!( sql);
-                                    
-                                    let args = toql::mysql::sql_arg::values_from_ref(&sql.1);
-                                    let r = self.conn().prep_exec( sql.0, args)?;
-                                    r.into_iter().next().unwrap().unwrap().get(0).unwrap()
-                                };
-                                count_result = Some((total_count ,filtered_count))
-                    }
-
-                   #optional_load_merges
-
-                    Ok((entities, count_result))
-                }
-                /* fn build_path(&mut self,path: &str, query: &toql::query::Query<#struct_ident>,
-                    wildcard_scope: &toql::sql_builder::wildcard_scope::WildcardScope,
-                    additional_columns: &[String]
-                   )
-                -> Result<Option<toql::sql::Sql>,toql :: mysql::error:: ToqlMySqlError>
-                {
-                     // Get new mapper, because self is mut borrowed 
-                  //  let mapper = self.registry().mappers.get( #struct_name ).ok_or( toql::error::ToqlError::MapperMissing(String::from(#struct_name)))?;
-                   let result = toql::sql_builder::SqlBuilder::new( #struct_name, self.registry())
-                    .with_roles(self.roles().clone())
-                       // .scope_wildcard(&wildcard_scope)
-                        .build_select_result(path, &query, self.alias_format.clone())?;
-                     let sql = result.select_sql_with_additional_columns("", "", &additional_columns);
-
-                     Ok(Some(sql))
-                        
-                } */
-
-                #load_dependencies_from_mysql
-            }
-
-        )
-    }
+  
 
     pub fn build_merge(&mut self) {
         // Build all merge fields
@@ -704,14 +481,11 @@ impl<'a> CodegenEntityFromRow<'a> {
 impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
-        let struct_name = &self.rust_struct.rust_struct_name;
-        let loader = self.loader_functions();
+    
 
         let mysql_deserialize_fields = &self.mysql_deserialize_fields;
 
-        let regular_fields = self.regular_fields;
-        let forward_joins = &self.forward_joins;
-
+    
         let macro_name = Ident::new(&format!("toql_entity_from_row_{}", &struct_ident), Span::call_site());
      
         let mysql = quote!(
@@ -727,11 +501,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
             impl toql::from_row::FromRow<toql::mysql::mysql::Row> for #struct_ident {
  
              type Error = toql::mysql::error::ToqlMySqlError;
-            /*  fn skip(mut i : usize) -> usize {
-                i += #regular_fields ;
-                #(#forward_joins)*
-                i
-            }   */
+           
 
             fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_ident> 
@@ -741,8 +511,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
 
 
                             
-      /*   let row : & mysql :: Row = row . as_ref() 
-            .map_err(| e | {  toql::error::ToqlError::DeserializeError(#struct_name.to_owned(), e.to_string())})? ; */
+    
 
        
                 Ok ( #struct_ident {

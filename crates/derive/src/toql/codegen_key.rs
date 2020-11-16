@@ -19,7 +19,7 @@ pub(crate) struct CodegenKey<'a> {
     
     toql_eq_predicates: Vec<TokenStream>,
     toql_eq_foreign_predicates: Vec<TokenStream>,
-    toql_in_predicate: Option<TokenStream>,
+    
 
     key_constr_code:Vec<TokenStream>,
 
@@ -51,7 +51,7 @@ impl<'a> CodegenKey<'a> {
 
             toql_eq_predicates: Vec::new(),
             toql_eq_foreign_predicates: Vec::new(),
-            toql_in_predicate: None,
+            
 
             key_constr_code: Vec::new(),
             sql_arg_code : None,
@@ -184,7 +184,7 @@ impl<'a> CodegenKey<'a> {
                 self.toql_eq_predicates.push(quote!(.and(toql::to_query::ToForeignQuery::to_foreign_query::<_>(&t. #rust_field_ident, #toql_name))));
                 self.toql_eq_foreign_predicates.push(quote!(.and(toql::to_query::ToForeignQuery::to_foreign_query::<_>(&t. #rust_field_ident, #toql_name))));
                
-                let index = syn::Index::from(self.key_constr_code.len());
+              
                 self.key_constr_code.push(quote!(#rust_field_ident));
               
               self.key_field_declarations.push(quote!( pub #rust_field_ident: <#rust_type_ident as toql::key::Keyed>::Key));
@@ -291,9 +291,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
        // let partial_key_types = &self.partial_key_types;
         let key_types = &self.key_types;
 
-        let key_type_code = quote!(  #(pub #key_types),* );
-
-        let key_fields = &self.key_fields;
+      
 
         //let key_getter = quote!( #(#key_fields  ),* );
         let key_getters = &self.key_getters;

@@ -113,7 +113,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
         let struct_ident = &self.rust_struct.rust_struct_ident;
 
         // let key_predicates = &self.key_predicates;
-        let struct_key_ident = Ident::new(&format!("{}Key", &struct_ident), Span::call_site());
+      
 
         let wildcard = if self.build_wildcard {
             quote!(
@@ -125,7 +125,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
             quote!()
         };
 
-        let key_composite_predicates = &self.key_composite_predicates;
+
 
        /*  let key_predicate_code = quote!(
             let query = toql::query::Query::new() #(#key_composite_predicates)*;

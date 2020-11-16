@@ -11,7 +11,7 @@ use syn::Ident;
 pub(crate) struct CodegenUpdate<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
-    table_alias :String,
+    
     sql_table_alias: String,
 
   
@@ -30,8 +30,7 @@ impl<'a> CodegenUpdate<'a> {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
             sql_table_alias : toql.sql_table_alias.to_owned(),
-            table_alias : toql.sql_table_alias.to_owned(),
-
+           
             update_set_code: Vec::new(),
            
             struct_upd_roles: &toql.upd_roles,
