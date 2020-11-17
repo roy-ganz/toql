@@ -6,15 +6,15 @@ use std::convert::TryFrom;
 use crate::sql_arg::SqlArg;
 use crate::query::field_path::Descendents;
 
-impl<E> TreeIdentity for Join<E>
+impl<T> TreeIdentity for Join<T>
 where
-    E: Keyed,
-    <E as Keyed>::Key: Clone,
-    E: TreeIdentity,
-    <E as Keyed>::Key: TryFrom<Vec<SqlArg>, Error=ToqlError >
+    T: Keyed,
+    <T as Keyed>::Key: Clone,
+    T: TreeIdentity,
+    <T as Keyed>::Key: TryFrom<Vec<SqlArg>, Error=ToqlError >
 {
     fn auto_id() -> bool {
-        <E as TreeIdentity>::auto_id()
+        <T as TreeIdentity>::auto_id()
     }
     fn set_id<'a>(
         &mut self,

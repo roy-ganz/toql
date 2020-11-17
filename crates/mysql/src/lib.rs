@@ -47,6 +47,8 @@ pub use mysql; // Reexport for derive produced code
 pub mod sql_arg;
 
 pub mod error;
+
+
 use crate::error::Result;
 use crate::error::ToqlMySqlError;
 use toql_core::sql::Sql;
@@ -445,7 +447,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: HashSet<String> = HashSet::new();
 
-        toql_core::backend::insert::plan_insert_exec::<T, _>(
+        toql_core::backend::insert::plan_insert_order::<T, _>(
             &self.registry.mappers,
             &paths.list,
             &mut joins,
@@ -606,7 +608,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
       
 
       //  toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
-        toql_core::backend::update::plan_update_exec::<T, _>(
+        toql_core::backend::update::plan_update_order::<T, _>(
             &self.registry.mappers,
             &fields.list,
             &mut joins,

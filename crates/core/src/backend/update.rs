@@ -49,7 +49,7 @@ pub fn build_update_sql<T, Q>( alias_format: AliasFormat,
 // separate out fields, that refer to merged entities
 // E.g on struct user "userLanguage_order" will update all orders in userLanguages
 // "userLanguage" refers to merges -> will replace rows
-pub fn plan_update_exec<T, S: AsRef<str>>(
+pub fn plan_update_order<T, S: AsRef<str>>(
         mappers: &HashMap<String, SqlMapper>,
         paths: &[S],
         fields: &mut HashMap<String, HashSet<String>>, // paths that refer to fields 

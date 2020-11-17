@@ -3,19 +3,19 @@ use super::Join;
 use crate::error::Result;
 use crate::key::Keyed;
 
-impl<E> Keyed for Join<E>
+impl<T> Keyed for Join<T>
 where
-    E: Keyed,
-    E::Key: Clone,
+    T: Keyed,
+    T::Key: Clone,
 {
-    type Key = E::Key;
-    fn try_get_key(&self) -> Result<E::Key> {
+    type Key = T::Key;
+    fn try_get_key(&self) -> Result<T::Key> {
         match self {
             Join::Key(k) => Ok(k.clone()),
             Join::Entity(e) => e.try_get_key(),
         }
     }
-    fn try_set_key(&mut self, key: E::Key) -> Result<()> {
+    fn try_set_key(&mut self, key: T::Key) -> Result<()> {
         match self {
             Join::Key(_) => {
                 *self = Join::Key(key);

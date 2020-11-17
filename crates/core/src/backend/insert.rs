@@ -110,7 +110,7 @@ use std::collections::HashSet;
 
 
 
-    pub fn plan_insert_exec<T, S: AsRef<str>>(
+    pub fn plan_insert_order<T, S: AsRef<str>>(
         mappers: &HashMap<String, SqlMapper>,
         paths: &[S],
         joins: &mut Vec<HashSet<String>>,
