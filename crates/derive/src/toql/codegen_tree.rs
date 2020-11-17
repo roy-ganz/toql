@@ -468,6 +468,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                         fn auto_id() -> bool {
                             #identity_auto_id_code
                         }
+
+                        #[allow(unused_variables, unused_mut)]
                         fn set_id < 'a >(&mut self, mut descendents : & mut toql :: query :: field_path ::
                                Descendents < 'a >, action:  toql::tree::tree_identity::IdentityAction)
                                    -> std :: result :: Result < (), toql::error::ToqlError >
@@ -490,6 +492,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                        impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 
+                            #[allow(unused_mut)]
                            fn columns<'a>(&self, mut descendents: &mut toql::query::field_path::Descendents<'a> )
                                -> Result<Vec<String>, toql::error::ToqlError>{
                                Ok(match descendents.next() {
@@ -516,6 +519,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                    })
                                }
 
+                            #[allow(unused_mut)]
                            fn args<'a>(
                                &self,
                                mut descendents: &mut toql::query::field_path::Descendents <'a>,
@@ -613,6 +617,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                     //   #(#index_type_bounds)*
 
                        {
+                            #[allow(unused_variables, unused_mut)]
                            fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
                                        rows: &[$row_type], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
                                -> std::result::Result<(), $error_type>
@@ -689,6 +694,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                        #(#merge_type_bounds)* */
 
                        {
+                           #[allow(unreachable_code, unused_variables, unused_mut)]
                            fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
                                        rows: &[$row_type],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
                                -> std::result::Result<(), $error_type>

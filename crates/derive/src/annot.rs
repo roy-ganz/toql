@@ -392,7 +392,7 @@ impl quote::ToTokens for Toql {
                 if !skip_mut {
                     toql_update.add_tree_update(&f);
                 
-                    toql_insert.add_tree_insert(&f);
+                    toql_insert.add_tree_insert(&f)?;
 
                    /*  #[cfg(feature = "mysql15")]
                     mysql15_insert.add_insert_field(&f); */

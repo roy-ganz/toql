@@ -502,7 +502,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
  
              type Error = toql::mysql::error::ToqlMySqlError;
            
-
+            #[allow(unused_variables, unused_mut)]
             fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
                 -> toql :: mysql :: error:: Result < #struct_ident> 
                 where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {

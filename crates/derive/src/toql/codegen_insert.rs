@@ -38,11 +38,9 @@ impl<'a> CodegenInsert<'a> {
         }
     }
 
-    pub(crate) fn add_tree_insert(&mut self, field: &crate::sane::Field) {
+    pub(crate) fn add_tree_insert(&mut self, field: &crate::sane::Field) -> darling::error::Result<()> {
 
-         if field.skip_mut {
-            return;
-        }
+        
         
         let rust_field_ident = &field.rust_field_ident;
         let rust_type_ident = &field.rust_type_ident;
@@ -56,7 +54,19 @@ impl<'a> CodegenInsert<'a> {
 
         match &field.kind {
              FieldKind::Regular(ref regular_attrs) => {
-                if regular_attrs.key  && self.auto_key == true {return;}
+                if regular_attrs.key  && self.auto_key == true {
+                    return Ok(());
+                }
+
+                if !regular_attrs.key && field.skip_mut {
+                    return Ok(());
+                }
+                if  regular_attrs.key && field.skip_mut {
+                     return Err(darling::Error::custom(
+                                "Key must not be `skip_mut`. Use `#[toql(auto_key=true)]` on your struct, if your key is an auto value.".to_string(),
+                            )
+                        .with_span(&field.rust_field_ident));
+                }
 
                 
                 match regular_attrs.sql_target {
@@ -67,7 +77,7 @@ impl<'a> CodegenInsert<'a> {
                                             e.push_literal(", ");
                                 )),
                     SqlTarget::Expression(_) => {
-                        return;
+                        return Ok(());
                     }
                 }
 
@@ -117,13 +127,27 @@ impl<'a> CodegenInsert<'a> {
                     self.duplicate = true;
                 }
 
+                if regular_attrs.key && field.skip_mut {
+                    self.duplicate = true;
+                }
+
                 
              }
 
             FieldKind::Join(join_attrs) => {
+                 if join_attrs.key  && self.auto_key == true {
+                    return Ok(());
+                }
 
-                if join_attrs.key  && self.auto_key == true {return;}
-                // todo join columns
+                if !join_attrs.key && field.skip_mut {
+                    return Ok(());
+                }
+                if  join_attrs.key && field.skip_mut {
+                     return Err(darling::Error::custom(
+                                "Key must not be `skip_mut`. Use `#[toql(auto_key=true)]` on your struct, if your key is an auto value.".to_string(),
+                            )
+                        .with_span(&field.rust_field_ident));
+                }
 
                self.dispatch_columns_code.push(
                    quote!(
@@ -263,6 +287,10 @@ impl<'a> CodegenInsert<'a> {
                
             }
             FieldKind::Merge(_merge) => {
+
+                 if field.skip_mut {
+                    return Ok(());
+                }
                 
                 // TODO throw error if we dispatch dispatch beyond first merge
                 self.dispatch_columns_code.push(
@@ -301,7 +329,7 @@ impl<'a> CodegenInsert<'a> {
            
         };
 
-
+    Ok(())
     }
 }
 impl<'a> quote::ToTokens for CodegenInsert<'a> {
@@ -314,6 +342,8 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
        
        let mods =  quote! {
                 impl toql::tree::tree_insert::TreeInsert for #struct_ident {
+
+                    #[allow(unused_mut)]
                     fn columns<'a>(  mut descendents: &mut toql::query::field_path::Descendents<'a>) 
                             -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
                         
@@ -335,6 +365,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                         } 
                         Ok(e)
                     }
+                    #[allow(unused_mut)]
                     fn values<'a>(&self,
                                         mut descendents: &mut  toql::query::field_path::Descendents<'a>,  
                                          values:  &mut toql::sql_expr::SqlExpr 

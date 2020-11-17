@@ -505,7 +505,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             }
         }
 
-        // Insert joins and merges
+        // Insert joins 
         for l in (0..joins.len()).rev() {
             for p in joins.get(l).unwrap() {
                 let mut path = FieldPath::from(&p);
@@ -546,6 +546,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 )?;
             }
         }
+
+        // Insert merges
         for p in merges {
             let path = FieldPath::from(&p);
 

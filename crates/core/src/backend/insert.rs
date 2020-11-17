@@ -8,7 +8,7 @@ use crate::error::Result;
 use std::collections::HashSet;
 
 
-    pub fn set_tree_identity<T, Q>(first_id: u64, entities: &mut[Q], path: &mut Descendents) -> Result<()>
+    pub fn set_tree_identity<T, Q>(first_id: u64, entities: &mut[Q], mut descendents: &mut Descendents) -> Result<()>
     where
         T:  TreeIdentity,
         Q: BorrowMut<T>,
@@ -18,8 +18,8 @@ use std::collections::HashSet;
 
           if <T as TreeIdentity>::auto_id() {
             let mut id: u64 =  first_id; 
-            let home_path = FieldPath::default();
-            let mut descendents= home_path.descendents();
+         //   let home_path = FieldPath::default();
+        //    let mut descendents= home_path.descendents();
             for  e in entities.iter_mut() {
                 {
                 let e_mut = e.borrow_mut();
