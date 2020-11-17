@@ -144,7 +144,8 @@ impl MergeField {
 pub struct Field {
     pub rust_field_ident: Ident,
     pub rust_field_name: String,
-    pub rust_type_ident: Ident,
+    pub rust_type_ident: syn::Type,
+    pub rust_base_type_ident: syn::Ident,
     pub rust_type_name: String,
     pub toql_field_name: String,
     pub number_of_options: u8,
@@ -167,12 +168,20 @@ pub enum FieldKind {
 
 impl Field {
     pub fn create(field: &ToqlField, toql: &Toql) -> Result<Self> {
+
+        let mut number_of_options = 0;
+        let rust_field_type = unwrap_type(&field.ty, &mut number_of_options);
+
         let rust_field_ident = field.ident.as_ref().unwrap().to_owned();
         let rust_field_name = rust_field_ident.to_string();
-        let rust_type_ident = field.first_non_generic_type().unwrap().to_owned();
-        let rust_type_name = field.first_non_generic_type().unwrap().to_string();
+        let rust_type_ident = rust_field_type.to_owned();
+        
+        let rust_base_type_ident = unwrap_base(&rust_field_type);
+        let rust_type_name = rust_base_type_ident.to_string();
+      
+
         let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
-        let number_of_options = field.number_of_options();
+        
 
         if field.skip_wildcard == true && field.preselect == true {
             return Err(darling::Error::custom(
@@ -204,7 +213,7 @@ impl Field {
             }
 
             let renamed_table = crate::util::rename_or_default(
-                field.first_non_generic_type().unwrap().to_string().as_str(),
+                &rust_type_name, // field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
             let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
@@ -336,7 +345,7 @@ impl Field {
             
 
             let renamed_table = crate::util::rename_or_default(
-                field.first_non_generic_type().unwrap().to_string().as_str(),
+                 &rust_type_name,  //field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
             let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
@@ -449,6 +458,7 @@ impl Field {
             rust_field_name,
             rust_type_ident,
             rust_type_name,
+            rust_base_type_ident,
             toql_field_name,
             number_of_options,
             skip_mut: field.skip_mut,
@@ -470,4 +480,55 @@ impl Field {
             kind,
         })
     }
+
+    
+}
+
+
+
+ pub(crate) fn unwrap_type<'a>(ty :&'a syn::Type,  number_of_options : &mut u8) -> &'a syn::Type {
+      
+   
+    match ty {
+        syn::Type::Path(type_path) if type_path.qself.is_none()  => {
+            let path_segment = &type_path.path.segments.iter().next().unwrap();
+            if &path_segment.ident == "Option" {
+                let path_arguments = &path_segment.arguments;
+                if let syn::PathArguments::AngleBracketed(params) = path_arguments {
+                    if let  syn::GenericArgument::Type(ty) =  params.args.iter().next().unwrap() {
+
+                            *number_of_options += 1;
+                            return unwrap_type(ty, number_of_options);
+                        }
+                    }
+                } 
+            } 
+
+        _ => {},
+        }
+    
+    ty
+
+}
+
+
+ pub(crate) fn unwrap_base<'a>(ty :&'a syn::Type) -> syn::Ident {
+
+    match ty {
+        syn::Type::Path(type_path) if type_path.qself.is_none()  => {
+            
+            let path_segment = &type_path.path.segments.iter().next().unwrap();
+            let path_arguments = &path_segment.arguments;
+
+            if let syn::PathArguments::AngleBracketed(params) = path_arguments {
+                if let  syn::GenericArgument::Type(ty) =  params.args.iter().next().unwrap() {
+                    return unwrap_base(ty);
+                }
+            } 
+            return path_segment.ident.to_owned()
+        } 
+        _ => {},
+        }
+    
+   syn::Ident::new("Unknown", Span::call_site())
 }

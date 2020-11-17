@@ -101,14 +101,22 @@ pub struct ToqlField {
             
 }
 
+
+
+ 
+
+
 impl ToqlField {
     // IMPROVE: Function is used, but somehow considered unused
-    #[allow(dead_code)]
+  /*   #[allow(dead_code)]
     pub fn _first_type<'a>(&'a self) -> &'a Ident {
         let types = self.get_types();
         types.0
-    }
-    pub fn first_non_generic_type<'a>(&'a self) -> Option<&'a Ident> {
+    } */
+    /* pub fn first_non_generic_type<'a>(&'a self) -> Option<&'a Ident> {
+
+        
+
         let types = self.get_types();
         if types.2.is_some() {
             types.2
@@ -145,6 +153,11 @@ impl ToqlField {
         Option<&'a syn::Ident>,
         Option<&'a syn::Ident>,
     ) {
+
+        // Test
+        println!("PARSE TEST");
+        dbg!(TypeInfo::parse(&self.ty));
+
         let type_ident =
             Self::get_type(&self.ty).expect(&format!("Invalid type on field {:?}", self.field));
 
@@ -193,7 +206,7 @@ impl ToqlField {
             syn::Type::Path(syn::TypePath { qself: _, path }) => Some(&path.segments[0].ident),
             _ => None,
         }
-    }
+    } */
 }
 
 #[derive(FromMeta, PartialEq, Eq, Clone, Debug)]

@@ -82,6 +82,7 @@ impl<'a> CodegenQueryFields<'a> {
                  let toql_field = &field.toql_field_name;
                 if let FieldKind::Join(join_attrs) = x {
                    
+                   
                     if join_attrs.key {
                         self.key_composite_predicates.push(quote!(
                             .and( toql::query::QueryPredicate::predicate(&self. #key_index, #toql_field))
@@ -91,8 +92,10 @@ impl<'a> CodegenQueryFields<'a> {
                 }
                 let toql_path = format!("{}_", toql_field);
 
+                 let rust_base_type_ident = &field.rust_base_type_ident;
+
                 let path_fields_struct =
-                    quote!( < #rust_type_ident as toql::query_fields::QueryFields>::FieldsType);
+                    quote!( < #rust_base_type_ident as toql::query_fields::QueryFields>::FieldsType);
 
                 self.builder_fields.push(quote!(
                                 #rust_struct_visibility fn #rust_field_ident (mut self) -> #path_fields_struct {
