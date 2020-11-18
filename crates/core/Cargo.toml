@@ -21,5 +21,6 @@ heck ="0.3"
 
 toql_query_parser = { version = "0.1", path = "../query_parser" }
 toql_sql_expr_parser = { version = "0.1", path = "../sql_expr_parser" }
+toql_role_expr_parser = { version = "0.1", path = "../role_expr_parser" }
 
 

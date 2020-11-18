@@ -1,0 +1,17 @@
+
+role =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
+
+negation = { not ~ expr }
+clause = { role | negation |( lpar ~ expr ~ rpar) } 
+separator = { "," | ";" }
+
+not = @{"!"}
+
+lpar = @{"("}
+rpar = @{")"}
+
+expr = { clause  ~ (separator ~ clause)*}
+query = { SOI ~ expr? ~ EOI }
+
+WHITESPACE = _{ " " }
+

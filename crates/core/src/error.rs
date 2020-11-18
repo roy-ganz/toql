@@ -29,6 +29,8 @@ pub enum ToqlError {
     QueryParserError(PestError<toql_query_parser::Rule>),
     /// The sql expression parser encountered a syntax error.
     SqlExprParserError(PestError<toql_sql_expr_parser::Rule>),
+    /// The role expression parser encountered a syntax error.
+    RoleExprParserError(PestError<toql_role_expr_parser::Rule>),
     /// The query encoding was not valid UTF-8.
     EncodingError(std::str::Utf8Error),
     /// No mapper was found for a given struct. Contains the struct name.
@@ -79,6 +81,11 @@ impl From<PestError<toql_sql_expr_parser::Rule>> for ToqlError {
         ToqlError::SqlExprParserError(err)
     }
 }
+impl From<PestError<toql_role_expr_parser::Rule>> for ToqlError {
+    fn from(err: PestError<toql_role_expr_parser::Rule>) -> ToqlError {
+        ToqlError::RoleExprParserError(err)
+    }
+}
 impl From<TryFromSqlArgError> for ToqlError {
     fn from(err: TryFromSqlArgError) -> ToqlError {
         ToqlError::TryFromSqlArgError(err)
@@ -99,6 +106,7 @@ impl fmt::Display for ToqlError {
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),
             ToqlError::SqlExprParserError(ref e) => e.fmt(f),
+            ToqlError::RoleExprParserError(ref e) => e.fmt(f),
             ToqlError::SqlExprResolverError(ref e) => e.fmt(f),
             ToqlError::DeserializeError(ref n, ref e) => {
                 write!(f, "unable to deserialize field `{}` because: {}", n, e)

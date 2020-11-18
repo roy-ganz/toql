@@ -88,6 +88,11 @@ pub use toql_query_macro as query_macro;
 pub use toql_fields_macro as fields_macro;
 pub use toql_paths_macro as paths_macro;
 
+pub use toql_core::role_expr;
+pub use toql_core::role_expr_parser;
+pub use toql_core::role_validator;
+
+
 pub use toql_core::log; // Reexport for derive
 
 pub use toql_core::dialect; // For generic SQL code
