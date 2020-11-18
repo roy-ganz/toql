@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub enum RoleExpr {
     And(Box<RoleExpr>, Box<RoleExpr>),
     Or(Box<RoleExpr>, Box<RoleExpr>),
@@ -7,7 +8,6 @@ pub enum RoleExpr {
 }
 
 impl RoleExpr {
-
    
     pub fn invalid() -> Self {
         RoleExpr::Invalid
