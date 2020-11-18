@@ -85,12 +85,12 @@ where
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
     let page_count = if let Some(Page::Counted(_, _)) = page {
-        let total_count: u32 = {
+        let unpaged_count: u32 = {
             toql_core::log_literal_sql!("SELECT FOUND_ROWS();");
             let r = mysql.conn().query("SELECT FOUND_ROWS();")?;
             r.into_iter().next().unwrap().unwrap().get(0).unwrap()
         };
-        let filtered_count: u32 = {
+        let unfiltered_count: u32 = {
             let alias_format = mysql.alias_format();
             let ty = <T as Mapped>::type_name();
             let mut alias_translator = AliasTranslator::new(alias_format);
@@ -116,7 +116,7 @@ where
                 .get(0)
                 .unwrap()
         };
-        Some((total_count, filtered_count))
+        Some((unpaged_count, unfiltered_count))
     } else {
         None
     };
@@ -937,7 +937,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     ///
     /// Returns a tuple with the structs and an optional tuple of count values.
     /// If `count` argument is `false`, no count queries are run and the resulting `Option<(u32,u32)>` will be `None`
-    /// otherwise the count queries are run and it will be `Some((total count, filtered count))`.
+    /// otherwise the count queries are run and it will be `Some((unpaged count, unfiltered count))`.
     pub fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<(u32, u32)>)>
     where
         T: Keyed
