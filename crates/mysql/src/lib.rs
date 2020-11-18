@@ -72,7 +72,7 @@ fn load_top<T, B, C>(
     mysql: &mut MySql<C>,
     query: &B,
     page: Option<Page>,
-) -> Result<(Vec<T>, HashSet<String>)>
+) -> Result<(Vec<T>, HashSet<String>, Option<(u32, u32)>)>
 where
     T: Keyed
         + Mapped
@@ -109,8 +109,11 @@ where
         None => Cow::Borrowed(""),
     };
 
+    let modifier =  if let Some(Page::Counted(_,_)) = page {"SQL_CALC_FOUND_ROWS"} else {""};
+
+    
     let sql = result
-        .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", extra.borrow())
+        .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, modifier, extra.borrow())
         .map_err(ToqlError::from)?;
 
     log_sql!(&sql);
@@ -131,7 +134,13 @@ where
         );
     }
 
-    Ok((entities, unmerged))
+    // Retrieve count information
+    if let Some(Page::Counted(_,_)) = page {
+          let total = mysql.conn.exec("SELECT FOUND_ROWS();")?;
+
+    }
+
+    Ok((entities, unmerged, None))
 }
 
 fn load_and_merge<T, B, C>(
@@ -153,7 +162,7 @@ where
     C: GenericConnection,
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
-    use toql_core::sql_expr::PredicateColumn;
+    
     use toql_core::sql_expr::SqlExpr;
 
     let ty = <T as Mapped>::type_name();
@@ -192,7 +201,7 @@ where
             )
         };
 
-        println!("{} ON {}", merge_join, merge_on);
+        //println!("{} ON {}", merge_join, merge_on);
         result.push_join(merge_join);
         result.push_join(SqlExpr::literal("ON ("));
         result.push_join(merge_on);
@@ -240,13 +249,10 @@ where
         dbg!(&args);
 
         // Load from database
-
         let args = crate::sql_arg::values_from_ref(&args);
         let query_results = mysql.conn.prep_exec(sql, args)?;
 
         // Build index
-        // let row_offset = result.column_counter();
-
         let mut index: HashMap<u64, Vec<usize>> = HashMap::new();
 
         let (field, ancestor_path) = FieldPath::split_basename(root_path.as_str());
@@ -263,8 +269,7 @@ where
 
         let row_offset = 0; // key must be forst columns in reow
         <T as TreeIndex<Row, ToqlMySqlError>>::index(&mut d, field, &rows, row_offset, &mut index)?;
-        println!("{:?}", result.selection_stream());
-
+        
         // Merge into entities
         for e in entities.iter_mut() {
             <T as TreeMerge<_, ToqlMySqlError>>::merge(
@@ -298,7 +303,7 @@ where
     C: GenericConnection,
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
-    let (mut entities, mut unmerged_paths) = load_top(mysql, &query, page)?;
+    let (mut entities, mut unmerged_paths, counts) = load_top(mysql, &query, page)?;
 
     loop {
         let mut pending_paths = load_and_merge(mysql, &query, &mut entities, &unmerged_paths)?;
@@ -312,7 +317,7 @@ where
         unmerged_paths.extend(pending_paths.drain());
     }
 
-    Ok((entities, None))
+    Ok((entities, counts))
 }
 
 fn execute_update_delete_sql<C>(statement: Sql, conn: &mut C) -> Result<u64>
@@ -885,14 +890,15 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             + Mapped
             + FromRow<Row>
             + TreePredicate
-            + TreeKeys
             + TreeIndex<Row, ToqlMySqlError>
             + TreeMerge<Row, ToqlMySqlError>,
         B: Borrow<Query<T>>,
         <T as Keyed>::Key: FromRow<Row>,
         ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
     {
+
         let entities_page = load(self, query.borrow(), Some(page))?;
+
         Ok(entities_page)
     }
 }
