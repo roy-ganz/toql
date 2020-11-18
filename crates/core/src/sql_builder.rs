@@ -257,8 +257,8 @@ impl<'a> SqlBuilder<'a> {
         query_root_path: &str,
         query: &Query<M>,
     ) -> Result<BuildResult> {
-        let mut context = BuildContext::new();
-        context.query_home_path = query_root_path.to_string();
+        let mut build_context = BuildContext::new();
+        build_context.query_home_path = query_root_path.to_string();
         let root_mapper = self.root_mapper()?; // self.mapper_for_path(&Self::root_field_path(root_path))?;
 
         let mut result = BuildResult::new(SqlExpr::literal("SELECT COUNT(*)"));
@@ -268,10 +268,13 @@ impl<'a> SqlBuilder<'a> {
             root_mapper.canonical_table_alias.to_owned(),
         );
 
-        self.build_where_clause(&query, &mut context, &mut result)?;
-        todo!();
+        self.build_where_clause(&query, &mut build_context, &mut result)?;
+        
+        let (_selected_fields, selected_paths, all_fields) =  self.selection_from_query(query, &build_context)?;
+        build_context.selected_paths = selected_paths;
+        build_context.all_fields_selected = all_fields;
     
-        self.build_join_clause(&mut context, &mut result)?;
+        self.build_join_clause(&mut build_context, &mut result)?;
 
         Ok(result)
     }
@@ -590,7 +593,7 @@ impl<'a> SqlBuilder<'a> {
         build_context.selected_fields = selected_fields;
         build_context.selected_paths = selected_paths;
         build_context.all_fields_selected = all_fields;
-        dbg!(&build_context.selected_paths);
+        
 
         self.resolve_select(&None, query, build_context, result, 0)?;
 

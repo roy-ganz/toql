@@ -48,7 +48,6 @@ pub mod sql_arg;
 
 pub mod error;
 
-
 use crate::error::Result;
 use crate::error::ToqlMySqlError;
 use toql_core::sql::Sql;
@@ -68,6 +67,61 @@ use toql_core::{
 
 use crate::sql_arg::{values_from, values_from_ref};
 
+fn load_count<T, B, C>(
+    mysql: &mut MySql<C>,
+    query: &B,
+    page: Option<Page>,
+) -> Result<Option<(u32, u32)>>
+where
+    T: Keyed
+        + Mapped
+        + FromRow<Row>
+        + TreePredicate
+        + TreeIndex<Row, ToqlMySqlError>
+        + TreeMerge<Row, ToqlMySqlError>,
+    B: Borrow<Query<T>>,
+    <T as toql_core::key::Keyed>::Key: FromRow<Row>,
+    C: GenericConnection,
+    ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
+{
+    let page_count = if let Some(Page::Counted(_, _)) = page {
+        let total_count: u32 = {
+            toql_core::log_literal_sql!("SELECT FOUND_ROWS();");
+            let r = mysql.conn().query("SELECT FOUND_ROWS();")?;
+            r.into_iter().next().unwrap().unwrap().get(0).unwrap()
+        };
+        let filtered_count: u32 = {
+            let alias_format = mysql.alias_format();
+            let ty = <T as Mapped>::type_name();
+            let mut alias_translator = AliasTranslator::new(alias_format);
+            let aux_params = [mysql.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params);
+
+            let mut builder = SqlBuilder::new(&ty, mysql.registry());
+            let result = builder.build_count("", query.borrow())?;
+            let sql = result
+                .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", "")
+                .map_err(ToqlError::from)?;
+
+            log_sql!(&sql);
+            let Sql(sql_stmt, args) = sql;
+
+            let args = crate::sql_arg::values_from_ref(&args);
+            let query_results = mysql.conn.prep_exec(sql_stmt, args)?;
+            query_results
+                .into_iter()
+                .next()
+                .unwrap()
+                .unwrap()
+                .get(0)
+                .unwrap()
+        };
+        Some((total_count, filtered_count))
+    } else {
+        None
+    };
+    Ok(page_count)
+}
 fn load_top<T, B, C>(
     mysql: &mut MySql<C>,
     query: &B,
@@ -109,11 +163,19 @@ where
         None => Cow::Borrowed(""),
     };
 
-    let modifier =  if let Some(Page::Counted(_,_)) = page {"SQL_CALC_FOUND_ROWS"} else {""};
+    let modifier = if let Some(Page::Counted(_, _)) = page {
+        "SQL_CALC_FOUND_ROWS"
+    } else {
+        ""
+    };
 
-    
     let sql = result
-        .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, modifier, extra.borrow())
+        .to_sql_with_modifier_and_extra(
+            &aux_params,
+            &mut alias_translator,
+            modifier,
+            extra.borrow(),
+        )
         .map_err(ToqlError::from)?;
 
     log_sql!(&sql);
@@ -135,12 +197,9 @@ where
     }
 
     // Retrieve count information
-    if let Some(Page::Counted(_,_)) = page {
-          let total = mysql.conn.exec("SELECT FOUND_ROWS();")?;
+    let page_count = load_count(mysql, query, page)?;
 
-    }
-
-    Ok((entities, unmerged, None))
+    Ok((entities, unmerged, page_count))
 }
 
 fn load_and_merge<T, B, C>(
@@ -162,7 +221,6 @@ where
     C: GenericConnection,
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
-    
     use toql_core::sql_expr::SqlExpr;
 
     let ty = <T as Mapped>::type_name();
@@ -269,7 +327,7 @@ where
 
         let row_offset = 0; // key must be forst columns in reow
         <T as TreeIndex<Row, ToqlMySqlError>>::index(&mut d, field, &rows, row_offset, &mut index)?;
-        
+
         // Merge into entities
         for e in entities.iter_mut() {
             <T as TreeMerge<_, ToqlMySqlError>>::merge(
@@ -510,7 +568,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             }
         }
 
-        // Insert joins 
+        // Insert joins
         for l in (0..joins.len()).rev() {
             for p in joins.get(l).unwrap() {
                 let mut path = FieldPath::from(&p);
@@ -610,11 +668,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         // TODO should be possible to impl with &str
         let mut joins: HashMap<String, HashSet<String>> = HashMap::new();
         let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
-        
 
-      
-
-      //  toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
+        //  toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
         toql_core::backend::update::plan_update_order::<T, _>(
             &self.registry.mappers,
             &fields.list,
@@ -622,10 +677,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             &mut merges,
         )?;
 
-
         for (path, fields) in joins {
             let sqls = {
-               
                 let field_path = FieldPath::from(&path);
                 toql_core::backend::update::build_update_sql::<T, _>(
                     self.alias_format(),
@@ -649,7 +702,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         for (path, fields) in merges {
             // Build delete sql
-            
+
             let parent_path = FieldPath::from(&path);
             let entity = entities.get(0).unwrap().borrow();
             let columns = <T as TreePredicate>::columns(entity, &mut parent_path.descendents())?;
@@ -670,7 +723,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 let merge_path = FieldPath::from(&merge);
                 let type_name = <T as Mapped>::type_name();
                 let mut sql_builder = SqlBuilder::new(&type_name, self.registry());
-                let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate.to_owned())?;
+                let delete_expr =
+                    sql_builder.build_merge_delete(&merge_path, key_predicate.to_owned())?;
 
                 let mut alias_translator = AliasTranslator::new(self.alias_format());
                 let resolver = Resolver::new();
@@ -896,7 +950,6 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         <T as Keyed>::Key: FromRow<Row>,
         ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
     {
-
         let entities_page = load(self, query.borrow(), Some(page))?;
 
         Ok(entities_page)
