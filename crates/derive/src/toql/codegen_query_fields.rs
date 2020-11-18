@@ -9,7 +9,7 @@ pub(crate) struct CodegenQueryFields<'a> {
     rust_struct: &'a Struct,
     rust_struct_visibility: &'a syn::Visibility,
     builder_fields_struct: Ident,
-    build_wildcard: bool,
+    //build_wildcard: bool,
     builder_fields: Vec<TokenStream>,
     key_composite_predicates: Vec<TokenStream>,
 }
@@ -42,7 +42,7 @@ impl<'a> CodegenQueryFields<'a> {
                 &format!("{}Fields", toql.rust_struct_name),
                 Span::call_site(),
             ),
-            build_wildcard: true,
+           // build_wildcard: true,
             builder_fields,
             key_composite_predicates: Vec::new(),
         }
@@ -56,9 +56,9 @@ impl<'a> CodegenQueryFields<'a> {
 
            
         // Omit wildcard function, if there is already a field called `wildcard`
-        if rust_field_name == "wildcard" {
+       /*  if rust_field_name == "wildcard" {
             self.build_wildcard = false;
-        }
+        } */
         let key_index = syn::Index::from(self.key_composite_predicates.len());
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
@@ -117,7 +117,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
 
         // let key_predicates = &self.key_predicates;
       
-
+/* 
         let wildcard = if self.build_wildcard {
             quote!(
                 pub fn wildcard( self) -> toql::query::wildcard::Wildcard {
@@ -127,7 +127,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
         } else {
             quote!()
         };
-
+ */
 
 
        /*  let key_predicate_code = quote!(
@@ -184,11 +184,18 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
             }
 
             #rust_struct_visibility struct #builder_fields_struct ( String ) ;
+
+            impl toql::query_path::QueryPath for #builder_fields_struct {
+                fn into_path(self) -> String {
+                self.0
+                }
+            }
+
             impl #builder_fields_struct {
                 #rust_struct_visibility fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
                 #rust_struct_visibility fn from_path ( path : String ) -> Self { Self ( path ) }
                 #(#builder_fields)*
-                #wildcard
+               
             }
         );
 

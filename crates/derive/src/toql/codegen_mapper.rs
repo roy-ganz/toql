@@ -12,15 +12,23 @@ pub(crate) struct CodegenMapper<'a> {
     key_field_names: Vec<String>,
     count_filter_code: TokenStream,
     key_fields: bool,
-   
-    
 }
 
 impl<'a> CodegenMapper<'a> {
     pub(crate) fn from_toql(rust_struct: &'a Struct) -> CodegenMapper {
         let mut field_mappings: Vec<TokenStream> = Vec::new();
 
-        
+        let rust_struct_ident = &rust_struct.rust_struct_ident;
+        for selection in &rust_struct.mapped_selections {
+             let name = &selection.name;
+             let fields = &selection.fields;
+
+            field_mappings.push(quote!(
+                mapper.map_selection( #name, toql::fields_macro::fields!(#rust_struct_ident, #fields).list);
+            ));
+         }
+
+
 
         for mapping in &rust_struct.mapped_predicates {
             let toql_field_name = &mapping.name;
@@ -263,29 +271,11 @@ impl<'a> CodegenMapper<'a> {
                 // todo map handler, see regular field
 
                 self.field_mappings.push(quote! {
-
-                    /* mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
-                    toql::sql_expr_parser::SqlExprParser::parse(#join_statement)?, 
-                    toql::sql_expr_parser::SqlExprParser::parse( #join_predicate)?,
-                     toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
-                    ); */
                     mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
                     {let mut t = toql::sql_expr::SqlExpr::literal(#join_statement); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
                      toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
                     );
-
-                  /*   #join_expression_builder;
-                    mapper.map_join::<#rust_type_ident>( &format!("{}{}{}",
-                        toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                        &join_alias);
-
-                    let aliased_table = mapper.translate_aliased_table(#sql_join_table_name, &join_alias);
-                    mapper.join_with_options( &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                     #join_type,
-                     &aliased_table,
-                     #join_predicate,
-                     toql::sql_mapper::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident); */
                 });
 
                 if join_attrs.key {
@@ -486,6 +476,8 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
 
         let field_mappings = &self.field_mappings;
         let count_filter_code = &self.count_filter_code;
+      
+
         
        
         let builder = quote!(
@@ -507,6 +499,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                         mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
                     } */
                     
+
 
                     #(#field_mappings)*
 

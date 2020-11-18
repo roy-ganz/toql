@@ -96,24 +96,12 @@ impl<'a> SqlBuilder<'a> {
         }
     }
 
-    /* pub fn change_root_for_path(&mut self, root: &str, path: &str) -> Result<()> {
-        let path = if path.is_empty() {
-            None
-        } else {
-            Some(FieldPath::from(path))
-        };
-        self.root_mapper = String::from(root);
-        let mapper = self.mapper_for_path(&path)?;
-        self.root_mapper = String::from(&mapper.table_name);
-        Ok(())
-    } */
-
     pub fn with_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
         self
     }
+
     pub fn with_aux_params(mut self, aux_params: HashMap<String, SqlArg>) -> Self {
-        // TODO use Parameter Map
         self.aux_params = aux_params;
         self
     }
@@ -123,87 +111,16 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-    /*  pub fn join_sql(&self, field_path: &str) -> Result<Sql> {
-        let mut context = BuildContext::new();
-        let mut sql = Sql::new();
-        let mut current_mapper = self.root_mapper()?;
-        let field_path = FieldPath::from(field_path);
-        let mut alias = std::iter::once(FieldPath::from("")).chain(field_path.descendents()); // build canonical aliases
-        let canonical_table_alias = &self.root_mapper()?.canonical_table_alias;
-        let p = [&self.aux_params];
-        let aux_params = ParameterMap::new(&p);
-
-        let mut alias1 = alias.next();
-        let mut alias2 = alias.next();
-
-        for d in field_path.children() {
-            dbg!(&d);
-
-            let self_alias = self.alias_translator.translate(
-                alias1
-                    .unwrap_or(FieldPath::from("")) // Should never be used
-                    .prefix(&canonical_table_alias)
-                    .as_str(),
-            );
-
-            let other_alias = self.alias_translator.translate(
-                alias2
-                    .as_ref()
-                    .unwrap_or(&FieldPath::from("")) // Should never be used
-                    .prefix(&canonical_table_alias)
-                    .as_str(),
-            );
-
-            // Rotate aliases
-            alias1 = alias2;
-            alias2 = alias.next();
-
-            if let Some(j) = current_mapper.join(d.as_str()) {
-                current_mapper = self
-                    .sql_mapper_registry
-                    .get(&j.joined_mapper)
-                    .ok_or(ToqlError::MapperMissing(j.joined_mapper.to_string()))?;
-
-                let join_sql =
-                    j.join_expression
-                        .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
-                sql.append(&join_sql);
-                sql.push_literal(" ON ");
-
-                let join_on_sql =
-                    j.on_expression
-                        .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
-                sql.append(&join_on_sql);
-                sql.push_literal(" ");
-            } else if let Some(m) = current_mapper.merge(d.as_str()) {
-                current_mapper = self
-                    .sql_mapper_registry
-                    .get(&m.merged_mapper)
-                    .ok_or(ToqlError::MapperMissing(m.merged_mapper.to_string()))?;
-
-                let merge_sql =
-                    m.merge_predicate
-                        .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
-                sql.append(&merge_sql);
-                sql.push_literal(" ");
-            } else {
-                return Err(ToqlError::MapperMissing(d.as_str().to_string()));
-            }
-        }
-        sql.pop_literals(1); // Remove trailing space
-        Ok(sql)
-    } */
     pub fn merge_expr(&self, field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
-        // let mut sql = SqlExpr::new();
+       
         let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
         let (basename, ancestor_path) = FieldPath::split_basename(field_path);
 
-        let canonical_table_alias = &current_mapper.canonical_table_alias;
-        /*  let p = [&self.aux_params];
-        let aux_params = ParameterMap::new(&p); */
+       
+       
 
         if let Some(p) = ancestor_path.as_ref() {
             for d in p.children() {
@@ -220,46 +137,13 @@ impl<'a> SqlBuilder<'a> {
             }
         }
 
-        // Build canonical alias
-        /*   let self_alias = ancestor_path
-            .unwrap_or(FieldPath::from(""))
-            .prefix(&canonical_table_alias);
-
-        let other_alias = FieldPath::from(field_path).prefix(&canonical_table_alias); */
-
         // Get merge join statement and on predicate
         let merge = current_mapper.merge(basename).ok_or(ToqlError::NotFound)?;
 
-        /*  let resolver = Resolver::new()
-        .with_self_alias(&self_alias.as_str())
-        .with_other_alias(&other_alias.as_str()); */
-
-        /*   let join_expr = resolver.resolve(&merge.merge_join)?;
-        let on_expr = resolver.resolve(&merge.merge_predicate)?;
-
-        Ok((join_expr, on_expr)) */
         Ok((
             merge.merge_join.to_owned(),
             merge.merge_predicate.to_owned(),
         ))
-
-        /* let join_clause_sql =
-            merge
-                .merge_join
-                .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
-        sql.append(&join_clause_sql);
-        sql.push_literal(" ON ");
-
-        let on_clause_sql =
-            merge
-                .merge_predicate
-                .resolve(&self_alias, Some(&other_alias), &aux_params, &[])?;
-        sql.append(&on_clause_sql);
-        // return two sql
-        // TODO translator in sql builder to have same translations
-        // Oder anstatt Alias Format -> Translator übergeben
-        // Rückgabe 2 expressions -> resolve in hauptfunktion
-        Ok(sql)  */
     }
 
     pub fn build_delete<M>(&mut self, query: &Query<M>) -> Result<BuildResult> {
@@ -345,7 +229,7 @@ impl<'a> SqlBuilder<'a> {
         } else {
             Some(FieldPath::from(query_home_path))
         };
-        dbg!(&query_home_path);
+      //  dbg!(&query_home_path);
 
         self.set_home_mapper_for_path(&query_home_path)?;
 
@@ -353,11 +237,7 @@ impl<'a> SqlBuilder<'a> {
             .sql_mapper_registry
             .get(&self.home_mapper)
             .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))?;
-        /*  let alias_table = self
-            .alias_translator
-            .translate(&root_mapper.canonical_table_alias);
-
-        let aliased_table = format!("{} {}", root_mapper.table_name, alias_table); */
+       
         let mut result = BuildResult::new(SqlExpr::literal("SELECT"));
         result.set_from(
             mapper.table_name.to_owned(),
@@ -390,23 +270,12 @@ impl<'a> SqlBuilder<'a> {
 
         self.build_where_clause(&query, &mut context, &mut result)?;
         todo!();
-        //self.build_select_clause(&query, &mut context, &mut result)?;
+    
         self.build_join_clause(&mut context, &mut result)?;
 
         Ok(result)
     }
-    /*  pub fn build_count_sql<M>(
-        &mut self,
-        query_root_path: &str,
-        query: &Query<M>,
-        modified: &str,
-        extra: &str,
-        mut alias_translator: &mut AliasTranslator,
-    ) -> Result<Sql> {
-        let result = self.build_count_result(query_root_path, query, alias_translator)?;
-
-       result.count_sql(alias_translator).map_err( ToqlError::from)
-    } */
+    
 
     pub fn mapper_for_path(&self, query_path: &Option<FieldPath>) -> Result<&SqlMapper> {
         let mut current_mapper = self
@@ -441,7 +310,7 @@ impl<'a> SqlBuilder<'a> {
 
         if let Some(path) = query_path {
             for (p, a) in path.children().zip(path.step()) {
-                dbg!(&a);
+              //  dbg!(&a);
                 if current_mapper.merges.contains_key(p.as_str()) {
                     return Ok(MapperOrMerge::Merge(a.to_string()));
                 }
@@ -467,7 +336,6 @@ impl<'a> SqlBuilder<'a> {
                 .ok_or(ToqlError::MapperMissing(current_type.to_string()))?;
 
             for p in path.children() {
-                dbg!(&p);
                 if let Some(merge) = current_mapper.merges.get(p.as_str()) {
                     current_mapper = self
                         .sql_mapper_registry
@@ -508,19 +376,13 @@ impl<'a> SqlBuilder<'a> {
         let home_path = self.home_mapper.to_mixed_case();
 
         for selectect_path in &build_context.joined_paths {
-            // Add home path for tree
             let canonical_path = FieldPath::from(&selectect_path).prepend(&home_path);
             join_tree.insert(&canonical_path);
         }
-        dbg!(&join_tree);
+       
 
         // Build join
         for r in join_tree.roots() {
-            // Remove again home path
-            /* let path = FieldPath::from(&r);
-            let default_path= FieldPath::default();
-            let path = path.relative_path(&home_path).unwrap_or(default_path); */
-
             let expr: SqlExpr =
                 self.resolve_join(FieldPath::from(&r), &join_tree, &mut build_context)?;
             result.join_expr.extend(expr);
@@ -535,7 +397,6 @@ impl<'a> SqlBuilder<'a> {
         join_tree: &PathTree,
         build_context: &mut BuildContext,
     ) -> Result<SqlExpr> {
-        //  let mapper_name= canonical_path.ancestor().unwrap_or(canonical_path.basename());
         use heck::MixedCase;
 
         let mut join_expr = SqlExpr::new();
@@ -544,8 +405,7 @@ impl<'a> SqlBuilder<'a> {
         let mapper = self.mapper_for_path(&relative_path)?;
         for nodes in join_tree.nodes(canonical_path.as_str()) {
             for n in nodes {
-                //let mapper = self.mapper_from_path(canonical_path)?;
-
+               
                 let (basename, _) = FieldPath::split_basename(n);
 
                 let join = mapper
@@ -555,10 +415,6 @@ impl<'a> SqlBuilder<'a> {
                 let p = [&self.aux_params, &join.options.aux_params];
                 let aux_params = ParameterMap::new(&p);
 
-                /*  let self_alias = self
-                    .alias_translator
-                    .translate(canonical_path.as_str());
-                let other_alias = self.alias_translator.translate(n.as_str()); */
                 let resolver = Resolver::new()
                     .with_self_alias(canonical_path.as_str())
                     .with_other_alias(n.as_str());
@@ -591,21 +447,6 @@ impl<'a> SqlBuilder<'a> {
         Ok(join_expr)
     }
 
-    /* fn mapper_from_path(&self, canonical_path: &FieldPath) -> Result<&SqlMapper> {
-        //let path = canonical_path.trim_start_matches(self.root_path);
-        let path = canonical_path;
-        let mut mapper: Option<&SqlMapper> = None;
-        for c in path.children() {
-            mapper = Some(
-                self.sql_mapper_registry
-                    .get(c.as_str())
-                    .ok_or(ToqlError::MapperMissing(c.as_str().to_string()))?,
-            );
-        }
-
-        mapper.ok_or(ToqlError::MapperMissing("".to_ascii_lowercase()))
-    } */
-
     fn build_where_clause<M>(
         &mut self,
         query: &Query<M>,
@@ -631,10 +472,7 @@ impl<'a> SqlBuilder<'a> {
                     let relative_path = path
                         .as_ref()
                         .and_then(|p| p.relative_path(&build_context.query_home_path));
-                    dbg!(&path);
-                    dbg!(&relative_path);
-                    dbg!(&build_context.query_home_path);
-
+               
                     let mapper_or_merge = self.mapper_or_merge_for_path(&relative_path)?;
 
                     match mapper_or_merge {
@@ -650,7 +488,7 @@ impl<'a> SqlBuilder<'a> {
                             }
 
                             if let Some(role) = self.missing_role(
-                                &mapped_field.options.roles, /*mapper.load_roles(field)*/
+                                &mapped_field.options.roles, 
                             ) {
                                 return Err(SqlBuilderError::RoleRequired(role.to_string()).into());
                             }
@@ -710,25 +548,10 @@ impl<'a> SqlBuilder<'a> {
                             // Build canonical alias
 
                             let canonical_alias = self.canonical_alias(&relative_path)?;
-                            /*  let canonical_alias = match &relative_path {
-                                Some(p) => Cow::Owned(format!(
-                                    "{}_{}",
-                                    &self.root_mapper()?.canonical_table_alias,
-                                    p.as_str()
-                                )),
-                                None => Cow::Borrowed(&mapper.canonical_table_alias),
-                            }; */
+                           
                             let resolver = Resolver::new().with_self_alias(&canonical_alias);
 
                             let expr = resolver.resolve(&mapped_predicate.expression)?;
-
-                            /*   let alias = self.alias_translator.translate(&canonical_alias);
-                            let sql = mapped_predicate.expression.resolve(
-                                &alias,
-                                None,
-                                &aux_params,
-                                &[],
-                            )?; */
 
                             result.where_expr.extend(expr);
 
@@ -771,9 +594,6 @@ impl<'a> SqlBuilder<'a> {
 
         self.resolve_select(&None, query, build_context, result, 0)?;
 
-        /*  result.select_expr = build_context
-        .select_sql
-        .into_sql(&build_context.selected_placeholders); */
         if result.select_expr.is_empty() {
             result.select_expr.push_literal("1");
         } else {
@@ -800,8 +620,6 @@ impl<'a> SqlBuilder<'a> {
         let canonical_alias = self.canonical_alias(query_path)?;
 
         let mut any_selected = false;
-
-        dbg!(&query_path);
 
         for deserialization_type in &mapper.deserialize_order {
             match deserialization_type {
@@ -1018,62 +836,68 @@ impl<'a> SqlBuilder<'a> {
 
                     //  relative_paths.insert(wildcard.path.to_string());
                 }
-                QueryToken::Selection(selection) => match selection.name.as_str() {
-                    "all" => all_fields = true,
-                    "mut" => {
-                        let m = self.root_mapper()?;
-                        for deserialization_type in &m.deserialize_order {
-                            if let DeserializeType::Field(field_name) = deserialization_type {
-                                let f = m
-                                    .fields
-                                    .get(field_name)
-                                    .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
-                                if f.options.mut_select {
-                                    let field = FieldPath::from(&field_name);
-                                    let relative_field = field
-                                        .relative_path(&build_context.query_home_path)
-                                        .unwrap();
-                                    relative_fields.insert(relative_field.to_string());
+                QueryToken::Selection(selection) => {
+                    let selection = FieldPath::from(&selection.name);
+                    let relative_selection = selection.relative_path(&build_context.query_home_path);
+                    if let Some(relative_selection ) = relative_selection {
+                        match relative_selection.as_str() {
+                            "all" => all_fields = true,
+                            "mut" => {
+                                let m = self.root_mapper()?;
+                                for deserialization_type in &m.deserialize_order {
+                                    if let DeserializeType::Field(field_name) = deserialization_type {
+                                        let f = m
+                                            .fields
+                                            .get(field_name)
+                                            .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
+                                        if f.options.mut_select {
+                                            let field = FieldPath::from(&field_name);
+                                            let relative_field = field
+                                                .relative_path(&build_context.query_home_path)
+                                                .unwrap();
+                                            relative_fields.insert(relative_field.to_string());
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
-                    "cnt" => {
-                        let m = self.root_mapper()?;
-                        for deserialization_type in &m.deserialize_order {
-                            if let DeserializeType::Field(field_name) = deserialization_type {
-                                let f = m
-                                    .fields
-                                    .get(field_name)
-                                    .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
-                                if f.options.count_select {
-                                    let field = FieldPath::from(&field_name);
-                                    let relative_field = field
-                                        .relative_path(&build_context.query_home_path)
-                                        .unwrap();
-                                    relative_fields.insert(relative_field.to_string());
+                            "cnt" => {
+                                let m = self.root_mapper()?;
+                                for deserialization_type in &m.deserialize_order {
+                                    if let DeserializeType::Field(field_name) = deserialization_type {
+                                        let f = m
+                                            .fields
+                                            .get(field_name)
+                                            .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
+                                        if f.options.count_select {
+                                            let field = FieldPath::from(&field_name);
+                                            let relative_field = field
+                                                .relative_path(&build_context.query_home_path)
+                                                .unwrap();
+                                            relative_fields.insert(relative_field.to_string());
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    }
-                    name @ _ => {
-                        let m = self.root_mapper()?;
-                        let selection = m
-                            .selections
-                            .get(name)
-                            .ok_or(SqlBuilderError::SelectionMissing(name.to_string()))?;
-                        for s in selection {
-                            if s.ends_with("*") {
-                                let path =
-                                    FieldPath::from(s.trim_end_matches("*").trim_end_matches("_"));
-                                let relative_path =
-                                    path.relative_path(&build_context.query_home_path).unwrap();
-                                relative_paths.insert(relative_path.to_string());
-                            } else {
-                                let field = FieldPath::from(s);
-                                let relative_field =
-                                    field.relative_path(&build_context.query_home_path).unwrap();
-                                relative_paths.insert(relative_field.to_string());
+                            name @ _ => {
+                                let m = self.root_mapper()?;
+                                let selection = m
+                                    .selections
+                                    .get(name)
+                                    .ok_or(SqlBuilderError::SelectionMissing(name.to_string()))?;
+                                for s in selection {
+                                    if s.ends_with("*") {
+                                        let path =
+                                            FieldPath::from(s.trim_end_matches("*").trim_end_matches("_"));
+                                        let relative_path =
+                                            path.relative_path(&build_context.query_home_path).unwrap();
+                                        relative_paths.insert(relative_path.to_string());
+                                    } else {
+                                        let field = FieldPath::from(s);
+                                        let relative_field =
+                                            field.relative_path(&build_context.query_home_path).unwrap();
+                                        relative_fields.insert(relative_field.to_string());
+                                    }
+                                }
                             }
                         }
                     }
@@ -1113,32 +937,5 @@ impl<'a> SqlBuilder<'a> {
 
         r
     }
-    /*   fn root_field_path(root_path: &str) -> Option<FieldPath> {
-           if root_path.is_empty() {
-               None
-           } else {
-               Some(FieldPath::from(root_path))
-           }
-       }
-    */
-    /* pub fn merge_path(&self, path: &FieldPath) -> Result<Option<&str>> {
-
-
-        let mut mapper = self.root_mapper()?;
-        let mp = path.children();
-
-        for p in path.descendents() {
-            match mapper.join(p.as_str()) {
-                Some(m) => {mapper = self.mm.joined_mapper },
-                None= {
-                    if mapper.merges.contains(p) {
-                        Ok(Some(mp))
-                    }
-                }
-            }
-
-        }
-        Ok(None)
-
-    } */
+   
 }

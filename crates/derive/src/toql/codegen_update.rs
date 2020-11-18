@@ -147,13 +147,14 @@ impl<'a> CodegenUpdate<'a> {
                );
             }
             FieldKind::Merge(_) => {
+                let rust_base_type_ident = &field.rust_base_type_ident;
                 self.dispatch_update_code.push(
                     match field.number_of_options {
                         1 => {quote!(
                                 #toql_field_name => { 
                                     if let Some (fs) = self. #rust_field_ident .as_ref(){
                                         for f in fs {
-                                            <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, exprs)?
+                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, exprs)?
                                         }
                                     }
                                 }
@@ -162,7 +163,7 @@ impl<'a> CodegenUpdate<'a> {
                             quote!(
                                 #toql_field_name => { 
                                     for f in self. #rust_field_ident .as_ref(){
-                                        <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
+                                        <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
                                     }
                                 }
                             )

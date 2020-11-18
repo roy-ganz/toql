@@ -74,7 +74,6 @@ fn evaluate_pair(
                 let method_names = span.as_str().split("_")
                     .filter(|p| !p.is_empty())
                     .map(|p| {
-                        dbg!(p);
                         let name = Ident::new(&format!("{}", &p.to_snake_case()), Span::call_site());
                         quote!( . #name ())
                     })

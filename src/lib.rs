@@ -71,6 +71,7 @@ pub use toql_core::field_handler;
 pub use toql_core::join_handler;
 pub use toql_core::predicate_handler;
 pub use toql_core::query_fields;
+pub use toql_core::query_path;
 pub use toql_core::query_parser;
 pub use toql_core::sql_builder;
 pub use toql_core::sql_mapper;

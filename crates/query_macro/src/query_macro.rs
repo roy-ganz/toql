@@ -15,6 +15,7 @@ enum TokenType {
     Field,
     Wildcard,
     Predicate,
+    Selection,
     Query,
     Unknown,
 }
@@ -98,14 +99,14 @@ impl FieldInfo {
                 )
             }
             TokenType::Wildcard => Some(if self.name.is_empty() {
-                quote!(<#struct_type as toql::query_fields::QueryFields>::fields() .wildcard())
+                quote!(toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields()))
             } else {
                 let fnname = self
                     .name
                     .split("_")
                     .map(|n| syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case())).unwrap());
 
-                quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).* .wildcard())
+                quote!(toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*))
             }),
             TokenType::Query => {
                 let query = &self.args.get(0);
@@ -127,6 +128,31 @@ impl FieldInfo {
                     quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).* #are ),
                 )
             }
+            TokenType::Selection => {
+                if self.name.is_empty() {
+                     Some(quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(),"std")))
+                } else {
+
+                    let (name, path) = if let Some(pos) = self.name.rfind('_') {
+                        (&self.name[pos + 1..],   Some(&self.name[..pos]))
+                    } else {
+                        (self.name.as_str(), None)
+                    };
+
+                    match path {
+                        Some(p) => {
+                           let fnname =  p
+                            .split("_")
+                            .map(|n| syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case())).unwrap());
+                             Some(quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*, #name)))
+                        }
+                        None => { 
+                             Some(quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(), #name)))
+                        }
+                    }
+                   
+                }
+            },
             TokenType::Unknown => None,
         };
 
@@ -308,6 +334,12 @@ fn evaluate_pair(
                         return Err(quote!(compile_error!("Missing argument for placholder.");));
                     }
                 }
+            }
+            Rule::selection_clause => {
+                field_info.token_type = TokenType::Selection;
+            }
+            Rule::selection_name => {
+               field_info.name = span.as_str().trim_start_matches("#").to_string();
             }
             Rule::predicate_clause => {
                 field_info.token_type = TokenType::Predicate;

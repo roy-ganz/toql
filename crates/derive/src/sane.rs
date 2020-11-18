@@ -3,7 +3,7 @@ use crate::annot::Pair;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
-use crate::annot::{PredicateArg, ParamArg};
+use crate::annot::{PredicateArg, ParamArg, SelectionArg};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
@@ -24,10 +24,11 @@ pub struct Struct {
     pub rust_struct_visibility: Visibility,
     pub serde_key: bool,
     pub mapped_predicates: Vec<PredicateArg>,
+    pub mapped_selections: Vec<SelectionArg>,
     pub insdel_roles: HashSet<String>,
     pub upd_roles: HashSet<String>,
     pub wildcard: Option<HashSet<String>>,
-    pub count_filter: Option<HashSet<String>>,
+  //  pub count_filter: Option<HashSet<String>>,
     pub auto_key: bool
 }
 
@@ -46,6 +47,14 @@ impl Struct {
                 count_filter: a.count_filter.clone()
             })
             .collect::<Vec<_>>();
+        let mapped_selections: Vec<SelectionArg> = toql
+            .selection
+            .iter()
+            .map(|a| SelectionArg {
+                name: if a.name.is_empty() { "std".to_string()} else {a.name.to_mixed_case()},
+                fields: a.fields.clone(),
+            })
+            .collect::<Vec<_>>();
 
         Struct {
             rust_struct_ident: toql.ident.clone(),
@@ -59,10 +68,11 @@ impl Struct {
             rust_struct_visibility: toql.vis.clone(),
             serde_key: toql.serde_key,
             mapped_predicates,
+            mapped_selections,
             insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
             upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
             wildcard: toql.wildcard.as_ref().map(|e|e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
-            count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
+          //  count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
             auto_key: toql.auto_key
         }
     }

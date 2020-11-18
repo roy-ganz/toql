@@ -540,7 +540,7 @@ where {
         self.predicates.insert(name.to_string(), predicate);
     }
 
-    pub fn map_selection(&mut self, name: &str, fields_or_paths: &[String]) {
+    pub fn map_selection(&mut self, name: &str, fields_or_paths: Vec<String>) {
         if cfg!(debug_assertion) {
             if name.len() <= 3 {
                 panic!(
@@ -550,7 +550,7 @@ where {
             }
         }
         self.selections
-            .insert(name.to_string(), fields_or_paths.to_vec());
+            .insert(name.to_string(), fields_or_paths);
     }
 
     /* /// Translates a canonical sql alias into a shorter alias

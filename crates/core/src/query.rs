@@ -443,6 +443,13 @@ impl<M> From<Predicate> for Query<M> {
         q
     }
 }
+impl<M> From<Selection> for Query<M> {
+    fn from(selection: Selection) -> Query<M> {
+        let mut q = Query::new();
+        q.tokens.push(QueryToken::Selection(selection));
+        q
+    }
+}
 
 impl<M> From<Wildcard> for Query<M> {
     fn from(wildcard: Wildcard) -> Query<M> {

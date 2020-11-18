@@ -291,13 +291,13 @@ impl<'a> CodegenInsert<'a> {
                  if field.skip_mut {
                     return Ok(());
                 }
-                
+                let rust_base_type_ident = &field.rust_base_type_ident;
                 // TODO throw error if we dispatch dispatch beyond first merge
                 self.dispatch_columns_code.push(
                    quote!(
                         #toql_field_name => { 
                           
-                             return Ok(<#rust_type_ident as toql::tree::tree_insert::TreeInsert>::columns(&mut descendents)?);
+                             return Ok(<#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::columns(&mut descendents)?);
                         }
                 )
                );
@@ -307,7 +307,7 @@ impl<'a> CodegenInsert<'a> {
                                 #toql_field_name => { 
                                     if let Some (fs) = self. #rust_field_ident .as_ref(){
                                         for f in fs {
-                                            <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, values)?
+                                            <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, values)?
                                         }
                                     }
                                 }
@@ -316,7 +316,7 @@ impl<'a> CodegenInsert<'a> {
                             quote!(
                                 #toql_field_name => { 
                                     for f in self. #rust_field_ident .as_ref(){
-                                        <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, values)?
+                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, values)?
                                     }
                                 }
                             )
