@@ -18,6 +18,7 @@ pub(crate) struct CodegenInsert<'a> {
     dispatch_values_code: Vec<TokenStream>,
     insert_columns_code: Vec<TokenStream>,
     insert_values_code: Vec<TokenStream>,
+    struct_ins_roles: &'a Option<String>
     
    
 }
@@ -34,6 +35,7 @@ impl<'a> CodegenInsert<'a> {
             dispatch_values_code: Vec::new(),
             insert_columns_code: Vec::new(),
             insert_values_code: Vec::new(),
+            struct_ins_roles : &toql.roles.insert
             
         }
     }
@@ -166,7 +168,7 @@ impl<'a> CodegenInsert<'a> {
                                          if let Some(f) = &mut self. #rust_field_ident .as_ref() {
                                               if let Some(f) = f .as_ref() {
                                                 <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
-                                                values(f, &mut descendents, values)?
+                                                values(f, &mut descendents, roles, values)?
                                             }
                                          }
                                     }
@@ -175,7 +177,7 @@ impl<'a> CodegenInsert<'a> {
                                     #toql_field_name => { 
                                         if let Some(f) = &mut self. #rust_field_ident .as_ref() {
                                             <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
-                                            values(f, &mut descendents, values)?
+                                            values(f, &mut descendents, roles, values)?
                                         }
                                     }
                                         ) },
@@ -183,7 +185,7 @@ impl<'a> CodegenInsert<'a> {
                                     quote!(
                                         #toql_field_name => { 
                                             <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
-                                            values(& self. #rust_field_ident, &mut descendents, values)?
+                                            values(& self. #rust_field_ident, &mut descendents, roles, values)?
                                         }
                                     )}
                    }
@@ -307,7 +309,7 @@ impl<'a> CodegenInsert<'a> {
                                 #toql_field_name => { 
                                     if let Some (fs) = self. #rust_field_ident .as_ref(){
                                         for f in fs {
-                                            <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, values)?
+                                            <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, values)?
                                         }
                                     }
                                 }
@@ -316,7 +318,7 @@ impl<'a> CodegenInsert<'a> {
                             quote!(
                                 #toql_field_name => { 
                                     for f in self. #rust_field_ident .as_ref(){
-                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, values)?
+                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, values)?
                                     }
                                 }
                             )
@@ -340,6 +342,18 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
         let insert_columns_code = &self.insert_columns_code;
         let insert_values_code = &self.insert_values_code;
        
+       let role_assert = match self.struct_ins_roles {
+                None => quote!(),
+                Some(role_expr_string) => {
+                    quote!(
+                        if !toql::role_validator::RoleValidator::is_valid(roles, &&toql::role_expr_macro::role_expr!(#role_expr_string))  {
+                            return Err( toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string()).into())
+                        }
+                    )
+                }
+            };
+
+
        let mods =  quote! {
                 impl toql::tree::tree_insert::TreeInsert for #struct_ident {
 
@@ -367,7 +381,8 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                     }
                     #[allow(unused_mut)]
                     fn values<'a>(&self,
-                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,  
+                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,
+                                        roles: &std::collections::HashSet<String>,  
                                          values:  &mut toql::sql_expr::SqlExpr 
                                 ) -> Result<(),  toql::error::ToqlError>
                                 {
@@ -381,6 +396,8 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                                 }
                                         },
                                         None => {
+                                            #role_assert
+
                                             values.push_literal("(");
                                             #(#insert_values_code)* 
                                             values.pop_literals(2);

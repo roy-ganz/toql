@@ -28,6 +28,8 @@ pub(crate) struct CodegenTree<'a> {
     identity_set_merges_key_code: Vec<TokenStream>,
     key_columns: Vec<String>,
 
+     dispatch_map_code: Vec<TokenStream>,
+
     number_of_keys: u8,
 }
 
@@ -53,6 +55,7 @@ impl<'a> CodegenTree<'a> {
             identity_set_merges_key_code: Vec::new(),
             key_columns: Vec::new(),
             number_of_keys: 0,
+            dispatch_map_code: Vec::new(),
         }
     }
 
@@ -63,6 +66,7 @@ impl<'a> CodegenTree<'a> {
         let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
         let toql_field_name = &field.toql_field_name;
+        let rust_base_type_ident = &field.rust_base_type_ident;
 
         // Handle key predicate and parameters
         let unwrap = match field.number_of_options {
@@ -107,6 +111,11 @@ impl<'a> CodegenTree<'a> {
                 if join_attrs.key {
                     self.number_of_keys += 1;
                 }
+
+                 
+                self.dispatch_map_code.push(quote!(
+                            <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
+                ));
 
                 self.dispatch_predicate_args_code.push(quote!(
                       #toql_field_name => {
@@ -159,7 +168,7 @@ impl<'a> CodegenTree<'a> {
                );
             }
             FieldKind::Merge(merge) => {
-                let rust_base_type_ident = &field.rust_base_type_ident;
+               
                 self.dispatch_index_code.push(
                    quote!(
                        #toql_field_name => {
@@ -199,6 +208,11 @@ impl<'a> CodegenTree<'a> {
                        }
                 )
                );
+
+                self.dispatch_map_code.push(quote!(
+                            <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
+                ));
+
                 self.dispatch_merge_key_code.push(quote!(
                        #toql_field_name => {
                             <#rust_base_type_ident as toql::tree::tree_keys::TreeKeys>::
@@ -413,6 +427,7 @@ impl<'a> CodegenTree<'a> {
 impl<'a> quote::ToTokens for CodegenTree<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
+        let struct_name = &self.rust_struct.rust_struct_name;
 
         let dispatch_predicate_args_code = &self.dispatch_predicate_args_code;
         let dispatch_predicate_columns_code = &self.dispatch_predicate_columns_code;
@@ -424,6 +439,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
         let dispatch_identity_code = &self.dispatch_identity_code;
         let identity_set_merges_key_code = &self.identity_set_merges_key_code;
+
+        let dispatch_map_code = &self.dispatch_map_code;
 
         let struct_key_ident = Ident::new(
             &format!("{}Key", &self.rust_struct.rust_struct_ident),
@@ -493,6 +510,18 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                Ok(())
                            }
                       }
+                        impl toql::tree::tree_map::TreeMap for #struct_ident {
+
+                                fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::error::Result<()>{
+
+                                        if registry.get(#struct_name).is_none() {
+                                            registry.insert_new_mapper::<#struct_ident>()?;
+                                        }
+                                        #(#dispatch_map_code)*
+                                        Ok(())
+                                }
+
+                        }
 
                        impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 

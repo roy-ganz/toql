@@ -1,3 +1,5 @@
+
+/*
 role =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
 negation = { "!" ~ role }
 and_clause = {  (role | negation | "(" ~ or_clause ~ ")")  ~ ("," ~ (role | negation | "(" ~ or_clause ~ ")"))* } 
@@ -5,3 +7,15 @@ or_clause = { and_clause  ~ (";" ~ and_clause)*}
 query = { SOI ~ or_clause? ~ EOI }
 
 WHITESPACE = _{ " " }
+*/
+
+
+// support negate
+role =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
+negate = @{"!"}
+and_clause = {  (( negate? ~ role) | (  negate? ~ "(" ~ or_clause ~ ")"))  ~ ("," ~ (( negate? ~ role) | (negate? ~ "(" ~ or_clause ~ ")")))* } 
+or_clause = { and_clause  ~ (";" ~ and_clause)*}
+query = { SOI ~ (  or_clause)? ~ EOI }
+
+WHITESPACE = _{ " " }
+

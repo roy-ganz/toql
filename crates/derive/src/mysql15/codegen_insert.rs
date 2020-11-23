@@ -15,7 +15,7 @@ pub(crate) struct GeneratedMysqlInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
 
     insert_values_code: Vec<TokenStream>,
-    insdel_roles: &'a HashSet<String>,
+    insert_roles: &'a Option<String>,
     duplicate: bool,
 }
 
@@ -27,7 +27,7 @@ impl<'a> GeneratedMysqlInsert<'a> {
             insert_columns_code: Vec::new(),
 
             insert_values_code: Vec::new(),
-            insdel_roles: &toql.insdel_roles,
+            insert_roles: &toql.roles.insert,
             duplicate: false,
         }
     }
@@ -181,15 +181,15 @@ impl<'a> quote::ToTokens for GeneratedMysqlInsert<'a> {
             let insert_statement = format!("INSERT {{}}{{}}INTO {} ({{}}) VALUES ", self.sql_table_name);
             let insert_columns_code = &self.insert_columns_code;
 
-            let role_test = if self.insdel_roles.is_empty() {
-                quote!()
-            } else {
-                let roles = &self.insdel_roles;
-                quote!(
-                        toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(e)))?;
-
+            let role_test = match &self.insert_roles {
+                None => quote!(),
+            Some(roles) => {
+                 quote!(
+                    if toql::role_validator::RoleValidator::is_valid(roles, toql::role_parser::RoleParser::parse(#roles)?) {
+                        toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#roles))
+                    }
                 )
+                }
             };
 
             let optional_insert_duplicate_impl = if self.duplicate {

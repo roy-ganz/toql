@@ -1,4 +1,4 @@
-use crate::sql_arg::SqlArg;
+use crate::{role_expr::RoleExpr, sql_arg::SqlArg};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
@@ -10,7 +10,7 @@ pub struct FieldOptions {
     pub(crate) mut_select: bool, // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
     pub(crate) query_select: bool, // Select field for query builder
-    pub(crate) roles: HashSet<String>, // Only for use by these roles
+    pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
     pub(crate) on_params: Vec<String>, // Identity params for on clauses
 }
@@ -25,7 +25,7 @@ impl FieldOptions {
             mut_select: false,
             skip_wildcard: false,
             query_select: true,
-            roles: HashSet::new(),
+            load_role_expr: None,
             aux_params: HashMap::new(),
             on_params: Vec::new(),
         }
@@ -70,8 +70,8 @@ impl FieldOptions {
     /// these roles.
     /// Example: The email address is only visible to users with
     /// the _admin_ role.
-    pub fn restrict_roles(mut self, roles: HashSet<String>) -> Self {
-        self.roles = roles;
+    pub fn restrict_load(mut self, role_expr: RoleExpr) -> Self {
+        self.load_role_expr = Some(role_expr);
         self
     }
 

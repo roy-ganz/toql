@@ -18,6 +18,7 @@ lazy_static = "1.4"
 enquote="1"
 chrono = "^0.4"
 heck ="0.3"
+lru = "0.6"
 
 toql_query_parser = { version = "0.1", path = "../query_parser" }
 toql_sql_expr_parser = { version = "0.1", path = "../sql_expr_parser" }

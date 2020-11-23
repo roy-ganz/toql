@@ -1,4 +1,4 @@
-use crate::sql_arg::SqlArg;
+use crate::{role_expr::RoleExpr, sql_arg::SqlArg};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -6,7 +6,7 @@ pub struct PredicateOptions {
     pub(crate) aux_params: HashMap<String, SqlArg>,
     pub(crate) on_params: Vec<(u8, String)>, // Argument params for on clauses (index, name)
     pub(crate) count_filter: bool,
-    pub(crate) roles: HashSet<String>, // Only for use by these roles
+    pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
 }
 
 impl PredicateOptions {
@@ -15,7 +15,7 @@ impl PredicateOptions {
             aux_params: HashMap::new(),
             on_params: Vec::new(),
             count_filter: false,
-            roles: HashSet::new(),
+            load_role_expr: None,
         }
     }
 

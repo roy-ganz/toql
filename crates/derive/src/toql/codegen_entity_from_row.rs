@@ -280,15 +280,16 @@ impl<'a> CodegenEntityFromRow<'a> {
                         quote!()
                     };
  
-                    let role_test = if field.load_roles.is_empty() {
-                        quote!()
-                    } else {
-                        let roles = &field.load_roles;
-                        quote!(
-                            toql::query::assert_roles(&self.roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                            .map_err(|e| SqlBuilderError::RoleRequired(e))?;
-                        )
+                    let role_test = match &field.roles.load {
+                        Some(role) => {  quote!(
+                            if !toql::role_validator::RoleValidator::is_valid(toql::role_expr_parser::RoleExprParser(#role)?) {
+                                SqlBuilderError::RoleRequired(#role)
+                            }
+                            
+                        )},
+                        None => quote!()
                     };
+                        
                     
                    
 

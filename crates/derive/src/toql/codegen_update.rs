@@ -18,7 +18,7 @@ pub(crate) struct CodegenUpdate<'a> {
 
     update_set_code: Vec<TokenStream>,
   
-    struct_upd_roles: &'a HashSet<String>,
+    struct_upd_roles: &'a Option<String>,
     
 
       dispatch_update_code: Vec<TokenStream>,
@@ -33,7 +33,7 @@ impl<'a> CodegenUpdate<'a> {
            
             update_set_code: Vec::new(),
            
-            struct_upd_roles: &toql.upd_roles,
+            struct_upd_roles: &toql.roles.update,
 
             dispatch_update_code: Vec::new()
         }
@@ -57,6 +57,30 @@ impl<'a> CodegenUpdate<'a> {
                     _ => quote!(),
                 };
 
+        let role_test = match &field.roles.update {
+                        None => quote!(),
+                        Some(role_expr) => { 
+                            quote!(
+                               && toql::role_validator::RoleValidator::is_valid(roles, 
+                               &toql::role_expr_macro::role_expr!(#role_expr))
+                            )
+                        }
+                    };
+
+        let role_assert = match &field.roles.update {
+                        None => quote!(),
+                        Some(role_expr_string) => { 
+                            quote!(
+                               if !toql::role_validator::RoleValidator::is_valid(roles, 
+                               &toql::role_expr_macro::role_expr!(#role_expr_string)) {
+                                     return Err(toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string())));
+                               }
+                            )
+                        }
+                    };
+          
+
+
         // Handle key predicate and parameters
         match &field.kind {
             FieldKind::Regular(regular_attrs) => {
@@ -66,16 +90,6 @@ impl<'a> CodegenUpdate<'a> {
                 };
 
                 if !field.skip_mut{
-
-                    let role_assert = if field.load_roles.is_empty() {
-                        quote!()
-                    } else {
-                        let roles = &field.load_roles;
-                        quote!(
-                            if toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect()).is_ok()
-                        )
-                    };
-
 
                     let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
                             quote!(
@@ -106,12 +120,11 @@ impl<'a> CodegenUpdate<'a> {
                         // Doesn't update primary key
                         if !regular_attrs.key {
                             self.update_set_code.push(quote!(
-                                #role_assert {
                                     if  self. #rust_field_ident .is_some() 
-                                        && (fields.contains("*") || fields.contains( #toql_field_name)){
+                                        && (fields.contains("*") || fields.contains( #toql_field_name)) {
+                                            #role_assert
                                             #column_set
                                     }
-                                }
                             ));
                         }
                         
@@ -123,11 +136,10 @@ impl<'a> CodegenUpdate<'a> {
                         //update statement
                         if !regular_attrs.key {
                             self.update_set_code.push(quote!(
-                            #role_assert {
-                                 if fields.contains("*") || fields.contains( #toql_field_name) {
+                                 if (fields.contains("*") || fields.contains( #toql_field_name)) {
+                                    #role_assert
                                     #column_set
                                  }
-                            }
                             ));
                         }
 
@@ -137,42 +149,55 @@ impl<'a> CodegenUpdate<'a> {
             }
             FieldKind::Join(_join_attrs) => {
                
-                self.dispatch_update_code.push(
-                   quote!(
-                      #toql_field_name => { 
-                            <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                            update(#refer  self. #rust_field_ident # unwrap ,&mut descendents, fields, roles, exprs)?
-                        }
-                )
-               );
+                if !field.skip_mut{
+                   
+                        self.dispatch_update_code.push(
+                        quote!(
+                            #toql_field_name => { 
+                                    #role_assert
+
+                                    <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
+                                    update(#refer  self. #rust_field_ident # unwrap ,&mut descendents, fields, roles, exprs)?
+                                }
+                        )
+                    );
+                }
             }
             FieldKind::Merge(_) => {
-                let rust_base_type_ident = &field.rust_base_type_ident;
-                self.dispatch_update_code.push(
-                    match field.number_of_options {
-                        1 => {quote!(
-                                #toql_field_name => { 
-                                    if let Some (fs) = self. #rust_field_ident .as_ref(){
-                                        for f in fs {
-                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, exprs)?
+
+                 if !field.skip_mut{
+                   
+
+                    let rust_base_type_ident = &field.rust_base_type_ident;
+                    self.dispatch_update_code.push(
+                        match field.number_of_options {
+                            1 => {quote!(
+                                    #toql_field_name => { 
+                                        #role_assert
+
+                                        if let Some (fs) = self. #rust_field_ident .as_ref(){
+                                            for f in fs {
+                                                <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, exprs)?
+                                            }
                                         }
                                     }
-                                }
-                        )}
-                        _ => {
-                            quote!(
-                                #toql_field_name => { 
-                                    for f in self. #rust_field_ident .as_ref(){
-                                        <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
-                                    }
-                                }
-                            )
-                        }
+                            )}
+                            _ => {
+                                quote!(
+                                    #toql_field_name => { 
+                                        #role_assert
 
-                    }
-                   
-               );
-                  
+                                        for f in self. #rust_field_ident .as_ref(){
+                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
+                                        }
+                                    }
+                                )
+                            }
+
+                        }
+                    
+                );
+                 }
             }
         };
 
@@ -198,16 +223,18 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
             let sql_table_name = &self.sql_table_name;
             let sql_table_alias = &self.sql_table_alias;
 
-            let upd_role_test = if self.struct_upd_roles.is_empty() {
-                quote!()
-            } else {
-                let roles = &self.struct_upd_roles;
-                quote!(
-                        toql::query::assert_roles(roles, &[ #(String::from(#roles)),* ].iter().cloned().collect())
-                        .map_err(|e|toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(e)))?;
-
-                )
+            let struct_upd_role_assert = match self.struct_upd_roles {
+                None => quote!(),
+                Some(role_expr_string) => {
+                    quote!(
+                        if !toql::role_validator::RoleValidator::is_valid(roles, &&toql::role_expr_macro::role_expr!(#role_expr_string))  {
+                            return Err(toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string())));
+                        }
+                    )
+                }
             };
+            
+
           
             let dispatch_update_code = &self.dispatch_update_code;
 
@@ -232,12 +259,12 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         }
                                     },
                                     None => {
-                                        #upd_role_test
-
+                                        #struct_upd_role_assert
+                                        
                                         let mut expr = toql::sql_expr::SqlExpr::new();
                                         expr.push_literal("UPDATE ");
                                         expr.push_literal(#sql_table_name);
-                                         expr.push_literal(" ");
+                                        expr.push_literal(" ");
                                         expr.push_alias(#sql_table_alias);
                                         expr.push_literal(" SET ");
                                         let tokens = expr.tokens().len();
@@ -250,6 +277,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                             expr.extend( resolver.resolve(&toql::key::predicate_expr(key))?); 
                                             exprs.push(expr);
                                         }
+                                        
                                     }
                                 };
                               

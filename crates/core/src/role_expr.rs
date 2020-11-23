@@ -25,5 +25,16 @@ impl RoleExpr {
     pub fn not(self) -> Self {
         RoleExpr::Not(Box::new(self))
     }
-
 }
+ 
+impl ToString for RoleExpr {
+    fn to_string(&self) -> String {
+        match self {
+            RoleExpr::And(a, b) => {format!("{}, {}", a.to_string(), b.to_string())}
+            RoleExpr::Or(a, b) => {format!("({}); ({})", a.to_string(), b.to_string())}
+            RoleExpr::Not(a) => {format!("{}", a.to_string())}
+            RoleExpr::Role(r) => {format!("{}", r.to_string())}
+            RoleExpr::Invalid => {"`false`".to_string()}
+        }
+    }
+} 

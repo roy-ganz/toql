@@ -12,6 +12,8 @@ pub(crate) struct CodegenMapper<'a> {
     key_field_names: Vec<String>,
     count_filter_code: TokenStream,
     key_fields: bool,
+    delete_role_expr:  &'a Option<String>,
+    load_role_expr:  &'a Option<String>
 }
 
 impl<'a> CodegenMapper<'a> {
@@ -100,6 +102,8 @@ impl<'a> CodegenMapper<'a> {
             key_field_names: Vec::new(),
             count_filter_code,
             key_fields: true,
+            delete_role_expr: &rust_struct.roles.delete,
+            load_role_expr: &rust_struct.roles.load
         }
     }
 
@@ -109,6 +113,10 @@ impl<'a> CodegenMapper<'a> {
 
         let rust_field_name = &field.rust_field_name;
       
+       let roles_ident =  match &field.roles.load {
+                    Some(role) =>  quote! {  .restrict_load(toql::role_expr_macro::role_expr!(#role)) },
+                    None => quote!()
+                };
 
         // Joined field
         match &field.kind {
@@ -151,51 +159,6 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 }; 
-
-                // If no columns are provided, use default
-             /*    let col_array = if join_attrs.columns.is_empty() {
-                    quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns())
-                } else {
-                     let other_columns: Vec<String> = join_attrs.columns
-                        .iter()
-                        .map(|column| String::from(column.other.as_str()))
-                        .collect::<Vec<_>>();
-                        quote!( [ #(String::from(#other_columns)),* ])
-                }; */
-/* 
-                let join_expression_builder = quote!(
-                    
-                //  let join_alias = format!("{}_{}",canonical_sql_alias, #join_alias);
-
-                 // #left_join_discriminator
-                  //let join_expression = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
-                 /*  let join_expression =  #col_array .iter()
-                    .map(|other_column| {
-                        #default_self_column_code;
-                        let self_column= #columns_map_code;
-                        format!("{} = {}", & mapper.translate_aliased_column(canonical_sql_alias, &self_column),
-                        & mapper.translate_aliased_column(&join_alias,other_column))
-                    }).collect::<Vec<String>>().join(" AND ")
-                ); */
-                  let join_expression =  #col_array .iter()
-                    .map(|other_column| {
-                        #default_self_column_code;
-                        let self_column= #columns_map_code;
-                        format!("{} = {}",  &self_column,&other_column)
-                    }).collect::<Vec<String>>().join(" AND ")
-                ); */
-    // Alias resolving
-             /*    let on_sql = if let Some(ref sql) = &join_attrs.on_sql {
-                    format!(" AND ({})", sql.replace("...", "{join_alias}.").replace("..", "{alias}."))
-                } else {
-                    String::from("")
-                }; */
-
-              
-
-                
-                // Avoid unused arguments by consuming them with zero length
-                // let join_predicate_format = format!("{{join}}{}{{join_alias:.0}}{{alias:.0}}", on_sql);
 
                 // Build predicate based on key information or custom provided column pairs
                 let col_array = if join_attrs.columns.is_empty() {
@@ -249,20 +212,8 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 };
-                
-              /*   let mut_select_ident = if join_attrs.key {
-                    quote!(.mut_select(toql_path.is_empty() || (!toql_path.is_empty() && ! toql_path.contains('_'))))
-                } else {
-                    quote!(.mut_select(toql_path.is_empty()))
-                };
- */
+                        
 
-                let roles = &field.load_roles;
-                let roles_ident = if roles.is_empty() {
-                    quote!()
-                } else {
-                    quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
-                };
 
                  let aux_params = join_attrs.aux_params.iter()
                     .map(|p| { let name = &p.name; let value = &p.value; quote!(.aux_param(String::from(#name), String::from(#value))) })
@@ -295,16 +246,7 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                            self.key_fields = false;
                 }
-              /*   let countfilter_ident = if regular_attrs.count_filter {
-                    quote!( .count_filter(true))
-                } else {
-                    quote!()
-                };
-                let countselect_ident = if regular_attrs.count_select {
-                    quote!( .count_select(true))
-                } else {
-                    quote!()
-                }; */
+            
                 let preselect_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
                 } else {
@@ -326,13 +268,6 @@ impl<'a> CodegenMapper<'a> {
                     quote!(.mut_select(toql_path.is_empty() || (!toql_path.is_empty() && ! toql_path.contains('_'))))
                 } else {
                     quote!(.mut_select(toql_path.is_empty()))
-                };
-
-                let roles = &field.load_roles;
-                let roles_ident = if roles.is_empty() {
-                    quote!()
-                } else {
-                    quote! { .restrict_roles( [ #(String::from(#roles)),* ].iter().cloned().collect())  }
                 };
 
                 let aux_params = regular_attrs.aux_params.iter()
@@ -477,6 +412,14 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
         let field_mappings = &self.field_mappings;
         let count_filter_code = &self.count_filter_code;
       
+       let delete_role_code = match &self.delete_role_expr {
+           Some(r) => quote!(mapper.restrict_delete( toql::role_expr_macro::role_expr!(#r)); ),
+           None => quote!()
+          };
+       let load_role_code = match &self.delete_role_expr {
+           Some(r) => quote!(mapper.restrict_load( toql::role_expr_macro::role_expr!(#r)); ),
+           None => quote!()
+          };
 
         
        
@@ -504,6 +447,9 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                     #(#field_mappings)*
 
                     #count_filter_code
+
+                    #load_role_code
+                    #delete_role_code
                     Ok(())
                 }
             }

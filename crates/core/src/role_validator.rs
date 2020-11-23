@@ -18,7 +18,6 @@ impl RoleValidator {
 
     }
 
-
 }
 
 

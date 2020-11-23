@@ -12,6 +12,7 @@ pub trait TreeInsert {
      fn values<'a>(
         &self,
         descendents: &mut Descendents<'a>,
+        roles: &std::collections::HashSet<String>,
         values:  &mut crate::sql_expr::SqlExpr  
    ) -> Result<(), ToqlError>; 
    /*  fn values<'a>(

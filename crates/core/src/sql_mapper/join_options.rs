@@ -1,6 +1,6 @@
 use crate::join_handler::JoinHandler;
 use crate::sql_arg::SqlArg;
-use crate::sql_expr::SqlExpr;
+use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub struct JoinOptions {
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
-    pub(crate) roles: HashSet<String>, // Only for use by these roles
+    pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
     pub(crate) discriminator: Option<SqlExpr>, // Optional discriminator field to distimguish unselected left join from selected but NULL join
@@ -21,7 +21,7 @@ impl JoinOptions {
         JoinOptions {
             preselect: false,
             skip_wildcard: false,
-            roles: HashSet::new(),
+            load_role_expr: None,
             aux_params: HashMap::new(),
             join_handler: None,
             discriminator: None,
@@ -49,8 +49,8 @@ impl JoinOptions {
     /// these roles.
     /// Example: The email address is only visible to users with
     /// the _admin_ role.
-    pub fn restrict_roles(mut self, roles: HashSet<String>) -> Self {
-        self.roles = roles;
+    pub fn restrict_load(mut self, role_expr: RoleExpr) -> Self {
+        self.load_role_expr = Some(role_expr);
         self
     }
 

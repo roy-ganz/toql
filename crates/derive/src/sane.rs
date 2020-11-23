@@ -1,9 +1,10 @@
 use crate::annot::OnParamArg;
 use crate::annot::Pair;
+use crate::annot::FieldRoles;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
-use crate::annot::{PredicateArg, ParamArg, SelectionArg};
+use crate::annot::{PredicateArg, ParamArg, SelectionArg, StructRoles};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
 
@@ -25,8 +26,7 @@ pub struct Struct {
     pub serde_key: bool,
     pub mapped_predicates: Vec<PredicateArg>,
     pub mapped_selections: Vec<SelectionArg>,
-    pub insdel_roles: HashSet<String>,
-    pub upd_roles: HashSet<String>,
+    pub roles : StructRoles,
     pub wildcard: Option<HashSet<String>>,
   //  pub count_filter: Option<HashSet<String>>,
     pub auto_key: bool
@@ -69,8 +69,7 @@ impl Struct {
             serde_key: toql.serde_key,
             mapped_predicates,
             mapped_selections,
-            insdel_roles: toql.insdel_role.iter().cloned().collect::<HashSet<_>>(),
-            upd_roles: toql.upd_role.iter().cloned().collect::<HashSet<_>>(),
+            roles: toql.roles.clone(),
             wildcard: toql.wildcard.as_ref().map(|e|e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
           //  count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
             auto_key: toql.auto_key
@@ -150,6 +149,8 @@ impl MergeField {
     } */
 }
 
+
+
 #[derive(Clone)]
 pub struct Field {
     pub rust_field_ident: Ident,
@@ -160,8 +161,7 @@ pub struct Field {
     pub toql_field_name: String,
     pub number_of_options: u8,
     pub skip_wildcard: bool,
-    pub load_roles: HashSet<String>,
-    pub upd_roles: HashSet<String>,
+    pub roles: FieldRoles,
     pub preselect: bool,
     pub kind: FieldKind,
     pub skip_mut: bool,
@@ -474,18 +474,7 @@ impl Field {
             skip_mut: field.skip_mut,
             skip_query: field.skip_query,
             skip_wildcard: field.skip_wildcard,
-            load_roles: field
-                .load_role
-                .iter()
-                .cloned()
-                .collect::<HashSet<_>>()
-                .clone(),
-            upd_roles: field
-                .upd_role
-                .iter()
-                .cloned()
-                .collect::<HashSet<_>>()
-                .clone(),
+            roles: field.roles.clone(),
             preselect: field.preselect,
             kind,
         })

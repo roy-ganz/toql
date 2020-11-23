@@ -28,21 +28,27 @@ impl RoleExprParser {
 
             match pair.as_rule() {
                 Rule::role => Some(RoleExpr::role(span.as_str().to_string())),
-                Rule::negation => {
-                    if let Some(a) = evaluate_pair(pair) {
-                        Some(RoleExpr::Not(Box::new(a)))
-                    } else {
-                        None
-                    }
-                }
-
+               
                 Rule::and_clause => {
                     let mut expr: Option<RoleExpr> = None;
+                     let mut negate = false;
                     for p in pair.into_inner() {
+                          if p.as_rule() == Rule::negate {
+                            negate = true;
+                            continue;
+                        }
                         let res = evaluate_pair(p);
                         if let Some(r) = res {
                             match expr {
-                                Some(ex) => expr = Some(RoleExpr::And(Box::new(ex), Box::new(r))),
+                                Some(ex) => {
+                                    let e = if negate {
+                                        negate = false;
+                                        RoleExpr::Not(Box::new(r))
+                                    } else {
+                                        r
+                                    };
+                                    expr = Some(RoleExpr::And(Box::new(ex), Box::new(e)));
+                                },
                                 None => expr = Some(r),
                             }
                         }
@@ -50,12 +56,26 @@ impl RoleExprParser {
                     expr
                 }
                 Rule::or_clause => {
+                    let mut negate = false;
                     let mut expr: Option<RoleExpr> = None;
                     for p in pair.into_inner() {
+                        if p.as_rule() == Rule::negate {
+                            negate = true;
+                            continue;
+                        }
                         let res = evaluate_pair(p);
                         if let Some(r) = res {
                             match expr {
-                                Some(ex) => expr = Some(RoleExpr::Or(Box::new(ex), Box::new(r))),
+                                Some(ex) => { 
+                                    let e = if negate {
+                                        negate = false;
+                                        RoleExpr::Not(Box::new(r))
+                                    } else {
+                                        r
+                                    };
+                                    expr = Some(RoleExpr::Or(Box::new(ex), Box::new(e)));
+
+                                },
                                 None => expr = Some(r),
                             }
                         }

@@ -4,6 +4,7 @@ use crate::key::{Key, Keyed};
 use crate::{sql_mapper::mapped::Mapped, error::ToqlError};
 use crate::query::field_path::Descendents;
 use crate::sql_expr::SqlExpr;
+use std::collections::HashSet;
 
 
 impl<T> TreeInsert for Join<T>
@@ -17,6 +18,7 @@ where T: Keyed + TreeInsert + Mapped, <T as Keyed>::Key: Key + Clone
     fn values<'a>(
         &self,
         descendents: &mut Descendents<'a>,
+        roles: &HashSet<String>,
         values:  &mut SqlExpr  
    ) -> Result<(), ToqlError> {
         match self {
@@ -34,7 +36,7 @@ where T: Keyed + TreeInsert + Mapped, <T as Keyed>::Key: Key + Clone
                     Ok(())
                 }
             },
-            Join::Entity(e) => e.values(descendents, values),
+            Join::Entity(e) => e.values(descendents, roles, values),
         }
     }
 

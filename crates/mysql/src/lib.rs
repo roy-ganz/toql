@@ -62,7 +62,7 @@ use toql_core::{
     from_row::FromRow,
     parameter::ParameterMap,
     sql_expr::{resolver::Resolver, PredicateColumn},
-    sql_mapper::{mapped::Mapped, SqlMapper},
+    sql_mapper::{mapped::Mapped, SqlMapper}, role_validator::RoleValidator,
 };
 
 use crate::sql_arg::{values_from, values_from_ref};
@@ -361,6 +361,9 @@ where
     C: GenericConnection,
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
+    if !mysql.registred_roots.contains() {
+
+    }
     let (mut entities, mut unmerged_paths, counts) = load_top(mysql, &query, page)?;
 
     loop {
@@ -528,6 +531,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 self.alias_format(),
                 &aux_params,
                 entities,
+                &self.roles(),
                 &home_path,
                 "",
                 "",
@@ -581,6 +585,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                         self.alias_format(),
                         &aux_params,
                         entities,
+                         &self.roles(),
                         &mut path,
                         "",
                         "",
@@ -622,6 +627,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     self.alias_format(),
                     &aux_params,
                     entities,
+                     &self.roles(),
                     &path,
                     "",
                     "",
@@ -753,6 +759,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     self.alias_format(),
                     &aux_params,
                     entities,
+                     &self.roles(),
                     &merge_path,
                     "",
                     "",
@@ -797,8 +804,9 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         T: Mapped,
         B: Borrow<Query<T>>,
     {
-        /*  let sql_mapper = self.registry.mappers.get( &<T as Mapped>::type_name() )
-        .ok_or( ToqlError::MapperMissing(<T as Mapped>::type_name()))?; */
+        /*   */
+
+        
 
         let result = SqlBuilder::new(&<T as Mapped>::type_name(), self.registry)
             .with_aux_params(self.aux_params().clone()) // todo ref

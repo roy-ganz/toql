@@ -55,7 +55,7 @@ use crate::sql_mapper::predicate::Predicate;
 use std::collections::HashMap;
 
 use crate::field_handler::{BasicFieldHandler, FieldHandler};
-use crate::sql_expr::SqlExpr;
+use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
 use std::fmt;
 use std::sync::Arc;
 
@@ -122,6 +122,12 @@ pub struct SqlMapper {
     /// Merge information
     pub(crate) merges: HashMap<String, Merge>,
 
+    /// Load role
+    pub(crate) load_role_expr: Option<RoleExpr>,
+
+    /// Delete role
+    pub(crate) delete_role_expr: Option<RoleExpr>,
+
     /// Selections
     /// Automatic created selection are
     /// #cnt - Fields for count query
@@ -171,6 +177,8 @@ where {
             deserialize_order: Vec::new(),
             joined_mappers: HashMap::new(),
             selections: HashMap::new(),
+            load_role_expr: None,
+            delete_role_expr: None
         }
     }
     /// Create a new mapper from a struct that implements the Mapped trait.
@@ -438,42 +446,9 @@ where {
         self.deserialize_order
             .push(DeserializeType::Join(toql_path.into()));
 
-        /* // Precalculate tree information for quicker join construction
-               // Build root joins and store child joins to parent joins
-               // Eg. [user] = [user_country, user_address, user_info]
-
-               let c = toql_path.matches('_').count();
-               if c == 0 {
-                   self.joins_root.push(toql_path.to_string());
-               } else {
-                   // Add path to base path
-                   let head: &str = toql_path
-                       .trim_end_matches(|c| c != '_')
-                       .trim_end_matches('_');
-
-                   let j = self
-                       .joins_tree
-                       .entry(head.to_string())
-                       .or_insert(Vec::new());
-                   j.push(toql_path.to_string());
-               }
-        */
-        // Find targets that use join and set join field
-
         self
     }
-    /// Changes an already added join.
-    /// This will panic if the join does not exist
-    /// Use it to make changes, it prevents typing errors of path names.
-    /*   pub fn alter_join<'a>(
-        &'a mut self,
-        toql_path: &str,
-        join_expression: SqlExpr,
-    ) -> Result<&'a mut Self> {
-        let j = self.joins.get_mut(toql_path).ok_or(ToqlError::MapperMissing)?;
-        j.expression = join_expression;
-        Ok(self)
-    } */
+   
     pub fn map_merge<S>(
         &mut self,
         toql_path: S,
@@ -553,124 +528,12 @@ where {
             .insert(name.to_string(), fields_or_paths);
     }
 
-    /* /// Translates a canonical sql alias into a shorter alias
-    pub fn translate_alias(&mut self, canonical_alias: &str) -> String {
-        use std::collections::hash_map::Entry;
-
-        let a = match self.alias_translation.entry(canonical_alias.to_owned()) {
-            Entry::Occupied(o) => o.into_mut(),
-            Entry::Vacant(v) => {
-                let alias = match self.alias_format {
-                    AliasFormat::TinyIndex => {
-                        self.table_index = self.table_index + 1;
-                        AliasFormat::tiny_index(self.table_index)
-                    }
-                    AliasFormat::ShortIndex => {
-                        self.table_index = self.table_index + 1;
-                        AliasFormat::short_index(&canonical_alias, self.table_index)
-                    }
-                    AliasFormat::MediumIndex => {
-                        self.table_index = self.table_index + 1;
-                        AliasFormat::medium_index(&canonical_alias, self.table_index)
-                    }
-                    _ => canonical_alias.to_owned(),
-                };
-                v.insert(alias)
-            }
-        }
-        .to_owned();
-
-        //println!("{} -> {}", canonical_alias, &a);
-        a
-    }
-    /// Returns a translated alias or the canonical alias if it's not been translated
-    pub fn translated_alias(&self, canonical_alias: &str) -> String {
-        // println!("{:?}", self.alias_translation);
-        self.alias_translation
-            .get(canonical_alias)
-            .unwrap_or(&canonical_alias.to_owned())
-            .to_owned()
-    }
-    /// Helper method to build an aliased column with a canonical sql alias
-    /// Example for `AliasFormat::TinyIndex`: user_address_country.id translates into t1.id
-    pub fn translate_aliased_column(&mut self, canonical_alias: &str, column: &str) -> String {
-        let translated_alias = self.translate_alias(canonical_alias);
-        format!(
-            "{}{}{}",
-            &translated_alias,
-            if canonical_alias.is_empty() { "" } else { "." },
-            column
-        )
-    }
-    /// Helper method to build an aliased column with a canonical sql alias
-    /// Example for `AliasFormat::TinyIndex`: user_address_country.id translates into t1.id
-    pub fn aliased_column(&self, canonical_alias: &str, column: &str) -> String {
-        let translated_alias = self.translated_alias(canonical_alias);
-        format!(
-            "{}{}{}",
-            &translated_alias,
-            if canonical_alias.is_empty() { "" } else { "." },
-            column
-        )
-    }
-    /// Helper method to build an aliased table with a canonical SQL alias
-    /// Example for `AliasFormat::TinyIndex`:  Country user_address_country translates into Country t1
-    pub fn translate_aliased_table(&mut self, table: &str, canonical_alias: &str) -> String {
-        let translated_alias = self.translate_alias(canonical_alias);
-        format!(
-            "{}{}{}",
-            table,
-            if canonical_alias.is_empty() { "" } else { " " },
-            &translated_alias
-        )
+    pub fn restrict_delete(&mut self, role_expr: RoleExpr) {
+        self.delete_role_expr = Some(role_expr);
     }
 
-    /// Helper method to replace alias placeholders in SQL expression
-    /// '[canonical_sql_alias]' is replaced with translated alias
-    pub fn replace_aliases(&mut self, sql_with_aliases: &str) -> Result<String, SqlMapperError> {
-        lazy_static! {
-            static ref REGEX: regex::Regex = regex::Regex::new(r"\[([\w_]+)\]").unwrap();
-        }
-
-        if cfg!(debug_assertions) {
-            for m in REGEX.find_iter(sql_with_aliases) {
-                if !self.alias_translation.contains_key(m.as_str()) {
-                    return Err(SqlMapperError::CanonicalAliasMissing(m.as_str().to_owned()));
-                }
-            }
-        }
-
-        let sql = REGEX.replace(sql_with_aliases, |e: &regex::Captures| {
-            let canonical_alias = &e[1];
-            let alias = self.alias_translation.get(canonical_alias);
-            if let Some(a) = alias {
-                a.to_owned()
-            } else {
-                String::from(canonical_alias)
-            }
-        });
-        Ok(sql.to_string())
+    pub fn restrict_load(&mut self, role_expr: RoleExpr) {
+        self.load_role_expr = Some(role_expr);
     }
 
-    /// Extract aux parameter names and arguments from predicate expression
-    /// Example: `SELECT 1 WHERE <a> and ? and <b>` yields  the tuple
-    /// ("SELECT 1 WHERE ? and ? and ?" , ["a", "?", "b"] )
-    fn predicate_argument_names(sql_expression: &str) -> (String, Vec<String>) {
-                lazy_static! {
-                    static ref REGEX: regex::Regex = regex::Regex::new(r"<([\w_]+)>|\?").unwrap();
-                }
-                let mut sql_aux_param_names :Vec<String> = Vec::new();
-
-                for cap in REGEX.captures_iter(sql_expression) {
-                    if cap[0] == *"?" {
-                        sql_aux_param_names.push("?".to_owned());
-                    } else {
-                        sql_aux_param_names.push(cap[1].to_owned());
-                    }
-                }
-
-                let replaced_sql_expression = REGEX.replace_all(sql_expression, "?");
-
-                ( replaced_sql_expression.to_owned().to_string(), sql_aux_param_names)
-         } */
 }

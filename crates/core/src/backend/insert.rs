@@ -32,6 +32,7 @@ use std::collections::HashSet;
     }
     pub fn build_insert_sql<T, Q>( mappers: &HashMap<String, SqlMapper>, 
         alias_format: AliasFormat, aux_params: &ParameterMap, entities: &[Q], 
+        roles: &HashSet<String>,
             path: &FieldPath, modifier: &str, extra: &str) 
             -> Result<Option<Sql>>
     where
@@ -47,7 +48,7 @@ use std::collections::HashSet;
         let columns_expr = <T as TreeInsert>::columns(&mut d)?;
         for e in entities {
              let mut d = path.descendents();
-            <T as TreeInsert>::values(e.borrow(), &mut d, &mut values_expr)?;
+            <T as TreeInsert>::values(e.borrow(), &mut d, roles, &mut values_expr)?;
         }
         if values_expr.is_empty() {
             return Ok(None);

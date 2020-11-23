@@ -17,6 +17,24 @@ pub struct Pair {
     pub this: String,
     pub other: String,
 }
+#[derive(Debug, FromMeta, Default, Clone)]
+pub struct FieldRoles {
+     #[darling(default)]
+    pub load: Option<String>,
+     #[darling(default)]
+    pub update: Option<String>
+}
+#[derive(Debug, FromMeta, Default, Clone)]
+pub struct StructRoles {
+    #[darling(default)]
+    pub load: Option<String>,
+    #[darling(default)]
+    pub update: Option<String>,
+     #[darling(default)]
+    pub insert: Option<String>,
+     #[darling(default)]
+    pub delete: Option<String>
+}
 
 #[derive(Debug, FromMeta)]
 pub struct MergeArg {
@@ -81,10 +99,6 @@ pub struct ToqlField {
     pub field: Option<String>,
     #[darling(default)]
     pub sql: Option<String>,
-    #[darling(multiple)]
-    pub load_role: Vec<String>,
-    #[darling(multiple)]
-    pub upd_role: Vec<String>,
     #[darling(default)]
     pub merge: Option<MergeArg>,
     #[darling(default)]
@@ -95,9 +109,10 @@ pub struct ToqlField {
     pub handler: Option<Path>,
     #[darling(multiple)]
     pub param: Vec<ParamArg>,
-
+    #[darling(default)]
+    pub roles: FieldRoles,
     #[darling(multiple)]
-    pub on_param: Vec<OnParamArg>,
+    pub on_param: Vec<OnParamArg>
             
 }
 
@@ -105,109 +120,6 @@ pub struct ToqlField {
 
  
 
-
-impl ToqlField {
-    // IMPROVE: Function is used, but somehow considered unused
-  /*   #[allow(dead_code)]
-    pub fn _first_type<'a>(&'a self) -> &'a Ident {
-        let types = self.get_types();
-        types.0
-    } */
-    /* pub fn first_non_generic_type<'a>(&'a self) -> Option<&'a Ident> {
-
-        
-
-        let types = self.get_types();
-        if types.2.is_some() {
-            types.2
-        } else if types.1.is_some() {
-            types.1
-        } else {
-            Some(types.0)
-        }
-    }
-    pub fn number_of_options<'a>(&'a self) -> u8 {
-        let types = self.get_types();
-
-        let mut n: u8 = 0;
-        if types.0 == "Option" {
-            n += 1;
-            if let Some(t) = types.1 {
-                if t == "Option" {
-                    n += 1;
-                    if let Some(t) = types.2 {
-                        if t == "Option" {
-                            n += 1;
-                        }
-                    }
-                }
-            }
-        }
-        n
-    }
-
-    pub fn get_types<'a>(
-        &'a self,
-    ) -> (
-        &'a syn::Ident,
-        Option<&'a syn::Ident>,
-        Option<&'a syn::Ident>,
-    ) {
-
-        // Test
-        println!("PARSE TEST");
-        dbg!(TypeInfo::parse(&self.ty));
-
-        let type_ident =
-            Self::get_type(&self.ty).expect(&format!("Invalid type on field {:?}", self.field));
-
-        match &self.ty {
-            syn::Type::Path(syn::TypePath { qself: _, path }) => {
-                match &path.segments[0].arguments {
-                    syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
-                        colon2_token: _,
-                        lt_token: _,
-                        gt_token: _,
-                        args,
-                    }) => match &args[0] {
-                        Type(t) => {
-                            let gt = match &t {
-                                syn::Type::Path(syn::TypePath { qself: _, path }) => {
-                                    match &path.segments[0].arguments {
-                                        syn::PathArguments::AngleBracketed(
-                                            syn::AngleBracketedGenericArguments {
-                                                colon2_token: _,
-                                                lt_token: _,
-                                                gt_token: _,
-                                                args,
-                                            },
-                                        ) => match &args[0] {
-                                            Type(t) => Self::get_type(t),
-                                            _ => None,
-                                        },
-                                        _ => None,
-                                    }
-                                }
-                                _ => None,
-                            };
-                            (type_ident, Self::get_type(t), gt)
-                        }
-                        _ => (type_ident, None, None),
-                    },
-                    _ => (type_ident, None, None),
-                }
-            }
-            _ => (type_ident, None, None),
-        }
-    }
-
-    fn get_type<'a>(ty: &'a syn::Type) -> Option<&'a syn::Ident> {
-        match ty {
-            syn::Type::Path(syn::TypePath { qself: _, path }) => Some(&path.segments[0].ident),
-            _ => None,
-        }
-    } */
-}
 
 #[derive(FromMeta, PartialEq, Eq, Clone, Debug)]
 pub enum RenameCase {
@@ -287,10 +199,13 @@ pub struct Toql {
     pub predicate: Vec<PredicateArg>,
     #[darling(multiple)]
     pub selection: Vec<SelectionArg>,
+     #[darling(default)]
+    pub roles : StructRoles,
+    /* 
     #[darling(multiple)]
     pub insdel_role: Vec<String>,
     #[darling(multiple)]
-    pub upd_role: Vec<String>,
+    pub upd_role: Vec<String>, */
    
     #[darling(default)]
     pub wildcard: Option<StringSet>,
@@ -344,8 +259,7 @@ impl quote::ToTokens for Toql {
             serde_key: _,
             predicate: _,
             selection: _,
-            insdel_role: _,
-            upd_role: _,
+            roles: _,
             wildcard:_,
            // count_filter:_,
             ref data,
