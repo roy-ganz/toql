@@ -62,7 +62,7 @@ use toql_core::{
     from_row::FromRow,
     parameter::ParameterMap,
     sql_expr::{resolver::Resolver, PredicateColumn},
-    sql_mapper::{mapped::Mapped, SqlMapper}, role_validator::RoleValidator, backend::context::Context,
+    sql_mapper::{mapped::Mapped, SqlMapper}, role_validator::RoleValidator, backend::context::Context, cache::Cache,
 };
 
 use crate::sql_arg::{values_from, values_from_ref};
@@ -363,9 +363,9 @@ where
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
     let type_name = <T as Mapped>::type_name();
-    if !mysql.context.registered_roots.contains(&type_name) {
-        <T as TreeMap>::map(&mut mysql.context.registry)?;
-        mysql.context.registered_roots.insert(type_name);
+    if !mysql.cache.registered_roots.contains(&type_name) {
+        <T as TreeMap>::map(&mut mysql.cache.registry)?;
+        mysql.cache.registered_roots.insert(type_name);
     }
 
     let (mut entities, mut unmerged_paths, counts) = load_top(mysql, &query, page)?;
@@ -411,7 +411,8 @@ where
 
 pub struct MySql<'a, C: GenericConnection> {
     conn: &'a mut C,
-    context : Context
+    context : Context,
+    cache: &'a mut Cache
    /*  roles: HashSet<String>,
     registry: &'a SqlMapperRegistry,
     aux_params: HashMap<String, SqlArg>,
@@ -422,8 +423,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Create connection wrapper from MySql connection or transaction.
     ///
     /// Use the connection wrapper to access all Toql functionality.
-    pub fn from(conn: &'a mut C) -> MySql<'a, C> {
-        Self::with_roles_and_aux_params(conn,  HashSet::new(), HashMap::new())
+    pub fn from(conn: &'a mut C, cache: &'a mut Cache) -> MySql<'a, C> {
+        Self::with_roles_and_aux_params(conn, cache, HashSet::new(), HashMap::new())
     }
 
     /// Create connection wrapper from MySql connection or transaction and roles.
@@ -431,32 +432,34 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_roles(
         conn: &'a mut C,
+         cache: &'a mut Cache,
         roles: HashSet<String>,
     ) -> MySql<'a, C> {
-        Self::with_roles_and_aux_params(conn,  roles, HashMap::new())
+        Self::with_roles_and_aux_params(conn, cache, roles, HashMap::new())
     }
     /// Create connection wrapper from MySql connection or transaction and roles.
     ///
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_aux_params(
         conn: &'a mut C,
+        cache : &'a mut Cache,
         aux_params: HashMap<String, SqlArg>,
     ) -> MySql<'a, C> {
-        Self::with_roles_and_aux_params(conn, HashSet::new(), aux_params)
+        Self::with_roles_and_aux_params(conn, cache, HashSet::new(), aux_params)
     }
     /// Create connection wrapper from MySql connection or transaction and roles.
     ///
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_roles_and_aux_params(
         conn: &'a mut C,
+        cache: &'a mut Cache,
         roles: HashSet<String>,
         aux_params: HashMap<String, SqlArg>,
     ) -> MySql<'a, C> {
         MySql {
             conn,
+            cache,
             context: Context {
-                registry : SqlMapperRegistry::new(),
-                registered_roots: HashSet::new(),
                 roles,
                 aux_params,
                 alias_format: AliasFormat::Canonical,
@@ -478,7 +481,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     }
 
     pub fn registry(&self) -> &SqlMapperRegistry {
-        &self.context.registry
+        &self.cache.registry
     }
     pub fn roles(&self) -> &HashSet<String> {
         &self.context.roles
@@ -519,7 +522,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut merges: HashSet<String> = HashSet::new();
 
         toql_core::backend::insert::plan_insert_order::<T, _>(
-            &self.context.registry.mappers,
+            &self.cache.registry.mappers,
             &paths.list,
             &mut joins,
             &mut merges,
@@ -682,7 +685,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         //  toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
         toql_core::backend::update::plan_update_order::<T, _>(
-            &self.context.registry.mappers,
+            &self.cache.registry.mappers,
             &fields.list,
             &mut joins,
             &mut merges,
@@ -810,16 +813,13 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         B: Borrow<Query<T>>,
     {
        
-
         let type_name = <T as Mapped>::type_name();
-        if !self.context.registered_roots.contains(&type_name) {
-            <T as TreeMap>::map(&mut self.context.registry)?;
-            self.context.registered_roots.insert(type_name);
+        if !self.cache.registered_roots.contains(&type_name) {
+            <T as TreeMap>::map(&mut self.cache.registry)?;
+            self.cache.registered_roots.insert(type_name);
         }
 
-        
-
-        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.context.registry)
+        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.cache.registry)
             .with_aux_params(self.aux_params().clone()) // todo ref
             .with_roles(self.roles().clone()) // todo ref
             .build_delete(query.borrow())?;
@@ -887,7 +887,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         let mut alias_translator = AliasTranslator::new(self.alias_format());
 
-        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.context.registry)
+        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.cache.registry)
             .with_roles(self.roles().clone())
             .with_aux_params(self.aux_params().clone())
             .build_count("", query.borrow())?;

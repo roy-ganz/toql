@@ -92,6 +92,7 @@ pub use toql_role_expr_macro as role_expr_macro;
 pub use toql_core::role_expr;
 pub use toql_core::role_expr_parser;
 pub use toql_core::role_validator;
+pub use toql_core::cache;
 
 
 pub use toql_core::log; // Reexport for derive
