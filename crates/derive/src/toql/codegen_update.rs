@@ -5,7 +5,6 @@
 
 use crate::sane::{FieldKind, SqlTarget};
 use proc_macro2::TokenStream;
-use std::collections::HashSet;
 use syn::Ident;
 
 pub(crate) struct CodegenUpdate<'a> {
@@ -57,15 +56,7 @@ impl<'a> CodegenUpdate<'a> {
                     _ => quote!(),
                 };
 
-        let role_test = match &field.roles.update {
-                        None => quote!(),
-                        Some(role_expr) => { 
-                            quote!(
-                               && toql::role_validator::RoleValidator::is_valid(roles, 
-                               &toql::role_expr_macro::role_expr!(#role_expr))
-                            )
-                        }
-                    };
+     
 
         let role_assert = match &field.roles.update {
                         None => quote!(),

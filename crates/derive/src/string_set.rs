@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 
-use syn::{Meta, NestedMeta, Path};
+use syn::{ NestedMeta};
 
 use darling::{Error, FromMeta, Result};
 use std::collections::HashSet;
@@ -20,14 +20,7 @@ use std::collections::HashSet;
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct StringSet(pub HashSet<String>);
 
-impl StringSet {
-    /// Create a new list.
-    pub fn new<T: Into<String>>(vals: Vec<T>) -> Self {
-        StringSet(vals.into_iter().map(T::into).collect())
-    }
 
-   
-}
 
 impl Deref for StringSet {
     type Target = HashSet<String>;

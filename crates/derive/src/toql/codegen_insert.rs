@@ -379,7 +379,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                         } 
                         Ok(e)
                     }
-                    #[allow(unused_mut)]
+                    #[allow(unused_mut, unused_variables)]
                     fn values<'a>(&self,
                                         mut descendents: &mut  toql::query::field_path::Descendents<'a>,
                                         roles: &std::collections::HashSet<String>,  

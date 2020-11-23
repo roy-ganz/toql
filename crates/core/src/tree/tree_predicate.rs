@@ -1,8 +1,7 @@
 use crate::error::ToqlError;
 use crate::query::field_path::Descendents;
-use crate::sql_expr::SqlExpr;
 use crate::sql_arg::SqlArg;
-use crate::sql_expr::PredicateColumn;
+
 
 
 pub trait TreePredicate {

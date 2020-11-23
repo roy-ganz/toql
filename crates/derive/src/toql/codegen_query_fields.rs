@@ -50,8 +50,7 @@ impl<'a> CodegenQueryFields<'a> {
 
     pub(crate) fn add_field_for_builder(&mut self, field: &crate::sane::Field) {
         let rust_field_ident = &field.rust_field_ident;
-        let rust_type_ident = &field.rust_type_ident;
-        let rust_field_name = &field.rust_field_name;
+     
         let rust_struct_visibility = &self.rust_struct_visibility;
 
            

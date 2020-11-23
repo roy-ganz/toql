@@ -1,5 +1,5 @@
 use crate::{role_expr::RoleExpr, sql_arg::SqlArg};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
 #[derive(Debug, Clone)]
 /// Options for a mapped field.

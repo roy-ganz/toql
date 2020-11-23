@@ -1,9 +1,9 @@
 use syn::parse::{Parse, ParseStream};
 
-use syn::{Error,  Ident,  LitStr, Result, Token};
+use syn::{LitStr, Result};
 
-use heck::SnakeCase;
-use proc_macro2::{Span, TokenStream};
+
+use proc_macro2::{TokenStream};
 use toql_role_expr_parser::PestRoleExprParser;
 
 use pest::{  Parser};

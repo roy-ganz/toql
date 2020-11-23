@@ -8,8 +8,8 @@ use crate::toql::codegen_entity_from_row::CodegenEntityFromRow;
 use crate::toql::codegen_insert::CodegenInsert;
 use crate::string_set::StringSet;
 
-use syn::GenericArgument::Type;
-use syn::{Ident, Path};
+
+use syn::Path;
 
 #[derive(Debug, FromMeta, Clone)]
 pub struct Pair {
@@ -237,11 +237,11 @@ impl quote::ToTokens for Toql {
         let mut mysql15_tree = crate::mysql15::codegen_tree::GeneratedMysqlTree::from_toql(&rust_struct);
  */
 
-        #[cfg(feature = "mysql15")]
-        let mut mysql15_insert = crate::mysql15::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct);
+       /*  #[cfg(feature = "mysql15")]
+        let mut mysql15_insert = crate::mysql15::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct); */
 
         #[cfg(feature = "mysql15")]
-        let mut mysql15_macros = crate::mysql15::codegen_macros::CodegenMacros::from_toql(&rust_struct);
+        let mysql15_macros = crate::mysql15::codegen_macros::CodegenMacros::from_toql(&rust_struct);
 
         let Toql {
             vis: _,
@@ -253,8 +253,8 @@ impl quote::ToTokens for Toql {
             alias: _,
             skip_mut,
             skip_load,
-            auto_key,
-            skip_select,
+            auto_key: _,
+            skip_select: _,
             skip_query_builder,
             serde_key: _,
             predicate: _,

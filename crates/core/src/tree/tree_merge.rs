@@ -1,7 +1,7 @@
 use crate::{
-    from_row::FromRow, query::field_path::Descendents, sql_builder::select_stream::SelectStream,
+     query::field_path::Descendents, sql_builder::select_stream::SelectStream,
 };
-use std::{collections::HashMap, ops::Index};
+use std::{collections::HashMap};
 
 /* pub trait RowIndex<R> {
 

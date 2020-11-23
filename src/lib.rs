@@ -52,11 +52,8 @@ pub use toql_core::error;
 pub use toql_core::error::Result;
 pub use toql_core::from_row;
 pub use toql_core::key;
-pub use toql_core::load;
 pub use toql_core::merge;
-pub use toql_core::mutate;
 pub use toql_core::query;
-pub use toql_core::select;
 pub use toql_core::sql;
 pub use toql_core::sql_arg;
 pub use toql_core::sql_expr;
@@ -93,11 +90,15 @@ pub use toql_core::role_expr;
 pub use toql_core::role_expr_parser;
 pub use toql_core::role_validator;
 pub use toql_core::cache;
+pub use toql_core::page;
 
 
 pub use toql_core::log; // Reexport for derive
 
-pub use toql_core::dialect; // For generic SQL code
+
 
 #[cfg(feature = "mysql15")]
 pub use toql_mysql as mysql;
+
+
+pub mod prelude;

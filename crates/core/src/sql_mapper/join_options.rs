@@ -1,7 +1,7 @@
 use crate::join_handler::JoinHandler;
 use crate::sql_arg::SqlArg;
 use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::sync::Arc;
 
 /// Options for a mapped field.
