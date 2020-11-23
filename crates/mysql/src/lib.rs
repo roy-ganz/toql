@@ -98,7 +98,7 @@ where
             let aux_params = ParameterMap::new(&aux_params);
 
             let mut builder = SqlBuilder::new(&ty, mysql.registry());
-            let result = builder.build_count("", query.borrow())?;
+            let result = builder.build_count("", query.borrow(), true)?;
             let sql = result
                 .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", "")
                 .map_err(ToqlError::from)?;
@@ -890,7 +890,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.cache.registry)
             .with_roles(self.roles().clone())
             .with_aux_params(self.aux_params().clone())
-            .build_count("", query.borrow())?;
+            .build_count("", query.borrow(), false)?;
         let p = [self.aux_params()];
         let aux_params = ParameterMap::new(&p);
 
