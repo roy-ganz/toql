@@ -527,7 +527,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                             #[allow(unused_mut)]
                            fn columns<'a>(&self, mut descendents: &mut toql::query::field_path::Descendents<'a> )
-                               -> Result<Vec<String>, toql::error::ToqlError>{
+                               -> std::result::Result<Vec<String>, toql::error::ToqlError>{
                                Ok(match descendents.next() {
                                        Some(d) => match d.as_str() {
                                            #(#dispatch_predicate_columns_code),*
@@ -557,7 +557,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                &self,
                                mut descendents: &mut toql::query::field_path::Descendents <'a>,
                                args: &mut Vec<toql::sql_arg::SqlArg>
-                           ) -> Result<(), toql::error::ToqlError>
+                           ) -> std::result::Result<(), toql::error::ToqlError>
 
                            {
                                    match descendents.next() {

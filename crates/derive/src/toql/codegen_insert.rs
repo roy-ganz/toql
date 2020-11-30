@@ -384,7 +384,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                         mut descendents: &mut  toql::query::field_path::Descendents<'a>,
                                         roles: &std::collections::HashSet<String>,  
                                          values:  &mut toql::sql_expr::SqlExpr 
-                                ) -> Result<(),  toql::error::ToqlError>
+                                ) -> std::result::Result<(),  toql::error::ToqlError>
                                 {
                                   
                                     match descendents.next() {

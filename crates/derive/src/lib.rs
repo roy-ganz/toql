@@ -70,8 +70,8 @@ mod util;
 
 mod string_set;
 
-#[cfg(feature = "mysql15")]
-mod mysql15;
+#[cfg(feature = "mysql14")]
+mod mysql14;
 
 /* 
 

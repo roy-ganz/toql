@@ -97,7 +97,7 @@ pub use toql_core::log; // Reexport for derive
 
 
 
-#[cfg(feature = "mysql15")]
+#[cfg(feature = "mysql14")]
 pub use toql_mysql as mysql;
 
 

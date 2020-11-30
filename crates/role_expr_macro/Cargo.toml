@@ -1,6 +1,6 @@
 [package]
 name = "toql_role_expr_macro"
-version = "0.1.5"
+version = "0.3.0"
 authors = ["Artos <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with fields macro for toql"
@@ -27,6 +27,6 @@ env_logger="0.6"
 
 pest= "2.0"
 
-toql_role_expr_parser = { version = "0.1", path = "../role_expr_parser" }
+toql_role_expr_parser = { version = "0.3", path = "../role_expr_parser" }
 
 

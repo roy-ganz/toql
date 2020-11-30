@@ -1,6 +1,6 @@
 [package]
 name = "toql_query_macro"
-version = "0.1.5"
+version = "0.3.0"
 authors = ["Artos <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with query macro for toql"
@@ -27,6 +27,6 @@ env_logger="0.6"
 
 pest= "2.0"
 
-toql_query_parser = { version = "0.1", path = "../query_parser" }
+toql_query_parser = { version = "0.3", path = "../query_parser" }
 
 

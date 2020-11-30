@@ -27,7 +27,7 @@ use toql_core::log_sql;
 use crate::row::FromResultRow;
 use std::{
     borrow::BorrowMut,
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet}, sync::RwLockReadGuard,
 };
 use toql_core::fields::Fields;
 use toql_core::paths::Paths;
@@ -91,17 +91,21 @@ where
             r.into_iter().next().unwrap().unwrap().get(0).unwrap()
         };
         let unfiltered_count: u32 = {
-            let alias_format = mysql.alias_format();
+            
+            let sql = {
+                let alias_format = mysql.alias_format();
             let ty = <T as Mapped>::type_name();
             let mut alias_translator = AliasTranslator::new(alias_format);
             let aux_params = [mysql.aux_params()];
             let aux_params = ParameterMap::new(&aux_params);
 
-            let mut builder = SqlBuilder::new(&ty, mysql.registry());
+            let registry= &*mysql.registry()?;
+            let mut builder = SqlBuilder::new(&ty, registry);
             let result = builder.build_count("", query.borrow(), true)?;
-            let sql = result
+                result
                 .to_sql_with_modifier_and_extra(&aux_params, &mut alias_translator, "", "")
-                .map_err(ToqlError::from)?;
+                .map_err(ToqlError::from)?
+            };
 
             log_sql!(&sql);
             let Sql(sql_stmt, args) = sql;
@@ -145,8 +149,12 @@ where
 
     let ty = <T as Mapped>::type_name();
 
-    let mut builder = SqlBuilder::new(&ty, mysql.registry());
-    let result = builder.build_select("", query.borrow())?;
+   
+    let result = {
+        let registry =  &*mysql.registry()?;
+        let mut builder = SqlBuilder::new(&ty,registry);
+        builder.build_select("", query.borrow())?
+    };
 
     let unmerged = result.unmerged_paths().clone();
     let mut alias_translator = AliasTranslator::new(alias_format);
@@ -169,14 +177,16 @@ where
         ""
     };
 
-    let sql = result
+    let sql = 
+    {result
         .to_sql_with_modifier_and_extra(
             &aux_params,
             &mut alias_translator,
             modifier,
             extra.borrow(),
         )
-        .map_err(ToqlError::from)?;
+        .map_err(ToqlError::from)?
+        };
 
     log_sql!(&sql);
     let Sql(sql_stmt, args) = sql;
@@ -226,24 +236,35 @@ where
     let ty = <T as Mapped>::type_name();
     let mut pending_paths = HashSet::new();
 
-    let mapper = mysql
-        .registry()
-        .mappers
-        .get(&ty)
-        .ok_or(ToqlError::MapperMissing(ty.clone()))?;
-    let merge_base_alias = mapper.canonical_table_alias.clone();
+   
+    let merge_base_alias = {
+        let registry = &*mysql.registry()?;
+        let mapper = registry
+            .mappers
+            .get(&ty)
+            .ok_or(ToqlError::MapperMissing(ty.clone()))?;
+         mapper.canonical_table_alias.clone()
+    };
 
     for root_path in unmerged_paths {
         // Get merge JOIN with ON from mapper
-        let mut builder = SqlBuilder::new(&ty, mysql.registry()); // Add alias format or translator to constructor
-        let mut result = builder.build_select(root_path.as_str(), query.borrow())?;
+       
+        let mut result = {
+            let registry = &*mysql.registry()?;
+            let mut builder = SqlBuilder::new(&ty, registry); // Add alias format or translator to constructor
+            builder.build_select(root_path.as_str(), query.borrow())?
+        };
         pending_paths = result.unmerged_paths().clone();
 
         let other_alias = result.table_alias().clone();
 
         // Build merge join
         // Get merge join and custom on predicate from mapper
-        let on_sql_expr = builder.merge_expr(&root_path)?;
+        let on_sql_expr = {
+            let registry = &*mysql.registry()?;
+            let builder = SqlBuilder::new(&ty, registry); // Add alias format or translator to constructor
+            builder.merge_expr(&root_path)?
+        };
 
         let (merge_join, merge_on) = {
             let merge_resolver = Resolver::new()
@@ -363,9 +384,10 @@ where
     ToqlMySqlError: std::convert::From<<T as toql_core::from_row::FromRow<mysql::Row>>::Error>,
 {
     let type_name = <T as Mapped>::type_name();
-    if !mysql.cache.registered_roots.contains(&type_name) {
-        <T as TreeMap>::map(&mut mysql.cache.registry)?;
-        mysql.cache.registered_roots.insert(type_name);
+    if !mysql.cache.registered_roots.read().map_err(ToqlError::from)?.contains(&type_name) {
+        let mut cache = &mut *mysql.cache.registry.write().map_err(ToqlError::from)?;
+        <T as TreeMap>::map(&mut cache)?;
+        mysql.cache.registered_roots.write().map_err(ToqlError::from)?.insert(type_name);
     }
 
     let (mut entities, mut unmerged_paths, counts) = load_top(mysql, &query, page)?;
@@ -412,7 +434,7 @@ where
 pub struct MySql<'a, C: GenericConnection> {
     conn: &'a mut C,
     context : Context,
-    cache: &'a mut Cache
+    cache: &'a Cache
    /*  roles: HashSet<String>,
     registry: &'a SqlMapperRegistry,
     aux_params: HashMap<String, SqlArg>,
@@ -423,7 +445,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Create connection wrapper from MySql connection or transaction.
     ///
     /// Use the connection wrapper to access all Toql functionality.
-    pub fn from(conn: &'a mut C, cache: &'a mut Cache) -> MySql<'a, C> {
+    pub fn from(conn: &'a mut C, cache: &'a Cache) -> MySql<'a, C> {
         Self::with_roles_and_aux_params(conn, cache, HashSet::new(), HashMap::new())
     }
 
@@ -432,7 +454,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_roles(
         conn: &'a mut C,
-         cache: &'a mut Cache,
+         cache: &'a Cache,
         roles: HashSet<String>,
     ) -> MySql<'a, C> {
         Self::with_roles_and_aux_params(conn, cache, roles, HashMap::new())
@@ -442,7 +464,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_aux_params(
         conn: &'a mut C,
-        cache : &'a mut Cache,
+        cache : &'a Cache,
         aux_params: HashMap<String, SqlArg>,
     ) -> MySql<'a, C> {
         Self::with_roles_and_aux_params(conn, cache, HashSet::new(), aux_params)
@@ -452,7 +474,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     /// Use the connection wrapper to access all Toql functionality.
     pub fn with_roles_and_aux_params(
         conn: &'a mut C,
-        cache: &'a mut Cache,
+        cache: &'a Cache,
         roles: HashSet<String>,
         aux_params: HashMap<String, SqlArg>,
     ) -> MySql<'a, C> {
@@ -480,8 +502,8 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         self.conn
     }
 
-    pub fn registry(&self) -> &SqlMapperRegistry {
-        &self.cache.registry
+    pub fn registry(&self) -> std::result::Result<RwLockReadGuard<'_, SqlMapperRegistry>,ToqlError> {
+        self.cache.registry.read().map_err(ToqlError::from)
     }
     pub fn roles(&self) -> &HashSet<String> {
         &self.context.roles
@@ -522,7 +544,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut merges: HashSet<String> = HashSet::new();
 
         toql_core::backend::insert::plan_insert_order::<T, _>(
-            &self.cache.registry.mappers,
+            &self.registry()?.mappers,
             &paths.list,
             &mut joins,
             &mut merges,
@@ -535,7 +557,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             let home_path = FieldPath::default();
 
             toql_core::backend::insert::build_insert_sql::<T, _>(
-                &self.registry().mappers,
+                &self.registry()?.mappers,
                 self.alias_format(),
                 &aux_params,
                 entities,
@@ -589,7 +611,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                     let aux_params = [self.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
                     toql_core::backend::insert::build_insert_sql::<T, _>(
-                        &self.registry().mappers,
+                        &self.registry()?.mappers,
                         self.alias_format(),
                         &aux_params,
                         entities,
@@ -631,7 +653,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 let aux_params = [self.aux_params()];
                 let aux_params = ParameterMap::new(&aux_params);
                 toql_core::backend::insert::build_insert_sql::<T, _>(
-                    &self.registry().mappers,
+                    &self.registry()?.mappers,
                     self.alias_format(),
                     &aux_params,
                     entities,
@@ -684,8 +706,9 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
         let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
 
         //  toql_core::backend::insert::split_basename(&fields.list, &mut path_fields, &mut paths);
+        
         toql_core::backend::update::plan_update_order::<T, _>(
-            &self.cache.registry.mappers,
+            &self.registry()?.mappers,
             &fields.list,
             &mut joins,
             &mut merges,
@@ -734,17 +757,21 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             key_predicate.push_predicate(columns, args);
 
             for merge in fields {
-                let merge_path = FieldPath::from(&merge);
-                let type_name = <T as Mapped>::type_name();
-                let mut sql_builder = SqlBuilder::new(&type_name, self.registry());
-                let delete_expr =
-                    sql_builder.build_merge_delete(&merge_path, key_predicate.to_owned())?;
+               let merge_path = FieldPath::from(&merge);
+                let sql = {
+                    
+                    let type_name = <T as Mapped>::type_name();
+                    let registry = &*self.registry()?;
+                    let mut sql_builder = SqlBuilder::new(&type_name, registry);
+                    let delete_expr =
+                        sql_builder.build_merge_delete(&merge_path, key_predicate.to_owned())?;
 
-                let mut alias_translator = AliasTranslator::new(self.alias_format());
-                let resolver = Resolver::new();
-                let sql = resolver
-                    .to_sql(&delete_expr, &mut alias_translator)
-                    .map_err(ToqlError::from)?;
+                    let mut alias_translator = AliasTranslator::new(self.alias_format());
+                    let resolver = Resolver::new();
+                        resolver
+                        .to_sql(&delete_expr, &mut alias_translator)
+                        .map_err(ToqlError::from)?
+                };
 
                 dbg!(sql.to_unsafe_string());
                 execute_update_delete_sql(sql, self.conn)?;
@@ -763,7 +790,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
                 let aux_params = [self.aux_params()];
                 let aux_params = ParameterMap::new(&aux_params);
                 let sql = toql_core::backend::insert::build_insert_sql(
-                    &self.registry().mappers,
+                    &self.registry()?.mappers,
                     self.alias_format(),
                     &aux_params,
                     entities,
@@ -791,7 +818,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     pub fn delete_one<K>(&mut self, key: K) -> Result<u64>
     where
         K: Key + Into<Query<<K as Key>::Entity>>,
-        <K as Key>::Entity: FromResultRow<<K as Key>::Entity> + Mapped + TreeMap,
+        <K as Key>::Entity: Mapped + TreeMap,
     {
         /*  let sql_mapper = self.registry.mappers.get( &<K as Key>::Entity::type_name() )
         .ok_or( ToqlError::MapperMissing(<K as Key>::Entity::type_name()))?; */
@@ -814,12 +841,14 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
     {
        
         let type_name = <T as Mapped>::type_name();
-        if !self.cache.registered_roots.contains(&type_name) {
-            <T as TreeMap>::map(&mut self.cache.registry)?;
-            self.cache.registered_roots.insert(type_name);
+        if !self.cache.registered_roots.read().map_err(ToqlError::from)?.contains(&type_name) {
+            let mut cache = &mut *self.cache.registry.write().map_err(ToqlError::from)?;
+            <T as TreeMap>::map(&mut cache)?;
+
+            self.cache.registered_roots.write().map_err(ToqlError::from)?.insert(type_name);
         }
 
-        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.cache.registry)
+        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &*self.cache.registry.read().map_err(ToqlError::from)?)
             .with_aux_params(self.aux_params().clone()) // todo ref
             .with_roles(self.roles().clone()) // todo ref
             .build_delete(query.borrow())?;
@@ -837,26 +866,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
             execute_update_delete_sql(sql, self.conn)
         }
     }
-    /*
-    /// Update a collection of structs.
-    ///
-    /// Optional fields with value `None` are not updated. See guide for details.
-    /// The field that is used as key must be attributed with `#[toql(delup_key)]`.
-    /// Returns the number of updated rows.
-    pub fn update_many<T, Q>(&mut self, entities: &[Q]) -> Result<u64>
-    where
-        T: UpdateSql,
-        Q: Borrow<T>,
-    {
-        let sql = <T as UpdateSql>::update_many_sql(&entities, &self.roles)?;
-
-        Ok(if let Some(sql) = sql {
-            execute_update_delete_sql(sql, self.conn)?
-        } else {
-            0
-        })
-    } */
-
+   
     /// Update a single struct.
     ///
     /// Optional fields with value `None` are not updated. See guide for details.
@@ -887,7 +897,7 @@ impl<'a, C: 'a + GenericConnection> MySql<'a, C> {
 
         let mut alias_translator = AliasTranslator::new(self.alias_format());
 
-        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &self.cache.registry)
+        let result = SqlBuilder::new(&<T as Mapped>::type_name(), &*self.cache.registry.read().map_err(ToqlError::from)?)
             .with_roles(self.roles().clone())
             .with_aux_params(self.aux_params().clone())
             .build_count("", query.borrow(), false)?;

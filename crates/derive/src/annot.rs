@@ -230,18 +230,18 @@ impl quote::ToTokens for Toql {
         let mut toql_entity_from_row = CodegenEntityFromRow::from_toql(&rust_struct);
         let mut toql_insert = CodegenInsert::from_toql(&rust_struct);
 
-       /*  #[cfg(feature = "mysql15")]
-        let mut mysql15_load = crate::mysql15::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
+       /*  #[cfg(feature = "mysql14")]
+        let mut mysql14_load = crate::mysql14::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
 
-           #[cfg(feature = "mysql15")]
-        let mut mysql15_tree = crate::mysql15::codegen_tree::GeneratedMysqlTree::from_toql(&rust_struct);
+           #[cfg(feature = "mysql14")]
+        let mut mysql14_tree = crate::mysql14::codegen_tree::GeneratedMysqlTree::from_toql(&rust_struct);
  */
 
-       /*  #[cfg(feature = "mysql15")]
-        let mut mysql15_insert = crate::mysql15::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct); */
+       /*  #[cfg(feature = "mysql14")]
+        let mut mysql14_insert = crate::mysql14::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct); */
 
-        #[cfg(feature = "mysql15")]
-        let mysql15_macros = crate::mysql15::codegen_macros::CodegenMacros::from_toql(&rust_struct);
+        #[cfg(feature = "mysql14")]
+        let mysql14_macros = crate::mysql14::codegen_macros::CodegenMacros::from_toql(&rust_struct);
 
         let Toql {
             vis: _,
@@ -282,7 +282,7 @@ impl quote::ToTokens for Toql {
                 // Generate query functionality
                 if !skip_load {
                     if field.skip {
-                        #[cfg(feature = "mysql15")]
+                        #[cfg(feature = "mysql14")]
                         toql_entity_from_row.add_mysql_deserialize_skip_field(&f);
                         continue;
                     }
@@ -303,14 +303,14 @@ impl quote::ToTokens for Toql {
                     if field.merge.is_some() {
                         toql_mapper.add_merge_function(&f);
 
-                        #[cfg(feature = "mysql15")]
+                        #[cfg(feature = "mysql14")]
                         toql_entity_from_row.add_ignored_path(&f);
 
-                        #[cfg(feature = "mysql15")]
+                        #[cfg(feature = "mysql14")]
                         toql_entity_from_row.add_path_loader(&f);
                     }
 
-                    #[cfg(feature = "mysql15")]
+                    #[cfg(feature = "mysql14")]
                     toql_entity_from_row.add_mysql_deserialize(&f);
 
                    
@@ -329,13 +329,13 @@ impl quote::ToTokens for Toql {
                 
                     toql_insert.add_tree_insert(&f)?;
 
-                   /*  #[cfg(feature = "mysql15")]
-                    mysql15_insert.add_insert_field(&f); */
+                   /*  #[cfg(feature = "mysql14")]
+                    mysql14_insert.add_insert_field(&f); */
 
                  
                 }
                /*  if !skip_select {
-                    #[cfg(feature = "mysql15")]
+                    #[cfg(feature = "mysql14")]
                     mysql_select.add_select_field(&f)?;
                 } */
             }
@@ -348,9 +348,9 @@ impl quote::ToTokens for Toql {
             }
 
             // Build merge functionality
-            /*  #[cfg(feature = "mysql15")]
+            /*  #[cfg(feature = "mysql14")]
             mysql_select.build_merge();  SELECT on signle table only*/
-            #[cfg(feature = "mysql15")]
+            #[cfg(feature = "mysql14")]
             toql_entity_from_row.build_merge();
 
             Ok(())
@@ -375,14 +375,14 @@ impl quote::ToTokens for Toql {
                 if !skip_load {
                     tokens.extend(quote!(#toql_mapper));
 
-                  /*   #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_load)); */
+                  /*   #[cfg(feature = "mysql14")]
+                    tokens.extend(quote!(#mysql14_load)); */
 
-                    #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_macros));
+                    #[cfg(feature = "mysql14")]
+                    tokens.extend(quote!(#mysql14_macros));
 
-                  /*   #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_key)); */
+                  /*   #[cfg(feature = "mysql14")]
+                    tokens.extend(quote!(#mysql14_key)); */
 
                    
                 }
@@ -391,13 +391,13 @@ impl quote::ToTokens for Toql {
                     tokens.extend(quote!(#toql_insert));
                     tokens.extend(quote!(#toql_update));
 
-                   /*  #[cfg(feature = "mysql15")]
-                    tokens.extend(quote!(#mysql15_insert)); */
+                   /*  #[cfg(feature = "mysql14")]
+                    tokens.extend(quote!(#mysql14_insert)); */
                   
                 }
 
                 /* if !skip_select {
-                    #[cfg(feature = "mysql15")]
+                    #[cfg(feature = "mysql14")]
                     tokens.extend(quote!(#mysql_select));
                 } */
             }

@@ -86,7 +86,7 @@ fn evaluate_pair(
 
    
    Ok(quote!(
-        Paths::<#struct_type>::from(vec![#(#methods),* ])
+        toql::paths::Paths::<#struct_type>::from(vec![#(#methods),* ])
     ))
     
 

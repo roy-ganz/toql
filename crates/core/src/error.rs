@@ -48,6 +48,9 @@ pub enum ToqlError {
 
     /// SQL Builder failed to turn Toql query into SQL query.
     SqlExprResolverError(ResolverError),
+
+    /// Access to shared registry, typically inside cache, failed
+    RegistryPoisenError(String)
 }
 
 /// A result with a [`ToqlError`](enum.ToqlError.html)
@@ -91,6 +94,11 @@ impl From<TryFromSqlArgError> for ToqlError {
         ToqlError::TryFromSqlArgError(err)
     }
 }
+impl<PE> From<std::sync::PoisonError<PE>> for ToqlError {
+    fn from(err: std::sync::PoisonError<PE>) -> ToqlError {
+        ToqlError::RegistryPoisenError(err.to_string())
+    }
+}
 
 impl fmt::Display for ToqlError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -101,7 +109,7 @@ impl fmt::Display for ToqlError {
             ToqlError::SqlMapperError(ref e) => e.fmt(f),
             ToqlError::ValueMissing(ref s) => write!(f, "no value found for `{}`", s),
             ToqlError::TryFromSqlArgError(ref a) => write!(f, "unable to convert `{}` into desired type", a.0.to_string()),
-
+            ToqlError::RegistryPoisenError(ref a) => write!(f, "failed to access registry: `{}`", a.to_string()),
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),

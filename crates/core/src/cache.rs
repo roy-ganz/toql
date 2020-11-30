@@ -1,11 +1,11 @@
 use crate::sql_mapper_registry::SqlMapperRegistry;
-use std::collections::HashSet;
+use std::{sync::RwLock, collections::HashSet};
 use lru::LruCache;
 
 pub struct Cache {
-    pub registry: SqlMapperRegistry,
-    pub registered_roots: HashSet<String>,
-    pub (crate) query_cache : LruCache<String, String>
+    pub registry: RwLock<SqlMapperRegistry>,
+    pub registered_roots: RwLock<HashSet<String>>,
+    pub (crate) query_cache : RwLock<LruCache<String, String>>
 }
 
 impl Cache {
@@ -13,10 +13,9 @@ impl Cache {
     pub fn with_capacity(capacity:usize) -> Self {
 
         Cache {
-            registry: SqlMapperRegistry::new(),
-            registered_roots : HashSet::new(),
-            query_cache : LruCache::new(capacity)
-
+            registry: RwLock::new(SqlMapperRegistry::new()),
+            registered_roots : RwLock::new(HashSet::new()),
+            query_cache : RwLock::new(LruCache::new(capacity))
         }
     }
 
