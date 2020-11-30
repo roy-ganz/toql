@@ -3,7 +3,7 @@ name = "toql_mysql"
 version = "0.3.0"
 authors = ["Artos <roy.ganz@glanis.biz>"]
 edition = "2018"
-description = "Library with mysql integration for toql"
+description = "Library with MySql version 14 integration for toql"
 keywords = ["toql"]
 readme = "README.md"
 license = "MIT/Apache-2.0"
@@ -11,7 +11,7 @@ repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 toql_core = { version="0.3", path="../core"}
-#mysql = ">=14, <=17"
+
 mysql = "14"
 log= "0.4"
 
