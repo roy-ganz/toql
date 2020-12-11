@@ -6,8 +6,8 @@ pub(crate) struct CodegenKeyFromRow<'a> {
     rust_struct: &'a crate::sane::Struct,
 
     forward_key_columns: usize,
-    mysql_deserialize_key: Vec<TokenStream>,
-    mysql_forward_join_key: Vec<TokenStream>,
+    deserialize_key: Vec<TokenStream>,
+    forward_join_key: Vec<TokenStream>,
 }
 
 impl<'a> CodegenKeyFromRow<'a> {
@@ -15,8 +15,8 @@ impl<'a> CodegenKeyFromRow<'a> {
         CodegenKeyFromRow {
             rust_struct: &toql,
             forward_key_columns: 0,
-            mysql_deserialize_key: Vec::new(),
-            mysql_forward_join_key: Vec::new(),
+            deserialize_key: Vec::new(),
+            forward_join_key: Vec::new(),
         }
     }
 
@@ -37,7 +37,7 @@ impl<'a> CodegenKeyFromRow<'a> {
                     "{}Key::{}",
                     &self.rust_struct.rust_struct_ident, rust_field_name
                 );
-               /*  let increment = if self.mysql_deserialize_key.is_empty() {
+               /*  let increment = if self.deserialize_key.is_empty() {
                     quote!(*i)
                 } else {
                     quote!({
@@ -45,7 +45,7 @@ impl<'a> CodegenKeyFromRow<'a> {
                         *i
                     })
                 }; */
-                self.mysql_deserialize_key.push(quote!(
+                self.deserialize_key.push(quote!(
                     #rust_field_ident: ($col_get!(row, *i)
                                 .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
                             )?, *i += 1).0
@@ -58,12 +58,12 @@ impl<'a> CodegenKeyFromRow<'a> {
                 }
 
                 // Impl key from result row
-                self.mysql_forward_join_key.push(quote!(
+                self.forward_join_key.push(quote!(
                    *i = < #rust_type_ident > ::skip(*i);
                 ));
 
               
-                self.mysql_deserialize_key.push(quote!(
+                self.deserialize_key.push(quote!(
                     
                     #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i, iter /*#increment*/)?
                 ));
@@ -81,33 +81,25 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
 
         let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
       
-        let mysql_deserialize_key = &self.mysql_deserialize_key;
-        let macro_name = Ident::new(&format!("toql_key_from_row_{}", &rust_stuct_ident), Span::call_site());
+        let deserialize_key = &self.deserialize_key;
+       
         let key = quote! {
-
-            macro_rules! #macro_name {
-                        ($row_type: ty, $col_get: ident) => {
                 
-                    impl toql::from_row::FromRow<$row_type> for #struct_key_ident {
-                
-
-                        type Error = toql::mysql::error::ToqlMySqlError;
+                    impl<R,E> toql::from_row::FromRow<R, E> for #struct_key_ident 
+                    // TODO BOUNDS
+                    {
                                     
                             #[allow(unused_variables, unused_mut)]
-                            fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
-                                -> toql :: mysql :: error:: Result < #struct_key_ident> 
+                            fn from_row_with_index<'a, I> ( mut row : &E , i : &mut usize, mut iter: &mut I)
+                                -> std::result:: Result < #struct_key_ident, E> 
                                 where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
 
                                 Ok ( #struct_key_ident{
-                                    #(#mysql_deserialize_key),*
+                                    #(#deserialize_key),*
                                 })
                             }
-                            }
-                                }
-
 
                 }
-
 
         };
 

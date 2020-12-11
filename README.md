@@ -17,7 +17,7 @@ ORDER BY user.age ASC
 for all your `Toql` derived structs.
 
 ### Resources
-There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.1/toql/).
+There is also a [guide](https://roy-ganz.github.io/toql) and the [API documentation](https://docs.rs/toql/0.3/toql/).
 
 ### Installation
 
@@ -25,7 +25,8 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-toql = { version = "0.1", features = ["mysql"] }
+toql = { version = "0.3" }
+toql_mysql = { version = "0.1" }
 ```
 
 ### Integration 

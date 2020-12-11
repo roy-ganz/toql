@@ -446,15 +446,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             &format!("{}Key", &self.rust_struct.rust_struct_ident),
             Span::call_site(),
         );
-        let macro_name_index = Ident::new(
-            &format!("toql_tree_index_{}", &self.rust_struct.rust_struct_ident),
-            Span::call_site(),
-        );
-        let macro_name_merge = Ident::new(
-            &format!("toql_tree_merge_{}", &self.rust_struct.rust_struct_ident),
-            Span::call_site(),
-        );
-
+      
        
 
         let identity_set_self_key_code = 
@@ -639,10 +631,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                        }*/
 
-                      macro_rules! #macro_name_index {
-                       // `()` indicates that the macro takes no argument.
-                       ($row_type: ty, $error_type: ty) => {
-                        impl toql::tree::tree_index::TreeIndex<$row_type, $error_type> for #struct_ident
+                   
+                        impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for #struct_ident
                       /*  where Self: toql::from_row::FromRow<R>,
                        #struct_key_ident : toql :: from_row :: FromRow < R >,
                        E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
@@ -710,15 +700,12 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                            }
 
                        }
-                       };
-                   }
+                      
 
-        macro_rules! #macro_name_merge {
-                       // `()` indicates that the macro takes no argument.
-                       ($row_type: ty, $error_type: ty) => {
+      
+                     
 
-
-                       impl toql::tree::tree_merge::TreeMerge<$row_type, $error_type> for #struct_ident
+                       impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for #struct_ident
                       /*  where Self: toql::from_row::FromRow<R>,
                        #struct_key_ident : toql :: from_row :: FromRow < R >,
                        E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
@@ -779,8 +766,6 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                Ok(())
                            }
 
-                       }
-                       }
         }
 
                };

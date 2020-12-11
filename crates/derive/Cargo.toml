@@ -21,14 +21,13 @@ quote = "0.6"
 heck = "0.3"
 
 proc-macro2 = "0.4"
-mysql = {version=">=14", optional=true}
 log = "0.4"
 env_logger="0.6"
 regex="1"
 
 [features]
-mysql14 = ["mysql"]
+
 serde = []
 
 [dev-dependencies]
-toql = {version = "0.3", path="../../../toql", features=["mysql14"]}
+toql = {version = "0.3", path="../../../toql"}

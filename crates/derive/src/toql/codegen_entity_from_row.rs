@@ -16,12 +16,12 @@ use std::collections::HashMap;
 pub(crate) struct CodegenEntityFromRow<'a> {
     rust_struct: &'a Struct,
 
-    mysql_deserialize_fields: Vec<TokenStream>,
+    deserialize_fields: Vec<TokenStream>,
     path_loaders: Vec<TokenStream>,
     ignored_paths: Vec<TokenStream>,
 
     
-    regular_fields: usize, // Impl for mysql::row::ColumnIndex,
+    regular_fields: usize, 
     merge_fields: Vec<crate::sane::Field>,
     key_field_names: Vec<String>,
     merge_field_getter: HashMap<String, TokenStream>,
@@ -33,7 +33,7 @@ impl<'a> CodegenEntityFromRow<'a> {
 
         CodegenEntityFromRow {
             rust_struct: &toql,
-            mysql_deserialize_fields: Vec::new(),
+            deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
             ignored_paths: Vec::new(),
             regular_fields: 0,
@@ -43,16 +43,16 @@ impl<'a> CodegenEntityFromRow<'a> {
         }
     }
 
-    pub(crate) fn add_mysql_deserialize_skip_field(&mut self, field: &crate::sane::Field) {
+    pub(crate) fn add_deserialize_skip_field(&mut self, field: &crate::sane::Field) {
         let rust_field_ident = &field.rust_field_ident;
 
-        self.mysql_deserialize_fields.push( quote!( #rust_field_ident : Default::default()));
+        self.deserialize_fields.push( quote!( #rust_field_ident : Default::default()));
               
               
     }
 
 
-    pub(crate) fn add_mysql_deserialize(&mut self, field: &crate::sane::Field) {
+    pub(crate) fn add_deserialize(&mut self, field: &crate::sane::Field) {
         // Regular fields
         let rust_field_name = &field.rust_field_name;
         let error_field = format!(
@@ -71,7 +71,7 @@ impl<'a> CodegenEntityFromRow<'a> {
 
                     // Check selection for optional Toql fields: Option<Option<..> or Option<..>
                     if field.number_of_options > 0 {
-                        self.mysql_deserialize_fields.push(quote!(
+                        self.deserialize_fields.push(quote!(
                             #rust_field_ident : {
                                 if iter.next().unwrap_or(&Select::None) != &Select::None {
                                     ($col_get!(row, *i)
@@ -85,7 +85,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                     } 
                     // Preselected fields
                     else {
-                        self.mysql_deserialize_fields.push(quote!(
+                        self.deserialize_fields.push(quote!(
                             #rust_field_ident : {
                                 if iter.next().unwrap_or(&Select::None) == &Select::None{
                                      return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
@@ -139,7 +139,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                     // - for unselected entity (discriminator column is NULL Type)
                     // - for null entity (discriminator column is false) - only left joins
 
-                    self.mysql_deserialize_fields.push(
+                    self.deserialize_fields.push(
                     match   field.number_of_options {
                         2 =>   //    Option<Option<T>>                 -> Selectable Nullable Join -> Left Join
                         quote!(
@@ -203,7 +203,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                 }
                 FieldKind::Merge(_merge_attrs) => {
                     let rust_field_ident = &field.rust_field_ident;
-                    self.mysql_deserialize_fields
+                    self.deserialize_fields
                         .push(if field.number_of_options > 0 {
                             quote!( #rust_field_ident : None)
                         } else {
@@ -484,28 +484,24 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
         let struct_ident = &self.rust_struct.rust_struct_ident;
     
 
-        let mysql_deserialize_fields = &self.mysql_deserialize_fields;
+        let deserialize_fields = &self.deserialize_fields;
 
     
-        let macro_name = Ident::new(&format!("toql_entity_from_row_{}", &struct_ident), Span::call_site());
+       
      
-        let mysql = quote!(
+        let code = quote!(
 
          //   #loader
 
 
            // impl toql :: mysql :: row:: FromResultRow < #struct_ident > for #struct_ident {
 
-            macro_rules! #macro_name {
-                        ($row_type: ty, $col_get: ident) => {
-
-            impl toql::from_row::FromRow<toql::mysql::mysql::Row> for #struct_ident {
+            impl<R,E> toql::from_row::FromRow<R, E> for #struct_ident {
  
-             type Error = toql::mysql::error::ToqlMySqlError;
            
             #[allow(unused_variables, unused_mut)]
-            fn from_row_with_index<'a, I> ( mut row : &mysql::Row , i : &mut usize, mut iter: &mut I)
-                -> toql :: mysql :: error:: Result < #struct_ident> 
+            fn from_row_with_index<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
+                ->std::result:: Result < #struct_ident, E> 
                 where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
 
                     use toql::sql_builder::select_stream::Select;
@@ -516,25 +512,21 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
 
        
                 Ok ( #struct_ident {
-                    #(#mysql_deserialize_fields),*
+                    #(#deserialize_fields),*
 
                 })
             }
             }
-            }
-            }
-
-          
-        
+           
 
         );
 
         log::debug!(
             "Source code for `{}`:\n{}",
             &self.rust_struct.rust_struct_name,
-            mysql.to_string()
+            code.to_string()
         );
 
-        tokens.extend(mysql);
+        tokens.extend(code);
     }
 }

@@ -49,29 +49,11 @@ mod annot;
 
 mod toql;
 
-/* 
-#[cfg(feature = "mysqldb15")]
-mod codegen_mysql_load;
-
-#[cfg(feature = "mysqldb15")]
-mod codegen_mysql_key; */
-
-#[cfg(feature = "mysqldb15")]
-mod codegen_mysql_macros;
-/* 
-#[cfg(feature = "mysqldb15")]
-mod codegen_mysql_select;
-
-#[cfg(feature = "mysqldb15")]
-mod codegen_mysql_insert; */
 
 mod sane;
 mod util;
 
 mod string_set;
-
-#[cfg(feature = "mysql14")]
-mod mysql14;
 
 /* 
 

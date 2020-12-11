@@ -15,6 +15,3 @@ pub use toql_query_macro::query;
 pub use toql_core::sql_builder::sql_builder_error::SqlBuilderError;
 
 pub use toql_derive::{Toql, ToqlSqlArg};
-
-#[cfg(feature = "mysql14")]
-pub use toql_mysql::MySql;

@@ -228,19 +228,7 @@ impl quote::ToTokens for Toql {
         let mut toql_key_from_row = CodegenKeyFromRow::from_toql(&rust_struct);
         let mut toql_entity_from_row = CodegenEntityFromRow::from_toql(&rust_struct);
         let mut toql_insert = CodegenInsert::from_toql(&rust_struct);
-
-       /*  #[cfg(feature = "mysql14")]
-        let mut mysql14_load = crate::mysql14::codegen_load::GeneratedMysqlLoad::from_toql(&rust_struct);
-
-           #[cfg(feature = "mysql14")]
-        let mut mysql14_tree = crate::mysql14::codegen_tree::GeneratedMysqlTree::from_toql(&rust_struct);
- */
-
-       /*  #[cfg(feature = "mysql14")]
-        let mut mysql14_insert = crate::mysql14::codegen_insert::GeneratedMysqlInsert::from_toql(&rust_struct); */
-
-        #[cfg(feature = "mysql14")]
-        let mysql14_macros = crate::mysql14::codegen_macros::CodegenMacros::from_toql(&rust_struct);
+    
 
         let Toql {
             vis: _,
@@ -280,8 +268,7 @@ impl quote::ToTokens for Toql {
                 // Generate query functionality
                 if !skip_load {
                     if field.skip {
-                        #[cfg(feature = "mysql14")]
-                        toql_entity_from_row.add_mysql_deserialize_skip_field(&f);
+                        toql_entity_from_row.add_deserialize_skip_field(&f);
                         continue;
                     }
                     toql_mapper.add_field_mapping(&f)?;
@@ -301,15 +288,15 @@ impl quote::ToTokens for Toql {
                     if field.merge.is_some() {
                         toql_mapper.add_merge_function(&f);
 
-                        #[cfg(feature = "mysql14")]
+                       
                         toql_entity_from_row.add_ignored_path(&f);
 
-                        #[cfg(feature = "mysql14")]
+                       
                         toql_entity_from_row.add_path_loader(&f);
                     }
 
-                    #[cfg(feature = "mysql14")]
-                    toql_entity_from_row.add_mysql_deserialize(&f);
+                    
+                    toql_entity_from_row.add_deserialize(&f);
 
                    
 
@@ -326,16 +313,9 @@ impl quote::ToTokens for Toql {
                     toql_update.add_tree_update(&f);
                 
                     toql_insert.add_tree_insert(&f)?;
-
-                   /*  #[cfg(feature = "mysql14")]
-                    mysql14_insert.add_insert_field(&f); */
-
                  
                 }
-               /*  if !skip_select {
-                    #[cfg(feature = "mysql14")]
-                    mysql_select.add_select_field(&f)?;
-                } */
+              
             }
 
             // Fail if no keys are found
@@ -346,9 +326,7 @@ impl quote::ToTokens for Toql {
             }
 
             // Build merge functionality
-            /*  #[cfg(feature = "mysql14")]
-            mysql_select.build_merge();  SELECT on signle table only*/
-            #[cfg(feature = "mysql14")]
+          
             toql_entity_from_row.build_merge();
 
             Ok(())
@@ -372,32 +350,15 @@ impl quote::ToTokens for Toql {
 
                 if !skip_load {
                     tokens.extend(quote!(#toql_mapper));
-
-                  /*   #[cfg(feature = "mysql14")]
-                    tokens.extend(quote!(#mysql14_load)); */
-
-                    #[cfg(feature = "mysql14")]
-                    tokens.extend(quote!(#mysql14_macros));
-
-                  /*   #[cfg(feature = "mysql14")]
-                    tokens.extend(quote!(#mysql14_key)); */
-
                    
                 }
 
                 if !skip_mut {
                     tokens.extend(quote!(#toql_insert));
                     tokens.extend(quote!(#toql_update));
-
-                   /*  #[cfg(feature = "mysql14")]
-                    tokens.extend(quote!(#mysql14_insert)); */
                   
                 }
 
-                /* if !skip_select {
-                    #[cfg(feature = "mysql14")]
-                    tokens.extend(quote!(#mysql_select));
-                } */
             }
         }
     }
