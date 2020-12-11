@@ -41,5 +41,6 @@ members =  [
 
 [features]
 mysql14 = ["toql_mysql", "toql_derive/mysql14"]
+serde = ["toql_derive/serde"]
 
 

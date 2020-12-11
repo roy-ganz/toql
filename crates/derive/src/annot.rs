@@ -193,8 +193,7 @@ pub struct Toql {
     pub skip_select: bool,
     #[darling(default)]
     pub skip_query_builder: bool,
-    #[darling(default)]
-    pub serde_key: bool,
+   
     #[darling(multiple)]
     pub predicate: Vec<PredicateArg>,
     #[darling(multiple)]
@@ -256,7 +255,6 @@ impl quote::ToTokens for Toql {
             auto_key: _,
             skip_select: _,
             skip_query_builder,
-            serde_key: _,
             predicate: _,
             selection: _,
             roles: _,

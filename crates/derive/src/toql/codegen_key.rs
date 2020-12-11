@@ -14,7 +14,7 @@ pub(crate) struct CodegenKey<'a> {
    // key_sql_predicates: Vec<TokenStream>,
    /*  partial_key_types: Vec<TokenStream>,
     partial_key_sql_predicates: Vec<TokenStream>, */
-    serde_key: bool,
+    
     key_field_declarations: Vec<TokenStream>,
     
     toql_eq_predicates: Vec<TokenStream>,
@@ -47,8 +47,7 @@ impl<'a> CodegenKey<'a> {
           //  key_sql_predicates: Vec::new(),
          /*    partial_key_types: Vec::new(),
             partial_key_sql_predicates: Vec::new(), */
-            serde_key: toql.serde_key,
-
+            
             toql_eq_predicates: Vec::new(),
             toql_eq_foreign_predicates: Vec::new(),
             
@@ -317,11 +316,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
             quote!(  #( #key_codes),* )
         }; */
 
-        let serde = if self.serde_key {
-            quote!( ,Deserialize, Serialize)
-        } else {
-            quote!()
-        };
+       
 
         let key_field_declarations = &self.key_field_declarations;
         //let key_sql_predicates = &self.key_sql_predicates;
@@ -379,7 +374,9 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
 
         let key = quote! {
 
-        #[derive(Debug, Eq, PartialEq, Hash #serde, Clone)]
+        
+        #[derive(Debug, Eq, PartialEq, Hash, Clone)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
            #vis struct #struct_key_ident { 
                #(#key_field_declarations),* 
             }

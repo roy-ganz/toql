@@ -28,6 +28,7 @@ regex="1"
 
 [features]
 mysql14 = ["mysql"]
+serde = []
 
 [dev-dependencies]
 toql = {version = "0.3", path="../../../toql", features=["mysql14"]}

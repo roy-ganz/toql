@@ -23,7 +23,6 @@ pub struct Struct {
     pub sql_table_name: String,
     pub sql_table_alias: String,
     pub rust_struct_visibility: Visibility,
-    pub serde_key: bool,
     pub mapped_predicates: Vec<PredicateArg>,
     pub mapped_selections: Vec<SelectionArg>,
     pub roles : StructRoles,
@@ -66,7 +65,6 @@ impl Struct {
                 .unwrap_or(toql.ident.to_string())
                 .to_mixed_case(),
             rust_struct_visibility: toql.vis.clone(),
-            serde_key: toql.serde_key,
             mapped_predicates,
             mapped_selections,
             roles: toql.roles.clone(),
