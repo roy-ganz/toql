@@ -1,6 +1,7 @@
 use crate::sane::FieldKind;
 use proc_macro2::{Span, TokenStream};
 use syn::Ident;
+use std::collections::HashSet;
 
 pub(crate) struct CodegenKeyFromRow<'a> {
     rust_struct: &'a crate::sane::Struct,
@@ -8,6 +9,8 @@ pub(crate) struct CodegenKeyFromRow<'a> {
     forward_key_columns: usize,
     deserialize_key: Vec<TokenStream>,
     forward_join_key: Vec<TokenStream>,
+    regular_types: HashSet<syn::Ident>,
+    join_types: HashSet<syn::Ident>,
 }
 
 impl<'a> CodegenKeyFromRow<'a> {
@@ -17,6 +20,8 @@ impl<'a> CodegenKeyFromRow<'a> {
             forward_key_columns: 0,
             deserialize_key: Vec::new(),
             forward_join_key: Vec::new(),
+            regular_types: HashSet::new(),
+            join_types: HashSet::new(),
         }
     }
 
@@ -27,16 +32,19 @@ impl<'a> CodegenKeyFromRow<'a> {
         let rust_type_ident = &field.rust_type_ident;
         let rust_field_name = &field.rust_field_name;
         let rust_field_ident = &field.rust_field_ident;
+        
+         let error_field = format!(
+                    "{}Key::{}",
+                    &self.rust_struct.rust_struct_ident, rust_field_name
+                );
 
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 if !regular_attrs.key {
                     return Ok(());
                 }
-                let error_field = format!(
-                    "{}Key::{}",
-                    &self.rust_struct.rust_struct_ident, rust_field_name
-                );
+                self.regular_types.insert(field.rust_base_type_ident.to_owned());
+               
                /*  let increment = if self.deserialize_key.is_empty() {
                     quote!(*i)
                 } else {
@@ -46,9 +54,11 @@ impl<'a> CodegenKeyFromRow<'a> {
                     })
                 }; */
                 self.deserialize_key.push(quote!(
-                    #rust_field_ident: ($col_get!(row, *i)
-                                .map_err(|e| toql::error::ToqlError::DeserializeError(#error_field.to_string(), e.to_string())
-                            )?, *i += 1).0
+                    #rust_field_ident: {
+                                    toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?
+                                            .ok_or(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")))?
+                                            
+                    }
                 ));
                 self.forward_key_columns = self.forward_key_columns + 1;
             }
@@ -57,6 +67,7 @@ impl<'a> CodegenKeyFromRow<'a> {
                     return Ok(());
                 }
 
+            self.join_types.insert(field.rust_base_type_ident.to_owned());
                 // Impl key from result row
                 self.forward_join_key.push(quote!(
                    *i = < #rust_type_ident > ::skip(*i);
@@ -65,7 +76,10 @@ impl<'a> CodegenKeyFromRow<'a> {
               
                 self.deserialize_key.push(quote!(
                     
-                    #rust_field_ident: << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row_with_index (row, i, iter /*#increment*/)?
+                    #rust_field_ident: {
+                         << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row(row, i, iter)?
+                                .ok_or(toql::error::ToqlError::ValueMissing(#error_field.to_string()))?
+                    }
                 ));
             }
             _ => {}
@@ -82,21 +96,29 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
         let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
       
         let deserialize_key = &self.deserialize_key;
+        let regular_types = &self.regular_types.iter().map(|k| quote!( #k :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
+        let join_types = &self.join_types.iter().map(|k| quote!( 
+            #k :  toql::from_row::FromRow<R, E> + toql::key::Keyed,
+            <#k as toql::key::Keyed>::Key: toql::from_row::FromRow<R, E>
+            )).collect::<Vec<_>>();
        
         let key = quote! {
                 
                     impl<R,E> toql::from_row::FromRow<R, E> for #struct_key_ident 
-                    // TODO BOUNDS
+                    where  E: std::convert::From<toql::error::ToqlError>,
+                     #(#regular_types)*
+                     #(#join_types)*
+                    
                     {
                                     
                             #[allow(unused_variables, unused_mut)]
-                            fn from_row_with_index<'a, I> ( mut row : &E , i : &mut usize, mut iter: &mut I)
-                                -> std::result:: Result < #struct_key_ident, E> 
+                            fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
+                                -> std::result:: Result < Option<#struct_key_ident>, E> 
                                 where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
 
-                                Ok ( #struct_key_ident{
+                                Ok ( Some(#struct_key_ident{
                                     #(#deserialize_key),*
-                                })
+                                }))
                             }
 
                 }

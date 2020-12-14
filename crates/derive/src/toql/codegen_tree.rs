@@ -6,6 +6,7 @@
 use crate::sane::{FieldKind, MergeColumn, Struct};
 use proc_macro2::{Span, TokenStream};
 use syn::Ident;
+use std::collections::HashSet;
 
 pub(crate) struct CodegenTree<'a> {
     rust_struct: &'a Struct,
@@ -29,6 +30,7 @@ pub(crate) struct CodegenTree<'a> {
     key_columns: Vec<String>,
 
      dispatch_map_code: Vec<TokenStream>,
+     dispatch_types: HashSet<Ident>,
 
     number_of_keys: u8,
 }
@@ -56,6 +58,7 @@ impl<'a> CodegenTree<'a> {
             key_columns: Vec::new(),
             number_of_keys: 0,
             dispatch_map_code: Vec::new(),
+            dispatch_types: HashSet::new(),
         }
     }
 
@@ -112,6 +115,7 @@ impl<'a> CodegenTree<'a> {
                     self.number_of_keys += 1;
                 }
 
+                self.dispatch_types.insert(field.rust_base_type_ident.to_owned());
                  
                 self.dispatch_map_code.push(quote!(
                             <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
@@ -133,7 +137,7 @@ impl<'a> CodegenTree<'a> {
                 self.dispatch_index_code.push(
                    quote!(
                         #toql_field_name => {
-                            <#rust_type_ident as toql::tree::tree_index::TreeIndex<$row_type,$error_type>>::
+                            <#rust_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
                             index(&mut descendents, &field,rows, row_offset, index)?
                         }
                 )
@@ -147,7 +151,7 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
 
-                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
+                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
                             merge(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, &field, rows, row_offset, index, selection_stream)?
 
                        }
@@ -169,10 +173,12 @@ impl<'a> CodegenTree<'a> {
             }
             FieldKind::Merge(merge) => {
                
+               self.dispatch_types.insert(field.rust_base_type_ident.to_owned());
+
                 self.dispatch_index_code.push(
                    quote!(
                        #toql_field_name => {
-                             <#rust_base_type_ident as toql::tree::tree_index::TreeIndex<$row_type,$error_type>>::
+                             <#rust_base_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
                             index(&mut descendents, &field,rows, row_offset, index)?
                        }
                 )
@@ -181,7 +187,7 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
                         for f in #refer_mut self. #rust_field_ident #unwrap_mut {
-                            <#rust_base_type_ident as toql::tree::tree_merge::TreeMerge<$row_type,$error_type>>::
+                            <#rust_base_type_ident as toql::tree::tree_merge::TreeMerge<R,E>>::
                             merge(f, &mut descendents, &field, rows, row_offset, index, selection_stream)?
                         }
                        }
@@ -200,7 +206,10 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
                        let f = #refer self. #rust_field_ident #unwrap .get(0)
-                        .ok_or( toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(#toql_field_name.to_string()))?;
+                        .ok_or(
+                            toql::error::ToqlError::SqlBuilderError(
+                             toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(#toql_field_name.to_string())))
+                             ?;
                             <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
                             columns(f, &mut descendents)?
 
@@ -303,7 +312,7 @@ impl<'a> CodegenTree<'a> {
 
                 self.index_code.push(quote!(
                     #toql_field_name => {
-                        let fk = #type_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?;
+                        let fk = #type_key_ident ::from_row(&row, &mut i, &mut iter)?;
                         fk.hash(&mut s);
                         },
                 ));
@@ -323,12 +332,14 @@ impl<'a> CodegenTree<'a> {
                                 for row_number in row_numbers {
                                             let mut i = n;
                                             let mut iter = std::iter::repeat(&Select::Query);
-                                            let row: & $row_type = &rows[*row_number];
-                                            let fk = #struct_key_ident::from_row_with_index(&row, &mut i, &mut iter)?;
+                                            let row: &R = &rows[*row_number];
+                                            let fk = #struct_key_ident::from_row(&row, &mut i, &mut iter)?
+                                                .ok_or(toql::error::ToqlError::ValueMissing( #toql_field_name .to_string()))?;
                                             if fk ==  pk {
                                                 let mut i = 0;
                                                 let mut iter = selection_stream.iter();
-                                                let e = #rust_base_type_ident::from_row_with_index(&row, &mut i, &mut iter)?;
+                                                let e = #rust_base_type_ident::from_row(&row, &mut i, &mut iter)?
+                                                  .ok_or(toql::error::ToqlError::ValueMissing( #toql_field_name .to_string()))?;
                                                 #merge_push
                                             }
                                         }
@@ -452,7 +463,11 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let identity_set_self_key_code = 
             quote!(
                 if let toql::tree::tree_identity::IdentityAction::Set(args) = action {
-                    let key = std::convert::TryFrom::try_from(args)?;
+                       let n = <<Self as toql::key::Keyed>::Key as toql::key::Key>::columns().len();
+                     let end = args.borrow().len();
+                     let args : Vec<SqlArg> = args.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
+                      let key = std :: convert :: TryFrom::try_from(args)?;
+                    
                     self.try_set_key(key)?;
                 }
             );
@@ -475,6 +490,15 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             quote!(false)
         };
 
+          let tree_index_dispatch_bounds = self.dispatch_types.iter()
+                        .map(|t| quote!( #t :  toql::tree::tree_index::TreeIndex<R, E>,))
+                        .collect::<Vec<_>>();
+          let tree_merge_dispatch_bounds = self.dispatch_types.iter()
+                        .map(|t| quote!( 
+                            #t : toql::tree::tree_merge::TreeMerge<R, E> + toql::from_row::FromRow<R, E>
+                            ))
+                        .collect::<Vec<_>>();
+
         let mods = quote! {
 
                        impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
@@ -483,8 +507,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                         }
 
                         #[allow(unused_variables, unused_mut)]
-                        fn set_id < 'a >(&mut self, mut descendents : & mut toql :: query :: field_path ::
-                               Descendents < 'a >, action:  toql::tree::tree_identity::IdentityAction)
+                        fn set_id < 'a, 'b >(&mut self, mut descendents : & mut toql :: query :: field_path ::
+                               Descendents < 'a >, action: &'b toql::tree::tree_identity::IdentityAction)
                                    -> std :: result :: Result < (), toql::error::ToqlError >
                        {
                                 match descendents.next() {
@@ -492,7 +516,9 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                           #(#dispatch_identity_code),*
                                           f @ _ => {
                                                return Err(
-                                                   toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                   toql::error::ToqlError::SqlBuilderError (
+                                                    toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                   .into());
                                            }
                                       },
                                       None => {
@@ -525,7 +551,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                            #(#dispatch_predicate_columns_code),*
                                            f @ _ => {
                                                    return Err(
-                                                       toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                       toql::error::ToqlError::SqlBuilderError (
+                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
                                                }
                                        },
                                        None => {
@@ -557,82 +584,26 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                            #(#dispatch_predicate_args_code),*
                                            f @ _ => {
                                                    return Err(
-                                                       toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                       toql::error::ToqlError::SqlBuilderError (
+                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
                                                }
                                        },
                                        None => {
                                             let key = <Self as toql::key::Keyed>::try_get_key(&self)?;
                                            args.extend(<<Self as toql::key::Keyed>::Key as toql::key::Key>::params(&key));
-                                           /*
-                                               match field {
-                                               #(#merge_predicate_code),*
-                                               f @ _ => {
-                                                   return Err(
-                                                       toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
-                                               }
-                                               }*/
-
-                                       }
+                                      }
                                    }
                                    Ok(())
                                }
                       }
 
-                        /*
-                       impl toql::tree::tree_keys::TreeKeys for #struct_ident
-                       {
-                           fn keys<'a>(
-                               mut descendents: &mut toql::query::field_path::Descendents<'a>,
-                               field: &str,
-                               key_expr: &mut toql::sql_expr::SqlExpr,
-                           ) -> Result<(),toql::sql_builder::sql_builder_error::SqlBuilderError> {
-
-                                   match descendents.next() {
-
-                                       Some(d) => {
-                                           match d.as_str() {
-                                               #(#dispatch_merge_key_code),*
-                                               f @ _ => {
-                                                   return Err(
-                                                      toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()));
-                                               }
-                                           }
-                                       },
-                                       None => {
-                                           // Private key
-                                           /* for col in <#struct_key_ident as toql::key::Key>::columns() {
-                                               key_expr.push_self_alias();
-                                               key_expr.push_literal(".");
-                                               key_expr.push_alias(col);
-                                               key_expr.push_literal(", ");
-                                           } */
-                                            match field {
-                                               #(#merge_columns_code),*
-
-                                              /*  "" => {
-                                                   for col in <#struct_key_ident as toql::key::Key>::columns() {
-                                                       key_expr.push_self_alias();
-                                                       key_expr.push_literal(".");
-                                                       key_expr.push_alias(col);
-                                                       key_expr.push_literal(", ");
-                                                   }
-                                               },  */
-                                               f @ _ => {
-                                                   return Err(
-                                                       toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()));
-                                               }
-                                           }
-
-                                           key_expr.pop(); // Remove final ", "
-                                       }
-                               }
-                               Ok(())
-                           }
-
-                       }*/
-
+                      
+                  
                    
                         impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for #struct_ident
+                         where  E: std::convert::From<toql::error::ToqlError>, 
+                         #struct_key_ident: toql::from_row::FromRow<R, E>,
+                         #(#tree_index_dispatch_bounds)*
                       /*  where Self: toql::from_row::FromRow<R>,
                        #struct_key_ident : toql :: from_row :: FromRow < R >,
                        E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
@@ -642,8 +613,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                        {
                             #[allow(unused_variables, unused_mut)]
                            fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
-                                       rows: &[$row_type], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
-                               -> std::result::Result<(), $error_type>
+                                       rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
+                               -> std::result::Result<(), E>
 
                                 {
 
@@ -660,7 +631,9 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                                #(#dispatch_index_code),*
                                                f @ _ => {
                                                    return Err(
-                                                      toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                       toql::error::ToqlError::SqlBuilderError (
+                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                        .into());
                                                }
                                            }
                                        },
@@ -669,7 +642,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                                let mut  i= row_offset;
                                                for (n, row) in rows.into_iter().enumerate() {
                                                    let mut iter = std::iter::repeat(&Select::Query);
-                                                   let fk = #struct_key_ident ::from_row_with_index(&row, &mut i, &mut iter)?; // SKip Primary key
+                                                   let fk = #struct_key_ident ::from_row(&row, &mut i, &mut iter)?; // SKip Primary key
 
                                                    let mut s = DefaultHasher::new();
                                                    fk.hash(&mut s);
@@ -706,18 +679,16 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                      
 
                        impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for #struct_ident
-                      /*  where Self: toql::from_row::FromRow<R>,
-                       #struct_key_ident : toql :: from_row :: FromRow < R >,
-                       E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
-                       E: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>,
-                       E: std::convert ::From<toql :: error ::  ToqlError>,
-                       #(#merge_type_bounds)* */
+                        where  E: std::convert::From<toql::error::ToqlError>,
+                        #struct_key_ident: toql::from_row::FromRow<R, E>,
+                        #(#tree_merge_dispatch_bounds)*
+                     
 
                        {
                            #[allow(unreachable_code, unused_variables, unused_mut)]
                            fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
-                                       rows: &[$row_type],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
-                               -> std::result::Result<(), $error_type>
+                                       rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
+                               -> std::result::Result<(), E>
 
                                 {
                                use toql::key::Keyed;
@@ -734,13 +705,15 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                                #(#dispatch_merge_code),*
                                                f @ _ => {
                                                    return Err(
-                                                      toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                      toql::error::ToqlError::SqlBuilderError(
+                                                          toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                          .into());
                                                }
                                            }
                                        },
                                        None => {
 
-                                               let pk = self.try_get_key()?;
+                                               let pk : #struct_key_ident = self.try_get_key()?; // removed .into()
                                                let mut s = DefaultHasher::new();
                                                pk.hash(&mut s);
                                                let h = s.finish();
@@ -753,7 +726,9 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                                                    f @ _ => {
                                                        return Err(
-                                                           toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                            toql::error::ToqlError::SqlBuilderError(
+                                                                toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                            .into());
                                                    }
 
                                                };

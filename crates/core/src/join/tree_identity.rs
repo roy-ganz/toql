@@ -1,5 +1,6 @@
 use super::Join;
 use crate::key::Keyed;
+use crate::key::Key;
 use crate::tree::tree_identity::{TreeIdentity, IdentityAction};
 use crate::error::ToqlError;
 use std::convert::TryFrom;
@@ -16,10 +17,10 @@ where
     fn auto_id() -> bool {
         <T as TreeIdentity>::auto_id()
     }
-    fn set_id<'a>(
+    fn set_id<'a, 'b>(
         &mut self,
         descendents: &mut Descendents<'a>,
-        action: IdentityAction,
+        action: &'b IdentityAction,
     ) -> Result<(), ToqlError> {
        
        match self {
@@ -28,7 +29,10 @@ where
                Some(p) => {  Err(ToqlError::ValueMissing(  p.as_str().to_string()))},
                None => {
                    match action {
-                       IdentityAction::Set(args) => {
+                       IdentityAction::Set(ids) => {
+                           let n = <<T as Keyed>::Key as Key>::columns().len();
+                           let end = ids.borrow().len();
+                           let args : Vec<SqlArg> = ids.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
                             let key = TryFrom::try_from(args)?;
                             *k = key;
                             Ok(())

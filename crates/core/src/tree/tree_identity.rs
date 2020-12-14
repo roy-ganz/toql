@@ -1,19 +1,19 @@
 use crate::query::field_path::Descendents;
 use crate::{error::ToqlError, sql_arg::SqlArg};
-use std::result::Result;
+use std::{cell::RefCell, result::Result};
 
-#[derive(Clone)]
+
 pub enum IdentityAction {
-    Set(Vec<SqlArg>),
+    Set(RefCell<Vec<SqlArg>>), // Needs interior mutability, because keys are taken from vec
     Refresh
 }
 pub trait TreeIdentity {
 
     fn auto_id() -> bool;
 
-    fn set_id<'a>(
+    fn set_id<'a, 'b>(
         &mut self,
         descendents: &mut Descendents<'a>,
-        action: IdentityAction,
+        action: &'b IdentityAction,
     ) -> Result<(), ToqlError>;
 }

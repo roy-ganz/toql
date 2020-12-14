@@ -356,7 +356,11 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
         } else {
             quote!()
         }; */
-        
+     let serde = if cfg!(feature = "serde") {
+         quote!(Serialize, Deserialize, )
+     }else { quote!()};
+     
+
     let key_constr_code =  if self.key_constr_code.len() == 1 {
         let key_constr_code = self.key_constr_code.get(0).unwrap();
         vec![quote!( #key_constr_code : key)]
@@ -375,8 +379,8 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
         let key = quote! {
 
         
-        #[derive(Debug, Eq, PartialEq, Hash, Clone)]
-        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Debug, Eq, PartialEq, Hash, #serde Clone)]
+        
            #vis struct #struct_key_ident { 
                #(#key_field_declarations),* 
             }
