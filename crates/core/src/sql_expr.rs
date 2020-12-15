@@ -2,7 +2,7 @@ pub mod resolver;
 pub mod resolver_error;
 
 use crate::sql_arg::SqlArg;
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PredicateColumn {
@@ -133,6 +133,7 @@ impl SqlExpr {
     pub fn is_empty(&self) -> bool {
         self.tokens.is_empty()
     }
+
 
     pub fn push_predicate(
         &mut self,

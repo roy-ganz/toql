@@ -602,14 +602,21 @@ impl<'a> SqlBuilder<'a> {
 
                             let canonical_alias = self.canonical_alias(&relative_path)?;
 
-                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                            let resolver = Resolver::new()
+                            .with_self_alias(&canonical_alias)
+                            .with_arguments(&predicate.args);
 
                             let expr = resolver.resolve(&mapped_predicate.expression)?;
+                             if let Some(expr) = mapped_predicate.handler.build_predicate(
+                                expr,
+                                &predicate.args,
+                                &aux_params,
+                            )? {
+                                result.where_expr.extend(expr);
 
-                            result.where_expr.extend(expr);
-
-                            if let Some(p) = path {
-                                build_context.joined_paths.insert(p.as_str().to_string());
+                                if let Some(p) = path {
+                                    build_context.joined_paths.insert(p.as_str().to_string());
+                                }
                             }
                         }
                         MapperOrMerge::Merge(merge_path) => {

@@ -7,7 +7,7 @@ use crate::{
     sql_arg::SqlArg,
     sql_expr::{SqlExpr, SqlExprToken},
 };
-use std::{borrow::Cow, collections::HashSet};
+use std::{borrow::Cow, collections::{HashMap, HashSet}};
 
 pub struct Resolver<'a> {
     self_alias: Option<&'a str>,
@@ -15,6 +15,7 @@ pub struct Resolver<'a> {
     arguments: Option<&'a [SqlArg]>,
     aux_params: Option<&'a ParameterMap<'a>>,
     placeholders: Option<&'a HashSet<u16>>,
+    
     // alias_translator: Option<&'a AliasTranslator>
 }
 
@@ -49,6 +50,20 @@ impl<'a> Resolver<'a> {
     pub fn with_placeholders(mut self, placeholders: &'a HashSet<u16>) -> Self {
         self.placeholders = Some(placeholders);
         self
+    }
+
+    pub fn replace_aux_params(sql_expr: SqlExpr, aux_params_exprs: &HashMap<String, SqlExpr>) {
+        let mut tokens = Vec::new();
+
+         for token in sql_expr.tokens {
+            if let SqlExprToken::AuxParam(ref name) = token {
+                if let Some(expr) = aux_params_exprs.get(name) {
+                    tokens.extend_from_slice(&expr.tokens);
+                }
+            } else {
+                tokens.push(token);
+            }
+        }
     }
 
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {

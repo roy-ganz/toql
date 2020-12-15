@@ -35,13 +35,7 @@ impl<'a> CodegenMapper<'a> {
         for mapping in &rust_struct.mapped_predicates {
             let toql_field_name = &mapping.name;
             let sql_mapping = &mapping.sql;
-            let sql_expr = if sql_mapping.contains(".."){
-                let sql_mapping = sql_mapping.replace("..", "{alias}."); 
-                quote!(&format!(#sql_mapping, alias = mapper.translated_alias(&canonical_sql_alias)))
-            } else {
-                quote!(#sql_mapping)
-            };
-
+          
             let on_params :Vec<TokenStream>= mapping.on_param.iter().map(|p| {
                 let index = &p.index;
                 let name = &p.name;
@@ -58,18 +52,18 @@ impl<'a> CodegenMapper<'a> {
                 Some(handler) => {
                     field_mappings.push(quote! {
                                 mapper.map_predicate_handler_with_options(
-                                    &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                    #sql_expr ,
+                                    #toql_field_name, 
+                                    toql::sql_expr_macro::sql_expr!(#sql_mapping),
                                     #handler (), 
-                                    toql::sql_mapper::PredicateOptions::new()  #(#on_params)* #countfilter_ident );
+                                    toql::sql_mapper::predicate_options::PredicateOptions::new()  #(#on_params)* #countfilter_ident );
                             });
                 }
                 None => {
                     field_mappings.push(quote! {
                                 mapper.map_predicate_with_options(
-                                    &format!("{}{}{}",toql_path,if toql_path.is_empty() {"" }else {"_"}, #toql_field_name), 
-                                #sql_expr,
-                                toql::sql_mapper::PredicateOptions::new() #(#on_params)* #countfilter_ident
+                                #toql_field_name, 
+                                toql::sql_expr_macro::sql_expr!(#sql_mapping),
+                                toql::sql_mapper::predicate_options::PredicateOptions::new() #(#on_params)* #countfilter_ident
                               );
                             });
                 }
@@ -148,7 +142,7 @@ impl<'a> CodegenMapper<'a> {
                     || (field.number_of_options == 1 && field.preselect == true)
                 {
                     quote!(
-                        .discriminator( toql::sql_expr_parser::SqlExprParser::parse( {
+                        .discriminator( toql::sql_expr_macro::sql_expr!( {
                             <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
                                     format!("(...{} IS NOT NULL)", &other_column)
                             }).collect::<Vec<String>>().join(" AND ").as_str()  
@@ -171,7 +165,7 @@ impl<'a> CodegenMapper<'a> {
                         quote!( [ #(String::from(#other_columns)),* ])
                 };
                 let on_predicate = if let Some( on ) = &join_attrs.on_sql {
-                    quote!(t.extend(toql::sql_expr_parser::SqlExprParser::parse(#on)?))
+                    quote!(t.extend(toql::sql_expr_macro::sql_expr!(#on)))
                 } else {
                     quote!(t.pop_literals(5)) // Remove unneeded ' AND '
                 };
@@ -276,7 +270,7 @@ impl<'a> CodegenMapper<'a> {
              
               let sql_mapping = match &regular_attrs.sql_target {
                     SqlTarget::Expression(ref expression) => {
-                        quote! {let sql_mapping = toql::sql_expr_parser::SqlExprParser::parse( #expression)?;}
+                        quote! {let sql_mapping = toql::sql_expr_macro::sql_expr!( #expression)?;}
                     }
                     SqlTarget::Column(ref column) => {
                         quote! { let sql_mapping = #column; }
@@ -310,7 +304,7 @@ impl<'a> CodegenMapper<'a> {
                
                
                 let join_statement= if let Some(custom_join) = &merge_attrs.join_sql {
-                    quote!(toql::sql_expr_parser::SqlExprParser::parse(#custom_join)?)
+                    quote!(toql::sql_expr_macro::sql_expr!(#custom_join)?)
                 } else {
                     //let table_name = &merge_attrs.sql_join_table_name;
                     let table_name = &self.rust_struct.sql_table_name;
@@ -331,7 +325,7 @@ impl<'a> CodegenMapper<'a> {
                 // - build from key, if columns are missing
               
                 let join_predicate=  if let Some(custom_on) = &merge_attrs.on_sql {
-                     quote!( toql::sql_expr_parser::SqlExprParser::parse( #custom_on)?)
+                     quote!( toql::sql_expr_macro::sql_expr!( #custom_on)?)
                 } else {
 
                     if merge_attrs.columns.is_empty() {

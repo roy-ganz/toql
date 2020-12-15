@@ -1,7 +1,5 @@
-use crate::sql::Sql;
-use crate::sql_arg::SqlArg;
-use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use std::collections::HashMap;
+
+use crate::{sql_expr::SqlExpr, sql_builder::sql_builder_error::SqlBuilderError, parameter_map::ParameterMap, sql_arg::SqlArg};
 
 pub trait PredicateHandler {
     /// Match filter and return SQL expression or None, if no filtering is required.
@@ -9,10 +7,10 @@ pub trait PredicateHandler {
     /// If you miss some arguments, raise an error, typically `SqlBuilderError::FilterInvalid`
     fn build_predicate(
         &self,
-        expression: Sql,
-        predicate_args: &Vec<SqlArg>,
-        aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Option<Sql>, SqlBuilderError>;
+        expression: SqlExpr,
+        args : &Vec<SqlArg>,
+        aux_params: &ParameterMap,
+    ) -> Result<Option<SqlExpr>, SqlBuilderError>;
 }
 
 impl std::fmt::Debug for (dyn PredicateHandler + std::marker::Send + std::marker::Sync + 'static) {
@@ -32,11 +30,14 @@ impl DefaultPredicateHandler {
 impl PredicateHandler for DefaultPredicateHandler {
     fn build_predicate(
         &self,
-        predicate: Sql,
-        _predicate_args: &Vec<SqlArg>,
-        _aux_params: &HashMap<String, SqlArg>,
-    ) -> Result<Option<Sql>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
+        predicate: SqlExpr,
+        _args: &Vec<SqlArg>,
+        _aux_params: &ParameterMap,
+    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         // Wrap in parens
-        Ok(Some(Sql(format!("({})", predicate.0), predicate.1)))
+        let mut e = SqlExpr::literal("(");
+        e.extend(predicate);
+        e.push_literal(")");
+        Ok(Some(e))
     }
 }

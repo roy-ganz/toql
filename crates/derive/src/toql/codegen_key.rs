@@ -102,7 +102,7 @@ impl<'a> CodegenKey<'a> {
                                     }
                                 }
                                 impl From<&#struct_key_ident> for toql::sql_arg::SqlArg {
-                                    fn into(t: &#struct_key_ident) -> toql::sql_arg::SqlArg {
+                                    fn from(t: &#struct_key_ident) -> toql::sql_arg::SqlArg {
                                         toql::sql_arg::SqlArg::from(t. #rust_field_ident .to_owned())
                                     }
                                 }
