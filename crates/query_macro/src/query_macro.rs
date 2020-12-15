@@ -331,7 +331,7 @@ fn evaluate_pair(
                 match v {
                     Some(v) => field_info.args.push(quote!(#v)),
                     None => {
-                        return Err(quote!(compile_error!("Missing argument for placholder.");));
+                        return Err(quote!(compile_error!("Missing argument for placeholder");));
                     }
                 }
             }

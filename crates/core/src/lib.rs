@@ -33,7 +33,7 @@ pub mod sql_expr;
 pub mod sql_expr_parser;
 //pub mod sql_expr:resolver; // Bug?
 pub mod alias_translator;
-pub mod parameter;
+pub mod parameter_map;
 
 //pub mod sql_builder_result;
 pub mod field_handler;

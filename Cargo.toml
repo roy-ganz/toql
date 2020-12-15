@@ -15,6 +15,7 @@ toql_derive = { path = "crates/derive", version = "0.3" }
 toql_query_macro = { path = "crates/query_macro", version = "0.3" }
 toql_query_parser = { path = "crates/query_parser", version = "0.3" }
 toql_sql_expr_parser = { path = "crates/sql_expr_parser", version = "0.3" }
+toql_sql_expr_macro = { path = "crates/sql_expr_macro", version = "0.3" }
 toql_field_list_parser = { path = "crates/field_list_parser", version = "0.3" }
 toql_fields_macro = { path = "crates/fields_macro", version = "0.3" }
 toql_paths_macro = { path = "crates/paths_macro", version = "0.3" }
@@ -30,6 +31,7 @@ members =  [
     "crates/query_macro",
     "crates/query_parser",
     "crates/sql_expr_parser",
+    "crates/sql_expr_macro",
     "crates/field_list_parser",
     "crates/fields_macro",
     "crates/paths_macro",

@@ -1,4 +1,4 @@
-use crate::parameter::ParameterMap;
+use crate::parameter_map::ParameterMap;
 use crate::sql_expr::SqlExpr;
 
 pub trait JoinHandler {

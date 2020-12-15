@@ -2,7 +2,7 @@
 
 use crate::{tree::{tree_insert::TreeInsert, tree_identity::TreeIdentity}, query::field_path::{FieldPath, Descendents}, sql::Sql, sql_mapper::{SqlMapper, mapped::Mapped}, error::ToqlError, alias_translator::AliasTranslator, alias::AliasFormat, sql_expr::resolver::Resolver, sql_builder::sql_builder_error::SqlBuilderError};
 use std::{collections::HashMap, borrow::BorrowMut};
-use crate::{paths::Paths, parameter::ParameterMap, fields::Fields};
+use crate::{paths::Paths, parameter_map::ParameterMap, fields::Fields};
 
 use crate::error::Result;
 use std::collections::HashSet;

@@ -2,7 +2,7 @@ use super::{resolver_error::ResolverError, PredicateColumn};
 use crate::{
     alias::AliasFormat,
     alias_translator::AliasTranslator,
-    parameter::ParameterMap,
+    parameter_map::ParameterMap,
     sql::Sql,
     sql_arg::SqlArg,
     sql_expr::{SqlExpr, SqlExprToken},

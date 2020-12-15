@@ -1,4 +1,4 @@
-use crate::parameter::ParameterMap;
+use crate::parameter_map::ParameterMap;
 /// A FieldHandler maps a Toql field onto an SQL.
 /// Use it to
 /// - define your own custom function (through FN)
@@ -15,12 +15,9 @@ use crate::parameter::ParameterMap;
 /// struct MyHandler {};
 ///
 /// impl FieldHandler for MyHandler {
-///     fn build_filter(&self, sql: &str, _filter: &FieldFilter)
-///     ->Result<Option<String>, SqlBuilderError> {
+///     fn build_filter(&self, sql: &SqlExpr, _filter: &FieldFilter)
+///     ->Result<Option<SqlExpr>, SqlBuilderError> {
 ///        --snip--
-///     }
-///     fn build_param(&self, _filter: &FieldFilter) -> Vec<String> {
-///         --snip--
 ///     }
 /// }
 /// let my_handler = MyHandler {};
@@ -38,7 +35,7 @@ pub trait FieldHandler {
         &self,
         select: SqlExpr,
         _aux_params: &ParameterMap,
-    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
+    ) -> Result<Option<SqlExpr>, SqlBuilderError> {
         Ok(Some(select))
     }
 
@@ -50,7 +47,7 @@ pub trait FieldHandler {
         select: SqlExpr,
         filter: &FieldFilter,
         aux_params: &ParameterMap,
-    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError>;
+    ) -> Result<Option<SqlExpr>, SqlBuilderError>;
 }
 
 impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sync + 'static) {
@@ -72,7 +69,7 @@ impl FieldHandler for BasicFieldHandler {
         mut select: SqlExpr,
         filter: &FieldFilter,
         _aux_params: &ParameterMap,
-    ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
+    ) -> Result<Option<SqlExpr>, SqlBuilderError> {
         match filter {
             FieldFilter::Eq(criteria) => {
                 select.push_literal(" = ").push_arg(criteria.clone());

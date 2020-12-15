@@ -26,9 +26,9 @@ impl<'a> CodegenQueryFields<'a> {
             let fnc_ident = Ident::new(fnc_name, Span::call_site());
             let toql_field=  args.name.as_str().trim_start_matches("r#");
             builder_fields.push(quote!(
-                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: predicate: : Predicate {
+                        #rust_struct_visibility fn #fnc_ident (mut self) -> toql :: query :: predicate :: Predicate {
                             self . 0 . push_str ( #toql_field ) ;
-                            toql :: query :: predicate:: Predicate :: from ( self . 0 )
+                            toql :: query :: predicate :: Predicate :: from ( self . 0 )
                         }
                     ));
 

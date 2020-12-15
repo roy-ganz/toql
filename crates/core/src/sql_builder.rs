@@ -59,7 +59,7 @@ use crate::sql_mapper_registry::SqlMapperRegistry;
 
 use crate::sql_arg::SqlArg;
 use crate::{
-    parameter::ParameterMap,
+    parameter_map::ParameterMap,
     query::field_path::FieldPath,
     role_validator::RoleValidator,
     sql_expr::{resolver::Resolver, SqlExpr},

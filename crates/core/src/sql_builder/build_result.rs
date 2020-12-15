@@ -3,7 +3,7 @@
 
 use super::select_stream::SelectStream;
 use crate::{
-    alias_translator::AliasTranslator, parameter::ParameterMap, sql_expr::resolver_error::Result,
+    alias_translator::AliasTranslator, parameter_map::ParameterMap, sql_expr::resolver_error::Result,
 };
 use crate::{
     sql::Sql,

@@ -260,7 +260,7 @@ impl<'a> CodegenInsert<'a> {
                                         if let Some(field) = &self. #rust_field_ident {
                                                     toql :: key :: Key :: params(& < #rust_type_ident as toql ::
                                                                                     key :: Keyed > ::
-                                                                                    try_get_key(f)?)
+                                                                                    try_get_key(field)?)
                                                                                     .iter()
                                                                                     .for_each(|p| {
                                                                                         values.push_arg(p.to_owned());
@@ -268,7 +268,7 @@ impl<'a> CodegenInsert<'a> {
                                                                                         });
                                         } else {
                                               <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns()
-                                                .iter().for_each(|_|  {insert_stmt.push_str("DEFAULT, ");});
+                                                .iter().for_each(|_|  {values.push_literal("DEFAULT, ");});
                                         }
                                     )
                                 },

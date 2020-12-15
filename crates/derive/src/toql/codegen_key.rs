@@ -96,14 +96,14 @@ impl<'a> CodegenKey<'a> {
                              let rust_stuct_ident = &self.rust_struct.rust_struct_ident;
                              let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
                             Some(quote!(
-                                impl Into<toql::sql_arg::SqlArg> for #struct_key_ident {
-                                    fn into(self) -> toql::sql_arg::SqlArg {
-                                        toql::sql_arg::SqlArg::from(self. #rust_field_ident)
+                                impl From< #struct_key_ident> for toql::sql_arg::SqlArg {
+                                    fn from( t: #struct_key_ident) -> toql::sql_arg::SqlArg {
+                                        toql::sql_arg::SqlArg::from(t. #rust_field_ident)
                                     }
                                 }
-                                impl Into<toql::sql_arg::SqlArg> for &#struct_key_ident {
-                                    fn into(self) -> toql::sql_arg::SqlArg {
-                                        toql::sql_arg::SqlArg::from(self. #rust_field_ident .to_owned())
+                                impl From<&#struct_key_ident> for toql::sql_arg::SqlArg {
+                                    fn into(t: &#struct_key_ident) -> toql::sql_arg::SqlArg {
+                                        toql::sql_arg::SqlArg::from(t. #rust_field_ident .to_owned())
                                     }
                                 }
                             ))

@@ -1,6 +1,6 @@
 
 use std::{borrow::{Borrow, BorrowMut}, collections::{HashSet, HashMap}};
-use crate::{alias::AliasFormat, sql_mapper::{mapped::Mapped, SqlMapper}, parameter::ParameterMap, tree::tree_update::TreeUpdate, query::field_path::FieldPath};
+use crate::{alias::AliasFormat, sql_mapper::{mapped::Mapped, SqlMapper}, parameter_map::ParameterMap, tree::tree_update::TreeUpdate, query::field_path::FieldPath};
 use crate::{sql_expr::resolver::Resolver, sql::Sql, alias_translator::AliasTranslator, error::ToqlError, sql_builder::sql_builder_error::SqlBuilderError};
 use crate::error::Result;
 
