@@ -59,8 +59,8 @@ mod string_set;
 pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
     let ast = parse_macro_input!(input as DeriveInput);
-    //let gen = impl_filter_arg_derive(&ast);
     let name = &ast.ident;
+    let name_string = name.to_string();
     let gen = quote! {
                        impl<R, E> toql::from_row::FromRow<R, E> for #name 
                     where String :toql::from_row::FromRow<R, E>, 
@@ -78,7 +78,7 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
                             let s: Option<String> = toql::from_row::FromRow::<R, E>::from_row(row, i, iter)?;
                             if let Some(s) = s {
                                 let t = <Self as std::str::FromStr>::from_str(s.as_str())
-                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name .to_string(), e.to_string()))?;
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name_string .to_string(), e.to_string()))?;
                                 Ok(Some(t))
 
                             } else {
@@ -94,10 +94,10 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
                         fn try_from(t: &toql::sql_arg::SqlArg) -> Result<Self, Self::Error> {
                         if let toql::sql_arg::SqlArg::Str(s) = t {
                                 let t = <Self as std::str::FromStr>::from_str(s.as_str())
-                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name.to_string(), e.to_string()))?;
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name_string .to_string(), e.to_string()))?;
                                 Ok(t)
                         } else {
-                            Err(toql::error::ToqlError::DeserializeError(#name.to_string(),"Requires string argument.".to_string()))  
+                            Err(toql::error::ToqlError::DeserializeError(#name_string .to_string(),"Requires string argument.".to_string()))  
                         }
                         }
                     }
