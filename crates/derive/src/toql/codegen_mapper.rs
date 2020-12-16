@@ -142,12 +142,21 @@ impl<'a> CodegenMapper<'a> {
                     || (field.number_of_options == 1 && field.preselect == true)
                 {
                     quote!(
-                        .discriminator( toql::sql_expr_macro::sql_expr!( {
-                            <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|other_column|{
-                                    format!("(...{} IS NOT NULL)", &other_column)
-                            }).collect::<Vec<String>>().join(" AND ").as_str()  
-
-                        })? 
+                        .discriminator( 
+                            {
+                                let mut e = toql::sql_expr::SqlExpr::new();
+                                <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                                .for_each(| other_column |
+                                {
+                                    e.push_other_alias();
+                                    e.push_literal(".");
+                                    e.push_literal(other_column);
+                                    e.push_literal(" IS NOT NULL AND ");
+                                    
+                                });
+                                e.pop_literals(5);
+                                e 
+                            }
                         ) 
                     )
                 } else {
@@ -270,7 +279,7 @@ impl<'a> CodegenMapper<'a> {
              
               let sql_mapping = match &regular_attrs.sql_target {
                     SqlTarget::Expression(ref expression) => {
-                        quote! {let sql_mapping = toql::sql_expr_macro::sql_expr!( #expression)?;}
+                        quote! {let sql_mapping = toql::sql_expr_macro::sql_expr!( #expression);}
                     }
                     SqlTarget::Column(ref column) => {
                         quote! { let sql_mapping = #column; }
@@ -279,17 +288,39 @@ impl<'a> CodegenMapper<'a> {
 
                 match &regular_attrs.handler {
                     Some(handler) => {
+                         let sql_expr = match &regular_attrs.sql_target {
+                            SqlTarget::Expression(ref expression) => {
+                                quote! { toql::sql_expr_macro::sql_expr!( #expression)}
+                            }
+                            SqlTarget::Column(ref column) => {
+                                quote! { toql::sql_expr::SqlExpr::aliased_column(#column) }
+                            }
+                        }; 
                         self.field_mappings.push(quote! {
                                 #sql_mapping
-                                mapper.map_handler_with_options( #toql_field_name, sql_mapping, #handler (), toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                mapper.map_handler_with_options( #toql_field_name, #sql_expr, #handler (), toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)* #preselect_ident  #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
                             });
                     }
                     None => {
-                        self.field_mappings.push(quote! {
+                          self.field_mappings.push( match &regular_attrs.sql_target {
+                            SqlTarget::Expression(ref expression) => {
+                                quote! {
+                                    mapper.map_expr_with_options( #toql_field_name,  toql::sql_expr_macro::sql_expr!( #expression),
+                                toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                }
+                            }
+                            SqlTarget::Column(ref column) => {
+                                quote! {
+                                    mapper.map_column_with_options( #toql_field_name, #column ,
+                                    toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                                 }
+                            }
+                        }); 
+                       /*  self.field_mappings.push(quote! {
                             #sql_mapping
                                 mapper.map_column_with_options( #toql_field_name, sql_mapping,
                                 toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
-                            });
+                            }); */
                     }
                 };
 
@@ -304,7 +335,7 @@ impl<'a> CodegenMapper<'a> {
                
                
                 let join_statement= if let Some(custom_join) = &merge_attrs.join_sql {
-                    quote!(toql::sql_expr_macro::sql_expr!(#custom_join)?)
+                    quote!(toql::sql_expr_macro::sql_expr!(#custom_join))
                 } else {
                     //let table_name = &merge_attrs.sql_join_table_name;
                     let table_name = &self.rust_struct.sql_table_name;
@@ -325,7 +356,7 @@ impl<'a> CodegenMapper<'a> {
                 // - build from key, if columns are missing
               
                 let join_predicate=  if let Some(custom_on) = &merge_attrs.on_sql {
-                     quote!( toql::sql_expr_macro::sql_expr!( #custom_on)?)
+                     quote!( toql::sql_expr_macro::sql_expr!( #custom_on))
                 } else {
 
                     if merge_attrs.columns.is_empty() {
@@ -356,17 +387,17 @@ impl<'a> CodegenMapper<'a> {
                                         t.push_self_alias(); 
                                         t.push_literal("."); 
                                         t.push_literal(#this_column); 
-                                        t.push_literal(" = ") )); 
+                                        t.push_literal(" = "); )); 
                             match &m.other {
                                 crate::sane::MergeColumn::Aliased(a) => {
-                                    default_join_predicate.push( quote!( t.push_literal(#a)));
+                                    default_join_predicate.push( quote!( t.push_literal(#a);));
                                 }
                                 crate::sane::MergeColumn::Unaliased(u) => {
                                     default_join_predicate.push( quote!( 
                                         t.push_other_alias(); 
                                         t.push_literal("."); 
                                         t.push_literal(#u); 
-                                        t.push_literal(" AND ") ))
+                                        t.push_literal(" AND "); ))
                                 }
                             }
                         }

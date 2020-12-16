@@ -293,26 +293,29 @@ impl<'a> CodegenTree<'a> {
                 )
                );
 
-                let type_key_ident =
-                    Ident::new(&format!("{}Key", &field.rust_type_name), Span::call_site());
+              /*   let type_key_ident =
+                    Ident::new(&format!("{}Key", &field.rust_type_name), Span::call_site()); */
+
                 let struct_ident = &self.rust_struct.rust_struct_ident;
+
                 let struct_key_ident =
                     Ident::new(&format!("{}Key", &struct_ident), Span::call_site());
 
                 self.index_type_bounds.push(quote!(
-                    #type_key_ident : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < #type_key_ident as toql :: from_row :: FromRow < R >> :: Error>
+                    //#type_key_ident : toql :: from_row :: FromRow < R >,
+                    <#rust_type_ident as toql::key::Keyed>::Key : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < <#rust_type_ident as toql::key::Keyed>::Key as toql :: from_row :: FromRow < R >> :: Error>
                     ));
                 self.merge_type_bounds.push(quote!(
-                    #type_key_ident : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < #type_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
+                    <#rust_type_ident as toql::key::Keyed>::Key : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < <#rust_type_ident as toql::key::Keyed>::Key as toql :: from_row :: FromRow < R >> :: Error>,
                     #rust_type_ident : toql :: from_row :: FromRow < R >,
                     E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
                     ));
 
                 self.index_code.push(quote!(
                     #toql_field_name => {
-                        let fk = #type_key_ident ::from_row(&row, &mut i, &mut iter)?;
+                        let fk = <#rust_type_ident as toql::key::Keyed>::Key ::from_row(&row, &mut i, &mut iter)?;
                         fk.hash(&mut s);
                         },
                 ));
@@ -383,7 +386,7 @@ impl<'a> CodegenTree<'a> {
                                     let key = e.try_get_key()?;
                                             let mut ps = toql::key::Key::params(&key);
 
-                                            let other_columns = <#type_key_ident as toql::key::Key>::columns();
+                                            let other_columns = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
                                             for (i,other_column) in other_columns.iter().enumerate() {
                                                 for (j,self_column) in self_columns.iter().enumerate() {
                                                     let calculated_other_column= match self_column.as_str() {
@@ -396,7 +399,7 @@ impl<'a> CodegenTree<'a> {
                                                     }
                                                 }
                                             }
-                                            let key = <#type_key_ident as std::convert::TryFrom<_>>::try_from(ps)?;
+                                            let key = <<#rust_type_ident as toql::key::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
                                             e.try_set_key(key)?;
                                 }
                             )
@@ -409,7 +412,7 @@ impl<'a> CodegenTree<'a> {
                                             let key = e.try_get_key()?;
                                             let mut ps = toql::key::Key::params(&key);
 
-                                            let other_columns = <#type_key_ident as toql::key::Key>::columns();
+                                            let other_columns = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
                                             for (i,other_column) in other_columns.iter().enumerate() {
                                                 for (j,self_column) in self_columns.iter().enumerate() {
                                                     let calculated_other_column= match self_column.as_str() {
@@ -422,7 +425,7 @@ impl<'a> CodegenTree<'a> {
                                                     }
                                                 }
                                             }
-                                            let key = <#type_key_ident as std::convert::TryFrom<_>>::try_from(ps)?;
+                                            let key = <<#rust_type_ident as toql::key::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
                                             e.try_set_key(key)?;
                                         }
 
@@ -465,7 +468,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 if let toql::tree::tree_identity::IdentityAction::Set(args) = action {
                        let n = <<Self as toql::key::Keyed>::Key as toql::key::Key>::columns().len();
                      let end = args.borrow().len();
-                     let args : Vec<SqlArg> = args.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
+                     let args : Vec<toql::sql_arg::SqlArg> = args.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
                       let key = std :: convert :: TryFrom::try_from(args)?;
                     
                     self.try_set_key(key)?;
@@ -495,7 +498,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                         .collect::<Vec<_>>();
           let tree_merge_dispatch_bounds = self.dispatch_types.iter()
                         .map(|t| quote!( 
-                            #t : toql::tree::tree_merge::TreeMerge<R, E> + toql::from_row::FromRow<R, E>
+                            #t : toql::tree::tree_merge::TreeMerge<R, E> + toql::from_row::FromRow<R, E>,
                             ))
                         .collect::<Vec<_>>();
 

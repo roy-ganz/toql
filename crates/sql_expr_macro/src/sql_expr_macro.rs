@@ -89,6 +89,7 @@ fn evaluate_pair(
     
  
     let mut with_args = false;
+    let mut alias = false;
     let mut field_info = FieldInfo::new();
 
     let mut tokens : Vec<TokenStream> = Vec::new();
@@ -97,22 +98,35 @@ fn evaluate_pair(
         let span = pair.clone().as_span();
 
         match pair.as_rule() {
+           /*  Rule::placeholder => {
+                append_literal(&mut field_info, &mut tokens);
+                tokens.push( quote!( toql::sql_expr::SqlExprToken::SelfAlias));
+                alias = true;
+            } */
             Rule::self_alias => {
                 append_literal(&mut field_info, &mut tokens);
-                tokens.push( quote!( toql::sql_expr::SqlExprToken::SelfAlias))
-              
+                tokens.push( quote!( toql::sql_expr::SqlExprToken::SelfAlias));
+                alias = true;
             }
             Rule::other_alias => {
                append_literal(&mut field_info, &mut tokens);
-                tokens.push( quote!( toql::sql_expr::SqlExprToken::OtherAlias))
+               tokens.push( quote!( toql::sql_expr::SqlExprToken::OtherAlias));
+               alias = true;
+
             }
             Rule::aux_param => {
                append_literal(&mut field_info, &mut tokens);
                let name = span.as_str();
-                tokens.push( quote!( toql::sql_expr::SqlExprToken::AuxParam(String::from(#name))))
+               alias = false;
+               tokens.push( quote!( toql::sql_expr::SqlExprToken::AuxParam(String::from(#name))));
                 
             }
             Rule::literal => {
+
+                // Add a dot if an alias immediately precedes a literal (..column_name)
+                if alias == true {
+                    field_info.literal.push('.');
+                }
                 // If literal is ? insert arguments
                 let l = span.as_str();
                 if l == "?" {
@@ -130,6 +144,7 @@ fn evaluate_pair(
                 } else {
                     field_info.literal.push_str(l)
                 }
+                alias = false;
             }
 
             _ => {}

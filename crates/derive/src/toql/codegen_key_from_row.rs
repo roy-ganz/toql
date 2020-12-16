@@ -99,7 +99,7 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
         let regular_types = &self.regular_types.iter().map(|k| quote!( #k :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
         let join_types = &self.join_types.iter().map(|k| quote!( 
             #k :  toql::from_row::FromRow<R, E> + toql::key::Keyed,
-            <#k as toql::key::Keyed>::Key: toql::from_row::FromRow<R, E>
+            <#k as toql::key::Keyed>::Key: toql::from_row::FromRow<R, E>,
             )).collect::<Vec<_>>();
        
         let key = quote! {

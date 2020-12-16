@@ -1,15 +1,17 @@
 quoted = ${  "'" ~ ( "''" | (!"'" ~ ANY) )* ~  "'" }
 
+
 name =  @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*   }
 
 other_alias = @{"..."}
 self_alias = @{".."}
 
+// for sql_expr macro, allows to include other sql_expr
+placeholder = @{"{}"}
 
 aux_param = @{"<" ~ name ~ ">"}
 
 literal = { ANY }
 
-expr = { ( aux_param |quoted | other_alias | self_alias |literal) ~  ( aux_param |quoted |other_alias | self_alias |literal)+}
+expr = { ( aux_param |quoted | other_alias | self_alias| placeholder |literal) ~  ( aux_param |quoted |other_alias | self_alias | placeholder |literal)*}
 query = { SOI ~ expr? ~ EOI }
-

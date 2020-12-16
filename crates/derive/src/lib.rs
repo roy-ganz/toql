@@ -108,6 +108,21 @@ pub fn toql_sql_arg_derive(input: TokenStream) -> TokenStream {
     //let gen = impl_filter_arg_derive(&ast);
     let name = &ast.ident;
     let gen = quote! {
+                        impl<R,E> toql::from_row::FromRow<R, E> for #name {
+                            fn from_row<'a, I>(
+                                    row: &R,
+                                    i: &mut usize,
+                                    iter: &mut I,
+                                ) -> std::result::Result<Option<#name>, E>
+                                where
+                                    I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
+                                {
+                                    
+                                    let s : Option<String> = toql::from_row::FromRow::<R,E>::from_row(row, i, iter)?;
+                                    s.map_(|v|Self::parse(s))
+                                }
+                        }
+
                     impl From<#name> for toql::sql_arg::SqlArg {
                         fn from(t: #name) -> Self {
                             toql::sql_arg::SqlArg::Str(t.to_string())

@@ -82,13 +82,17 @@ impl<'a> CodegenUpdate<'a> {
 
                 if !field.skip_mut{
 
+                    let unwrap = if field.number_of_options > 0 {
+                        quote!(.as_ref().unwrap())
+                    } else {  quote!()};
+
                     let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
                             quote!(
                                     expr.push_alias(#sql_table_alias);
                                             expr.push_literal(".");
                                             expr.push_literal(#sql_column);
                                             expr.push_literal(" = ");
-                                            expr.push_arg(toql::sql_arg::SqlArg::from(self . #rust_field_ident.as_ref().unwrap()));
+                                            expr.push_arg(toql::sql_arg::SqlArg::from(self . #rust_field_ident #unwrap));
                                             expr.push_literal(", ");
                                     )
                         } else {
@@ -127,7 +131,7 @@ impl<'a> CodegenUpdate<'a> {
                         //update statement
                         if !regular_attrs.key {
                             self.update_set_code.push(quote!(
-                                 if (fields.contains("*") || fields.contains( #toql_field_name)) {
+                                 if fields.contains("*") || fields.contains( #toql_field_name) {
                                     #role_assert
                                     #column_set
                                  }
