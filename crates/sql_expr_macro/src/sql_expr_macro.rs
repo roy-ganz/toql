@@ -75,8 +75,13 @@ pub fn parse(
 fn append_literal(field_info : &mut FieldInfo, tokens: &mut Vec<TokenStream>) {
     let lit = &field_info.literal;
     if !lit.is_empty() {
-        tokens.push( quote!( toql::sql_expr::SqlExprToken::Literal(String::from(#lit))));
+        tokens.push( quote!(  toql::sql_expr::SqlExprToken::Literal(String::from(#lit))));
         field_info.literal.clear();
+    }
+}
+fn append_tokens( tokens: &mut Vec<TokenStream>, outstream: &mut TokenStream) {
+    if !tokens.is_empty(){
+        outstream.extend(quote!(.extend(toql::sql_expr::SqlExpr::from(vec![ #(#tokens),* ]))));
     }
 }
 
@@ -91,18 +96,26 @@ fn evaluate_pair(
     let mut with_args = false;
     let mut alias = false;
     let mut field_info = FieldInfo::new();
+    let mut outstream : TokenStream = quote!( let mut t = toql::sql_expr::SqlExpr::new(); t); // actual output stream
 
-    let mut tokens : Vec<TokenStream> = Vec::new();
+    let mut tokens : Vec<TokenStream> = Vec::new(); // collect tokens for vec
 
     while let Some(pair) = pairs.next() {
         let span = pair.clone().as_span();
 
         match pair.as_rule() {
-           /*  Rule::placeholder => {
+            
+             Rule::placeholder => {
                 append_literal(&mut field_info, &mut tokens);
-                tokens.push( quote!( toql::sql_expr::SqlExprToken::SelfAlias));
-                alias = true;
-            } */
+                append_tokens(&mut tokens, &mut outstream);
+                tokens.clear();
+                 if let Some(a) = expr_args.next() {
+                    outstream.extend( quote!( .extend(#a)));
+                 } else {
+                    return Err(quote!(compile_error!("Missing placeholder argument")));
+                 }
+                alias = false;
+            } 
             Rule::self_alias => {
                 append_literal(&mut field_info, &mut tokens);
                 tokens.push( quote!( toql::sql_expr::SqlExprToken::SelfAlias));
@@ -154,7 +167,7 @@ fn evaluate_pair(
     if  expr_args.next().is_some() {
         return Err(quote!(compile_error!("To many values for arguments");));
     }
-    
+      append_tokens(&mut tokens, &mut outstream);
 
-    Ok(quote!( toql::sql_expr::SqlExpr::from(vec![#(#tokens),*])))
+    Ok(quote!({#outstream; t})) // return value not reference
 }

@@ -35,13 +35,7 @@ pub struct SqlExpr {
 }
 
 impl SqlExpr {
-    /*
-    pub fn new() -> Self {
-        SqlExpr {
-            tokens:Vec::new()
-        }
-    } */
-
+    
     pub fn from(tokens: Vec<SqlExprToken>) -> Self {
         SqlExpr { tokens }
     }
@@ -157,8 +151,8 @@ impl SqlExpr {
         self
     }
 
-    pub fn extend(&mut self, expr: SqlExpr) -> &mut Self {
-        self.tokens.extend(expr.tokens);
+    pub fn extend(&mut self, expr: impl Into<SqlExpr>) -> &mut Self {
+        self.tokens.extend(expr.into().tokens);
         self
     }
     pub fn tokens(&self) -> &[SqlExprToken] {
@@ -197,4 +191,16 @@ impl fmt::Display for SqlExprToken {
             }
         }
     }
+}
+
+impl std::convert::From<&str> for SqlExpr {
+    fn from(s: &str) -> Self {
+        SqlExpr::literal(s)
+    }
+}
+impl std::convert::From<String> for SqlExpr {
+    fn from(s: String) -> Self {
+        SqlExpr::literal(s)
+    }
+
 }
