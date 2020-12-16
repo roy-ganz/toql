@@ -5,7 +5,7 @@ pub use toql_core::error::ToqlError;
 pub use toql_core::field_handler::FieldHandler;
 pub use toql_core::field_handler::BasicFieldHandler;
 pub use toql_core::join_handler::JoinHandler;
-
+pub use toql_core::predicate_handler::PredicateHandler;
 pub use toql_core::page::Page;
 pub use toql_core::cache::Cache;
 
@@ -18,4 +18,13 @@ pub use toql_core::query::{Query, query_with::QueryWith};
 pub use toql_core::query::field::Field;
 
 
-pub use toql_derive::{Toql, ToqlSqlArg};
+
+pub use toql_core::query::field_filter::FieldFilter;
+
+
+
+pub use toql_core::parameter_map::ParameterMap;
+pub use toql_sql_expr_macro::sql_expr;
+
+
+pub use toql_derive::{Toql, ToqlEnum};

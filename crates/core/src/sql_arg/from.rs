@@ -138,6 +138,12 @@ impl From<&str> for SqlArg {
     }
 }
 
+impl From<&SqlArg> for SqlArg {
+    fn from(t: &SqlArg) -> Self {
+        t.to_owned()
+    }
+}
+
 impl<T> From<Option<T>> for SqlArg
 where
     T: Into<SqlArg>,

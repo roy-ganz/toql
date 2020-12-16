@@ -50,7 +50,7 @@ pub enum ToqlError {
     SqlExprResolverError(ResolverError),
 
     /// Access to shared registry, typically inside cache, failed
-    RegistryPoisenError(String)
+    RegistryPoisenError(String),
 }
 
 /// A result with a [`ToqlError`](enum.ToqlError.html)

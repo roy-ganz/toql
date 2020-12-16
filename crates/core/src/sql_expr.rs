@@ -48,6 +48,26 @@ impl SqlExpr {
             tokens: vec![SqlExprToken::Literal(lit.into())],
         }
     }
+    pub fn self_alias() -> Self {
+        SqlExpr {
+            tokens: vec![SqlExprToken::SelfAlias],
+        }
+    }
+    pub fn other_alias() -> Self {
+        SqlExpr {
+            tokens: vec![SqlExprToken::OtherAlias],
+        }
+    }
+    pub fn unresolved_arg() -> Self {
+        SqlExpr {
+            tokens: vec![SqlExprToken::UnresolvedArg],
+        }
+    }
+    pub fn arg(a: SqlArg) -> Self {
+        SqlExpr {
+            tokens: vec![SqlExprToken::Arg(a)],
+        }
+    }
     pub fn aliased_column(column_name: String) -> Self {
         SqlExpr {
             tokens: vec![
@@ -122,6 +142,10 @@ impl SqlExpr {
     }
     pub fn push_arg(&mut self, arg: SqlArg) -> &mut Self {
         self.tokens.push(SqlExprToken::Arg(arg));
+        self
+    }
+    pub fn push_unresolved_arg(&mut self) -> &mut Self {
+        self.tokens.push(SqlExprToken::UnresolvedArg);
         self
     }
     pub fn is_empty(&self) -> bool {
@@ -200,6 +224,12 @@ impl std::convert::From<&str> for SqlExpr {
 }
 impl std::convert::From<String> for SqlExpr {
     fn from(s: String) -> Self {
+        SqlExpr::literal(s)
+    }
+
+}
+impl std::convert::From<&String> for SqlExpr {
+    fn from(s: &String) -> Self {
         SqlExpr::literal(s)
     }
 

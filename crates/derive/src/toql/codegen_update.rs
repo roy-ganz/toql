@@ -80,11 +80,12 @@ impl<'a> CodegenUpdate<'a> {
                     return;
                 };
 
-                if !field.skip_mut{
-
-                    let unwrap = if field.number_of_options > 0 {
-                        quote!(.as_ref().unwrap())
-                    } else {  quote!()};
+                if !field.skip_mut {
+                    let value = if field.number_of_options > 0 {
+                        quote!(self . #rust_field_ident .as_ref().unwrap())
+                    } else {  
+                        quote!( &self . #rust_field_ident)
+                    };
 
                     let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
                             quote!(
@@ -92,7 +93,7 @@ impl<'a> CodegenUpdate<'a> {
                                             expr.push_literal(".");
                                             expr.push_literal(#sql_column);
                                             expr.push_literal(" = ");
-                                            expr.push_arg(toql::sql_arg::SqlArg::from(self . #rust_field_ident #unwrap));
+                                            expr.push_arg(toql::sql_arg::SqlArg::from( #value));
                                             expr.push_literal(", ");
                                     )
                         } else {

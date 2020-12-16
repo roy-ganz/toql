@@ -55,73 +55,52 @@ mod util;
 
 mod string_set;
 
-/* 
-
-#[proc_macro]
-pub fn query(input: TokenStream) -> TokenStream {
-
-     let _ = env_logger::try_init(); // Avoid multiple init
-     eprintln!("{:?}", input);
-
-    let ast = parse_macro_input!(input as query_builder::QueryBuilder);
-
-    eprintln!("{:?}", ast);
-
-  let gen = quote!( 
-      pub fn hello() 
-   { 
-       println!("hello");
-   }
-   );
-   
-   log::debug!("Source code for `{}`:\n{}", "query", gen.to_string());
-   TokenStream::from(gen)
-} */
-
-/* 
-#[proc_macro_derive(ToqlFilterArg)]
-pub fn filter_arg_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(ToqlEnum)]
+pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
     let ast = parse_macro_input!(input as DeriveInput);
     //let gen = impl_filter_arg_derive(&ast);
     let name = &ast.ident;
     let gen = quote! {
-                impl toql::query::FilterArg for  &#name {
-                    fn to_sql(&self) -> String {
-                         self.to_string().to_sql()
-                    }
-                }
-                impl toql::query::FilterArg for  #name {
-                    fn to_sql(&self) -> String {
-                         self.to_string().to_sql()
-                    }
-                }
-    };
-    log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
-    TokenStream::from(gen)
-} */
+                       impl<R, E> toql::from_row::FromRow<R, E> for #name 
+                    where String :toql::from_row::FromRow<R, E>, 
+                    Self: std::str::FromStr, 
+                    E: std::convert::From<toql::error::ToqlError>,
+                    {
+                        fn from_row<'a, I>(
+                            row: &R,
+                            i: &mut usize,
+                            iter: &mut I,
+                        ) -> std::result::Result<Option<ConfigurationType>, E>
+                        where
+                            I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
+                        {
+                            let s: Option<String> = toql::from_row::FromRow::<R, E>::from_row(row, i, iter)?;
+                            if let Some(s) = s {
+                                let t = <Self as std::str::FromStr>::from_str(s.as_str())
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name .to_string(), e.to_string()))?;
+                                Ok(Some(t))
 
-#[proc_macro_derive(ToqlSqlArg)]
-pub fn toql_sql_arg_derive(input: TokenStream) -> TokenStream {
-    let _ = env_logger::try_init(); // Avoid multiple init
-    let ast = parse_macro_input!(input as DeriveInput);
-    //let gen = impl_filter_arg_derive(&ast);
-    let name = &ast.ident;
-    let gen = quote! {
-                        impl<R,E> toql::from_row::FromRow<R, E> for #name {
-                            fn from_row<'a, I>(
-                                    row: &R,
-                                    i: &mut usize,
-                                    iter: &mut I,
-                                ) -> std::result::Result<Option<#name>, E>
-                                where
-                                    I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
-                                {
-                                    
-                                    let s : Option<String> = toql::from_row::FromRow::<R,E>::from_row(row, i, iter)?;
-                                    s.map_(|v|Self::parse(s))
-                                }
+                            } else {
+                                Ok(None)
+                            }
+
                         }
+                    }
+                    impl std::convert::TryFrom<&toql::sql_arg::SqlArg> for #name 
+                    where Self: std::str::FromStr {
+
+                        type Error =  toql::error::ToqlError;
+                        fn try_from(t: &toql::sql_arg::SqlArg) -> Result<Self, Self::Error> {
+                        if let toql::sql_arg::SqlArg::Str(s) = t {
+                                let t = <Self as std::str::FromStr>::from_str(s.as_str())
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name.to_string(), e.to_string()))?;
+                                Ok(t)
+                        } else {
+                            Err(toql::error::ToqlError::DeserializeError(#name.to_string(),"Requires string argument.".to_string()))  
+                        }
+                        }
+                    }
 
                     impl From<#name> for toql::sql_arg::SqlArg {
                         fn from(t: #name) -> Self {
@@ -138,19 +117,6 @@ pub fn toql_sql_arg_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(gen)
 }
 
-
-
-/* fn impl_filter_arg_derive(ast: &syn::DeriveInput) ->TokenStream {
-    let name = &ast.ident;
-
-    quote! {
-                impl toql::query::FilterArg for  &#name {
-                    fn to_sql(&self) () -> String {
-                         self.to_string().to_sql()
-                    }
-                }
-    }
-} */
 
 /// Derive to add Toql functionality to your struct.
 #[proc_macro_derive(Toql, attributes(toql))]

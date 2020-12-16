@@ -52,7 +52,7 @@ impl<'a> Resolver<'a> {
         self
     }
 
-    pub fn replace_aux_params(sql_expr: SqlExpr, aux_params_exprs: &HashMap<String, SqlExpr>) {
+    pub fn replace_aux_params(sql_expr: SqlExpr, aux_params_exprs: &HashMap<String, SqlExpr>) -> SqlExpr {
         let mut tokens = Vec::new();
 
          for token in sql_expr.tokens {
@@ -64,6 +64,7 @@ impl<'a> Resolver<'a> {
                 tokens.push(token);
             }
         }
+        SqlExpr::from(tokens)
     }
 
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
