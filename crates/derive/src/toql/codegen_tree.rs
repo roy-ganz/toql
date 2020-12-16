@@ -67,7 +67,7 @@ impl<'a> CodegenTree<'a> {
 
         let rust_field_ident = &field.rust_field_ident;
         let rust_field_name = &field.rust_field_name;
-        let rust_type_ident = &field.rust_type_ident;
+        
         let toql_field_name = &field.toql_field_name;
         let rust_base_type_ident = &field.rust_base_type_ident;
 
@@ -123,13 +123,13 @@ impl<'a> CodegenTree<'a> {
 
                 self.dispatch_predicate_args_code.push(quote!(
                       #toql_field_name => {
-                            <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                            <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
                             args(#refer  self. #rust_field_ident # unwrap ,&mut descendents, args)?
                         }
                 ));
                 self.dispatch_predicate_columns_code.push(quote!(
                       #toql_field_name => {
-                            <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                            <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
                             columns(#refer  self. #rust_field_ident # unwrap ,&mut descendents)?
                         }
                 ));
@@ -137,35 +137,36 @@ impl<'a> CodegenTree<'a> {
                 self.dispatch_index_code.push(
                    quote!(
                         #toql_field_name => {
-                            <#rust_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
+                            <#rust_base_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
                             index(&mut descendents, &field,rows, row_offset, index)?
                         }
                 )
                );
+
                 self.index_type_bounds.push(quote!(
-                    #rust_type_ident : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
+                    #rust_base_type_ident : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < #rust_base_type_ident as toql :: from_row :: FromRow < R >> :: Error>
                     ));
 
                 self.dispatch_merge_code.push(
                    quote!(
                        #toql_field_name => {
 
-                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
+                            <#rust_base_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
                             merge(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, &field, rows, row_offset, index, selection_stream)?
 
                        }
                 )
                );
                 self.merge_type_bounds.push(quote!(
-                    #rust_type_ident : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
+                    #rust_base_type_ident : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < #rust_base_type_ident as toql :: from_row :: FromRow < R >> :: Error>
                     ));
 
                 self.dispatch_identity_code.push(
                    quote!(
                        #toql_field_name => {
-                            <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::
+                            <#rust_base_type_ident as toql::tree::tree_identity::TreeIdentity>::
                             set_id(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, action)?
                         }
                 )
@@ -230,7 +231,7 @@ impl<'a> CodegenTree<'a> {
                 ));
                 self.dispatch_identity_code.push(quote!(
                        #toql_field_name => {
-                            for f in #refer self. #rust_field_ident #unwrap_mut {
+                            for f in #refer_mut self. #rust_field_ident #unwrap_mut {
                                 <#rust_base_type_ident as toql::tree::tree_identity::TreeIdentity>::
                                 set_id(f, &mut descendents,  action.clone())?
                             }
@@ -260,13 +261,6 @@ impl<'a> CodegenTree<'a> {
                 }
                 self.merge_columns_code.push(quote!(
                        #toql_field_name => {
-                            // Primary key
-                            /* for col in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
-                                key_expr.push_self_alias();
-                                key_expr.push_literal(".");
-                                key_expr.push_alias(col);
-                                key_expr.push_literal(", ");
-                            } */
                            #(#columns_merge)*
                        }
                 ));
@@ -303,19 +297,19 @@ impl<'a> CodegenTree<'a> {
 
                 self.index_type_bounds.push(quote!(
                     //#type_key_ident : toql :: from_row :: FromRow < R >,
-                    <#rust_type_ident as toql::key::Keyed>::Key : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < <#rust_type_ident as toql::key::Keyed>::Key as toql :: from_row :: FromRow < R >> :: Error>
+                    <#rust_base_type_ident as toql::key::Keyed>::Key : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < <#rust_base_type_ident as toql::key::Keyed>::Key as toql :: from_row :: FromRow < R >> :: Error>
                     ));
                 self.merge_type_bounds.push(quote!(
-                    <#rust_type_ident as toql::key::Keyed>::Key : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < <#rust_type_ident as toql::key::Keyed>::Key as toql :: from_row :: FromRow < R >> :: Error>,
-                    #rust_type_ident : toql :: from_row :: FromRow < R >,
-                    E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
+                    <#rust_base_type_ident as toql::key::Keyed>::Key : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < <#rust_base_type_ident as toql::key::Keyed>::Key as toql :: from_row :: FromRow < R >> :: Error>,
+                    #rust_base_type_ident : toql :: from_row :: FromRow < R >,
+                    E : std::convert::From< < #rust_base_type_ident as toql :: from_row :: FromRow < R >> :: Error>
                     ));
 
                 self.index_code.push(quote!(
                     #toql_field_name => {
-                        let fk = <#rust_type_ident as toql::key::Keyed>::Key ::from_row(&row, &mut i, &mut iter)?;
+                        let fk = <#rust_base_type_ident as toql::key::Keyed>::Key ::from_row(&row, &mut i, &mut iter)?;
                         fk.hash(&mut s);
                         },
                 ));
@@ -378,15 +372,16 @@ impl<'a> CodegenTree<'a> {
                     }
                 }
                 if !skip_identity_code {
+                    
                     match field.number_of_options {
                          0 => {self.identity_set_merges_key_code.push(
                             quote!(
                                 let self_columns = <#struct_key_ident as toql::key::Key>::columns();
                                 for e in #refer self. #rust_field_ident #unwrap_mut {
-                                    let key = e.try_get_key()?;
+                                    let key = < #rust_base_type_ident as toql :: key :: Keyed >::try_get_key(e)?;
                                             let mut ps = toql::key::Key::params(&key);
 
-                                            let other_columns = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
+                                            let other_columns = <<#rust_base_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
                                             for (i,other_column) in other_columns.iter().enumerate() {
                                                 for (j,self_column) in self_columns.iter().enumerate() {
                                                     let calculated_other_column= match self_column.as_str() {
@@ -399,7 +394,7 @@ impl<'a> CodegenTree<'a> {
                                                     }
                                                 }
                                             }
-                                            let key = <<#rust_type_ident as toql::key::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
+                                            let key = <<#rust_base_type_ident as toql::key::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
                                             e.try_set_key(key)?;
                                 }
                             )
@@ -409,10 +404,10 @@ impl<'a> CodegenTree<'a> {
                                   let self_columns = <#struct_key_ident as toql::key::Key>::columns();
                                     if let Some(u) = self. #rust_field_ident .as_mut() {
                                         for e in u {
-                                            let key = e.try_get_key()?;
+                                            let key = < #rust_base_type_ident as toql :: key :: Keyed >::try_get_key(e)?;
                                             let mut ps = toql::key::Key::params(&key);
 
-                                            let other_columns = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
+                                            let other_columns = <<#rust_base_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
                                             for (i,other_column) in other_columns.iter().enumerate() {
                                                 for (j,self_column) in self_columns.iter().enumerate() {
                                                     let calculated_other_column= match self_column.as_str() {
@@ -425,7 +420,7 @@ impl<'a> CodegenTree<'a> {
                                                     }
                                                 }
                                             }
-                                            let key = <<#rust_type_ident as toql::key::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
+                                            let key = <<#rust_base_type_ident as toql::key::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
                                             e.try_set_key(key)?;
                                         }
 
@@ -471,7 +466,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                      let args : Vec<toql::sql_arg::SqlArg> = args.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
                       let key = std :: convert :: TryFrom::try_from(args)?;
                     
-                    self.try_set_key(key)?;
+                    <Self as toql::key::Keyed>::try_set_key(&mut self, key)?;
                 }
             );
     
@@ -479,7 +474,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let identity_set_key = if self.rust_struct.auto_key {
             quote!( #identity_set_self_key_code
 
-                    let self_key = self.try_get_key()?;
+                    let self_key = <Self as toql::key::Keyed>::try_get_key(&self)?;
                     let self_params = toql::key::Key::params(&self_key);
 
                    #(#identity_set_merges_key_code)*)
@@ -716,7 +711,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                        },
                                        None => {
 
-                                               let pk : #struct_key_ident = self.try_get_key()?; // removed .into()
+                                               let pk : #struct_key_ident = <Self as toql::key::Keyed>::try_get_key(&self)?; // removed .into()
                                                let mut s = DefaultHasher::new();
                                                pk.hash(&mut s);
                                                let h = s.finish();

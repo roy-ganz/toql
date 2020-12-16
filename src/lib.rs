@@ -96,7 +96,12 @@ pub use toql_core::parameter_map;
 
 
 pub use toql_core::log; // Reexport for derive
+
+#[cfg(feature= "serde")]
+pub use toql_core::serde; // Reexport for derive
+
 pub use toql_core::log_literal_sql;
+
 
 
 

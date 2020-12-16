@@ -19,9 +19,12 @@ enquote="1"
 chrono = "^0.4"
 heck ="0.3"
 lru = "0.6"
+serde  = {package="serde", version = "1", optional= true}
 
 toql_query_parser = { version = "0.3", path = "../query_parser" }
 toql_sql_expr_parser = { version = "0.3", path = "../sql_expr_parser" }
 toql_role_expr_parser = { version = "0.3", path = "../role_expr_parser" }
 
+[features]
+serde_feature = ["serde"]
 

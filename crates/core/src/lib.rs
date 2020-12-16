@@ -2,6 +2,10 @@
 
 extern crate pest;
 
+// Reexports
+#[cfg(feature= "serde_feature")]
+pub extern crate serde;         // For generated keys and Join<T>
+ 
 #[macro_use]
 pub mod error;
 pub mod alias;

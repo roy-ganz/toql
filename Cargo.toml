@@ -40,7 +40,7 @@ members =  [
 ]
 
 [features]
-serde = ["toql_derive/serde"]
+serde = ["toql_derive/serde", "toql_core/serde_feature"]
 
 
 

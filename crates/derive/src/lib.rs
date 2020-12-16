@@ -71,7 +71,7 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
                             row: &R,
                             i: &mut usize,
                             iter: &mut I,
-                        ) -> std::result::Result<Option<ConfigurationType>, E>
+                        ) -> std::result::Result<Option< #name >, E>
                         where
                             I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
                         {

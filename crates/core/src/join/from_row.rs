@@ -19,7 +19,7 @@ use crate::{error::ToqlError, sql_builder::select_stream::Select};
         I: Iterator<Item = &'a Select>,
         Self: Sized {
         
-        Ok(<T as FromRow<R, E>>::from_row(row, i, iter)?.map(|e| Join::Entity(e)))
+        Ok(<T as FromRow<R, E>>::from_row(row, i, iter)?.map(|e| Join::Entity(Box::new(e))))
     }
 
  }

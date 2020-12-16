@@ -357,7 +357,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
             quote!()
         }; */
      let serde = if cfg!(feature = "serde") {
-         quote!(Serialize, Deserialize, )
+         quote!(toql::serde::Serialize, toql::serde::Deserialize, )
      }else { quote!()};
      
 
