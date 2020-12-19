@@ -25,6 +25,8 @@ pub enum ToqlError {
     NotFound,
     /// Many records found, when exactly one was expected.
     NotUnique,
+    /// Joined entity is missing, when exactly one was expected.
+    JoinExpected,
     /// The query parser encountered a syntax error.
     QueryParserError(PestError<toql_query_parser::Rule>),
     /// The sql expression parser encountered a syntax error.
@@ -104,7 +106,8 @@ impl fmt::Display for ToqlError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ToqlError::NotFound => write!(f, "no result found"),
-            ToqlError::NotUnique => write!(f, "no unique result found "),
+            ToqlError::NotUnique => write!(f, "no unique result found"),
+            ToqlError::JoinExpected => write!(f, "no joined value found, but expected one"),
             ToqlError::MapperMissing(ref s) => write!(f, "no mapper found for `{}`", s),
             ToqlError::SqlMapperError(ref e) => e.fmt(f),
             ToqlError::ValueMissing(ref s) => write!(f, "no value found for `{}`", s),
