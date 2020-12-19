@@ -74,8 +74,14 @@ fn evaluate_pair(
                 let method_names = span.as_str().split("_")
                     .filter(|p| !p.is_empty())
                     .map(|p| {
-                        let name = Ident::new(&format!("{}", &p.to_snake_case()), Span::call_site());
-                        quote!( . #name ())
+                        // Create raw identifier, see https://github.com/dtolnay/syn/issues/628
+                        let raw_string= format!("r#{}", &p.to_snake_case());
+                        let mut raw_ident  :Ident = syn::parse_str(&raw_string).unwrap();
+                        raw_ident.set_span(Span::call_site());
+                        //let name = Ident::new(&format!("r#{}", &p.to_snake_case()),Span::call_site());
+                      //  let p = proc_macro2::Punct::new('#', proc_macro2::Spacing::Joint);
+                     
+                        quote!( .  #raw_ident ())
                     })
                     .collect::<Vec<_>>();
                 methods.push(  quote!(toql::insert_path::InsertPath::into_path(  #struct_type::fields() #(#method_names)*  )))

@@ -45,11 +45,13 @@ impl<'a> CodegenInsert<'a> {
         
         
         let rust_field_ident = &field.rust_field_ident;
+        
         let rust_type_ident = &field.rust_type_ident;
         let toql_field_name= &field.toql_field_name;
         
 
     
+     
 
         // Handle key predicate and parameters
               
@@ -305,7 +307,16 @@ impl<'a> CodegenInsert<'a> {
                );
                 self.dispatch_values_code.push(
                     match field.number_of_options {
-                        1 => {quote!(
+                        0 => {
+                            quote!(
+                                #toql_field_name => { 
+                                    for f in &self. #rust_field_ident{
+                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, values)?
+                                    }
+                                }
+                            )
+                        }
+                        _ => {quote!( // must be 1
                                 #toql_field_name => { 
                                     if let Some (fs) = self. #rust_field_ident .as_ref(){
                                         for f in fs {
@@ -313,16 +324,7 @@ impl<'a> CodegenInsert<'a> {
                                         }
                                     }
                                 }
-                        )}
-                        _ => {
-                            quote!(
-                                #toql_field_name => { 
-                                    for f in self. #rust_field_ident .as_ref(){
-                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, values)?
-                                    }
-                                }
-                            )
-                        }
+                        )},
 
                     }
                    

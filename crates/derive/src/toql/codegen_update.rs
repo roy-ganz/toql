@@ -89,8 +89,8 @@ impl<'a> CodegenUpdate<'a> {
 
                     let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
                             quote!(
-                                    expr.push_alias(#sql_table_alias);
-                                            expr.push_literal(".");
+                                    // expr.push_alias(#sql_table_alias);
+                                        //    expr.push_literal(".");
                                             expr.push_literal(#sql_column);
                                             expr.push_literal(" = ");
                                             expr.push_arg(toql::sql_arg::SqlArg::from( #value));
@@ -167,7 +167,18 @@ impl<'a> CodegenUpdate<'a> {
                     let rust_base_type_ident = &field.rust_base_type_ident;
                     self.dispatch_update_code.push(
                         match field.number_of_options {
-                            1 => {quote!(
+                            0 => {
+                                quote!(
+                                    #toql_field_name => { 
+                                        #role_assert
+
+                                        for f in &self. #rust_field_ident{
+                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
+                                        }
+                                    }
+                                )
+                            }
+                            _ => {quote!(
                                     #toql_field_name => { 
                                         #role_assert
 
@@ -178,17 +189,6 @@ impl<'a> CodegenUpdate<'a> {
                                         }
                                     }
                             )}
-                            _ => {
-                                quote!(
-                                    #toql_field_name => { 
-                                        #role_assert
-
-                                        for f in self. #rust_field_ident .as_ref(){
-                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
-                                        }
-                                    }
-                                )
-                            }
 
                         }
                     
@@ -261,7 +261,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         expr.push_literal("UPDATE ");
                                         expr.push_literal(#sql_table_name);
                                         expr.push_literal(" ");
-                                        expr.push_alias(#sql_table_alias);
+                                  //      expr.push_alias(#sql_table_alias);
                                         expr.push_literal(" SET ");
                                         let tokens = expr.tokens().len();
                                         #(#update_set_code)*
@@ -269,7 +269,9 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");
                                             let key = <Self as toql::key::Keyed>::try_get_key(&self)?;
-                                            let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
+                                            //let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
+                                            // Qualifierd column name
+                                            let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_name);
                                             expr.extend( resolver.resolve(&toql::key::predicate_expr(key))?); 
                                             exprs.push(expr);
                                         }

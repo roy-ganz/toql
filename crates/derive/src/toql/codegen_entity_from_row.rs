@@ -26,6 +26,7 @@ pub(crate) struct CodegenEntityFromRow<'a> {
     key_field_names: Vec<String>,
     merge_field_getter: HashMap<String, TokenStream>,
     impl_types: HashSet<syn::Ident>,
+    impl_opt_types: HashSet<syn::Ident>,
     
 }
 
@@ -41,7 +42,8 @@ impl<'a> CodegenEntityFromRow<'a> {
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
             merge_field_getter: HashMap::new(),
-            impl_types: HashSet::new()
+            impl_types: HashSet::new(),
+            impl_opt_types: HashSet::new()
         }
     }
 
@@ -62,12 +64,19 @@ impl<'a> CodegenEntityFromRow<'a> {
             &self.rust_struct.rust_struct_ident, rust_field_name
         );
 
-            self.impl_types.insert(field.rust_base_type_ident.to_owned());
+       
 
             match &field.kind {
                 FieldKind::Regular(ref regular_attrs) => {
                     let rust_field_ident = &field.rust_field_ident;
                     let rust_type_ident = &field.rust_type_ident;
+
+                    // Type bound for regular fields, fields can be optional
+                    if field.number_of_options > 1 {
+                        self.impl_opt_types.insert(field.rust_base_type_ident.to_owned());
+                    }else {
+                        self.impl_types.insert(field.rust_base_type_ident.to_owned());
+                    }
                     
                    
 
@@ -156,6 +165,9 @@ impl<'a> CodegenEntityFromRow<'a> {
                     let rust_field_ident = &field.rust_field_ident;
                     let rust_field_name = &field.rust_field_name;
                     let rust_type_ident = &field.rust_type_ident;
+
+                    // Bound for joins
+                    self.impl_types.insert(field.rust_base_type_ident.to_owned());
                    /*  self.forward_joins
                         .push(
                             
@@ -225,6 +237,9 @@ impl<'a> CodegenEntityFromRow<'a> {
                     }
                 }
                 FieldKind::Merge(_merge_attrs) => {
+
+                    // Merge don't need bounds, as they are nor deserialized within FromRow
+
                     let rust_field_ident = &field.rust_field_ident;
                     self.deserialize_fields
                         .push(if field.number_of_options > 0 {
@@ -510,6 +525,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
         let deserialize_fields = &self.deserialize_fields;
 
       let impl_types = &self.impl_types.iter().map(|k| quote!( #k :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
+      let impl_opt_types = &self.impl_opt_types.iter().map(|k| quote!( Option<#k> :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
        
      
         let code = quote!(
@@ -522,6 +538,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
             impl<R,E> toql::from_row::FromRow<R, E> for #struct_ident 
             where  E: std::convert::From<toql::error::ToqlError>,
               #(#impl_types)*
+              #(#impl_opt_types)*
             {
  
            
