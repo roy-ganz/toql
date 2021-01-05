@@ -17,8 +17,10 @@ pub use toql_core::join::Join;
 pub use toql_core::join::TryJoin;
 pub use toql_core::query::{Query, query_with::QueryWith};
 pub use toql_core::query::field::Field;
+
 pub use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
+pub use toql_core::key::{Key, Keyed};
 
 
 pub use toql_core::query::field_filter::FieldFilter;
@@ -30,3 +32,6 @@ pub use toql_sql_expr_macro::sql_expr;
 
 
 pub use toql_derive::{Toql, ToqlEnum};
+
+pub use toql_core::log_sql; // Export macro
+pub use toql_core::log_mut_sql; // Export macro
