@@ -20,7 +20,7 @@ pub use toql_core::query::field::Field;
 
 pub use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
-pub use toql_core::key::{Key, Keyed};
+pub use toql_core::key::{Key, Keyed, TryGetKeys};
 
 
 pub use toql_core::query::field_filter::FieldFilter;

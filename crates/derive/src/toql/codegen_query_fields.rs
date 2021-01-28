@@ -153,7 +153,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
                         toql::query::QueryPredicate::predicate(self, "")
                     }
                 } */
-
+/*
             impl toql::update_field::UpdateField for #builder_fields_struct {
                 fn into_field<'a>(mut self) -> String {
                     if self.0.ends_with("_") {
@@ -172,7 +172,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
                     self.0
                 }
 
-            }
+            }*/
 
             impl toql::query_fields::QueryFields for #struct_ident {
                 type FieldsType = #builder_fields_struct ;

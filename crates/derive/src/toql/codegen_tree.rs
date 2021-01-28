@@ -222,12 +222,12 @@ impl<'a> CodegenTree<'a> {
                             <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
                 ));
 
-                self.dispatch_merge_key_code.push(quote!(
+               /*  self.dispatch_merge_key_code.push(quote!(
                        #toql_field_name => {
                             <#rust_base_type_ident as toql::tree::tree_keys::TreeKeys>::
                             keys(&mut descendents, field, key_expr)?
                         }
-                ));
+                )); */
                 self.dispatch_identity_code.push(quote!(
                        #toql_field_name => {
                             for f in #refer_mut self. #rust_field_ident #unwrap_mut {

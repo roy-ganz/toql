@@ -59,9 +59,9 @@ where
 
 impl<T> Join<T> where T: crate::key::Keyed {
 
-pub fn new(key: <T as crate::key::Keyed>::Key) -> Self{
+/* pub fn new(key: <T as crate::key::Keyed>::Key) -> Self{
        Join::Key(key)
-    }
+    } */
 
 
     pub fn entity(&self) -> Option<&T>{
@@ -120,5 +120,13 @@ impl<T> TryJoin for Option<Join<T>> where T: crate::key::Keyed {
     type Output =  T;
     fn try_join(&self) ->  crate::error::Result<&Self::Output> {
         self.as_ref().ok_or(crate::error::ToqlError::JoinExpected)?.entity_or_err(crate::error::ToqlError::JoinExpected)
+    }
+}
+impl<T> TryJoin for Option<Option<Join<T>>> where T: crate::key::Keyed {
+    type Output =  T;
+    fn try_join(&self) ->  crate::error::Result<&Self::Output> {
+         self.as_ref().ok_or(crate::error::ToqlError::JoinExpected)?
+        .as_ref().ok_or(crate::error::ToqlError::JoinExpected)?
+        .entity_or_err(crate::error::ToqlError::JoinExpected)
     }
 }

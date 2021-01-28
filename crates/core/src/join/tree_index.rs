@@ -8,7 +8,7 @@ use crate::{error::ToqlError};
 impl<T, R, E> TreeIndex<R, E> for Join<T>
 where
     T: Keyed + TreeIndex<R,E>,
-     E: std::convert::From<ToqlError>
+    E: std::convert::From<ToqlError>
 {
 
     fn index<'a>(

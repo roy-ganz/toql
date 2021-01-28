@@ -176,6 +176,10 @@ impl Field {
         self
     }
 
+    pub fn into_name(self) -> String {
+        self.name
+    }
+
     /*  pub fn basename(&self) -> &str {
         match self.name.rfind('_'){
             Some(i) => &self.name[i+1..],

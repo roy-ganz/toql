@@ -55,4 +55,8 @@ impl Wildcard {
             path: path.into(),
         }
     }
+
+    pub fn into_string(self) -> String {
+        self.path
+    }
 }

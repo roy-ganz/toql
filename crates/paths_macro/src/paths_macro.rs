@@ -84,7 +84,9 @@ fn evaluate_pair(
                         quote!( .  #raw_ident ())
                     })
                     .collect::<Vec<_>>();
-                methods.push(  quote!(toql::insert_path::InsertPath::into_path(  #struct_type::fields() #(#method_names)*  )))
+                //methods.push(  quote!(toql::insert_path::InsertPath::into_path(  #struct_type::fields() #(#method_names)*  )))
+                
+                methods.push( quote!(toql::query_path::QueryPath::into_path(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*))) 
             }
             _ => {}
         }
@@ -92,7 +94,8 @@ fn evaluate_pair(
 
    
    Ok(quote!(
-        toql::paths::Paths::<#struct_type>::from(vec![#(#methods),* ])
+        //toql::paths::Paths::<#struct_type>::from(vec![#(#methods),* ])
+        vec![#(#methods),* ]
     ))
     
 

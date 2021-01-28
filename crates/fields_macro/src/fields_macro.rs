@@ -76,7 +76,8 @@ fn evaluate_pair(
                         quote!( .#name ())
                     })
                     .collect::<Vec<_>>();
-                methods.push( quote!(toql::update_field::UpdateField::into_field( toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*) )  ))
+               // methods.push( quote!(toql::update_field::UpdateField::into_field( toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*) )  ))
+                methods.push( quote!(toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*).into_string()) )
                 
             }
             Rule::field_path => {
@@ -92,7 +93,8 @@ fn evaluate_pair(
                         quote!( .  #raw_ident ())
                     })
                     .collect::<Vec<_>>();
-                methods.push(  quote!(toql::update_field::UpdateField::into_field(  <#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*  )))
+                //methods.push(  quote!(toql::update_field::UpdateField::into_field(  <#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*  )))
+                methods.push(  quote!( <#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*  .into_name()))
                 
             }
             _ => {}
@@ -101,7 +103,8 @@ fn evaluate_pair(
 
    
    Ok(quote!(
-        toql::fields::Fields::<#struct_type>::from(vec![#(#methods),* ])
+      //  toql::fields::Fields::<#struct_type>::from(vec![#(#methods),* ])
+      vec![#(#methods),* ]
     ))
     
 

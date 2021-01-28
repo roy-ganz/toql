@@ -22,6 +22,10 @@ pub fn from<T>(path: T) -> Self
             name : path.into()
         }
     }
+
+    pub fn into_string(self) -> String {
+        self.name
+    }
 }
     
 

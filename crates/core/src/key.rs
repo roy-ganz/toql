@@ -21,33 +21,31 @@ pub trait Keyed {
     /// Sets the key on a given entity.
     fn try_set_key(&mut self, key: Self::Key) -> crate::error::Result<()>;
 }
+ 
+/* 
+impl<K> Keyed for std::borrow::BorrowMut<K> where K: Keyed   {
+    type Key = <K as Keyed>::Key;
+    fn try_get_key(&self) -> crate::error::Result<Self::Key> {
+       self.borrow().try_get_key()
+    }
+    fn try_set_key(&mut self, key: Self::Key) -> crate::error::Result<()> {
+        self.borrow_mut().try_set_key(key)
+    }
 
-/// Trait to define key type of a Toql entity.
-pub trait KeyedSlice<K>
-where
-    K: Keyed,
+
+} */
+ 
+
+/// Trait to get keys from a collection of a Toql entities.
+pub trait TryGetKeys<K: Keyed>
+where K: Keyed
 {
     /// Return value of the key for a given entity.
     fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>>;
 }
+ 
 
-impl<K> KeyedSlice<K> for Vec<K>
-where
-    K: Keyed,
-{
-    /// Return value of the key for a given entity.
-    fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
-        let mut keys = Vec::new();
-
-        for k in self {
-            keys.push(k.try_get_key()?);
-        }
-
-        Ok(keys)
-    }
-}
-
-impl<K> KeyedSlice<K> for &[K]
+impl<K> TryGetKeys<K> for &[K]
 where
     K: Keyed,
 {
@@ -61,16 +59,64 @@ where
 
         Ok(keys)
     }
-}
+} 
+impl<K> TryGetKeys<K> for &[&mut K]
+where
+    K: Keyed,
+{
+    /// Return value of the key for a given entity.
+    fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
+        let mut keys = Vec::new();
 
-pub fn keys<K: Keyed>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
+        for k in *self {
+            keys.push(k.try_get_key()?);
+        }
+
+        Ok(keys)
+    }
+} 
+
+/*
+impl<K, I> TryGetKeys<K> for &mut I
+where K :Keyed, I:Iterator<Item = K > {
+ fn try_get_keys(self) -> crate::error::Result<Vec<K::Key>> {
+        let mut keys = Vec::new();
+
+        for k in self.next() {
+            keys.push(k.try_get_key()?);
+        }
+
+        Ok(keys)
+
+}
+}*/
+/*
+impl<Q, K> TryGetKeys<K> for Vec<Q>
+where
+    K: Keyed,
+    Q: std::borrow::Borrow<K>
+   
+{
+    /// Return value of the key for a given entity.
+    fn try_get_keys(&self) -> crate::error::Result<Vec<K::Key>> {
+        let mut keys = Vec::new();
+
+        for k in self {
+            keys.push(k.borrow().try_get_key()?);
+        }
+
+        Ok(keys)
+    }
+} */
+
+/* pub fn keys<K: Keyed>(entities: &[K]) -> crate::error::Result<Vec<K::Key>> {
     let mut keys = Vec::with_capacity(entities.len());
     for e in entities {
         keys.push(e.try_get_key()?);
     }
     Ok(keys)
 }
-
+ */
 fn predicate_from_columns_with_alias_sql<K: Key, T, U>(
     keys: &[K],
     columns: &[T],
