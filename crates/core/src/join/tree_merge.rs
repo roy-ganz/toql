@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 impl<T, R, E> TreeMerge<R, E> for Join<T>
 where
-    T: crate::key::Keyed + TreeMerge<R, E>,
+    T: crate::keyed::Keyed + TreeMerge<R, E>,
     E: std::convert::From<ToqlError>
 {
     fn merge<'a>(

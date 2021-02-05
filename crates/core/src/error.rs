@@ -55,8 +55,7 @@ pub enum ToqlError {
     RegistryPoisenError(String),
 }
 
-/// A result with a [`ToqlError`](enum.ToqlError.html)
-pub type Result<T> = std::result::Result<T, ToqlError>;
+
 
 impl From<SqlBuilderError> for ToqlError {
     fn from(err: SqlBuilderError) -> ToqlError {

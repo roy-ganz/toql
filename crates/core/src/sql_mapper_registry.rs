@@ -5,7 +5,7 @@
 //!
 use crate::alias::AliasFormat;
 /// A registry that holds mappers.
-use crate::error::Result;
+use crate::result::Result;
 use crate::field_handler::FieldHandler;
 use crate::sql_mapper::mapped::Mapped;
 use crate::sql_mapper::SqlMapper;

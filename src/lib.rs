@@ -49,9 +49,11 @@
 pub use toql_core::alias;
 pub use toql_core::alias_translator;
 pub use toql_core::error;
-pub use toql_core::error::Result;
+pub use toql_core::result;
 pub use toql_core::from_row;
 pub use toql_core::key;
+pub use toql_core::keyed;
+pub use toql_core::map_key;
 pub use toql_core::merge;
 pub use toql_core::query;
 pub use toql_core::sql;

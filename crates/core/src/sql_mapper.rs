@@ -43,7 +43,7 @@ use heck::{CamelCase, MixedCase};
 use crate::sql_mapper::join_options::JoinOptions;
 use crate::sql_mapper::predicate_options::PredicateOptions;
 
-use crate::error::Result;
+use crate::result::Result;
 use crate::predicate_handler::{DefaultPredicateHandler, PredicateHandler};
 use crate::sql_mapper::field::Field;
 use crate::sql_mapper::field_options::FieldOptions;

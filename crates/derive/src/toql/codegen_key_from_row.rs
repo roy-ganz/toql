@@ -77,7 +77,7 @@ impl<'a> CodegenKeyFromRow<'a> {
                 self.deserialize_key.push(quote!(
                     
                     #rust_field_ident: {
-                         << #rust_type_ident as toql :: key :: Keyed > :: Key >:: from_row(row, i, iter)?
+                         << #rust_type_ident as toql :: keyed :: Keyed > :: Key >:: from_row(row, i, iter)?
                                 .ok_or(toql::error::ToqlError::ValueMissing(#error_field.to_string()))?
                     }
                 ));
@@ -98,8 +98,8 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
         let deserialize_key = &self.deserialize_key;
         let regular_types = &self.regular_types.iter().map(|k| quote!( #k :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
         let join_types = &self.join_types.iter().map(|k| quote!( 
-            #k :  toql::from_row::FromRow<R, E> + toql::key::Keyed,
-            <#k as toql::key::Keyed>::Key: toql::from_row::FromRow<R, E>,
+            #k :  toql::from_row::FromRow<R, E> + toql::keyed::Keyed,
+            <#k as toql::keyed::Keyed>::Key: toql::from_row::FromRow<R, E>,
             )).collect::<Vec<_>>();
        
         let key = quote! {

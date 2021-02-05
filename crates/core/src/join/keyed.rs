@@ -1,7 +1,6 @@
 
 use super::Join;
-use crate::error::Result;
-use crate::key::Keyed;
+use crate::keyed::{Keyed, KeyedMut};
 
 impl<T> Keyed for Join<T>
 where
@@ -9,19 +8,34 @@ where
     T::Key: Clone,
 {
     type Key = T::Key;
-    fn try_get_key(&self) -> Result<T::Key> {
+    fn key(&self) -> T::Key {
         match self {
-            Join::Key(k) => Ok(k.clone()),
-            Join::Entity(e) => e.try_get_key(),
+            Join::Key(k) => k.clone(),
+            Join::Entity(e) => e.key(),
         }
     }
-    fn try_set_key(&mut self, key: T::Key) -> Result<()> {
+   /*  fn set_key(&mut self, key: T::Key) {
         match self {
             Join::Key(_) => {
                 *self = Join::Key(key);
-                Ok(())
+               
             }
-            Join::Entity(e) => e.try_set_key(key),
+            Join::Entity(e) => e.set_key(key),
+        }
+    } */
+}
+impl<T> KeyedMut for Join<T>
+where
+    T: KeyedMut,
+    T::Key: Clone,
+{
+    fn set_key(&mut self, key: T::Key) {
+        match self {
+            Join::Key(_) => {
+                *self = Join::Key(key);
+               
+            }
+            Join::Entity(e) => e.set_key(key),
         }
     }
 }

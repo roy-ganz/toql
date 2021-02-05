@@ -1,5 +1,5 @@
 use super::Join;
-use crate::key::Keyed;
+use crate::keyed::Keyed;
 use crate::key::Key;
 use crate::tree::tree_identity::{TreeIdentity, IdentityAction};
 use crate::error::ToqlError;

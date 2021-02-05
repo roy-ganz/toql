@@ -1,5 +1,5 @@
 use super::row::Row;
-use crate::error::Result;
+use crate::result::Result;
 use crate::sql::Sql;
 
 // Runs a query on a database and returns an iterator to the resulting rows.

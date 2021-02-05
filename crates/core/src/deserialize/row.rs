@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::result::Result;
 
 // Implemented by database support for every entity
 // Reads a and deserializes an entity from a table row

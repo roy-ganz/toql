@@ -4,7 +4,7 @@ use crate::{tree::{tree_insert::TreeInsert, tree_identity::TreeIdentity}, query:
 use std::{collections::HashMap, borrow::BorrowMut};
 use crate::{paths::Paths, parameter_map::ParameterMap, fields::Fields};
 
-use crate::error::Result;
+use crate::result::Result;
 use std::collections::HashSet;
 
 

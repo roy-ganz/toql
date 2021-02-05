@@ -1,6 +1,7 @@
 use crate::tree::tree_update::TreeUpdate;
 use super::Join;
-use crate::key::{Key, Keyed};
+use crate::key::Key;
+use crate::keyed::Keyed;
 use crate::{sql_mapper::mapped::Mapped, error::ToqlError};
 use crate::sql_expr::resolver::Resolver;
 

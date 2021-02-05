@@ -146,7 +146,7 @@ impl<'a> CodegenMapper<'a> {
                         .discriminator( 
                             {
                                 let mut e = toql::sql_expr::SqlExpr::new();
-                                <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter()
+                                <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter()
                                 .for_each(| other_column |
                                 {
                                     e.push_other_alias();
@@ -166,7 +166,7 @@ impl<'a> CodegenMapper<'a> {
 
                 // Build predicate based on key information or custom provided column pairs
                 let col_array = if join_attrs.columns.is_empty() {
-                    quote!(<<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns())
+                    quote!(<<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns())
                 } else {
                      let other_columns: Vec<String> = join_attrs.columns
                         .iter()
@@ -463,7 +463,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                 fn table_alias() -> String {
                     String::from(#sql_table_alias)
                 }
-                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str) -> toql::error::Result<()>{
+                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str) -> toql::result::Result<()>{
                   /*   if toql_path.is_empty() {
                         mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
                     } */

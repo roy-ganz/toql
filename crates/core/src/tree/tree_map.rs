@@ -6,5 +6,5 @@ use crate::{
 pub trait TreeMap : Mapped {
     fn map<'a>(
         registry: &mut SqlMapperRegistry
-    ) -> crate::error::Result<()>;
+    ) -> crate::result::Result<()>;
 }

@@ -270,7 +270,7 @@ impl Field {
             } else {
                 quote!(
                     if cfg!(debug_assertions) {
-                        let valid_columns = <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns();
+                        let valid_columns = <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
                         let invalid_columns: Vec<String> = [ #(#other_columns),* ]
                             .iter()
                             .filter(|col| !valid_columns.iter().any ( |s| &s == col ) )

@@ -196,7 +196,7 @@ impl<'a> CodegenInsert<'a> {
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
                 self.insert_columns_code.push(quote!(
-                     for other_column in <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns() {
+                     for other_column in <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
                             #default_self_column_code;
                             let self_column = #columns_map_code;
                             e.push_literal(self_column);
@@ -213,22 +213,22 @@ impl<'a> CodegenInsert<'a> {
                                             if let Some(field) = &self. #rust_field_ident {
                                                  if let Some(f) = field {
                                                     toql :: key :: Key :: params(& < #rust_type_ident as toql ::
-                                                                                    key :: Keyed > ::
-                                                                                    try_get_key(f)?)
+                                                                                    keyed :: Keyed > ::
+                                                                                    key(f))
                                                                                     .iter()
                                                                                     .for_each(|p| {
                                                                                         values.push_arg(p.to_owned());
                                                                                         values.push_literal(", ");
                                                                                         });
                                                 } else {
-                                                    <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns()
+                                                    <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
                                                     .iter().for_each(|_| { 
                                                             values.push_arg(toql::sql_arg::SqlArg::Null()); 
                                                             values.push_literal(", ");});
 
                                                 }
                                             } else {
-                                                <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_| { values.push_literal("DEFAULT, ");});
+                                                <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_| { values.push_literal("DEFAULT, ");});
                                             }
 
                                         )
@@ -238,15 +238,15 @@ impl<'a> CodegenInsert<'a> {
                                     quote!(
                                          if let Some(f) = field {
                                                     toql :: key :: Key :: params(& < #rust_type_ident as toql ::
-                                                                                    key :: Keyed > ::
-                                                                                    try_get_key(f)?)
+                                                                                    keyed :: Keyed > ::
+                                                                                    key(f))
                                                                                     .iter()
                                                                                     .for_each(|p| {
                                                                                         values.push_arg(p.to_owned());
                                                                                         values.push_literal(", ");
                                                                                         });
                                                 } else {
-                                                    <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns()
+                                                    <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
                                                     .iter().for_each(|_| { 
                                                             values.push_arg(toql::sql_arg::SqlArg::Null()); 
                                                             values.push_literal(", ");
@@ -261,15 +261,15 @@ impl<'a> CodegenInsert<'a> {
                                     quote!(
                                         if let Some(field) = &self. #rust_field_ident {
                                                     toql :: key :: Key :: params(& < #rust_type_ident as toql ::
-                                                                                    key :: Keyed > ::
-                                                                                    try_get_key(field)?)
+                                                                                    keyed :: Keyed > ::
+                                                                                    key(field))
                                                                                     .iter()
                                                                                     .for_each(|p| {
                                                                                         values.push_arg(p.to_owned());
                                                                                         values.push_literal(", ");
                                                                                         });
                                         } else {
-                                              <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns()
+                                              <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
                                                 .iter().for_each(|_|  {values.push_literal("DEFAULT, ");});
                                         }
                                     )
@@ -277,7 +277,7 @@ impl<'a> CodegenInsert<'a> {
                                 _ => { // T
                                     quote!(
                                         
-                                        &toql::key::Key::params( &<#rust_type_ident as toql::key::Keyed>::try_get_key(&self. #rust_field_ident)?)
+                                        &toql::key::Key::params( &<#rust_type_ident as toql::keyed::Keyed>::key(&self. #rust_field_ident))
                                        .into_iter() .for_each(|a| {values.push_arg(a); values.push_literal(", " );});
                                       
                                    )

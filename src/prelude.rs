@@ -1,6 +1,6 @@
 pub use toql_core::sql_expr::SqlExpr; 
 pub use toql_core::sql_arg::SqlArg;
-pub use toql_core::error::Result;
+pub use toql_core::result::Result;
 pub use toql_core::error::ToqlError;
 pub use toql_core::field_handler::FieldHandler;
 pub use toql_core::field_handler::BasicFieldHandler;
@@ -20,7 +20,11 @@ pub use toql_core::query::field::Field;
 
 pub use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
-pub use toql_core::key::{Key, Keyed, TryGetKeys};
+pub use toql_core::key::{Key};
+pub use toql_core::keyed::Keyed;
+pub use toql_core::map_key::MapKey;
+pub use toql_core::map_query::MapQuery;
+
 
 
 pub use toql_core::query::field_filter::FieldFilter;

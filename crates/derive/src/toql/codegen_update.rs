@@ -268,7 +268,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         expr.pop_literals(2);
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");
-                                            let key = <Self as toql::key::Keyed>::try_get_key(&self)?;
+                                            let key = <Self as toql::keyed::Keyed>::key(&self);
                                             //let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
                                             // Qualifierd column name
                                             let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_name);

@@ -2,7 +2,8 @@ use super::Join;
 use crate::tree::tree_predicate::TreePredicate;
 use crate::error::ToqlError;
 use crate::query::field_path::Descendents;
-use crate::key::{Key, Keyed};
+use crate::key::Key;
+use crate::keyed::Keyed;
 use crate::sql_arg::SqlArg;
 
 

@@ -8,15 +8,19 @@ pub extern crate serde;         // For generated keys and Join<T>
  
 #[macro_use]
 pub mod error;
+pub mod result;
 pub mod alias;
 pub mod deserialize;
 pub mod key;
+pub mod keyed;
+pub mod map_key;
 pub mod page;
 //pub mod mutate;
 //pub mod select;
 pub mod sql;
 pub mod sql_arg;
 pub mod to_query;
+pub mod map_query;
 pub mod paths;
 pub mod fields;
 

@@ -1,7 +1,7 @@
 use crate::from_row::FromRow;
 
 use super::Join;
-use crate::key::Keyed;
+use crate::keyed::Keyed;
 
 use crate::{error::ToqlError, sql_builder::select_stream::Select};
 

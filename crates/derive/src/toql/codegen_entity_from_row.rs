@@ -380,7 +380,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                             if cfg!(debug_assertions) {
                             for c in &[ #(#self_keys),* ] {
 
-                                if ! <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().contains(&c.to_string()) {
+                                if ! <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().contains(&c.to_string()) {
                                 let t = <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_name();
                                 let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
                                 let e2 = toql::error::ToqlError::SqlMapperError(e);
@@ -413,7 +413,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                                       } else {
                                         String::from(c)
                                     };
-                                if !<#rust_type_ident as toql::key::Keyed>::columns().contains(&unaliased_column) {
+                                if !<#rust_type_ident as toql::keyed::Keyed>::columns().contains(&unaliased_column) {
                                 let t = <#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_name();
                                 let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, unaliased_column);
                                 let e2 = toql::error::ToqlError::SqlMapperError(e);
@@ -435,8 +435,8 @@ impl<'a> CodegenEntityFromRow<'a> {
 
                     #optional_self_column_validation
 
-                    let default_inverse_columns= <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::default_inverse_columns();
-                     let inverse_columns = <<#struct_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+                    let default_inverse_columns= <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::default_inverse_columns();
+                     let inverse_columns = <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
 
                         let inverse_column = match c.as_str() {
                                 #(#inverse_column_translation)*
@@ -455,7 +455,7 @@ impl<'a> CodegenEntityFromRow<'a> {
 
                    // #predicate_builder
                     let (predicate, params) =
-                            toql::key::predicate_from_columns_sql::<< #struct_ident as toql::key::Keyed>::Key,_>(entity_keys, &inverse_columns);
+                            toql::key::predicate_from_columns_sql::<< #struct_ident as toql::keyed::Keyed>::Key,_>(entity_keys, &inverse_columns);
                             dep_query.where_predicates.push(predicate);
                             dep_query.where_predicate_params.extend_from_slice(&params);
 
@@ -465,7 +465,7 @@ impl<'a> CodegenEntityFromRow<'a> {
 
 
                                  // primary keys
-                                let mut columns :Vec<String>=  <<#rust_type_ident as toql::key::Keyed>::Key as toql::key::Key>::columns().iter().map(|c|{
+                                let mut columns :Vec<String>=  <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().map(|c|{
                                         mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_alias(),&c)
                                 }).collect::<Vec<_>>();
 
@@ -484,7 +484,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                                     toql::log_sql!(sql.0, sql.1);
                                     let args = toql::mysql::sql_arg::values_from_ref(&sql.1);
                                     let entities_stmt = self.conn().prep_exec(sql.0, args)?;
-                                    let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, _, <#rust_type_ident as toql::key::Keyed>::Key, <#struct_ident as toql::key::Keyed>::Key>(entities_stmt)?;
+                                    let (mut merge_entities, merge_keys, parent_keys)  = toql::mysql::row::from_query_result_with_merge_keys::<#rust_type_ident, _, <#rust_type_ident as toql::keyed::Keyed>::Key, <#struct_ident as toql::keyed::Keyed>::Key>(entities_stmt)?;
                                     
                                     if !merge_entities.is_empty() {
                                         dep_query.join_stmt_params.clear();

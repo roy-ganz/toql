@@ -45,7 +45,8 @@ pub(crate) mod path_tree;
 
 use super::sql_builder::build_context::BuildContext;
 use super::sql_builder::build_result::BuildResult;
-use crate::error::{Result, ToqlError};
+use crate::error::{ ToqlError};
+use crate::result::Result;
 use crate::query::Query;
 use crate::query::QueryToken;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
