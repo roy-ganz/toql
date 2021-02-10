@@ -48,7 +48,7 @@ pub fn query(input: TokenStream) -> TokenStream {
 
     let ast = parse_macro_input!(input as query_macro::QueryMacro);
 
-    let gen = query_macro::parse(&ast.query, ast.ident, &mut ast.arguments.iter());
+    let gen = query_macro::parse(&ast.query, ast.struct_type, &mut ast.arguments.iter());
 
     /* let gen = quote!(
        pub fn hello()

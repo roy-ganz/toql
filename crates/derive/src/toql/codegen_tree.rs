@@ -496,11 +496,14 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
           let tree_index_dispatch_bounds = self.dispatch_types.iter()
                         .map(|t| quote!( #t :  toql::tree::tree_index::TreeIndex<R, E>,))
                         .collect::<Vec<_>>();
+            let tree_index_dispatch_bounds_ref = tree_index_dispatch_bounds.clone();
+
           let tree_merge_dispatch_bounds = self.dispatch_types.iter()
                         .map(|t| quote!( 
                             #t : toql::tree::tree_merge::TreeMerge<R, E> + toql::from_row::FromRow<R, E>,
                             ))
                         .collect::<Vec<_>>();
+            let tree_merge_dispatch_bounds_ref = tree_merge_dispatch_bounds.clone();
 
         let mods = quote! {
 
@@ -531,6 +534,18 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                Ok(())
                            }
                       }
+                       impl toql::tree::tree_identity::TreeIdentity for &mut #struct_ident {
+                        fn auto_id() -> bool {
+                            <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id()
+                        }
+                       
+                        fn set_id < 'a, 'b >(&mut self, mut descendents : & mut toql :: query :: field_path ::
+                               Descendents < 'a >, action: &'b toql::tree::tree_identity::IdentityAction)
+                                   -> std :: result :: Result < (), toql::error::ToqlError >
+                       {
+                            <#struct_ident as toql::tree::tree_identity::TreeIdentity>::set_id(self, descendents, action)
+                       }
+                       }
                         impl toql::tree::tree_map::TreeMap for #struct_ident {
 
                                 fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
@@ -543,6 +558,12 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                 }
 
                         }
+                         impl toql::tree::tree_map::TreeMap for &#struct_ident {
+
+                                fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+                                    <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
+                                }
+                         }
 
                        impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 
@@ -599,6 +620,43 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                    Ok(())
                                }
                       }
+
+                       impl toql::tree::tree_predicate::TreePredicate for &#struct_ident {
+
+                            #[allow(unused_mut)]
+                           fn columns<'a>(&self, mut descendents: &mut toql::query::field_path::Descendents<'a> )
+                               -> std::result::Result<Vec<String>, toql::error::ToqlError>{
+                                   <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
+                               }
+
+                                  fn args<'a>(
+                               &self,
+                               mut descendents: &mut toql::query::field_path::Descendents <'a>,
+                               args: &mut Vec<toql::sql_arg::SqlArg>
+                           ) -> std::result::Result<(), toql::error::ToqlError>
+
+                           {
+                               <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
+                           }
+                       }
+                       impl toql::tree::tree_predicate::TreePredicate for &mut #struct_ident {
+
+                            #[allow(unused_mut)]
+                           fn columns<'a>(&self, mut descendents: &mut toql::query::field_path::Descendents<'a> )
+                               -> std::result::Result<Vec<String>, toql::error::ToqlError>{
+                                   <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
+                               }
+
+                                  fn args<'a>(
+                               &self,
+                               mut descendents: &mut toql::query::field_path::Descendents <'a>,
+                               args: &mut Vec<toql::sql_arg::SqlArg>
+                           ) -> std::result::Result<(), toql::error::ToqlError>
+
+                           {
+                               <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
+                           }
+                       }
 
                       
                   
@@ -678,6 +736,19 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                        }
                       
 
+                     impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for &#struct_ident
+                         where  E: std::convert::From<toql::error::ToqlError>, 
+                         #struct_key_ident: toql::from_row::FromRow<R, E>,
+                         #(#tree_index_dispatch_bounds_ref)*
+                      {
+                           fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
+                                       rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
+                               -> std::result::Result<(), E>
+
+                                {
+                                    <#struct_ident as  toql::tree::tree_index::TreeIndex<R,E>>::index(descendents, field, rows, row_offset, index)
+                                }
+                       }
       
                      
 
@@ -744,7 +815,23 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                Ok(())
                            }
 
-        }
+                        }
+
+                         impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for &mut #struct_ident
+                        where  E: std::convert::From<toql::error::ToqlError>,
+                        #struct_key_ident: toql::from_row::FromRow<R, E>,
+                        #(#tree_merge_dispatch_bounds_ref)*
+                     
+
+                       {
+                            fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
+                                       rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
+                               -> std::result::Result<(), E>
+
+                                {
+                                    <#struct_ident as toql::tree::tree_merge::TreeMerge<R,E>>::merge(self, descendents, field, rows, row_offset, index, selection_stream)
+                                }
+                       }
 
                };
 

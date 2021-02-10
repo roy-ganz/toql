@@ -480,6 +480,40 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                 }
             }
 
+             impl toql::sql_mapper::mapped::Mapped for &#struct_ident {
+
+                  fn type_name() -> String {
+                  <#struct_ident as toql::sql_mapper::mapped::Mapped>::type_name()
+                }
+
+                fn table_name() -> String {
+                   <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_name()
+                }
+                fn table_alias() -> String {
+                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_alias()
+                }
+                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str) -> toql::result::Result<()>{
+                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::map(mapper, toql_path)
+                }
+             }
+             
+             impl toql::sql_mapper::mapped::Mapped for &mut #struct_ident {
+
+                  fn type_name() -> String {
+                  <#struct_ident as toql::sql_mapper::mapped::Mapped>::type_name()
+                }
+
+                fn table_name() -> String {
+                   <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_name()
+                }
+                fn table_alias() -> String {
+                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_alias()
+                }
+                fn map(mapper: &mut toql::sql_mapper::SqlMapper, toql_path: &str) -> toql::result::Result<()>{
+                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::map(mapper, toql_path)
+                }
+             }
+
         );
 
         log::debug!(

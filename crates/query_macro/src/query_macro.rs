@@ -1,6 +1,6 @@
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{ Expr, Ident,  LitStr, Result, Token};
+use syn::{ Expr, Ident, Type,  LitStr, Result, Token};
 
 use heck::SnakeCase;
 use proc_macro2::{ TokenStream};
@@ -22,7 +22,7 @@ enum TokenType {
 
 #[derive(Debug)]
 pub struct QueryMacro {
-    pub ident: Ident,
+    pub struct_type: Type,
     pub query: LitStr,
     pub arguments: Punctuated<Expr, Token![,]>,
 }
@@ -30,7 +30,7 @@ pub struct QueryMacro {
 impl Parse for QueryMacro {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(QueryMacro {
-            ident: { (input.parse()?, input.parse::<Token![,]>()?).0 },
+            struct_type: { (input.parse()?, input.parse::<Token![,]>()?).0 },
             query: input.parse()?,
             arguments: {
                 let lookahead = input.lookahead1();
@@ -82,7 +82,7 @@ impl FieldInfo {
         }
     }
 
-    pub fn concatenated_token(&self, struct_type: &Ident) -> TokenStream {
+    pub fn concatenated_token(&self, struct_type: &Type) -> TokenStream {
         let token = match self.token_type {
             TokenType::Field => {
                 // Separate with underscore, convert to snake_case for rust
@@ -221,7 +221,7 @@ impl FieldInfo {
 
 pub fn parse(
     toql_string: &LitStr,
-    struct_type: Ident,
+    struct_type: Type,
     query_args: &mut syn::punctuated::Iter<'_, syn::Expr>,
 ) -> std::result::Result<TokenStream, TokenStream> {
     let mut output_stream: TokenStream = quote!(toql::query::Query::<#struct_type>::new());
@@ -246,7 +246,7 @@ pub fn parse(
 
 fn evaluate_pair(
     pairs: &mut pest::iterators::FlatPairs<toql_query_parser::Rule>,
-    struct_type: &Ident,
+    struct_type: &Type,
     query_args: &mut syn::punctuated::Iter<'_, syn::Expr>,
 ) -> std::result::Result<TokenStream, TokenStream> {
     //fn evaluate_pair(pairs: &pest::iterators::Pair<'_, toql_parser::Rule>) ->TokenStream2 {

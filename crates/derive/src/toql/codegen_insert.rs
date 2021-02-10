@@ -409,6 +409,39 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                     Ok(())   
                                 }
                 }
+
+                  impl toql::tree::tree_insert::TreeInsert for &#struct_ident {
+
+                    #[allow(unused_mut)]
+                    fn columns<'a>(  mut descendents: &mut toql::query::field_path::Descendents<'a>) 
+                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
+                                <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
+                            }
+                     fn values<'a>(&self,
+                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,
+                                        roles: &std::collections::HashSet<String>,  
+                                         values:  &mut toql::sql_expr::SqlExpr 
+                                ) -> std::result::Result<(),  toql::error::ToqlError>
+                                {
+                                    <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, values)
+                                }
+                  }
+                  impl toql::tree::tree_insert::TreeInsert for &mut #struct_ident {
+
+                    #[allow(unused_mut)]
+                    fn columns<'a>(  mut descendents: &mut toql::query::field_path::Descendents<'a>) 
+                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
+                                <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
+                            }
+                     fn values<'a>(&self,
+                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,
+                                        roles: &std::collections::HashSet<String>,  
+                                         values:  &mut toql::sql_expr::SqlExpr 
+                                ) -> std::result::Result<(),  toql::error::ToqlError>
+                                {
+                                    <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, values)
+                                }
+                  }
         };
        
 

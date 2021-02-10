@@ -40,7 +40,7 @@ impl <I: Iterator> MapQuery for I {
     }
 }
 
-// Allows to collect different queries in a query
+// Allows to collect different queries in a query (concatenation is and)
 impl<'a, T> std::iter::FromIterator<Query<T>> for Query<T> {
  fn from_iter<I: IntoIterator<Item = Query<T>>>(iter: I) -> Query<T> {
       let mut q :Query<T> = Query::new();
@@ -51,15 +51,38 @@ impl<'a, T> std::iter::FromIterator<Query<T>> for Query<T> {
     }
 }
 
-// Allows to collect different keys in a query
-impl<'a, T, K> std::iter::FromIterator<K> for Query<T> 
+// Allows to collect different keys in a query (concatenation is or)
+ impl<T, K> std::iter::FromIterator<K> for Query<T> 
 where K: Key<Entity=T> + ToQuery<T>
 {
  fn from_iter<I: IntoIterator<Item =K>>(iter: I) -> Query<T> {
       let mut q :Query<T> = Query::new();
         for k in iter {
-            q = q.and(ToQuery::to_query(&k) );
+            q = q.or(ToQuery::to_query(&k) );
         }
         q
     }
-}
+} 
+/* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T> 
+where K: Key<Entity=T> + ToQuery<T> + 'a
+{
+ fn from_iter<I: IntoIterator<Item =&'a K>>(iter: I) -> Query<T> {
+      let mut q :Query<T> = Query::new();
+        for k in iter {
+            q = q.or(ToQuery::to_query(k) );
+        }
+        q
+    }
+} */
+ /*impl<'a, T, K> std::iter::FromIterator<K> for Query<T> 
+where K: std::borrow::Borrow<K>,
+K: Key<Entity=T> + ToQuery<T> + 'a
+{
+ fn from_iter<I: IntoIterator<Item =K>>(iter: I) -> Query<T> {
+      let mut q :Query<T> = Query::new();
+        for k in iter {
+            q = q.or(ToQuery::to_query(k.borrow()) );
+        }
+        q
+    }
+} */

@@ -420,24 +420,21 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                         #(#key_params_code)*
                         params
                     }
+               }
 
-                   /*  fn sql_predicate(&seld, alias:&str) -> (String, Vec<String>) {
-                        let predicate = String::new();
-                        let params: Vec<String> = Vec::new();
-
-                        #(#partial_key_sql_predicates)*
-
-                        if !predicate.is_empty() {
-                            predicate.pop();
-                            predicate.pop();
-                            predicate.pop();
-                            predicate.pop();
-                        }
-                    
-                        (predicate, params)
-
-                    } */
+                impl toql::key::Key for &#struct_key_ident {
+                    type Entity = #rust_stuct_ident;
+                    fn columns() -> Vec<String> {
+                        <#struct_key_ident as toql::key::Key>::columns()
+                    }
+                    fn default_inverse_columns() -> Vec<String> {
+                    <#struct_key_ident as toql::key::Key>::default_inverse_columns()
+                    }
+                    fn params(&self) -> Vec<toql::sql_arg::SqlArg> {
+                        <#struct_key_ident as toql::key::Key>::params(self)
+                    }
                 }
+               
 
                 impl Into<toql::query::Query<#rust_stuct_ident>>  for #struct_key_ident {
                 
@@ -452,7 +449,12 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                     toql::query::Query::<#rust_stuct_ident>::new()
                     #(#toql_eq_predicates)*
                 }
-           //     #slice_to_query_code
+               }
+               impl toql::to_query::ToQuery<#rust_stuct_ident> for  &#struct_key_ident {
+                
+                fn to_query(&self) ->toql::query::Query<#rust_stuct_ident> {
+                   <#struct_key_ident as toql::to_query::ToQuery<#rust_stuct_ident>>::to_query(self)
+                }
                }
 
                #sql_arg_code
@@ -494,7 +496,23 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                        } 
                 }
             }
-            impl toql::keyed::Keyed for &#rust_stuct_ident {
+                
+             impl toql::keyed::Keyed for &#rust_stuct_ident {
+                type Key = #struct_key_ident;
+
+                fn key(&self) -> Self::Key {
+                    <#rust_stuct_ident as toql::keyed::Keyed>::key(self)
+                }
+            }
+            impl toql::keyed::Keyed for &mut #rust_stuct_ident {
+                type Key = #struct_key_ident;
+
+                fn key(&self) -> Self::Key {
+                     <#rust_stuct_ident as toql::keyed::Keyed>::key(self)
+                }
+            } 
+                
+            /* impl toql::keyed::Keyed for &#rust_stuct_ident {
                 type Key = #struct_key_ident;
 
                 fn key(&self) -> Self::Key {
@@ -511,7 +529,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                        #( #key_getters),*
                        } 
                 }
-            }
+            } */
 
             impl toql::keyed::KeyedMut for #rust_stuct_ident {
                 
@@ -520,10 +538,11 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                 }
                 
             }
+            
              impl toql::keyed::KeyedMut for &mut #rust_stuct_ident {
                 
                 fn set_key(&mut self, key: Self::Key)  {
-                  #( #key_setters;)*
+                    <#rust_stuct_ident as toql::keyed::KeyedMut>::set_key(self, key)
                 }
                 
             }

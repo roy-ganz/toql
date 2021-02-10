@@ -22,6 +22,5 @@ impl Cache {
      pub fn new() -> Self {
          Self::with_capacity(50)
     }
-
-
 }
+

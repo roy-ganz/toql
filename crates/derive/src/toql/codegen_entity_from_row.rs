@@ -527,6 +527,8 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
       let impl_types = &self.impl_types.iter().map(|k| quote!( #k :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
       let impl_opt_types = &self.impl_opt_types.iter().map(|k| quote!( Option<#k> :toql::from_row::FromRow<R,E>, )).collect::<Vec<_>>();
        
+       let impl_types_ref = impl_types.clone();
+       let impl_opt_types_ref = impl_opt_types.clone();
      
         let code = quote!(
 
@@ -546,13 +548,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
             fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
                 ->std::result:: Result < Option<#struct_ident>, E> 
                 where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
-
-                    use toql::sql_builder::select_stream::Select;
-
-
-                            
-    
-
+                use toql::sql_builder::select_stream::Select;
        
                 Ok ( Some(#struct_ident {
                     #(#deserialize_fields),*
@@ -560,6 +556,20 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
                 }))
             }
             }
+
+        /*     impl<R,E> toql::from_row::FromRow<R, E> for &#struct_ident 
+            where  E: std::convert::From<toql::error::ToqlError>,
+              #(#impl_types_ref)*
+              #(#impl_opt_types_ref)*
+            {
+          
+                fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
+                ->std::result:: Result < Option<#struct_ident>, E> 
+                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select>
+                {
+                    <#struct_ident  as toql::from_row::FromRow<R, E>>::from_row(row, usize, iter)
+                }
+            } */
            
 
         );

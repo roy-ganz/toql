@@ -26,7 +26,7 @@
 //! Check out the [guide](https://roy-ganz.github.io/toql/derive/reference.html) for list of available attributes.
 //!
 
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 extern crate proc_macro;
 

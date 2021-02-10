@@ -101,6 +101,10 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
             #k :  toql::from_row::FromRow<R, E> + toql::keyed::Keyed,
             <#k as toql::keyed::Keyed>::Key: toql::from_row::FromRow<R, E>,
             )).collect::<Vec<_>>();
+        
+        let regular_types_ref = regular_types.clone();
+        let join_types_ref = join_types.clone();
+
        
         let key = quote! {
                 
@@ -122,6 +126,17 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
                             }
 
                 }
+
+                  /*   impl<R,E> toql::from_row::FromRow<R, E> for &#struct_key_ident 
+                    where  E: std::convert::From<toql::error::ToqlError>,
+                     #(#regular_types_ref)*
+                     #(#join_types_ref)*
+                    
+                    {
+                            fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I) {
+                                <#struct_key_ident as toql::from_row::FromRow<R, E>>::from_row(row, usize, iter)
+                            }
+                    } */
 
         };
 

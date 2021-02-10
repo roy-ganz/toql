@@ -8,6 +8,7 @@ pub use toql_core::join_handler::JoinHandler;
 pub use toql_core::predicate_handler::PredicateHandler;
 pub use toql_core::page::Page;
 pub use toql_core::cache::Cache;
+pub use toql_core::cache_builder::CacheBuilder;
 
 pub use toql_fields_macro::fields;
 pub use toql_paths_macro::paths;
@@ -21,7 +22,7 @@ pub use toql_core::query::field::Field;
 pub use toql_core::sql_mapper_registry::SqlMapperRegistry;
 
 pub use toql_core::key::{Key};
-pub use toql_core::keyed::Keyed;
+pub use toql_core::keyed::{Keyed, KeyedMut};
 pub use toql_core::map_key::MapKey;
 pub use toql_core::map_query::MapQuery;
 
@@ -39,3 +40,10 @@ pub use toql_derive::{Toql, ToqlEnum};
 
 pub use toql_core::log_sql; // Export macro
 pub use toql_core::log_mut_sql; // Export macro
+pub use toql_core::log_literal_sql; // Export macro
+pub use toql_core::log_mut_literal_sql; // Export macro
+
+pub use toql_core::from_row::FromRow;
+pub use toql_core::backend::api::{Load, Count, Update, Insert, Delete};
+
+pub use toql_core::to_query::ToQuery;

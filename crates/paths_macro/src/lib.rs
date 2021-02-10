@@ -49,7 +49,7 @@ pub fn paths(input: TokenStream) -> TokenStream {
 
     let ast = parse_macro_input!(input as paths_macro::PathsMacro);
 
-    let gen = paths_macro::parse(&ast.query, ast.ident);
+    let gen = paths_macro::parse(&ast.query, ast.struct_type);
 
     /* let gen = quote!(
        pub fn hello()

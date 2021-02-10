@@ -48,7 +48,7 @@ pub fn fields(input: TokenStream) -> TokenStream {
 
     let ast = parse_macro_input!(input as fields_macro::FieldsMacro);
 
-    let gen = fields_macro::parse(&ast.query, ast.ident);
+    let gen = fields_macro::parse(&ast.query, ast.struct_type);
 
     /* let gen = quote!(
        pub fn hello()

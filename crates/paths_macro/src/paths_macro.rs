@@ -1,6 +1,6 @@
 use syn::parse::{Parse, ParseStream};
 
-use syn::{Error,  Ident,  LitStr, Result, Token};
+use syn::{Error,  Ident, Type, LitStr, Result, Token};
 
 use heck::SnakeCase;
 use proc_macro2::{Span, TokenStream};
@@ -12,14 +12,14 @@ use toql_field_list_parser::Rule;
 
 #[derive(Debug)]
 pub struct PathsMacro {
-    pub ident: Ident,
+    pub struct_type: Type,
     pub query: LitStr,
 }
 
 impl Parse for PathsMacro {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(PathsMacro {
-            ident: { (input.parse()?, input.parse::<Token![,]>()?).0 },
+            struct_type: { (input.parse()?, input.parse::<Token![,]>()?).0 },
             query: input.parse()?,
         })
     }
@@ -28,7 +28,7 @@ impl Parse for PathsMacro {
 
 pub fn parse(
     field_list_string: &LitStr,
-    struct_type: Ident,
+    struct_type: Type,
 ) -> std::result::Result<TokenStream, TokenStream> {
     let mut output_stream: TokenStream = TokenStream::new();
 
@@ -50,7 +50,7 @@ pub fn parse(
 
 fn evaluate_pair(
     pairs: &mut pest::iterators::FlatPairs<toql_field_list_parser::Rule>,
-    struct_type: &Ident,
+    struct_type: &Type,
 ) -> std::result::Result<TokenStream, TokenStream> {
     
     

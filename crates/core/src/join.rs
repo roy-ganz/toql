@@ -73,7 +73,7 @@ impl<T> Join<T> where T: crate::keyed::Keyed {
             Join::Entity(e) => {Some(&e)}
         }
     }
-    pub fn mut_entity(&mut self) -> Option<&mut T>{
+    pub fn entity_mut(&mut self) -> Option<&mut T>{
         match self {
             Join::Key(_) => {None}
             Join::Entity(e) => {Some(e.as_mut())}
@@ -85,7 +85,7 @@ impl<T> Join<T> where T: crate::keyed::Keyed {
             Join::Entity(e) => {Ok(&e)}
         }
     }
-    pub fn mut_entity_or_err<E>(&mut self, err: E) -> std::result::Result<&mut T, E>{
+    pub fn entity_mut_or_err<E>(&mut self, err: E) -> std::result::Result<&mut T, E>{
         match self {
             Join::Key(_) => {Err(err)}
             Join::Entity(e) => {Ok(e.as_mut())}
@@ -101,6 +101,13 @@ impl<T> Join<T> where T: crate::keyed::Keyed {
         }
     }
 
+     pub fn into_entity(self) -> std::result::Result<T, ToqlError>{
+        match self {
+            Join::Key(_) => {Err(ToqlError::NotFound)}
+            Join::Entity(e) => {Ok(*e)}
+        }
+    }
+
 }
 
 // Trait to improve convinience when working with Join<T> and Option<Join<T>>
@@ -111,6 +118,10 @@ pub trait TryJoin where Self: Sized{
     fn try_join_or<E>(&self, err: E) -> std::result::Result<&Self::Output, E> {
         self.try_join().map_err(|_| err)
     }
+    fn try_join_mut(&mut self) -> Result<&mut Self::Output>;
+    fn try_join_mut_or<E>(&mut self, err: E) -> std::result::Result<&mut Self::Output, E> {
+        self.try_join_mut().map_err(|_| err)
+    }
 }
 
 impl<T> TryJoin for Join<T> where T: crate::keyed::Keyed {
@@ -118,11 +129,17 @@ impl<T> TryJoin for Join<T> where T: crate::keyed::Keyed {
     fn try_join(&self) ->  Result<&Self::Output> {
         self.entity_or_err(ToqlError::NotFound)
     }
+    fn try_join_mut(&mut self) ->  Result<&mut Self::Output> {
+        self.entity_mut_or_err(ToqlError::NotFound)
+    }
 }
 impl<T> TryJoin for Option<Join<T>> where T: crate::keyed::Keyed {
     type Output =  T;
     fn try_join(&self) ->  Result<&Self::Output> {
         self.as_ref().ok_or(ToqlError::JoinExpected)?.entity_or_err(ToqlError::JoinExpected)
+    }
+    fn try_join_mut(&mut self) ->  Result<&mut Self::Output> {
+        self.as_mut().ok_or(ToqlError::JoinExpected)?.entity_mut_or_err(ToqlError::JoinExpected)
     }
 }
 impl<T> TryJoin for Option<Option<Join<T>>> where T: crate::keyed::Keyed {
@@ -132,4 +149,10 @@ impl<T> TryJoin for Option<Option<Join<T>>> where T: crate::keyed::Keyed {
         .as_ref().ok_or(ToqlError::JoinExpected)?
         .entity_or_err(ToqlError::JoinExpected)
     }
+    fn try_join_mut(&mut self) ->  Result<&mut Self::Output> {
+         self.as_mut().ok_or(ToqlError::JoinExpected)?
+        .as_mut().ok_or(ToqlError::JoinExpected)?
+        .entity_mut_or_err(ToqlError::JoinExpected)
+    }
 }
+

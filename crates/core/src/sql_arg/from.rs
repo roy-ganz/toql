@@ -138,6 +138,12 @@ impl From<&str> for SqlArg {
     }
 }
 
+impl From<&&str> for SqlArg {
+    fn from(t: &&str) -> Self {
+        SqlArg::Str((*t).to_owned())
+    }
+}
+
 impl From<&SqlArg> for SqlArg {
     fn from(t: &SqlArg) -> Self {
         t.to_owned()

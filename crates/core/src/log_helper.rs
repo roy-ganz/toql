@@ -26,6 +26,12 @@ macro_rules! log_literal_sql {
         $crate::log::info!("SQL `{}`", $s)
     };
 }
+#[macro_export]
+macro_rules! log_mut_literal_sql {
+    ($s:expr) => {
+        $crate::log::info!("Mut SQL `{}`", $s)
+    };
+}
 
 #[macro_export]
 macro_rules! log_toql {

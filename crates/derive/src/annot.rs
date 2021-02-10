@@ -1,3 +1,4 @@
+use crate::toql::codegen_api::CodegenApi;
 use crate::toql::codegen_update::CodegenUpdate;
 use crate::toql::codegen_key::CodegenKey;
 use crate::toql::codegen_tree::CodegenTree;
@@ -228,6 +229,7 @@ impl quote::ToTokens for Toql {
         let mut toql_key_from_row = CodegenKeyFromRow::from_toql(&rust_struct);
         let mut toql_entity_from_row = CodegenEntityFromRow::from_toql(&rust_struct);
         let mut toql_insert = CodegenInsert::from_toql(&rust_struct);
+        let toql_api = CodegenApi::from_toql(&rust_struct);
     
 
         let Toql {
@@ -338,6 +340,7 @@ impl quote::ToTokens for Toql {
             }
             _ => {
                 // Produce compiler tokens
+                tokens.extend(quote!(#toql_api));
                 tokens.extend(quote!(#toql_key));
                 tokens.extend(quote!(#toql_tree));
 
