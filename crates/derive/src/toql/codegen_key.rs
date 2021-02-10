@@ -4,6 +4,7 @@ use syn::Ident;
 
 pub(crate) struct CodegenKey<'a> {
     rust_struct: &'a crate::sane::Struct,
+    key_fields_code: Vec<TokenStream>,
     key_columns_code: Vec<TokenStream>,
     key_inverse_columns_code: Vec<TokenStream>,
     key_params_code: Vec<TokenStream>,
@@ -35,6 +36,7 @@ impl<'a> CodegenKey<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenKey {
         CodegenKey {
             rust_struct: &toql,
+            key_fields_code: Vec::new(),
             key_columns_code: Vec::new(),
             key_inverse_columns_code: Vec::new(),
             key_params_code: Vec::new(),
@@ -78,6 +80,9 @@ impl<'a> CodegenKey<'a> {
                 if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
                     self.key_columns_code
                         .push(quote!( columns.push( String::from(#column)); ));
+
+                    self.key_fields_code
+                        .push(quote!( fields.push( String::from(#toql_field_name)); ));
 
                     if let Some(inverse_column) = &regular_attrs.default_inverse_column {
                         self.key_inverse_columns_code
@@ -183,6 +188,7 @@ impl<'a> CodegenKey<'a> {
                     return Ok(());
                 }
                 let default_self_column_code = &join_attrs.default_self_column_code;
+                
                // let key_index = syn::Index::from(self.key_types.len());
                 self.key_types.push(quote!( <#rust_type_ident as toql::keyed::Keyed>::Key));
 
@@ -221,6 +227,13 @@ impl<'a> CodegenKey<'a> {
                     #default_self_column_code;
                     let column = #columns_map_code;
                     columns.push(column.to_string());
+                });
+                ));
+
+                
+                self.key_fields_code.push(quote!(
+                 <<#rust_type_ident as toql::keyed::Keyed>::Key as toql :: key_fields :: KeyFields> :: fields().iter().for_each(|other_field| {
+                    fields.push(format!("{}_{}",#toql_field_name, other_field));
                 });
                 ));
 
@@ -296,6 +309,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
         let rust_stuct_ident = &self.rust_struct.rust_struct_ident;
 
         let struct_key_ident = Ident::new(&format!("{}Key", &rust_stuct_ident), Span::call_site());
+        let key_fields_code = &self.key_fields_code;
         let key_columns_code = &self.key_columns_code;
         let key_inverse_columns_code = &self.key_inverse_columns_code;
         let key_params_code = &self.key_params_code;
@@ -398,6 +412,36 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                #(#key_field_declarations),* 
             }
 
+             impl toql::key_fields::KeyFields  for #struct_key_ident {
+                    type Entity = #rust_stuct_ident;
+
+                    fn fields() ->Vec<String> {
+                     let mut fields: Vec<String>= Vec::new();
+
+                        #(#key_fields_code)*
+                        fields
+                    }
+                    
+                    fn params(&self) ->Vec<toql::sql_arg::SqlArg> {
+                        let mut params: Vec<toql::sql_arg::SqlArg>= Vec::new();
+                        let key = self; // TODO cleanup
+
+                        #(#key_params_code)*
+                        params
+                    }
+               }
+                impl toql::key_fields::KeyFields  for &#struct_key_ident {
+                    type Entity = #rust_stuct_ident;
+
+                    fn fields() ->Vec<String> {
+                        <#struct_key_ident as toql::key_fields::KeyFields>::fields()
+                    }
+                    
+                    fn params(&self) ->Vec<toql::sql_arg::SqlArg> {
+                        <#struct_key_ident as toql::key_fields::KeyFields>::params(self)
+                    }
+               }
+
             impl toql::key::Key  for #struct_key_ident {
                     type Entity = #rust_stuct_ident;
 
@@ -434,15 +478,27 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                         <#struct_key_ident as toql::key::Key>::params(self)
                     }
                 }
+                /* impl toql::key::Key for &mut #struct_key_ident {
+                    type Entity = #rust_stuct_ident;
+                    fn columns() -> Vec<String> {
+                        <#struct_key_ident as toql::key::Key>::columns()
+                    }
+                    fn default_inverse_columns() -> Vec<String> {
+                    <#struct_key_ident as toql::key::Key>::default_inverse_columns()
+                    }
+                    fn params(&self) -> Vec<toql::sql_arg::SqlArg> {
+                        <#struct_key_ident as toql::key::Key>::params(self)
+                    }
+                } */
                
 
-                impl Into<toql::query::Query<#rust_stuct_ident>>  for #struct_key_ident {
+              /*  impl Into<toql::query::Query<#rust_stuct_ident>>  for #struct_key_ident {
                 
                 fn into(self) ->toql::query::Query<#rust_stuct_ident> {
                      <#struct_key_ident as toql::to_query::ToQuery<#rust_stuct_ident>>::to_query(&self)
                 }
-             }  
-               impl toql::to_query::ToQuery<#rust_stuct_ident> for  #struct_key_ident {
+             }  */
+             /*   impl toql::to_query::ToQuery<#rust_stuct_ident> for  #struct_key_ident {
                 
                 fn to_query(&self) ->toql::query::Query<#rust_stuct_ident> {
                     let t = self;
@@ -455,31 +511,25 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                 fn to_query(&self) ->toql::query::Query<#rust_stuct_ident> {
                    <#struct_key_ident as toql::to_query::ToQuery<#rust_stuct_ident>>::to_query(self)
                 }
-               }
+               } */
+              /*  impl toql::to_query::ToQuery<#rust_stuct_ident> for  &mut #struct_key_ident {
+                
+                fn to_query(&self) ->toql::query::Query<#rust_stuct_ident> {
+                   <#struct_key_ident as toql::to_query::ToQuery<#rust_stuct_ident>>::to_query(self)
+                }
+               } */
 
                #sql_arg_code
 
                 
-             
+             /*
              impl toql::to_query::ToForeignQuery  for #struct_key_ident {
                 fn to_foreign_query<M>(&self, toql_path :&str) ->toql::query::Query<M> {
                      let t = self;
                     toql::query::Query::<M>::new()
                     #(#toql_eq_foreign_predicates)*
                 }
-                /* fn slice_to_foreign_query<M>(entities: &[Self], toql_path :&str) ->toql::query::Query<M>
-                where Self:Sized
-                 {
-                    let mut q = toql::query::Query::<M>::new();
-                    for t in entities {
-                        q = q.or_parentized(
-                                toql::query::Query::<M>::new()
-                                #(#toql_eq_foreign_predicates)*
-                        );
-                    };
-                    q
-                } */
-             }
+             }*/
              
 
 

@@ -52,6 +52,7 @@ pub use toql_core::error;
 pub use toql_core::result;
 pub use toql_core::from_row;
 pub use toql_core::key;
+pub use toql_core::key_fields;
 pub use toql_core::keyed;
 pub use toql_core::map_key;
 pub use toql_core::merge;

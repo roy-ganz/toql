@@ -22,7 +22,7 @@ where T: Keyed + TreeUpdate + Mapped, <T as Keyed>::Key: Key + Clone
                     None => {
                         let table_alias = <T as Mapped>::table_alias();
                         let resolver = Resolver::new().with_self_alias(&table_alias);
-                        exprs.push(resolver.resolve(&crate::key::predicate_expr(k.clone()))?);
+                        exprs.push(resolver.resolve(&k.predicate_expr())?);
                         Ok(())
                     }
                 }

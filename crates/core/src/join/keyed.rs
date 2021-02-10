@@ -14,15 +14,7 @@ where
             Join::Entity(e) => e.key(),
         }
     }
-   /*  fn set_key(&mut self, key: T::Key) {
-        match self {
-            Join::Key(_) => {
-                *self = Join::Key(key);
-               
-            }
-            Join::Entity(e) => e.set_key(key),
-        }
-    } */
+   
 }
 impl<T> KeyedMut for Join<T>
 where

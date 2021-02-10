@@ -272,7 +272,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                             //let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
                                             // Qualifierd column name
                                             let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_name);
-                                            expr.extend( resolver.resolve(&toql::key::predicate_expr(key))?); 
+                                            expr.extend( resolver.resolve(&toql::key::Key::predicate_expr(&key))?); 
                                             exprs.push(expr);
                                         }
                                         
