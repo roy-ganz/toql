@@ -532,7 +532,7 @@ impl<'a> SqlBuilder<'a> {
                                 continue;
                             }
                             if let Some(role_expr) = &mapped_field.options.load_role_expr {
-                                if crate::role_validator::RoleValidator::is_valid(
+                                if !crate::role_validator::RoleValidator::is_valid(
                                     &self.roles,
                                     role_expr,
                                 ) {
@@ -543,13 +543,14 @@ impl<'a> SqlBuilder<'a> {
                                 }
                             }
                             let canonical_alias = self.canonical_alias(&relative_path)?;
-                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
-
-                            let field_expr = resolver.resolve(&mapped_field.expression)?;
+                           
+                            
+                            let p = [&self.aux_params, &query.aux_params, &mapped_field.options.aux_params];
+                            let aux_params = ParameterMap::new(&p);
 
                             let select_expr = mapped_field
                                 .handler
-                                .build_select(field_expr, &aux_params)?
+                                .build_select(mapped_field.expression.clone(), &aux_params)?
                                 .unwrap_or(SqlExpr::new());
 
                             // Does filter apply
@@ -558,7 +559,10 @@ impl<'a> SqlBuilder<'a> {
                                 field.filter.as_ref().unwrap(),
                                 &aux_params,
                             )? {
+                                let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                                let expr= resolver.resolve(&expr)?; 
                                 result.where_expr.extend(expr);
+                                result.where_expr.push_literal(" AND ");
 
                                 if let (_, Some(path)) = FieldPath::split_basename(&field.name) {
                                     build_context.joined_paths.insert(path.as_str().to_string());
@@ -614,6 +618,7 @@ impl<'a> SqlBuilder<'a> {
                                 &aux_params,
                             )? {
                                 result.where_expr.extend(expr);
+                                result.where_expr.push_literal(" AND ");
 
                                 if let Some(p) = path {
                                     build_context.joined_paths.insert(p.as_str().to_string());
@@ -627,6 +632,11 @@ impl<'a> SqlBuilder<'a> {
                 }
                 _ => {}
             }
+        }
+
+        if !result.where_expr.is_empty() 
+        {
+            result.where_expr.pop_literals(5); // Remove trailing ' AND '
         }
         Ok(())
     }
@@ -653,7 +663,11 @@ impl<'a> SqlBuilder<'a> {
         build_context.all_fields_selected = all_fields;
 
         self.resolve_select(&None, query, build_context, result, 0)?;
-
+ if result.select_expr.is_empty() {
+            result.select_expr.push_literal("1");
+        } else {
+            result.select_expr.pop_literals(2); // Remove trailing ,
+        }
         if result.select_expr.is_empty() {
             result.select_expr.push_literal("1");
         } else {
@@ -675,8 +689,7 @@ impl<'a> SqlBuilder<'a> {
 
         let mapper = self.mapper_for_path(&query_path)?;
 
-        let p = [&self.aux_params, &query.aux_params];
-        let aux_params = ParameterMap::new(&p);
+       
         let canonical_alias = self.canonical_alias(query_path)?;
 
         let mut any_selected = false;
@@ -706,6 +719,9 @@ impl<'a> SqlBuilder<'a> {
                     let field_info = mapper
                         .field(field)
                         .ok_or(SqlBuilderError::FieldMissing(field.to_string()))?;
+                    
+                    let p = [&self.aux_params, &query.aux_params, &field_info.options.aux_params];
+                    let aux_params = ParameterMap::new(&p);
 
                     let role_valid =
                         if let Some(load_role_expr) = &field_info.options.load_role_expr {
@@ -726,15 +742,13 @@ impl<'a> SqlBuilder<'a> {
                             return Err(SqlBuilderError::RoleRequired(role_string).into());
                         }
 
-                        let resolver = Resolver::new().with_self_alias(&canonical_alias);
-
-                        let select_expr = resolver.resolve(&field_info.expression)?;
-
                         let select_expr =
-                            field_info.handler.build_select(select_expr, &aux_params)?;
+                            field_info.handler.build_select(field_info.expression.clone(), &aux_params)?;
 
                         if role_valid {
                             if let Some(expr) = select_expr {
+                                let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                                let expr = resolver.resolve(&expr)?;
                                 result.select_expr.extend(expr);
                                 result.select_expr.push_literal(", ");
                                 result.selection_stream.push(Select::Query);
@@ -761,14 +775,17 @@ impl<'a> SqlBuilder<'a> {
                             return Err(SqlBuilderError::RoleRequired(role_string).into());
                         }
 
-                        let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                       
 
                         // let alias = self.alias_translator.translate(&canonical_alias);
-                        let select_expr = resolver.resolve(&field_info.expression)?;
+                       
                         let select_expr =
-                            field_info.handler.build_select(select_expr, &aux_params)?;
+                            field_info.handler.build_select(field_info.expression.clone(), &aux_params)?;
 
-                        if let Some(mut expr) = select_expr {
+                        if let Some( expr) = select_expr {
+                             let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                              let mut expr = resolver.resolve(&expr)?;
+
                             expr.push_literal(", ");
                             // Use result as placeholder
 

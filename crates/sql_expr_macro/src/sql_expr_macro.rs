@@ -139,6 +139,12 @@ fn evaluate_pair(
                alias = true;
 
             }
+            Rule::quoted => {
+               let text = span.as_str();
+               field_info.literal.push_str(text);
+               alias = false;
+
+            }
             Rule::aux_param => {
                append_literal(&mut field_info, &mut tokens);
                let name = span.as_str();
