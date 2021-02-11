@@ -12,17 +12,42 @@ use toql_field_list_parser::Rule;
 
 
 #[derive(Debug)]
-pub struct FieldsMacro {
-    pub struct_type: Type,
-    pub query: LitStr,
+pub enum FieldsMacro {
+   FieldList { struct_type: Type, query: LitStr },
+   Top,
 }
+
+
+fn parse_fieldlist(input: ParseStream) -> Result<FieldsMacro> {
+        Ok(FieldsMacro::FieldList {
+                struct_type: { (input.parse()?, input.parse::<Token![,]>()?).0 },
+                query: input.parse()?,
+            })
+}
+
+fn parse_top(input: ParseStream) -> Result<FieldsMacro> {
+        let top: Ident = input.parse()?;
+            if top.to_string() == "top" {
+                Ok(FieldsMacro::Top)
+            } else {
+                println!("Found {}", top);
+                Err(syn::Error::new(
+                    Span::call_site(),
+                    "Keyword `top` expected",
+                ))
+            }
+}
+
 
 impl Parse for FieldsMacro {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(FieldsMacro {
-            struct_type: { (input.parse()?, input.parse::<Token![,]>()?).0 },
-            query: input.parse()?,
-        })
+
+        let alt = input.fork();
+        let f = parse_fieldlist(input);
+        match f {
+            Ok(_) => {f}
+            Err(_) => {parse_top(&alt)}
+        }
     }
 }
 
@@ -104,7 +129,7 @@ fn evaluate_pair(
    
    Ok(quote!(
       //  toql::fields::Fields::<#struct_type>::from(vec![#(#methods),* ])
-      vec![#(#methods),* ]
+      toql::backend::fields::Fields::from(vec![#(#methods),* ])
     ))
     
 

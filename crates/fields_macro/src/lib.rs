@@ -27,6 +27,7 @@
 //!
 
 #![recursion_limit = "512"]
+#![feature(proc_macro_span)]
 
 extern crate proc_macro;
 
@@ -48,7 +49,17 @@ pub fn fields(input: TokenStream) -> TokenStream {
 
     let ast = parse_macro_input!(input as fields_macro::FieldsMacro);
 
-    let gen = fields_macro::parse(&ast.query, ast.struct_type);
+  //  let gen = fields_macro::parse(&ast.query, ast.struct_type);
+
+
+    let gen = match ast {
+        fields_macro::FieldsMacro::FieldList { struct_type, query } => {
+            fields_macro::parse(&query, struct_type)
+        }
+        fields_macro::FieldsMacro::Top => Ok(quote!(
+                toql::backend::fields::Fields::from(vec!["".to_string()])
+                )),
+    };
 
     /* let gen = quote!(
        pub fn hello()
@@ -57,11 +68,16 @@ pub fn fields(input: TokenStream) -> TokenStream {
     }
     );
      */
+     let source = proc_macro::Span::call_site()
+        .source_text()
+        .unwrap_or("".to_string());
+
+
     match gen {
         Ok(o) => {
             log::debug!(
                 "Source code for `{}`:\n{}",
-                ast.query.value(),
+                source,
                 o.to_string()
             );
             TokenStream::from(o)
@@ -69,7 +85,7 @@ pub fn fields(input: TokenStream) -> TokenStream {
         Err(e) => {
             log::debug!(
                 "Source code for `{}`:\n{}",
-                ast.query.value(),
+                source,
                 e.to_string()
             );
             TokenStream::from(e)

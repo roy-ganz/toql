@@ -27,7 +27,7 @@
 //!
 
 #![recursion_limit = "512"]
-
+#![feature(proc_macro_span)]
 
 extern crate proc_macro;
 
@@ -49,30 +49,26 @@ pub fn paths(input: TokenStream) -> TokenStream {
 
     let ast = parse_macro_input!(input as paths_macro::PathsMacro);
 
-    let gen = paths_macro::parse(&ast.query, ast.struct_type);
+    let gen = match ast {
+        paths_macro::PathsMacro::PathList { struct_type, query } => {
+            paths_macro::parse(&query, struct_type)
+        }
+        paths_macro::PathsMacro::Top => Ok(quote!(
+                toql::backend::paths::Paths::from(vec!["".to_string()])
+                )),
+    };
 
-    /* let gen = quote!(
-       pub fn hello()
-    {
-        println!("hello");
-    }
-    );
-     */
+    let source = proc_macro::Span::call_site()
+        .source_text()
+        .unwrap_or("".to_string());
+
     match gen {
         Ok(o) => {
-            log::debug!(
-                "Source code for `{}`:\n{}",
-                ast.query.value(),
-                o.to_string()
-            );
+            log::debug!("Source code for `{}`:\n{}", source, o.to_string());
             TokenStream::from(o)
         }
         Err(e) => {
-            log::debug!(
-                "Source code for `{}`:\n{}",
-                ast.query.value(),
-                e.to_string()
-            );
+            log::debug!("Source code for `{}`:\n{}", source, e.to_string());
             TokenStream::from(e)
         }
     }

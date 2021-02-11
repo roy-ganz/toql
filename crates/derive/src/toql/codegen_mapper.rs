@@ -26,8 +26,7 @@ impl<'a> CodegenMapper<'a> {
              let fields = &selection.fields;
 
             field_mappings.push(quote!(
-                //mapper.map_selection( #name, toql::fields_macro::fields!(#rust_struct_ident, #fields).list);
-                mapper.map_selection( #name, toql::fields_macro::fields!(#rust_struct_ident, #fields));
+                mapper.map_selection( #name, toql::fields_macro::fields!(#rust_struct_ident, #fields).into_inner());
             ));
          }
 

@@ -1,23 +1,23 @@
-use std::marker::PhantomData;
 
-pub struct Fields<T>{
+pub struct Fields{
     pub list: Vec<String>,
-    marker: PhantomData<T>
+    
 }
  
-impl< T> Fields< T> {
+impl Fields {
    
-    
-
-    pub fn wildcard() -> Self {
+    pub fn top() -> Self {
         Self::from(vec!["*".to_string()])
     }
 
     pub fn from(fields: Vec<String>) -> Self {
         Fields {
             list: fields,
-            marker: PhantomData
         }
+    }
+
+    pub fn into_inner(self) -> Vec<String> {
+        self.list
     }
        
 } 
