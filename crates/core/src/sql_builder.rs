@@ -550,7 +550,7 @@ impl<'a> SqlBuilder<'a> {
 
                             let select_expr = mapped_field
                                 .handler
-                                .build_select(mapped_field.expression.clone(), &aux_params)?
+                                .build_select( mapped_field.expression.clone(), &aux_params)?
                                 .unwrap_or(SqlExpr::new());
 
                             // Does filter apply
@@ -650,6 +650,7 @@ impl<'a> SqlBuilder<'a> {
         })
     }
 
+
     fn build_select_clause<M>(
         &mut self,
         query: &Query<M>,
@@ -697,11 +698,20 @@ impl<'a> SqlBuilder<'a> {
         for deserialization_type in &mapper.deserialize_order {
             match deserialization_type {
                 DeserializeType::Field(field) => {
-                    let absolute_path = FieldPath::from(field);
-                    let relative_path = absolute_path.relative_path(&build_context.query_home_path);
+                    // Ensure Path belongs to home path
+                    // -> Merges will issue multple selects with different home paths
+                    //let absolute_path = FieldPath::from(&field);
+                    //let absolute_path= query_path.clone().unwrap_or_default().append(field);
+                    //let absolute_path =  FieldPath::from(&fields;
+                    let relative_path = 
+                                match &query_path
+                                {
+                                    Some(p) =>  p.relative_path(&build_context.query_home_path),
+                                    None => None
+                                }; 
 
                     let query_selection =
-                        if let Some(a) = relative_path.as_ref().and_then(|p| p.ancestor()) {
+                        if let Some(a) = relative_path {
                             build_context.selected_paths.contains(a.as_str())
                         } else {
                             false
@@ -824,7 +834,8 @@ impl<'a> SqlBuilder<'a> {
                         .with_self_alias(&canonical_alias)
                         .with_other_alias(joined_alias.as_str());
 
-                    if build_context.selected_paths.contains(joined_path) {
+                    let relative_path = query_path.as_ref().map(|p|p.append(joined_path)).unwrap_or(FieldPath::default());
+                    if build_context.selected_paths.contains(&relative_path.to_string()) {
                         result.selection_stream.push(Select::Query); // Query selected join
                                                                      // join path is the same as to query path
                         let home_query_path = FieldPath::default();
@@ -844,6 +855,8 @@ impl<'a> SqlBuilder<'a> {
                         }
 
                         dbg!(&next_query_path);
+
+                        // Seelect fields for this path
                         self.resolve_select(
                             &Some(next_query_path),
                             query,
@@ -920,55 +933,61 @@ impl<'a> SqlBuilder<'a> {
         Ok(())
     }
 
+  
+
     fn selection_from_query<M>(
         &mut self,
         query: &Query<M>,
         build_context: &BuildContext,
     ) -> Result<(HashSet<String>, HashSet<String>, bool)> {
-        let mut relative_fields = HashSet::new();
-        let mut relative_paths = HashSet::new();
+        let mut local_fields = HashSet::new();
+        let mut local_paths = HashSet::new();
         let mut all_fields = false;
 
         for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
-                    let (_, absolute_path) = FieldPath::split_basename(&field.name);
+                    let (_, query_path) = FieldPath::split_basename(&field.name);
                    
-                    if !Self::root_contains(&build_context.query_home_path, &absolute_path) {
+                    if !Self::root_contains(&build_context.query_home_path, &query_path) {
                         continue;
                     }
                     // Insert all parent paths for a field
                     // Eg user_address_street -> user, user_address, user_address_street
-                    if let Some(absolute_path) = absolute_path {
-                        let relative_path =
-                            absolute_path.relative_path(&build_context.query_home_path);
-                        if let Some(relative_path) = relative_path {
-                            for p in relative_path.step() {
-                                relative_paths.insert(p.to_string());
+                   
+                        let local_path = match query_path {
+                            Some(ref p) => p.relative_path(&build_context.query_home_path),
+                            None => None
+                        };
+                        if let Some(local_path) = local_path {
+                            for p in local_path.step() {
+                                local_paths.insert(p.to_string());
                             }
                         }
-                    }
+                    
                     let field = FieldPath::from(&field.name);
-                    let relative_field =
+                    let local_field =
                         field.relative_path(&build_context.query_home_path).unwrap();
-                    relative_fields.insert(relative_field.to_string());
+                    local_fields.insert(local_field.to_string());
                 }
                 QueryToken::Wildcard(wildcard) => {
-                    let (_, absolute_path) = FieldPath::split_basename(&wildcard.path);
-                    if let Some(absolute_path) = absolute_path {
-                        for p in absolute_path.descendents() {
-                            relative_paths.insert(p.to_string());
+                        let query_path = FieldPath::from(&wildcard.path);
+                        let local_path = query_path.relative_path(&build_context.query_home_path);
+                        if let Some(local_path) = local_path {
+                        for p in local_path.ancestors() {
+                            local_paths.insert(p.to_string());
                         }
-                    }
-
+                        }
+                    
+                 
                     //  relative_paths.insert(wildcard.path.to_string());
                 }
                 QueryToken::Selection(selection) => {
                     let selection = FieldPath::from(&selection.name);
-                    let relative_selection =
+                    let local_selection =
                         selection.relative_path(&build_context.query_home_path);
-                    if let Some(relative_selection) = relative_selection {
-                        match relative_selection.as_str() {
+                    if let Some(local_selection) = local_selection {
+                        match local_selection.as_str() {
                             "all" => all_fields = true,
                             "mut" => {
                                 let m = self.root_mapper()?;
@@ -983,7 +1002,7 @@ impl<'a> SqlBuilder<'a> {
                                             let relative_field = field
                                                 .relative_path(&build_context.query_home_path)
                                                 .unwrap();
-                                            relative_fields.insert(relative_field.to_string());
+                                            local_fields.insert(relative_field.to_string());
                                         }
                                     }
                                 }
@@ -1001,7 +1020,7 @@ impl<'a> SqlBuilder<'a> {
                                             let relative_field = field
                                                 .relative_path(&build_context.query_home_path)
                                                 .unwrap();
-                                            relative_fields.insert(relative_field.to_string());
+                                            local_fields.insert(relative_field.to_string());
                                         }
                                     }
                                 }
@@ -1020,13 +1039,13 @@ impl<'a> SqlBuilder<'a> {
                                         let relative_path = path
                                             .relative_path(&build_context.query_home_path)
                                             .unwrap();
-                                        relative_paths.insert(relative_path.to_string());
+                                        local_paths.insert(relative_path.to_string());
                                     } else {
                                         let field = FieldPath::from(s);
                                         let relative_field = field
                                             .relative_path(&build_context.query_home_path)
                                             .unwrap();
-                                        relative_fields.insert(relative_field.to_string());
+                                        local_fields.insert(relative_field.to_string());
                                     }
                                 }
                             }
@@ -1040,7 +1059,7 @@ impl<'a> SqlBuilder<'a> {
         
 
 
-        Ok((relative_fields, relative_paths, all_fields))
+        Ok((local_fields, local_paths, all_fields))
     }
 
     fn root_mapper(&self) -> Result<&SqlMapper> {
@@ -1052,17 +1071,17 @@ impl<'a> SqlBuilder<'a> {
         let s = roles.difference(&self.roles).next();
         s.map(|r| r.as_str())
     }
-    fn root_contains(root_path: &str, absolute_path: &Option<FieldPath>) -> bool {
+    fn root_contains(home_path: &str, query_path: &Option<FieldPath>) -> bool {
         println!(
-            "Test absolute path  {:?} has root {:?}",
-            &absolute_path, &root_path
+            "Test if query path  {:?} has home {:?}",
+            &query_path, &home_path
         );
-        let root: Option<&str> = if root_path.is_empty() {
+        let root: Option<&str> = if home_path.is_empty() {
             None
         } else {
-            Some(root_path)
+            Some(home_path)
         };
-        let r = match (root, absolute_path) {
+        let r = match (root, query_path) {
             (None, None) => true,
             (None, Some(_)) => true,
             (Some(_), None) => false,

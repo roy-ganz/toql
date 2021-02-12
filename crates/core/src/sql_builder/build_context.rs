@@ -1,4 +1,4 @@
-use crate::sql_expr::SqlExpr;
+use crate::{query::field_path::FieldPath, sql_expr::SqlExpr};
 use std::collections::HashSet;
 
 pub(crate) struct BuildContext {
@@ -28,4 +28,5 @@ impl BuildContext {
             // selected_placeholders: HashSet::new(),
         }
     }
+
 }

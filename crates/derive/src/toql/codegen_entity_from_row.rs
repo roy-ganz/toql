@@ -215,18 +215,24 @@ impl<'a> CodegenEntityFromRow<'a> {
                             1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
                                         quote!(
                                         #rust_field_ident : {
-                                        
-                                             < #rust_type_ident > :: from_row ( row , i, iter )?
+                                         if iter.next().unwrap_or(&Select::None) != &Select::None {
+                                            < #rust_type_ident > :: from_row ( row , i, iter )?
+                                         } else {
+                                             None
+                                         }
                                                  
                                         }
                                     ),
                         _ =>   //    T                                 -> Selected Join -> InnerJoin
                         quote!(
                             #rust_field_ident : { 
-                                < #rust_type_ident > :: from_row ( row , i, iter )?
-                                        .ok_or(toql::error::ToqlError::DeserializeError(#error_field.to_string(), 
-                                        String::from("Deserialization stream is invalid: Expected selected field but got unselected.")))?
-                                        
+                                let err= toql::error::ToqlError::DeserializeError(#error_field.to_string(), 
+                                        String::from("Deserialization stream is invalid: Expected selected field but got unselected."));
+                                         if iter.next().unwrap_or(&Select::None) != &Select::None {
+                                                < #rust_type_ident > :: from_row ( row , i, iter )?.ok_or(err)?
+                                         } else {
+                                            return Err(err.into());
+                                         }
                                 }
                         )
                     }

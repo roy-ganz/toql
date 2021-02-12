@@ -1,6 +1,7 @@
 pub mod from_row;
 pub mod keyed;
 
+
 pub mod tree_identity;
 pub mod tree_index;
 pub mod tree_insert;
@@ -13,15 +14,21 @@ use crate::error::ToqlError;
 
 use std::{borrow::Cow, boxed::Box};
 
+
+
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde_feature",
     derive(serde::Serialize, serde::Deserialize)
 )]
+#[cfg_attr(
+    feature = "serde_feature",
+    serde(untagged)
+)]
 pub enum Join<E: crate::keyed::Keyed> 
 {
-    Key(E::Key),
     Entity(Box<E>),
+    Key(E::Key),
 }
 
 impl<E> Default for Join<E>
