@@ -106,13 +106,14 @@ use std::collections::HashSet;
     pub fn split_basename( fields: &[String], path_basenames:  &mut HashMap<String, HashSet<String>>, paths: &mut Vec<String>) {
         for f in fields {
             let (base, path )  = FieldPath::split_basename(f);
-            let p = path.unwrap_or_default();
-            if path_basenames.get(p.as_str()).is_none() {
-                path_basenames.insert(p.as_str().to_string(), HashSet::new());
+            if !path.is_empty(){
+                if path_basenames.get(path.as_str()).is_none() {
+                    path_basenames.insert(path.as_str().to_string(), HashSet::new());
+                }
+                path_basenames.get_mut(path.as_str()).unwrap().insert(base.to_string());
+            
+                paths.push(path.to_string());
             }
-            path_basenames.get_mut(p.as_str()).unwrap().insert(base.to_string());
-           
-            paths.push(p.to_string());
            
         }
 

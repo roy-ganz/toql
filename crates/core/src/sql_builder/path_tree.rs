@@ -10,19 +10,19 @@ use std::collections::HashSet;
 
 #[derive(Debug)]
 pub struct PathTree {
-    roots: Vec<String>,
+    roots: HashSet<String>,
     nodes: HashMap<String, HashSet<String>>,
 }
 
 impl PathTree {
     pub fn new() -> Self {
         PathTree {
-            roots: Vec::new(),
+            roots: HashSet::new(),
             nodes: HashMap::new(),
         }
     }
 
-    pub fn roots(&self) -> &Vec<String> {
+    pub fn roots(&self) -> &HashSet<String> {
         &self.roots
     }
     pub fn nodes(&self, name: &str) -> Option<&HashSet<String>> {
@@ -47,7 +47,7 @@ impl PathTree {
                         break;
                     }
                 }
-                None => self.roots.push(a.as_str().to_string()),
+                None => {self.roots.insert(a.as_str().to_string());}
             }
         }
     }

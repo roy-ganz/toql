@@ -51,7 +51,7 @@ pub fn build_update_sql<T, Q>( alias_format: AliasFormat,
 // "userLanguage" refers to merges -> will replace rows
 pub fn plan_update_order<T, S: AsRef<str>>(
         mappers: &HashMap<String, SqlMapper>,
-        paths: &[S],
+        query_paths: &[S],
         fields: &mut HashMap<String, HashSet<String>>, // paths that refer to fields 
         merges: &mut HashMap<String, HashSet<String>>, // paths that refer to merges
     ) -> Result<()>
@@ -59,12 +59,10 @@ pub fn plan_update_order<T, S: AsRef<str>>(
         T: Mapped,
     {
         let ty = <T as Mapped>::type_name();
-        for path in paths {
-            let (field, field_path) = FieldPath::split_basename(path.as_ref().trim_end_matches("_"));
+        for path in query_paths {
+            let (descendent_name, ancestor_path) = FieldPath::split_basename(path.as_ref().trim_end_matches("_"));
             
-            let field_path =  field_path.unwrap_or_default();
-            
-            let children = field_path.children();
+            let children = ancestor_path.children();
             
           
             let mut current_mapper: String = ty.to_owned();
@@ -93,22 +91,22 @@ pub fn plan_update_order<T, S: AsRef<str>>(
 
                 // Triage field
                 // Join, convert to wildcard
-                if  mapper.joined_mapper(field).is_some() {
+                if  mapper.joined_mapper(descendent_name).is_some() {
                    fields.entry(path.as_ref().trim_end_matches("_").to_string())
                    .or_insert( HashSet::new())
                    .insert("*".to_string()) ;
                 } 
                 // Merged field
-                else if mapper.merged_mapper(field).is_some() {
-                    merges.entry(field_path.to_string())
+                else if mapper.merged_mapper(descendent_name).is_some() {
+                    merges.entry(ancestor_path.to_string())
                    .or_insert( HashSet::new())
-                   .insert(field.to_string());
+                   .insert(descendent_name.to_string());
                 } 
                 // Normal field
                 else {
-                   fields.entry(field_path.to_string())
+                   fields.entry(ancestor_path.to_string())
                    .or_insert( HashSet::new())
-                   .insert(field.to_string());
+                   .insert(descendent_name.to_string());
                 }
 
           

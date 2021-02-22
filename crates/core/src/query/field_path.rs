@@ -10,26 +10,37 @@ impl<'a> Default for FieldPath<'a> {
 }
 
 impl<'a> FieldPath<'a> {
-    pub fn split_basename(path_with_basename: &str) -> (&str, Option<FieldPath>) {
+    pub fn split_basename(path_with_basename: &str) -> (&str, FieldPath) {
         if let Some(pos) = path_with_basename.rfind('_') {
             (
                 &path_with_basename[pos + 1..],
-                Some(FieldPath::from(&path_with_basename[..pos])),
+                FieldPath::from(&path_with_basename[..pos]),
             )
         } else {
-            (path_with_basename, None)
+            (path_with_basename, FieldPath::default())
         }
     }
 
     pub fn from(path: &'a str) -> Self {
         FieldPath(Cow::Borrowed(path))
     }
+    pub fn or(&self, b: &'a FieldPath) -> &FieldPath {
+        if self.is_empty() {
+            b
+        } else {
+            self
+        }
+    }
+
+     pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 
     pub fn prepend(&self, head: &'a str) -> Self {
         let path = format!(
             "{}{}{}",
             head,
-            if self.0.is_empty() { "" } else { "_" },
+            if self.0.is_empty() || head.is_empty() { "" } else { "_" },
             self.0.as_ref()
         );
 
@@ -46,12 +57,12 @@ impl<'a> FieldPath<'a> {
         FieldPath(Cow::Owned(path))
     }
 
-    pub fn relative_path(&self, root_path: &str) -> Option<FieldPath> {
-        if self.0.starts_with(root_path) {
-            let t = self.0.trim_start_matches(root_path).trim_start_matches("_");
-            Some(FieldPath::from(t))
+    pub fn localize_path(&self, home_path: &str) -> FieldPath {
+        if self.0.starts_with(home_path) {
+            let t = self.0.trim_start_matches(home_path).trim_start_matches("_");
+            FieldPath::from(t)
         } else {
-            None
+            FieldPath::default()
         }
     }
 
