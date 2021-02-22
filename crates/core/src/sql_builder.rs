@@ -413,12 +413,12 @@ impl<'a> SqlBuilder<'a> {
         }
 
         // Build join
-        for r in join_tree.roots() {
+        
             let expr: SqlExpr =
-                self.resolve_join(FieldPath::from(&r), &join_tree, &mut build_context)?;
+                self.resolve_join( FieldPath::default(), &join_tree, &join_tree.roots(), &mut build_context)?;
             result.join_expr.extend(expr);
             result.join_expr.pop_literals(1); // Remove trailing whitespace
-        }
+        
 
         Ok(())
     }
@@ -426,54 +426,55 @@ impl<'a> SqlBuilder<'a> {
         &self,
         local_path: FieldPath,
         join_tree: &PathTree,
+        nodes: &HashSet<String>,
         build_context: &mut BuildContext,
     ) -> Result<SqlExpr> {
        
         let mut join_expr = SqlExpr::new();
-      //  let home_path = self.home_mapper.to_mixed_case();
-      //  let local_path = canonical_path.localize_path(&home_path);
-       
-        let mapper = self.mapper_for_path(&local_path)?;
-        for nodes in join_tree.nodes(local_path.as_str()) {
-            for n in nodes.iter() { 
-                let (basename, _) = FieldPath::split_basename(n);
+      
+        for n in nodes { 
+            let (basename, _) = FieldPath::split_basename(n);
 
-                let join = mapper
-                    .join(basename)
-                    .ok_or(SqlBuilderError::JoinMissing(n.to_string()))?;
+            let local_mapper = self.mapper_for_path(&local_path)?;
+            let join = local_mapper
+                .join(basename)
+                .ok_or(SqlBuilderError::JoinMissing(n.to_string()))?;
 
-                let p = [&self.aux_params, &join.options.aux_params];
-                let aux_params = ParameterMap::new(&p);
+            let p = [&self.aux_params, &join.options.aux_params];
+            let aux_params = ParameterMap::new(&p);
 
-                let canonical_self_alias = self.canonical_alias(&local_path)?.to_string();
-                let canonical_other_alias = self.canonical_alias(&FieldPath::from(n))?.to_string();
-                let resolver = Resolver::new()
-                    .with_self_alias(&canonical_self_alias)
-                    .with_other_alias(&canonical_other_alias);
+            let canonical_self_alias = self.canonical_alias(&local_path)?.to_string();
+            let canonical_other_alias = self.canonical_alias(&FieldPath::from(n))?.to_string();
+            let resolver = Resolver::new()
+                .with_self_alias(&canonical_self_alias)
+                .with_other_alias(&canonical_other_alias);
 
-                let join_e = resolver.resolve(&join.join_expression)?;
-                join_expr.extend(join_e);
+            let join_e = resolver.resolve(&join.join_expression)?;
+            join_expr.extend(join_e);
 
-                let subjoin_expr =
-                    self.resolve_join(FieldPath::from(n.as_str()), join_tree, build_context)?;
-                if !subjoin_expr.is_empty() {
-                    join_expr.push_literal(" (".to_string());
-                    join_expr.extend(subjoin_expr);
-                    join_expr.push_literal(")".to_string());
-                }
-
-                join_expr.push_literal(" ON (".to_string());
-
-                let on_expr = resolver.resolve(&join.on_expression)?;
-
-                let on_expr = match &join.options.join_handler {
-                    Some(handler) => handler.build_on_predicate(on_expr, &aux_params)?,
-                    None => on_expr,
-                };
-                join_expr.extend(on_expr);
-
-                join_expr.push_literal(") ");
+            if let Some(subnodes) = join_tree.nodes(n) {
+                if !subnodes.is_empty(){
+                    let subjoin_expr =
+                        self.resolve_join(FieldPath::from(n.as_str()), join_tree, &subnodes, build_context)?;
+                        if !subjoin_expr.is_empty() {
+                            join_expr.push_literal(" (".to_string());
+                            join_expr.extend(subjoin_expr);
+                            join_expr.push_literal(")".to_string());
+                        }
+                    }
             }
+
+            join_expr.push_literal(" ON (".to_string());
+
+            let on_expr = resolver.resolve(&join.on_expression)?;
+
+            let on_expr = match &join.options.join_handler {
+                Some(handler) => handler.build_on_predicate(on_expr, &aux_params)?,
+                None => on_expr,
+            };
+            join_expr.extend(on_expr);
+
+            join_expr.push_literal(") ");
         }
 
         Ok(join_expr)
