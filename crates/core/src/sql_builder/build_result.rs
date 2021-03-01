@@ -20,8 +20,9 @@ pub struct BuildResult {
     pub(crate) distinct: bool,
     pub(crate) table_alias: String,
     pub(crate) selection_stream: SelectStream,
-    pub(crate) unmerged_paths: HashSet<String>,
+    pub(crate) unmerged_home_paths: HashSet<String>,
     pub(crate) verb_expr: SqlExpr,
+    pub(crate) preselect_expr: SqlExpr,
     pub(crate) select_expr: SqlExpr,
     pub(crate) from_expr: SqlExpr,
     pub(crate) join_expr: SqlExpr,
@@ -39,9 +40,10 @@ impl BuildResult {
             table_alias: String::new(),
             any_selected: false,
             distinct: false,
-            unmerged_paths: HashSet::new(),
+            unmerged_home_paths: HashSet::new(),
             selection_stream: SelectStream::new(),
             verb_expr: verb,
+            preselect_expr: SqlExpr::new(),
             select_expr: SqlExpr::new(),
             join_expr: SqlExpr::new(),
             from_expr: SqlExpr::new(),
@@ -70,6 +72,9 @@ impl BuildResult {
     }
     pub fn selected_placeholders(&self) -> &HashSet<u16> {
         &self.selected_placeholders
+    }
+    pub fn set_preselect(&mut self, preselect_expr:SqlExpr) {
+        self.preselect_expr = preselect_expr;
     }
 
     pub fn set_from(&mut self, table: String, canonical_alias: String) {
@@ -102,14 +107,16 @@ impl BuildResult {
             .with_aux_params(aux_params)
             .with_placeholders(&self.selected_placeholders);
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
+        let preselect_sql = resolver.to_sql(&self.preselect_expr, alias_translator)?;
         let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
         let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
         let join_sql = resolver.to_sql(&self.join_expr, alias_translator)?;
         let where_sql = resolver.to_sql(&self.where_expr, alias_translator)?;
 
-        let n = select_sql.1.len() + join_sql.1.len() + where_sql.1.len();
+        let n = preselect_sql.1.len() + select_sql.1.len() + join_sql.1.len() + where_sql.1.len();
         let mut args = Vec::with_capacity(n);
 
+        args.extend_from_slice(&preselect_sql.1);
         args.extend_from_slice(&select_sql.1);
         args.extend_from_slice(&join_sql.1);
         args.extend_from_slice(&where_sql.1);
@@ -120,6 +127,11 @@ impl BuildResult {
         if !modifier.is_empty() {
             stmt.push_str(modifier);
             stmt.push(' ');
+        }
+        
+        if !preselect_sql.is_empty() {
+            stmt.push_str(&preselect_sql.0);
+            stmt.push_str(", ");
         }
         stmt.push_str(&select_sql.0);
 
@@ -337,8 +349,8 @@ impl BuildResult {
     pub fn selection_stream(&self) -> &SelectStream {
         &self.selection_stream
     }
-    pub fn unmerged_paths(&self) -> &HashSet<String> {
-        &self.unmerged_paths
+    pub fn unmerged_home_paths(&self) -> &HashSet<String> {
+        &self.unmerged_home_paths
     }
 
     pub fn resolve_placeholders(&mut self) {

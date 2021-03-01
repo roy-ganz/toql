@@ -195,15 +195,18 @@ impl<'a> CodegenMapper<'a> {
                      #on_predicate
                      
                      );
-                          
 
-                let join_statement = if field.number_of_options == 0
+
+
+                let join_type = if field.number_of_options == 0
                     || (field.number_of_options == 1 && field.preselect == false)
                 {
-                   format!("JOIN {} ", &sql_join_table_name)
+                   quote!(toql::sql_mapper::join_type::JoinType::Inner)
                 } else {
-                    format!("LEFT JOIN {} ", &sql_join_table_name)
+                   quote!(toql::sql_mapper::join_type::JoinType::Left)
                 };
+
+                let join_statement = format!("{} ", &sql_join_table_name);
 
                 let preselect_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
@@ -226,6 +229,7 @@ impl<'a> CodegenMapper<'a> {
 
                 self.field_mappings.push(quote! {
                     mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
+                    #join_type,
                     {let mut t = toql::sql_expr::SqlExpr::literal(#join_statement); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
                      toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
@@ -332,22 +336,27 @@ impl<'a> CodegenMapper<'a> {
                 let toql_field_name = &field.toql_field_name;
                 let sql_merge_mapper_name = &field.rust_type_name;
 
-               
-               
-                let join_statement= if let Some(custom_join) = &merge_attrs.join_sql {
-                    quote!(toql::sql_expr_macro::sql_expr!(#custom_join))
-                } else {
-                    //let table_name = &merge_attrs.sql_join_table_name;
-                    let table_name = &self.rust_struct.sql_table_name;
+              
+                let table_name = &self.rust_struct.sql_table_name;
+                let table_join = 
                    quote!(  
                         toql::sql_expr::SqlExpr::from(vec![
-                        toql::sql_expr::SqlExprToken::Literal("JOIN ".to_string()),
-                        toql::sql_expr::SqlExprToken::Literal(#table_name.to_string()),
-                        toql::sql_expr::SqlExprToken::Literal(" ".to_string()),
-                        toql::sql_expr::SqlExprToken::SelfAlias
+                            toql::sql_expr::SqlExprToken::Literal("JOIN ".to_string()),
+                            toql::sql_expr::SqlExprToken::Literal(#table_name.to_string()),
+                            toql::sql_expr::SqlExprToken::Literal(" ".to_string()),
+                            toql::sql_expr::SqlExprToken::SelfAlias
                        ])
+                     );
+               
+                let join_statement= if let Some(custom_join) = &merge_attrs.join_sql {
+                   quote!(  
+                       { let mut t = toql::sql_expr_macro::sql_expr!(#custom_join);
+                       t.extend(toql::sql_expr::SqlExpr::literal(" "))
+                       .extend(#table_join); t}
                      )
-                   };
+                } else {
+                   table_join
+                };
 
               
                 // Build join predicate

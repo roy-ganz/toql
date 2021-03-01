@@ -32,6 +32,7 @@ pub mod field_options;
 pub mod join_options;
 pub mod mapped;
 pub mod predicate_options;
+pub mod join_type;
 
 pub(crate) mod field;
 pub(crate) mod join;
@@ -47,7 +48,7 @@ use crate::result::Result;
 use crate::predicate_handler::{DefaultPredicateHandler, PredicateHandler};
 use crate::sql_mapper::field::Field;
 use crate::sql_mapper::field_options::FieldOptions;
-use crate::sql_mapper::join::Join;
+use crate::sql_mapper::join::{Join};
 use crate::sql_mapper::mapped::Mapped;
 use crate::sql_mapper::merge::Merge;
 use crate::sql_mapper::predicate::Predicate;
@@ -58,6 +59,7 @@ use crate::field_handler::{BasicFieldHandler, FieldHandler};
 use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
 use std::fmt;
 use std::sync::Arc;
+use join_type::JoinType;
 
 #[derive(Debug)]
 pub enum DeserializeType {
@@ -411,13 +413,15 @@ where {
         &'a mut self,
         toql_path: &str,
         joined_mapper: &str,
-        join_expression: SqlExpr,
+        join_type: JoinType,
+        table_expression: SqlExpr,
         on_expression: SqlExpr,
     ) -> &'a mut Self {
         self.map_join_with_options(
             toql_path,
             joined_mapper,
-            join_expression,
+            join_type,
+            table_expression,
             on_expression,
             JoinOptions::new(),
         )
@@ -426,7 +430,8 @@ where {
         &'a mut self,
         toql_path: S,
         joined_mapper: &str,
-        join_expression: SqlExpr,
+        join_type: JoinType,
+        table_expression: SqlExpr,
         on_expression: SqlExpr,
         options: JoinOptions,
     ) -> &'a mut Self
@@ -437,7 +442,8 @@ where {
             toql_path.clone().into(),
             Join {
                 joined_mapper: joined_mapper.to_camel_case(),
-                join_expression,
+                join_type,
+                table_expression,
                 on_expression,
                 options,
             },

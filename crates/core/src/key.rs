@@ -36,6 +36,21 @@ pub trait Key {
     /// Return key values as params. Useful to loop across a composite key.
     fn params(&self) -> Vec<SqlArg>;
 
+    fn columns_expr() -> SqlExpr {
+        let columns = Self::columns();
+        let mut expr = SqlExpr::new();
+
+        for c in columns {
+            if !expr.is_empty() {
+                expr.push_literal(", ".to_string());
+            }
+            expr.push_self_alias();
+            expr.push_literal(".");
+            expr.push_literal(c);
+        }
+        expr
+    }
+
     fn predicate_expr(&self) -> SqlExpr {
         let columns = Self::columns();
         let mut params = self.params().into_iter();

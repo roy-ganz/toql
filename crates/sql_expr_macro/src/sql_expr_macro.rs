@@ -154,13 +154,13 @@ fn evaluate_pair(
             }
             Rule::literal => {
 
-                // Add a dot if an alias immediately precedes a literal (..column_name)
-                if alias == true {
+                // Add a dot if an alias immediately precedes a non whitespace literal (..column_name)
+                let l = span.as_str();
+
+                if alias == true && l != " " {
                     field_info.literal.push('.');
                 }
                 // If literal is ? insert arguments
-                let l = span.as_str();
-               
                 if l == "?" {
                     append_literal(&mut field_info, &mut tokens);
                     if let Some(a) = expr_args.next() {

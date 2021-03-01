@@ -339,7 +339,7 @@ impl<'a> CodegenTree<'a> {
                                             let fk = #struct_key_ident::from_row(&row, &mut i, &mut iter)?
                                                 .ok_or(toql::error::ToqlError::ValueMissing( #toql_field_name .to_string()))?;
                                             if fk ==  pk {
-                                                let mut i = 0;
+                                              //  let mut i = 0;
                                                 let mut iter = selection_stream.iter();
                                                 let e = #rust_base_type_ident::from_row(&row, &mut i, &mut iter)?
                                                   .ok_or(toql::error::ToqlError::ValueMissing( #toql_field_name .to_string()))?;
@@ -703,7 +703,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                                let mut  i= row_offset;
                                                for (n, row) in rows.into_iter().enumerate() {
                                                    let mut iter = std::iter::repeat(&Select::Query);
-                                                   let fk = #struct_key_ident ::from_row(&row, &mut i, &mut iter)?; // SKip Primary key
+                                                   let fk = #struct_key_ident ::from_row(&row, &mut i, &mut iter)?
+                                                    .ok_or(toql::error::ToqlError::ValueMissing(
+                                                                    <#struct_key_ident as toql::key::Key>::columns().join(", ")
+                                                                ))?; // SKip Primary key
 
                                                    let mut s = DefaultHasher::new();
                                                    fk.hash(&mut s);
