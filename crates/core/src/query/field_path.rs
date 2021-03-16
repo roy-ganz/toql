@@ -57,12 +57,12 @@ impl<'a> FieldPath<'a> {
         FieldPath(Cow::Owned(path))
     }
 
-    pub fn localize_path(&self, home_path: &str) -> FieldPath {
+    pub fn localize_path(&self, home_path: &str) -> Option<FieldPath> {
         if self.0.starts_with(home_path) {
             let t = self.0.trim_start_matches(home_path).trim_start_matches("_");
-            FieldPath::from(t)
+            Some(FieldPath::from(t))
         } else {
-            FieldPath::default()
+           None
         }
     }
 
@@ -249,8 +249,9 @@ impl<'a> Iterator for Children<'a> {
         let p = self.path[self.pos..].find('_');
         match p {
             Some(i) => {
-                (Some(FieldPath::from(&self.path[self.pos..i])), {
-                    self.pos = i + 1
+                let end = self.pos + i;
+                (Some(FieldPath::from(&self.path[self.pos..end])), {
+                    self.pos = end + 1
                 })
                     .0
             }

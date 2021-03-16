@@ -147,7 +147,7 @@ fn evaluate_pair(
             }
             Rule::aux_param => {
                append_literal(&mut field_info, &mut tokens);
-               let name = span.as_str();
+               let name = span.as_str().trim_start_matches("<").trim_end_matches(">");
                alias = false;
                tokens.push( quote!( toql::sql_expr::SqlExprToken::AuxParam(String::from(#name))));
                 
