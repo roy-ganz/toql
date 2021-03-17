@@ -133,7 +133,7 @@ use std::collections::HashSet;
         let ty = <T as Mapped>::type_name();
         for path in paths {
             let field_path = FieldPath::from(path.as_ref());
-            let steps = field_path.step();
+            let steps = field_path.step_down();
             let children = field_path.children();
             let mut level = 0;
             let mut mapper =

@@ -32,13 +32,13 @@ impl BuildContext {
 
         for path in self.local_selected_paths.iter().map(|p|FieldPath::from(p))
         {
-            for p in path.step(){
+            for p in path.step_down(){
                 self.local_joined_paths.insert(p.to_string());
             }
         }
         for path in self.local_selected_fields.iter().map(|f| {let (_, p)= FieldPath::split_basename(f);p})
         {
-            for p in path.step(){
+            for p in path.step_down(){
                 self.local_joined_paths.insert(p.to_string());
             }
         }

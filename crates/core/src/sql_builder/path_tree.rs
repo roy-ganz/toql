@@ -30,10 +30,11 @@ impl PathTree {
     }
 
     pub fn insert(&mut self, path: &FieldPath) {
-        let mut parents = path.parents().skip(1);
+        let mut parents = path.ancestors().skip(1);
 
         for a in path.ancestors() {
             // If Parent exists, its not a tree root
+            
             match parents.next() {
                 Some(p) => {
                     // If parent is already in the tree, Add child and leave inner for loop
@@ -47,7 +48,10 @@ impl PathTree {
                         break;
                     }
                 }
-                None => {self.roots.insert(a.as_str().to_string());}
+                None => {
+                    self.roots.insert(a.as_str().to_string()); 
+                    break;
+                }
             }
         }
     }

@@ -117,15 +117,21 @@ impl<'a> FieldPath<'a> {
         }
     }
 
-    pub fn step(&self) -> Step {
-        Step {
+    pub fn step_down(&self) -> StepDown {
+        StepDown {
             pos: 0,
+            path: self.0.as_ref(),
+        }
+    }
+    pub fn step_up(&self) -> StepUp {
+        StepUp {
+            pos: self.0.len(),
             path: self.0.as_ref(),
         }
     }
 }
 
-pub struct Step<'a> {
+pub struct StepDown<'a> {
     pos: usize,
     path: &'a str,
 }
@@ -133,15 +139,45 @@ pub struct Step<'a> {
 /// Iterator to step down
 /// Field without path has no descendents.
 /// user_address_country_id -> user, user_address, user_address_country, user_address_country_id
-impl<'a> Iterator for Step<'a> {
+impl<'a> Iterator for StepDown<'a> {
     type Item = FieldPath<'a>;
     fn next(&mut self) -> Option<FieldPath<'a>> {
         let p = self.path[self.pos..].find('_');
 
         match p {
-            Some(i) => Some((FieldPath::from(&self.path[..i]), self.pos = i + 1).0),
+            Some(i) => {
+                let end = self.pos + i;
+                Some((FieldPath::from(&self.path[..end]), self.pos = end + 1).0)
+            },
             None if self.pos != self.path.len() => {
                 Some((FieldPath::from(&self.path), self.pos = self.path.len()).0)
+            }
+            _ => None,
+        }
+    }
+}
+
+pub struct StepUp<'a> {
+    pos: usize,
+    path: &'a str,
+}
+
+/// Iterator to step up
+/// Field without path has no descendents.
+/// user_address_country_id -> user_address_country_id, user_address_country, user_address, user
+impl<'a> Iterator for StepUp<'a> {
+    type Item = FieldPath<'a>;
+    fn next(&mut self) -> Option<FieldPath<'a>> {
+        let p = self.path[..self.pos].rfind('_');
+
+        match p {
+            Some(i) => {
+                let end = self.pos;
+                 println!("String {}, from {} , steo is `{}`", &self.path, &end, &self.path[..end ]);
+                Some((FieldPath::from(&self.path[..end]), self.pos = i).0)
+            },
+            None if self.pos != 0 => {
+                Some((FieldPath::from(&self.path[..self.pos]), self.pos = 0).0)
             }
             _ => None,
         }
@@ -222,7 +258,8 @@ impl<'a> Iterator for Parents<'a> {
         let p = self.path[..self.pos].rfind('_');
         match p {
             Some(i) => {
-                (Some(FieldPath::from(&self.path[i..self.pos])), {
+               // println!("String {}, from {} to {}, parent is `{}`", &self.path, &i + 1, &self.pos, &self.path[i + 1..self.pos]);
+                (Some(FieldPath::from(&self.path[i + 1..self.pos])), {
                     self.pos = i
                 })
                     .0
