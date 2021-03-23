@@ -133,35 +133,6 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                            self.key_fields = false;
                 }
-                
-
-               // self.field_mappings.push(quote!( )); // use Toql field name to build join alias (prevents underscore in name)))
-
-               // Add discriminator field for LEFT joins
-                let left_join_discriminator = if field.number_of_options > 1
-                    || (field.number_of_options == 1 && field.preselect == true)
-                {
-                    quote!(
-                        .discriminator( 
-                            {
-                                let mut e = toql::sql_expr::SqlExpr::new();
-                                <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter()
-                                .for_each(| other_column |
-                                {
-                                    e.push_other_alias();
-                                    e.push_literal(".");
-                                    e.push_literal(other_column);
-                                    e.push_literal(" IS NOT NULL AND ");
-                                    
-                                });
-                                e.pop_literals(5);
-                                e 
-                            }
-                        ) 
-                    )
-                } else {
-                    quote!()
-                }; 
 
                 // Build predicate based on key information or custom provided column pairs
                 let col_array = if join_attrs.columns.is_empty() {
@@ -232,7 +203,7 @@ impl<'a> CodegenMapper<'a> {
                     #join_type,
                     {let mut t = toql::sql_expr::SqlExpr::literal(#join_statement); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
-                     toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident #left_join_discriminator
+                     toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* #preselect_ident #ignore_wc_ident #roles_ident 
                     );
                 });
 

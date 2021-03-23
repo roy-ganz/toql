@@ -5,6 +5,13 @@ pub enum Select {
     None,
 }
 
+impl Select {
+
+    pub fn is_selected(&self) -> bool {
+        self != &Select::None
+    }
+}
+
 /*
 SelectStream memorizes which columns and joins are selected and is needed for the deserialization trait FromRow.
 The selections can either come from the query or the preselections from the mapping.

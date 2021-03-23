@@ -10,7 +10,6 @@ pub trait TreeIndex<R, E>
 {
     fn index<'a>(
         descendents: &mut Descendents<'a>,
-        field: &str,
         rows: &[R],
         row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,

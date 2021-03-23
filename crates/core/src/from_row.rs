@@ -14,7 +14,7 @@ pub trait FromRow<R, E>
     /// that have fields selected but are null. 
     /// Those left joins cause select information in the select stream
     /// that must be skipped.
-    fn forward<'a, I>( iter: &mut I) -> usize
+    fn forward<'a, I>( iter: &mut I) -> Result<usize, E>
      where
         I: Iterator<Item = &'a Select>,
         Self: std::marker::Sized;

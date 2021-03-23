@@ -138,7 +138,7 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                         #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
-                            index(&mut descendents, &field,rows, row_offset, index)?
+                            index(&mut descendents, rows, row_offset, index)?
                         }
                 )
                );
@@ -179,7 +179,7 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
                              <#rust_base_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
-                            index(&mut descendents, &field,rows, row_offset, index)?
+                            index(&mut descendents, rows, row_offset, index)?
                        }
                 )
                );
@@ -538,7 +538,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                         fn auto_id() -> bool {
                             <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id()
                         }
-                       
+                         #[allow(unused_mut)]
                         fn set_id < 'a, 'b >(&mut self, mut descendents : & mut toql :: query :: field_path ::
                                Descendents < 'a >, action: &'b toql::tree::tree_identity::IdentityAction)
                                    -> std :: result :: Result < (), toql::error::ToqlError >
@@ -629,7 +629,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                    <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
                                }
 
-                                  fn args<'a>(
+                            #[allow(unused_mut)]
+                            fn args<'a>(
                                &self,
                                mut descendents: &mut toql::query::field_path::Descendents <'a>,
                                args: &mut Vec<toql::sql_arg::SqlArg>
@@ -641,13 +642,14 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                        }
                        impl toql::tree::tree_predicate::TreePredicate for &mut #struct_ident {
 
-                            #[allow(unused_mut)]
+                           #[allow(unused_mut)]
                            fn columns<'a>(&self, mut descendents: &mut toql::query::field_path::Descendents<'a> )
                                -> std::result::Result<Vec<String>, toql::error::ToqlError>{
                                    <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
                                }
 
-                                  fn args<'a>(
+                            #[allow(unused_mut)]
+                            fn args<'a>(
                                &self,
                                mut descendents: &mut toql::query::field_path::Descendents <'a>,
                                args: &mut Vec<toql::sql_arg::SqlArg>
@@ -673,7 +675,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                        {
                             #[allow(unused_variables, unused_mut)]
-                           fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
+                           fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, 
                                        rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
                                -> std::result::Result<(), E>
 
@@ -700,9 +702,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                        },
                                        None => {
 
-                                               let mut  i= row_offset;
+                                              
                                                for (n, row) in rows.into_iter().enumerate() {
                                                    let mut iter = std::iter::repeat(&Select::Query);
+                                                   let mut  i= row_offset;
                                                    let fk = #struct_key_ident ::from_row(&row, &mut i, &mut iter)?
                                                     .ok_or(toql::error::ToqlError::ValueMissing(
                                                                     <#struct_key_ident as toql::key::Key>::columns().join(", ")
@@ -744,12 +747,13 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                          #struct_key_ident: toql::from_row::FromRow<R, E>,
                          #(#tree_index_dispatch_bounds_ref)*
                       {
-                           fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
+                           #[allow(unused_mut)]
+                           fn index<'a>( mut descendents: &mut toql::query::field_path::Descendents<'a>,
                                        rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
                                -> std::result::Result<(), E>
 
                                 {
-                                    <#struct_ident as  toql::tree::tree_index::TreeIndex<R,E>>::index(descendents, field, rows, row_offset, index)
+                                    <#struct_ident as  toql::tree::tree_index::TreeIndex<R,E>>::index(descendents,  rows, row_offset, index)
                                 }
                        }
       
@@ -827,6 +831,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                      
 
                        {
+                            #[allow(unused_mut)]
                             fn merge<'a>(  &mut self, mut descendents: &mut toql::query::field_path::Descendents<'a>, field: &str,
                                        rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
                                -> std::result::Result<(), E>

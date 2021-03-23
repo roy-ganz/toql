@@ -4,7 +4,8 @@
 //!
 
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::{sql_expr::resolver_error::ResolverError, sql_mapper::SqlMapperError, sql_arg::error::TryFromSqlArgError};
+use crate::{sql_expr::resolver_error::ResolverError, sql_mapper::SqlMapperError, 
+    sql_arg::error::TryFromSqlArgError, deserialize::error::DeserializeError};
 use std::fmt;
 
 use pest::error::Error as PestError;
@@ -46,7 +47,8 @@ pub enum ToqlError {
     /// SQL Builder failed to turn Toql query into SQL query.
     SqlBuilderError(SqlBuilderError),
     /// Toql failed to convert row value into struct field
-    DeserializeError(String, String),
+   
+    DeserializeError(DeserializeError),
 
     /// SQL Builder failed to turn Toql query into SQL query.
     SqlExprResolverError(ResolverError),
@@ -60,6 +62,12 @@ pub enum ToqlError {
 impl From<SqlBuilderError> for ToqlError {
     fn from(err: SqlBuilderError) -> ToqlError {
         ToqlError::SqlBuilderError(err)
+    }
+}
+
+impl From<DeserializeError> for ToqlError {
+    fn from(err: DeserializeError) -> ToqlError {
+        ToqlError::DeserializeError(err)
     }
 }
 
@@ -118,9 +126,7 @@ impl fmt::Display for ToqlError {
             ToqlError::SqlExprParserError(ref e) => e.fmt(f),
             ToqlError::RoleExprParserError(ref e) => e.fmt(f),
             ToqlError::SqlExprResolverError(ref e) => e.fmt(f),
-            ToqlError::DeserializeError(ref n, ref e) => {
-                write!(f, "unable to deserialize field `{}` because: {}", n, e)
-            }
+            ToqlError::DeserializeError(ref e) => e.fmt(f),
         }
     }
 }

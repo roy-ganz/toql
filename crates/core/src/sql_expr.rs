@@ -26,7 +26,7 @@ pub enum SqlExprToken {
         columns: Vec<PredicateColumn>,
         args: Vec<SqlArg>,
     },
-    Placeholder(u16, SqlExpr, usize),
+    
 }
 
 #[derive(Debug, Clone)]
@@ -78,16 +78,7 @@ impl SqlExpr {
         }
     }
 
-    pub fn push_placeholder(
-        &mut self,
-        number: u16,
-        expr: SqlExpr,
-        selection_position: usize,
-    ) -> &mut Self {
-        self.tokens
-            .push(SqlExprToken::Placeholder(number, expr, selection_position));
-        self
-    }
+   
 
     pub fn push_literal(&mut self, lit: impl Into<String>) -> &mut Self {
         self.tokens.push(SqlExprToken::Literal(lit.into()));
@@ -208,11 +199,6 @@ impl fmt::Display for SqlExprToken {
                 columns: _,
                 args: _,
             } => write!(f, "ToDo"),
-            SqlExprToken::Placeholder(n, e, _) => {
-                write!(f, "|{}:", n)?;
-                e.fmt(f)?;
-                write!(f, "|")
-            }
         }
     }
 }

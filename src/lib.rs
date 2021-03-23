@@ -96,6 +96,7 @@ pub use toql_core::role_validator;
 pub use toql_core::cache;
 pub use toql_core::page;
 pub use toql_core::parameter_map;
+pub use toql_core::deserialize;
 
 
 pub use toql_core::log; // Reexport for derive

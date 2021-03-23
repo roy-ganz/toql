@@ -13,11 +13,10 @@ where
 
     fn index<'a>(
         descendents: &mut Descendents<'a>,
-        field: &str,
         rows: &[R],
         row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
     ) -> Result<(), E>  {
-        T::index(descendents, field, rows, row_offset, index)
+        T::index(descendents, rows, row_offset, index)
     }
 }

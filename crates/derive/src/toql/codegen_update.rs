@@ -285,6 +285,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
 
                   impl toql::tree::tree_update::TreeUpdate for &mut #struct_ident {
                    
+                    #[allow(unused_mut)]
                     fn update<'a>(&self, mut descendents: &mut  toql::query::field_path::Descendents<'a>, 
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>, 
                     exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>{

@@ -24,12 +24,16 @@ pub enum SqlBuilderError {
 
     /// An key cannot be set, because type is wrong or key is composite key
     KeyMismatch(String, String),
+    
+    /// A path was found for a selection that only exists in root, such as $all, $mut, $cnt
+    PathUnexpected(String)
 }
 
 impl fmt::Display for SqlBuilderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             SqlBuilderError::FieldMissing(ref s) => write!(f, "field `{}` is missing", s),
+            SqlBuilderError::PathUnexpected(ref s) => write!(f, "a path `{}` was found but no path is allowed", s),
             SqlBuilderError::SelectionMissing(ref s) => write!(f, "selection `{}` is missing", s),
             SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
             SqlBuilderError::JoinMissing(ref s) => write!(f, "join `{}` is missing", s),

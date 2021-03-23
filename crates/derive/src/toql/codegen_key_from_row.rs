@@ -58,12 +58,11 @@ impl<'a> CodegenKeyFromRow<'a> {
                 self.deserialize_key.push(quote!(
                     #rust_field_ident: {
                                     toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?
-                                            .ok_or(toql::error::ToqlError::DeserializeError(#error_field.to_string(), String::from("Deserialization stream is invalid: Expected selected field but got unselected.")))?
-                                            
+                                            .ok_or(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string()).into())?                    
                     }
                 ));
               //  self.forward_key_columns = self.forward_key_columns + 1;
-              self.forwards.push(quote!( <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )) )
+              self.forwards.push(quote!( <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )?) )
             }
             FieldKind::Join(ref join_attrs) => {
                 if !join_attrs.key {
@@ -73,7 +72,7 @@ impl<'a> CodegenKeyFromRow<'a> {
             self.join_types.insert(field.rust_base_type_ident.to_owned());
                 // Impl key from result row
                 self.forwards.push(quote!(
-                    <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )
+                    <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )?
                 ));
                /*  self.forward_join_key.push(quote!(
                     < #rust_type_ident > ::forward(&mut iter)
@@ -123,10 +122,10 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
                      #(#join_types)*
                     
                     {
-                            fn forward<'a, I>(mut iter: &mut I) -> usize 
+                            fn forward<'a, I>(mut iter: &mut I) -> std::result::Result<usize, E> 
                             where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select>{
                                 
-                               0 #(+ #forwards)* 
+                               Ok(0 #(+ #forwards)* )
                             }
                                     
                             #[allow(unused_variables, unused_mut)]

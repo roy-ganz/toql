@@ -28,7 +28,6 @@ pub struct BuildResult {
     pub(crate) join_expr: SqlExpr,
     pub(crate) where_expr: SqlExpr,
     pub(crate) order_expr: SqlExpr,
-    pub(crate) selected_placeholders: HashSet<u16>,
     pub(crate) column_counter: usize,
 }
 
@@ -49,7 +48,6 @@ impl BuildResult {
             from_expr: SqlExpr::new(),
             where_expr: SqlExpr::new(),
             order_expr: SqlExpr::new(),
-            selected_placeholders: HashSet::new(),
             column_counter: 0,
         }
     }
@@ -70,9 +68,7 @@ impl BuildResult {
     pub fn column_counter(&self) -> usize {
         self.column_counter
     }
-    pub fn selected_placeholders(&self) -> &HashSet<u16> {
-        &self.selected_placeholders
-    }
+   
     pub fn set_preselect(&mut self, preselect_expr:SqlExpr) {
         self.preselect_expr = preselect_expr;
     }
@@ -104,8 +100,7 @@ impl BuildResult {
         extra: &str,
     ) -> Result<Sql> {
         let resolver = Resolver::new()
-            .with_aux_params(aux_params)
-            .with_placeholders(&self.selected_placeholders);
+            .with_aux_params(aux_params);
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
         let preselect_sql = resolver.to_sql(&self.preselect_expr, alias_translator)?;
         let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
@@ -304,48 +299,6 @@ impl BuildResult {
         Ok(Sql(stmt, args))
     }
 
-    /// Returns simple SQL.
-    /*  pub fn query_stmt(
-        &self,
-        mut alias_translator: &mut AliasTranslator,
-        modifier: &str,
-        extra: &str,
-    ) -> Result<String> {
-        let mut s = String::from("SELECT ");
-        if self.distinct {
-            s.push_str("DISTINCT ");
-        }
-        if !modifier.is_empty() {
-            s.push_str(modifier);
-            s.push(' ');
-        }
-
-        let resolver = Resolver::new();
-        let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
-
-        s.push_str(&select_sql.0);
-        self.sql_body(&mut s, alias_translator);
-        if !extra.is_empty() {
-            s.push(' ');
-            s.push_str(extra);
-        }
-
-        Ok(s)
-    } */
-
-    /*  /// Returns SQL parameters for the WHERE and HAVING clauses in SQL.
-    pub fn query_params(&self) -> Vec<SqlArg> {
-
-        let n= self.select_expr.1.len() + self.join_expr.1.len() + self.where_expr.1.len() + self.order_expr.1.len();
-        let mut args = Vec::with_capacity(n);
-        args.extend_from_slice(&self.select_expr.1);
-        args.extend_from_slice(&self.join_expr.1);
-        args.extend_from_slice(&self.where_expr.1);
-        args.extend_from_slice(&self.order_expr.1);
-        args
-
-    } */
-
     pub fn selection_stream(&self) -> &SelectStream {
         &self.selection_stream
     }
@@ -353,60 +306,7 @@ impl BuildResult {
         &self.unmerged_home_paths
     }
 
-    pub fn resolve_placeholders(&mut self) {
-        Self::selection_from_token(
-            &self.selected_placeholders,
-            &mut self.selection_stream,
-            &self.select_expr,
-            &mut self.column_counter,
-        );
-    }
+   
 
-    fn selection_from_token(
-        selected_placeholders: &HashSet<u16>,
-        select_stream: &mut SelectStream,
-        expr: &SqlExpr,
-        column_counter: &mut usize,
-    ) {
-        use super::select_stream::Select;
-        use crate::sql_expr::SqlExprToken;
-
-        for token in expr.tokens() {
-            match token {
-                SqlExprToken::Placeholder(number, expr, sel) => {
-                    if selected_placeholders.contains(number) {
-                        select_stream.change(*sel, Select::Preselect);
-                        *column_counter += 1;
-                    }
-                    Self::selection_from_token(
-                        selected_placeholders,
-                        select_stream,
-                        expr,
-                        column_counter,
-                    );
-                }
-                _ => {}
-            }
-        }
-    }
-
-    /*  pub(crate) fn push_pending_parens(clause: &mut String, pending_parens: &u8) {
-        for _n in 0..*pending_parens {
-            clause.push_str("(");
-        }
-    }
-    pub(crate) fn push_concatenation(
-        clause: &mut String,
-        pending_concatenation: &Option<Concatenation>,
-    ) {
-        if let Some(c) = pending_concatenation {
-            match c {
-                Concatenation::And => clause.push_str(" AND "),
-                Concatenation::Or => clause.push_str(" OR "),
-            }
-        }
-    }
-    pub(crate) fn push_filter(clause: &mut String, filter: &str) {
-        clause.push_str(filter);
-    } */
+   
 }

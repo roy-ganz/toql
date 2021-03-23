@@ -417,6 +417,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                             -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
                                 <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
                             }
+                    #[allow(unused_mut)]
                      fn values<'a>(&self,
                                         mut descendents: &mut  toql::query::field_path::Descendents<'a>,
                                         roles: &std::collections::HashSet<String>,  
@@ -433,6 +434,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                             -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
                                 <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
                             }
+                    #[allow(unused_mut)]
                      fn values<'a>(&self,
                                         mut descendents: &mut  toql::query::field_path::Descendents<'a>,
                                         roles: &std::collections::HashSet<String>,  

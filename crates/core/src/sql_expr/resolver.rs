@@ -14,7 +14,7 @@ pub struct Resolver<'a> {
     other_alias: Option<&'a str>,
     arguments: Option<&'a [SqlArg]>,
     aux_params: Option<&'a ParameterMap<'a>>,
-    placeholders: Option<&'a HashSet<u16>>,
+   
     
     // alias_translator: Option<&'a AliasTranslator>
 }
@@ -26,7 +26,7 @@ impl<'a> Resolver<'a> {
             other_alias: None,
             arguments: None,
             aux_params: None,
-            placeholders: None,
+          
             // alias_translator: None
         }
     }
@@ -47,10 +47,7 @@ impl<'a> Resolver<'a> {
         self.arguments = Some(arguments);
         self
     }
-    pub fn with_placeholders(mut self, placeholders: &'a HashSet<u16>) -> Self {
-        self.placeholders = Some(placeholders);
-        self
-    }
+  
 
     pub fn replace_aux_params(sql_expr: SqlExpr, aux_params_exprs: &HashMap<String, SqlExpr>) -> SqlExpr {
         let mut tokens = Vec::new();
@@ -86,18 +83,6 @@ impl<'a> Resolver<'a> {
         let mut args: Vec<SqlArg> = Vec::new();
 
         for unresolved_token in &sql_expr.tokens {
-            if let SqlExprToken::Placeholder(number, expr, _) = unresolved_token {
-                if self
-                    .placeholders
-                    .map(|p| p.contains(number))
-                    .unwrap_or(false)
-                {
-                    let sql: Sql = self.to_sql(expr, alias_translator)?;
-                    stmt.push_str(&sql.0);
-                    args.extend(sql.1);
-                }
-            }
-
             let mut token = self.resolve_token(unresolved_token)?;
             Self::token_to_sql(token.to_mut(), alias_translator, &mut stmt, &mut args)?;
         }
@@ -200,9 +185,6 @@ impl<'a> Resolver<'a> {
             SqlExprToken::UnresolvedArg => return Err(ResolverError::UnresolvedArgument),
             SqlExprToken::AuxParam(name) => {
                 return Err(ResolverError::UnresolvedAuxParameter(name.to_owned()))
-            }
-
-            SqlExprToken::Placeholder(_number, _expr, _selection) => { /* Skip placeholder expression*/
             }
 
             SqlExprToken::Literal(lit) => stmt.push_str(&lit),

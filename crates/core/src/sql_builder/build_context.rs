@@ -3,15 +3,9 @@ use std::collections::HashSet;
 
 pub(crate) struct BuildContext {
     pub(crate) query_home_path: String,
-
     pub(crate) local_joined_paths: HashSet<String>,
     pub(crate) local_selected_paths: HashSet<String>,
     pub(crate) local_selected_fields: HashSet<String>,
-  //  pub(crate) all_fields_selected: bool,
-
-    pub(crate) current_placeholder: u16,
-    //  pub(crate) select_expr: SqlExpr,
-    // pub(crate) selected_placeholders: HashSet<u16>,
 }
 
 impl BuildContext {
@@ -21,10 +15,6 @@ impl BuildContext {
             local_joined_paths: HashSet::new(),
             local_selected_paths: HashSet::new(),
             local_selected_fields: HashSet::new(),
-          //  all_fields_selected: true,
-            current_placeholder: 0,
-            //  select_expr: SqlExpr::new(),
-            // selected_placeholders: HashSet::new(),
         }
     }
 

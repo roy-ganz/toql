@@ -41,7 +41,6 @@ pub mod wildcard_scope;
 pub(crate) mod build_context;
 pub(crate) mod build_result;
 pub(crate) mod path_tree;
-//pub(crate) mod sql_with_placeholders;
 
 use super::sql_builder::build_context::BuildContext;
 use super::sql_builder::build_result::BuildResult;
@@ -256,7 +255,6 @@ impl<'a> SqlBuilder<'a> {
         self.build_select_clause(&query, &mut context, &mut result)?;
         self.build_join_clause(&mut context, &mut result)?;
 
-        result.resolve_placeholders();
         Ok(result)
     }
 
@@ -299,14 +297,16 @@ impl<'a> SqlBuilder<'a> {
             {
                 if s.ends_with("_*") {
                     //selected_paths.remove(s.trim_end_matches("_*"));
-                      build_context.local_selected_paths.remove(s.trim_end_matches("_*"));
+                    build_context
+                        .local_selected_paths
+                        .remove(s.trim_end_matches("_*"));
                 }
             }
-           // all_fields = false;
+            // all_fields = false;
         }
 
-       // build_context.local_selected_paths = selected_paths;
-      //  build_context.all_fields_selected = all_fields;
+        // build_context.local_selected_paths = selected_paths;
+        //  build_context.all_fields_selected = all_fields;
 
         self.build_join_clause(&mut build_context, &mut result)?;
 
@@ -321,7 +321,7 @@ impl<'a> SqlBuilder<'a> {
 
         if !local_path.is_empty() {
             for p in local_path.children() {
-             //   println!("Getting join for name {}", p.as_str());
+                //   println!("Getting join for name {}", p.as_str());
                 if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
                         .sql_mapper_registry
@@ -448,7 +448,9 @@ impl<'a> SqlBuilder<'a> {
             let aux_params = ParameterMap::new(&p);
 
             let canonical_self_alias = self.canonical_alias(&local_path)?.to_string();
-            let canonical_other_alias = self.canonical_alias(&FieldPath::from(local_path_with_join))?.to_string();
+            let canonical_other_alias = self
+                .canonical_alias(&FieldPath::from(local_path_with_join))?
+                .to_string();
             let resolver = Resolver::new()
                 .with_self_alias(&canonical_self_alias)
                 .with_other_alias(&canonical_other_alias);
@@ -582,15 +584,6 @@ impl<'a> SqlBuilder<'a> {
                                 let expr = resolver.resolve(&expr)?;
                                 result.where_expr.extend(expr);
                                 result.where_expr.push_literal(" AND ");
-
-                                /*  let (_, query_path) = FieldPath::split_basename(&field.name);
-                                let local_path =
-                                   query_path.localize_path(&build_context.query_home_path); */
-                                /*  if !local_path.is_empty() {
-                                    build_context
-                                        .local_joined_paths
-                                        .insert(local_path.as_str().to_string());
-                                } */
                             }
                         }
                         MapperOrMerge::Merge(_merge_path) => {
@@ -645,16 +638,9 @@ impl<'a> SqlBuilder<'a> {
                             )? {
                                 result.where_expr.extend(expr);
                                 result.where_expr.push_literal(" AND ");
-
-                                /*  if !query_path.is_empty() {
-                                    build_context
-                                        .local_joined_paths
-                                        .insert(query_path.as_str().to_string());
-                                } */
                             }
                         }
                         MapperOrMerge::Merge(_merge_path) => {
-                            // result.unmerged_paths.insert(merge_path);
                         }
                     }
                 }
@@ -683,59 +669,22 @@ impl<'a> SqlBuilder<'a> {
         build_context: &mut BuildContext,
         result: &mut BuildResult,
     ) -> Result<()> {
-       // let /*local_fields, local_paths, all_fields,*/ unmerged_home_paths =
-        result.unmerged_home_paths =  self.selection_from_query(query, build_context)?;
-/* 
-        build_context.local_selected_fields = local_fields;
-        build_context.local_selected_paths = local_paths;
-       // build_context.all_fields_selected = all_fields;*/
-       // result.unmerged_home_paths = unmerged_home_paths; 
-        build_context.update_joins_from_selections();
-
-        // Add joined path if all fields are selected
         
-
-        /* for token in &query.tokens {
-            let query_path: Option<FieldPath> = match token {
-                QueryToken::Field(field) => {
-                    let (_, p) = FieldPath::split_basename(&field.name);
-                    Some(p)
-                }
-
-                QueryToken::Wildcard(wildcard) => Some(FieldPath::from(&wildcard.path)),
-                QueryToken::Predicate(predicate) => {
-                    let (_, p) = FieldPath::split_basename(&predicate.name);
-                    Some(p)
-                }
-                QueryToken::Selection(selection) => {
-                    let (_, p) = FieldPath::split_basename(&selection.name);
-                    Some(p)
-                }
-                _ => None,
-            };
-            if let Some(qp) = query_path {
-                if !Self::home_contains(&build_context.query_home_path, &qp) {
-                    let lqp = qp.localize_path(&build_context.query_home_path);
-                    if let Some(local_home_path) = self.next_merge_path(&lqp)? {
-                        let other_home_path = FieldPath::from(&build_context.query_home_path)
-                            .append(&local_home_path);
-                        result
-                            .unmerged_home_paths
-                            .insert(other_home_path.to_string());
-                    }
-                }
-            }
-        } */
+        result.unmerged_home_paths = self.selection_from_query(query, build_context)?;
+        build_context.update_joins_from_selections();
 
         Ok(())
     }
-    // Add recusivly all joins from a mapper to selected_paths 
+    // Add recusivly all joins from a mapper to selected_paths
     fn add_all_joins_as_selected_paths(
         &self,
         mapper_name: &String,
         local_path: String,
         build_context: &mut BuildContext,
+         unmerged_home_paths: &mut HashSet<String>
     ) -> Result<()> {
+        
+
         let mapper = self
             .sql_mapper_registry
             .get(&mapper_name)
@@ -743,14 +692,32 @@ impl<'a> SqlBuilder<'a> {
         for jm in &mapper.joins {
             let selected_path = FieldPath::from(&local_path).append(jm.0);
             // Resolve, if join is not yet resolved
-            // Otherwise skip to avoid circular
-            if !build_context.local_selected_paths.contains(selected_path.as_str()) {
-            build_context
+            // Otherwise skip to avoid circular dependency
+            if !build_context
                 .local_selected_paths
-                .insert(selected_path.to_string());
-                self.add_all_joins_as_selected_paths(&jm.1.joined_mapper, selected_path.to_string(), build_context)?;
+                .contains(selected_path.as_str())
+            {
+                build_context
+                    .local_selected_paths
+                    .insert(selected_path.to_string());
+                self.add_all_joins_as_selected_paths(
+                    &jm.1.joined_mapper,
+                    selected_path.to_string(),
+                    build_context,
+                    unmerged_home_paths
+                )?;
             }
-       }
+        }
+        for jm in &mapper.merges {
+            let selected_path = FieldPath::from(&local_path).append(jm.0);
+            // Resolve, if merge is not yet resolved
+            // Otherwise skip to avoid circular dependency
+            if !unmerged_home_paths
+                .contains(selected_path.as_str())
+            {
+                unmerged_home_paths.insert(selected_path.to_string());
+            }
+        }
         Ok(())
     }
     fn build_select_clause<M>(
@@ -786,17 +753,9 @@ impl<'a> SqlBuilder<'a> {
 
         let canonical_alias = self.canonical_alias(local_path)?;
 
-        let mut any_selected = false;
-
         for deserialization_type in &mapper.deserialize_order {
             match deserialization_type {
                 DeserializeType::Field(field_name) => {
-                    /* let local_path = match local_path.localize_path(&build_context.query_home_path)
-                    {
-                        Some(l) => l,
-                        None => continue,
-                    }; */
-                    
 
                     let path_selection = build_context
                         .local_selected_paths
@@ -857,8 +816,10 @@ impl<'a> SqlBuilder<'a> {
                                 result.select_expr.extend(expr);
                                 result.select_expr.push_literal(", ");
                                 result.selection_stream.push(Select::Query);
-                                any_selected = true;
                                 result.column_counter += 1;
+
+                                
+
                             } else {
                                 result.selection_stream.push(Select::None);
                             }
@@ -867,9 +828,6 @@ impl<'a> SqlBuilder<'a> {
                         }
                     }
                     // Field may be preselected (implicit selection)
-                    // Add those fields with placeholder number into expression.
-                    // If any other field is explicitly selected, select also placeholder number to include
-                    // expression in final Sql.
                     else if field_info.options.preselect {
                         if !role_valid {
                             let role_string = if let Some(e) = &field_info.options.load_role_expr {
@@ -891,7 +849,7 @@ impl<'a> SqlBuilder<'a> {
                             let mut expr = resolver.resolve(&expr)?;
 
                             expr.push_literal(", ");
-                            // Use result as placeholder
+
                             if local_path.is_empty()
                                 || build_context
                                     .local_joined_paths
@@ -900,14 +858,6 @@ impl<'a> SqlBuilder<'a> {
                                 result.select_expr.extend(expr);
                                 result.selection_stream.push(Select::Preselect);
                             } else {
-                                /*  result.select_expr.push_placeholder(
-                                    ph_index,
-                                    expr,
-                                    result.selection_stream.len(),
-                                ); */
-                                // Selection stream and column counter will be updated at the end
-                                // when the placeholders are resolved
-                                // Assume by default placeholder is not selected
                                 result.selection_stream.push(Select::None);
                             }
                         } else {
@@ -929,32 +879,16 @@ impl<'a> SqlBuilder<'a> {
                         );
                     };
 
-                    let joined_alias = FieldPath::from(canonical_alias.as_str()).append(join_name);
-
-                    let resolver = Resolver::new()
-                        .with_self_alias(&canonical_alias)
-                        .with_other_alias(joined_alias.as_str());
-
+                  
                     let local_join_path = local_path.append(join_name);
                     if build_context
                         .local_joined_paths
                         .contains(&local_join_path.to_string())
-                       /* || build_context.all_fields_selected*/
+                    
                     {
                         result.selection_stream.push(Select::Query); // Query selected join
                                                                      // join path is the same as to query path
-                                                                     /*  let home_query_path = FieldPath::default();
-                                                                     let next_query_path = local_path.or(&home_query_path).append(join_name); */
-                        any_selected = true;
-                        /*   build_context
-                        .local_joined_paths
-                        .insert(local_join_path.to_string()); */
-
-                        if let Some(d) = &join_info.options.discriminator {
-                            result.select_expr.extend(resolver.resolve(d)?);
-                            result.select_expr.extend(SqlExpr::literal(", "));
-                            result.column_counter += 1;
-                        }
+                       
 
                         dbg!(&local_join_path);
 
@@ -967,30 +901,10 @@ impl<'a> SqlBuilder<'a> {
                             ph_index + 1,
                         )?;
                     } else if join_info.options.preselect {
-                        /*  let home_query_path = FieldPath::default();
-                        let path = join_name.to_mixed_case();
-                        let next_query_path = local_path.or(&home_query_path).append(path.as_str()); */
-
+                       
                         dbg!(&local_join_path);
-                        any_selected = true;
-                        /*   build_context
-                        .local_joined_paths
-                        .insert(local_join_path.to_string()); */
-                        result.selection_stream.push(Select::None); // Preselected join // Changed from Select::Preselect
-
-                        // Selectable left joins - Option<Option<T> - have a discrimiator expression to distinguish
-                        // between no selection - None -  and  selected NULL join - Some(None).
-                        if let Some(d) = &join_info.options.discriminator {
-                            let mut e = resolver.resolve(d)?;
-                            e.extend(SqlExpr::literal(", "));
-
-                            // Each placeholder increments the column countrer
-                            result.select_expr.push_placeholder(
-                                ph_index + 1,
-                                e,
-                                result.selection_stream.len() - 1, // No extra selection stream data for discriminator, reuse previous (Select::Preselect)
-                            );
-                        }
+                       
+                        result.selection_stream.push(Select::None); 
 
                         self.resolve_select(
                             &local_join_path,
@@ -1025,10 +939,6 @@ impl<'a> SqlBuilder<'a> {
             }
         }
 
-        if any_selected {
-            // TODO Maybe evaluate placeholders here
-            result.selected_placeholders.insert(ph_index);
-        }
         Ok(())
     }
 
@@ -1061,8 +971,11 @@ impl<'a> SqlBuilder<'a> {
                 Some(f) => f,
                 None => return Ok(()),
             };
-            build_context.local_selected_fields.insert(local_field.to_string());
+            build_context
+                .local_selected_fields
+                .insert(local_field.to_string());
         }
+
         /*  } else {
             let query_field = FieldPath::from(&query_field);
             let local_field = match query_field.localize_path(&build_context.query_home_path) {
@@ -1078,10 +991,10 @@ impl<'a> SqlBuilder<'a> {
         &mut self,
         query: &Query<M>,
         mut build_context: &mut BuildContext,
-    ) -> Result< /*(HashSet<String>, HashSet<String>, /*bool,*/ */ HashSet<String>> {
-       // let mut local_selected_fields = HashSet::new();
-       // let mut local_selected_paths = HashSet::new();
-       // let mut selected_all_fields = false;
+    ) -> Result</*(HashSet<String>, HashSet<String>, /*bool,*/ */ HashSet<String>> {
+        // let mut local_selected_fields = HashSet::new();
+        // let mut local_selected_paths = HashSet::new();
+        // let mut selected_all_fields = false;
         let mut unmerged_home_paths = HashSet::new();
 
         for token in &query.tokens {
@@ -1090,9 +1003,11 @@ impl<'a> SqlBuilder<'a> {
                     self.add_field(
                         &field.name,
                         &mut build_context,
-                        &mut unmerged_home_paths
-                        /*&mut local_selected_fields, */
+                        &mut unmerged_home_paths, /*&mut local_selected_fields, */
                     )?;
+                    if let Some(o) = field.order {
+                        build_context
+                    }
                 }
                 QueryToken::Wildcard(wildcard) => {
                     let query_path = FieldPath::from(&wildcard.path);
@@ -1110,7 +1025,9 @@ impl<'a> SqlBuilder<'a> {
                                     .to_string(),
                             );
                         } else {
-                            build_context.local_selected_paths.insert(local_path.to_string());
+                            build_context
+                                .local_selected_paths
+                                .insert(local_path.to_string());
                         }
                         // }
                     }
@@ -1120,16 +1037,47 @@ impl<'a> SqlBuilder<'a> {
                 QueryToken::Selection(selection) => {
                     let (selection_name, query_path) = FieldPath::split_basename(&selection.name);
 
-                    if let Some(local_path) =
+                   /*  if let Some(local_path) =
                         query_path.localize_path(&build_context.query_home_path)
-                    {
+                    { */
                         //  if !local_selection.is_empty() {
                         match selection_name {
                             "all" => {
-                                let mapper = self.mapper_for_path(&local_path)?;
-                                build_context.local_selected_paths.insert("".to_string());
-                                self.add_all_joins_as_selected_paths(&mapper.table_name, String::from(""), &mut build_context)?;
-                                
+                                //let mapper = self.mapper_for_path(&local_path)?;
+                                // Select all fields down the path
+                                 if let Some(local_path) =
+                                    query_path.localize_path(&build_context.query_home_path)
+                                {
+                                    // if !local_path.is_empty() {
+                                    // local_selected_paths.insert(local_path.to_string());
+                                    if let Some(merge_path) = self.next_merge_path(&local_path)? {
+                                        // insert full query path
+                                        unmerged_home_paths.insert(
+                                            FieldPath::from(&build_context.query_home_path)
+                                                .append(&merge_path)
+                                                .to_string(),
+                                        );
+                                    } else {
+                                        let mapper = self.mapper_for_path(&local_path)?;
+                                        build_context.local_selected_paths.insert(local_path.to_string());
+                                        self.add_all_joins_as_selected_paths(
+                                            &mapper.table_name,
+                                            String::from(""),
+                                            &mut build_context,
+                                            &mut unmerged_home_paths
+                                        )?;
+                                    }
+                                }
+                               /*  if  build_context.query_home_path.as_str().starts_with(&query_path.as_str()) {
+                                    let mapper = self.mapper_for_path(&FieldPath::default())?;
+                                    build_context.local_selected_paths.insert("".to_string());
+                                    self.add_all_joins_as_selected_paths(
+                                            &mapper.table_name,
+                                            String::from(""),
+                                            &mut build_context,
+                                            &mut unmerged_home_paths
+                                        )?;
+                                } */
                             }
                             "mut" => {
                                 let m = self.root_mapper()?;
@@ -1147,14 +1095,7 @@ impl<'a> SqlBuilder<'a> {
                                                 &query_field_name,
                                                 &mut build_context,
                                                 &mut unmerged_home_paths,
-                                               // &mut local_selected_fields,
                                             )?;
-                                            /* let query_field = FieldPath::from(&query_field_name);
-                                             let local_field = query_field
-                                                 .localize_path(&build_context.query_home_path);
-
-                                            // local_selected_fields.insert(local_field.to_string());
-                                            */
                                         }
                                     }
                                 }
@@ -1175,14 +1116,7 @@ impl<'a> SqlBuilder<'a> {
                                                 &query_field_name,
                                                 &mut build_context,
                                                 &mut unmerged_home_paths,
-                                              //  &mut local_selected_fields,
                                             )?;
-
-                                            /* let query_field = FieldPath::from(&query_field_name);
-                                            let local_field = query_field
-                                                .localize_path(&build_context.query_home_path);
-
-                                            local_selected_fields.insert(local_field.to_string()); */
                                         }
                                     }
                                 }
@@ -1209,9 +1143,10 @@ impl<'a> SqlBuilder<'a> {
                                                         .append(&merge_path)
                                                         .to_string(),
                                                 );
-                                            //unmerged_home_paths.insert(merge_path.to_string());
                                             } else {
-                                                build_context.local_selected_paths.insert(local_path.to_string());
+                                                build_context
+                                                    .local_selected_paths
+                                                    .insert(local_path.to_string());
                                             }
                                         }
                                     } else {
@@ -1219,16 +1154,10 @@ impl<'a> SqlBuilder<'a> {
                                             &s,
                                             &mut build_context,
                                             &mut unmerged_home_paths,
-                                          //  &mut local_selected_fields,
                                         )?;
-                                        /*  let query_field = FieldPath::from(s);
-                                        let local_field = query_field
-                                            .localize_path(&build_context.query_home_path);
-
-                                        local_selected_fields.insert(local_field.to_string()); */
                                     }
                                 }
-                            }
+                           // }
                         }
                     }
                 }
@@ -1237,9 +1166,6 @@ impl<'a> SqlBuilder<'a> {
         }
 
         Ok(
-          /*  local_selected_fields,
-            local_selected_paths, */
-         /*   selected_all_fields,*/
             unmerged_home_paths,
         )
     }

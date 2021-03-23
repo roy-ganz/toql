@@ -9,7 +9,7 @@ use crate::{error::ToqlError, sql_builder::select_stream::Select};
  impl<T, R, E> FromRow <R, E> for Join<T> 
  where T:Keyed + FromRow<R, E>, E: std::convert::From<ToqlError>
  {
-     fn  forward<'a, I>(iter: &mut I) -> usize 
+     fn  forward<'a, I>(iter: &mut I) -> Result<usize, E> 
        where
         I: Iterator<Item = &'a Select>,Self: std::marker::Sized
      {

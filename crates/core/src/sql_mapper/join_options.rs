@@ -12,7 +12,7 @@ pub struct JoinOptions {
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
-    pub(crate) discriminator: Option<SqlExpr>, // Optional discriminator field to distimguish unselected left join from selected but NULL join
+   
 }
 
 impl JoinOptions {
@@ -24,19 +24,13 @@ impl JoinOptions {
             load_role_expr: None,
             aux_params: HashMap::new(),
             join_handler: None,
-            discriminator: None,
+           
         }
     }
 
     /// Field is selected, regardless of the query.
     pub fn preselect(mut self, preselect: bool) -> Self {
         self.preselect = preselect;
-        self
-    }
-
-    /// use this discrminator to check if the (left) join is NULL
-    pub fn discriminator(mut self, discriminator: SqlExpr) -> Self {
-        self.discriminator = Some(discriminator);
         self
     }
 
