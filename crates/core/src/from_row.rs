@@ -7,12 +7,22 @@ use std::result::Result;
 pub trait FromRow<R, E> 
 {
     
+    /// Returns the number of selects
+    /// This is needed to advance the iterator and
+    /// the row index. 
+    /// The Deserializer needs this information to skip left joins 
+    /// that have fields selected but are null. 
+    /// Those left joins cause select information in the select stream
+    /// that must be skipped.
+    fn forward<'a, I>( iter: &mut I) -> usize
+     where
+        I: Iterator<Item = &'a Select>,
+        Self: std::marker::Sized;
     
     /// Read row values into struct, starting from index.
     /// Advances iter and index
-    /// Returns None, if value is not selected. 
+    /// Returns None for value unselected values or joined entities that have null keys. 
     /// Return Error, if value is selected, but cannot be converted.
-    
     
     fn from_row<'a, I>(
         row: &R,

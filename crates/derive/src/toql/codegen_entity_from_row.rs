@@ -19,6 +19,7 @@ pub(crate) struct CodegenEntityFromRow<'a> {
     deserialize_fields: Vec<TokenStream>,
     path_loaders: Vec<TokenStream>,
     ignored_paths: Vec<TokenStream>,
+    forwards: Vec<TokenStream>,
 
     
     regular_fields: usize, 
@@ -38,6 +39,7 @@ impl<'a> CodegenEntityFromRow<'a> {
             deserialize_fields: Vec::new(),
             path_loaders: Vec::new(),
             ignored_paths: Vec::new(),
+            forwards: Vec::new(),
             regular_fields: 0,
             merge_fields: Vec::new(),
             key_field_names: Vec::new(),
@@ -78,7 +80,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                         self.impl_types.insert(field.rust_base_type_ident.to_owned());
                     }
                     
-                   
+                   self.forwards.push(quote!(  <#rust_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )));
 
 
                     self.regular_fields += 1;
@@ -100,14 +102,28 @@ impl<'a> CodegenEntityFromRow<'a> {
                         ));
                         }
                         _ => {
-                             self.deserialize_fields.push(quote!(
-                                #rust_field_ident : {
-                                    toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?
-                                            .ok_or(toql::error::ToqlError::DeserializeError(#error_field.to_string(), 
-                                                String::from("Deserialization stream is invalid: Expected selected field but got unselected.")))?
-                                           
-                                }
-                        ));
+                             self.deserialize_fields.push(
+                                 if regular_attrs.key {
+                                    quote!(
+                                        #rust_field_ident : {
+                                            match toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )? {
+                                                Some(s) => s,
+                                                None => return Ok(None)
+                                            }
+                                        }
+                                    )
+
+                                 } else {
+                                 quote!(
+                                        #rust_field_ident : {
+                                            toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?
+                                                    .ok_or(toql::error::ToqlError::DeserializeError(#error_field.to_string(), 
+                                                        String::from("Deserialization stream is invalid: Expected selected field but got unselected.")))?
+                                                
+                                        }
+                                 )
+                                 }
+                                );
                              
                         }
 
@@ -191,7 +207,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                         quote!(
                                     #rust_field_ident : {
                                         
-                                          if iter.next().unwrap_or(&Select::None) != &Select::None {
+                                          if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) != &toql::sql_builder::select_stream::Select::None {
                                                 *i += 1;  // Step over discriminator field
                                                 Some(< #rust_type_ident > :: from_row (  row , i, iter )?)
                                                  
@@ -204,7 +220,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                         1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
                                 quote!(
                                     #rust_field_ident : {
-                                        if iter.next().unwrap_or(&Select::None) == &Select::None {
+                                        if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) == &toql::sql_builder::select_stream::Select::None {
                                             return Err(toql::error::ToqlError::DeserializeError(#error_field.to_string(),
                                              String::from("Deserialization stream is invalid: Expected selected field but got unselected.")).into());
                                         }
@@ -215,7 +231,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                             1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
                                         quote!(
                                         #rust_field_ident : {
-                                         if iter.next().unwrap_or(&Select::None) != &Select::None {
+                                         if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) != &toql::sql_builder::select_stream::Select::None {
                                             < #rust_type_ident > :: from_row ( row , i, iter )?
                                          } else {
                                              None
@@ -224,19 +240,42 @@ impl<'a> CodegenEntityFromRow<'a> {
                                         }
                                     ),
                         _ =>   //    T                                 -> Selected Join -> InnerJoin
-                        quote!(
-                            #rust_field_ident : { 
-                                let err= toql::error::ToqlError::DeserializeError(#error_field.to_string(), 
-                                        String::from("Deserialization stream is invalid: Expected selected field but got unselected."));
-                                         if iter.next().unwrap_or(&Select::None) != &Select::None {
-                                                < #rust_type_ident > :: from_row ( row , i, iter )?.ok_or(err)?
-                                         } else {
-                                            return Err(err.into());
-                                         }
-                                }
-                        )
+                        if join_attrs.key {
+                                    quote!(
+                                        #rust_field_ident : {
+                                            match toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )? {
+                                                Some(s) => s,
+                                                None => return Ok(None)
+                                            }
+                                        }
+                                    )
+
+                                 } else {
+                                    quote!(
+                                        #rust_field_ident : { 
+                                            let err= toql::error::ToqlError::DeserializeError(#error_field.to_string(), 
+                                                    String::from("Deserialization stream is invalid: Expected selected field but got unselected."));
+                                                    if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) != &toql::sql_builder::select_stream::Select::None {
+                                                            < #rust_type_ident > :: from_row ( row , i, iter )?.ok_or(err)?
+                                                    } else {
+                                                        return Err(err.into());
+                                                    }
+                                            }
+                                    )
+                                 }
                     }
                 );
+                    // Forward : Evaluate left joins always, inner joins only if selected
+                    self.forwards.push(
+                        quote!{
+                            if let Some(s) = iter.next() {
+                                if s != &toql::sql_builder::select_stream::Select::None {
+                                     < #rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward (  &mut iter )
+                                } else {0}
+                            } else {0}
+                        
+                        });
+                       
 
                     if join_attrs.key {
                         self.key_field_names.push(rust_field_name.to_string());
@@ -527,6 +566,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = &self.rust_struct.rust_struct_ident;
     
+        let forwards = &self.forwards;
 
         let deserialize_fields = &self.deserialize_fields;
 
@@ -549,6 +589,11 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
               #(#impl_opt_types)*
             {
  
+            fn forward<'a, I>( mut iter: &mut I) -> usize
+             where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
+              
+                0 #(+ #forwards)*
+            }
            
             #[allow(unused_variables, unused_mut)]
             fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)

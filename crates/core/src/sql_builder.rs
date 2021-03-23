@@ -796,6 +796,7 @@ impl<'a> SqlBuilder<'a> {
                         Some(l) => l,
                         None => continue,
                     }; */
+                    
 
                     let path_selection = build_context
                         .local_selected_paths
@@ -1126,6 +1127,7 @@ impl<'a> SqlBuilder<'a> {
                         match selection_name {
                             "all" => {
                                 let mapper = self.mapper_for_path(&local_path)?;
+                                build_context.local_selected_paths.insert("".to_string());
                                 self.add_all_joins_as_selected_paths(&mapper.table_name, String::from(""), &mut build_context)?;
                                 
                             }

@@ -6,9 +6,10 @@ use std::collections::HashSet;
 pub(crate) struct CodegenKeyFromRow<'a> {
     rust_struct: &'a crate::sane::Struct,
 
-    forward_key_columns: usize,
+   // forward_key_columns: usize,
     deserialize_key: Vec<TokenStream>,
-    forward_join_key: Vec<TokenStream>,
+   // forward_join_key: Vec<TokenStream>,
+    forwards: Vec<TokenStream>,
     regular_types: HashSet<syn::Ident>,
     join_types: HashSet<syn::Ident>,
 }
@@ -17,9 +18,10 @@ impl<'a> CodegenKeyFromRow<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenKeyFromRow {
         CodegenKeyFromRow {
             rust_struct: &toql,
-            forward_key_columns: 0,
+           // forward_key_columns: 0,
             deserialize_key: Vec::new(),
-            forward_join_key: Vec::new(),
+            forwards: Vec::new(),
+          //  forward_join_key: Vec::new(),
             regular_types: HashSet::new(),
             join_types: HashSet::new(),
         }
@@ -60,7 +62,8 @@ impl<'a> CodegenKeyFromRow<'a> {
                                             
                     }
                 ));
-                self.forward_key_columns = self.forward_key_columns + 1;
+              //  self.forward_key_columns = self.forward_key_columns + 1;
+              self.forwards.push(quote!( <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )) )
             }
             FieldKind::Join(ref join_attrs) => {
                 if !join_attrs.key {
@@ -69,9 +72,12 @@ impl<'a> CodegenKeyFromRow<'a> {
 
             self.join_types.insert(field.rust_base_type_ident.to_owned());
                 // Impl key from result row
-                self.forward_join_key.push(quote!(
-                   *i = < #rust_type_ident > ::skip(*i);
+                self.forwards.push(quote!(
+                    <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )
                 ));
+               /*  self.forward_join_key.push(quote!(
+                    < #rust_type_ident > ::forward(&mut iter)
+                )); */
 
               
                 self.deserialize_key.push(quote!(
@@ -105,6 +111,9 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
         let regular_types_ref = regular_types.clone();
         let join_types_ref = join_types.clone();
 
+       /*  let forward_key_columns = &self.forward_key_columns;
+        let forward_join_key = &self.forward_join_key; */
+         let forwards = &self.forwards;
        
         let key = quote! {
                 
@@ -114,6 +123,11 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
                      #(#join_types)*
                     
                     {
+                            fn forward<'a, I>(mut iter: &mut I) -> usize 
+                            where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select>{
+                                
+                               0 #(+ #forwards)* 
+                            }
                                     
                             #[allow(unused_variables, unused_mut)]
                             fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
