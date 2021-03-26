@@ -20,7 +20,7 @@ macro_rules! from_float {
                 fn from(t: &Option<$type>) -> Self {
                     match t {
                         Some(v) =>  SqlArg::F64(v.to_owned().into()),
-                        None => SqlArg::Null()
+                        None => SqlArg::Null
                     }
 
                 }
@@ -48,7 +48,7 @@ macro_rules! from_unsigned {
                 fn from(t: &Option<$type>) -> Self {
                     match t {
                         Some(v) =>  SqlArg::U64(v.to_owned().into()),
-                        None => SqlArg::Null()
+                        None => SqlArg::Null
                     }
 
                 }
@@ -74,7 +74,7 @@ macro_rules! from_signed {
                 fn from(t: &Option<$type>) -> Self {
                     match t {
                         Some(v) =>  SqlArg::I64(v.to_owned().into()),
-                        None => SqlArg::Null()
+                        None => SqlArg::Null
                     }
 
                 }
@@ -99,7 +99,7 @@ macro_rules! from_string {
                 fn from(t: &Option<$type>) -> Self {
                     match t {
                         Some(v) =>  SqlArg::Str(v.to_string()),
-                        None => SqlArg::Null()
+                        None => SqlArg::Null
                     }
 
                 }
@@ -127,7 +127,7 @@ impl From<&Option<bool>> for SqlArg {
     fn from(t: &Option<bool>) -> Self {
         match t {
             Some(v) => SqlArg::Bool(v.to_owned()),
-            None => SqlArg::Null(),
+            None => SqlArg::Null,
         }
     }
 }
@@ -157,7 +157,7 @@ where
     fn from(t: Option<T>) -> Self {
         match t {
             Some(t) => t.into(),
-            None => SqlArg::Null(),
+            None => SqlArg::Null,
         }
     }
 }

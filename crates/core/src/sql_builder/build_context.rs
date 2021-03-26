@@ -1,11 +1,12 @@
-use crate::{query::field_path::FieldPath, sql_expr::SqlExpr};
-use std::collections::HashSet;
+use crate::{query::{field_order::FieldOrder, field_path::FieldPath}, sql_expr::SqlExpr};
+use std::collections::{HashMap, HashSet};
 
 pub(crate) struct BuildContext {
     pub(crate) query_home_path: String,
     pub(crate) local_joined_paths: HashSet<String>,
     pub(crate) local_selected_paths: HashSet<String>,
     pub(crate) local_selected_fields: HashSet<String>,
+     pub(crate) ordering: HashMap<u8, Vec<(FieldOrder, String)>>,
 }
 
 impl BuildContext {
@@ -15,6 +16,7 @@ impl BuildContext {
             local_joined_paths: HashSet::new(),
             local_selected_paths: HashSet::new(),
             local_selected_fields: HashSet::new(),
+            ordering: HashMap::new()
         }
     }
 

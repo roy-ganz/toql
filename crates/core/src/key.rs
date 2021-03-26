@@ -64,7 +64,7 @@ pub trait Key {
             expr.push_literal(".");
             expr.push_literal(c);
             expr.push_literal(" = ".to_string());
-            expr.push_arg(params.next().unwrap_or(SqlArg::Null()));
+            expr.push_arg(params.next().unwrap_or(SqlArg::Null));
         }
         expr
     }

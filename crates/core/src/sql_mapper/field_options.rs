@@ -7,12 +7,13 @@ pub struct FieldOptions {
     pub(crate) preselect: bool, // Always select this field, regardless of query fields
     pub(crate) count_filter: bool, // Filter field on count query
     pub(crate) count_select: bool, // Select field on count query
-    pub(crate) mut_select: bool, // Select field on mut select
+    pub(crate) skip_mut: bool, // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
-    pub(crate) query_select: bool, // Select field for query builder
+    pub(crate) skip_load: bool, // Select field for query builder
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
     pub(crate) on_params: Vec<String>, // Identity params for on clauses
+    pub(crate) key: bool,   // Field is part of key
 }
 
 impl FieldOptions {
@@ -22,12 +23,13 @@ impl FieldOptions {
             preselect: false,
             count_filter: false,
             count_select: false,
-            mut_select: false,
+            skip_mut: false,
             skip_wildcard: false,
-            query_select: true,
+            skip_load: false,
             load_role_expr: None,
             aux_params: HashMap::new(),
             on_params: Vec::new(),
+            key: false
         }
     }
 
@@ -36,6 +38,14 @@ impl FieldOptions {
         self.preselect = preselect;
         self
     }
+
+    /// Field is part of key.
+    /// It cannot be update and is always preselected
+    pub fn key(mut self, key: bool) -> Self {
+        self.key = key;
+        self
+    }
+
     /// Any filter on the field is considered when creating a count query.
     /// Typically applied to fields that represent permissions and foreign keys.
     /// Assumme a user wants to see all books. You will restrict the user query
@@ -52,13 +62,13 @@ impl FieldOptions {
         self
     }
     /// Field is used for the mut select query.
-    pub fn mut_select(mut self, mut_select: bool) -> Self {
-        self.mut_select = mut_select;
+    pub fn skip_mut(mut self, skip: bool) -> Self {
+        self.skip_mut = skip;
         self
     }
     /// Field is used for the normal query.
-    pub fn query_select(mut self, query_select: bool) -> Self {
-        self.query_select = query_select;
+    pub fn skip_load(mut self, skip: bool) -> Self {
+        self.skip_load = skip;
         self
     }
     /// Field is ignored by the wildcard.

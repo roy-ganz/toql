@@ -179,11 +179,11 @@ impl<'a> CodegenEntityFromRow<'a> {
                         quote!(
                                     #rust_field_ident : {
                                         
-                                          if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) != &toql::sql_builder::select_stream::Select::None {
-                                                
-                                                Some(< #rust_type_ident > :: from_row (  row , i, iter )?)
-                                                 
-                                             
+                                          if iter.next().ok_or(toql::error::ToqlError::DeserializeError(
+                                                toql::deserialize::error::DeserializeError::StreamEnd))?
+                                                .is_selected()
+                                        {
+                                            Some(< #rust_type_ident > :: from_row (  row , i, iter )?)
                                         } else {
                                             None
                                         }
@@ -192,7 +192,9 @@ impl<'a> CodegenEntityFromRow<'a> {
                         1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
                                 quote!(
                                     #rust_field_ident : {
-                                        if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) == &toql::sql_builder::select_stream::Select::None {
+                                        if iter.next().ok_or(toql::error::ToqlError::DeserializeError(
+                                            toql::deserialize::error::DeserializeError::StreamEnd))?
+                                            .is_selected() {
                                             return Err(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string()).into());
                                         }
                                        < #rust_type_ident > :: from_row ( row , i, iter )?
@@ -202,7 +204,9 @@ impl<'a> CodegenEntityFromRow<'a> {
                             1 if !field.preselect =>  //    Option<T>                         -> Selectable Join -> Inner Join
                                         quote!(
                                         #rust_field_ident : {
-                                         if iter.next().unwrap_or(&toql::sql_builder::select_stream::Select::None) != &toql::sql_builder::select_stream::Select::None {
+                                         if iter.next().ok_or(toql::error::ToqlError::DeserializeError(
+                                            toql::deserialize::error::DeserializeError::StreamEnd))?
+                                            .is_selected(){
                                             < #rust_type_ident > :: from_row ( row , i, iter )?
                                          } else {
                                              None
@@ -214,10 +218,17 @@ impl<'a> CodegenEntityFromRow<'a> {
                         if join_attrs.key {
                                     quote!(
                                         #rust_field_ident : {
+                                            if iter.next().ok_or(toql::error::ToqlError::DeserializeError(
+                                toql::deserialize::error::DeserializeError::StreamEnd))?
+                                .is_selected(){
                                             match toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )? {
                                                 Some(s) => s,
-                                                None => return Ok(None)
+                                                None => return Err(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()).into()),
                                             }
+                                       } else {
+                                            return Err(toql::error::ToqlError::DeserializeError(
+                                                toql::deserialize::error::DeserializeError::SelectionExpected(#rust_field_name.to_string())).into());
+                                        }
                                         }
                                     )
 

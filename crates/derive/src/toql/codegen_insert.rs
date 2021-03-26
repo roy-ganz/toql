@@ -223,7 +223,7 @@ impl<'a> CodegenInsert<'a> {
                                                 } else {
                                                     <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
                                                     .iter().for_each(|_| { 
-                                                            values.push_arg(toql::sql_arg::SqlArg::Null()); 
+                                                            values.push_arg(toql::sql_arg::SqlArg::Null); 
                                                             values.push_literal(", ");});
 
                                                 }
@@ -248,7 +248,7 @@ impl<'a> CodegenInsert<'a> {
                                                 } else {
                                                     <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
                                                     .iter().for_each(|_| { 
-                                                            values.push_arg(toql::sql_arg::SqlArg::Null()); 
+                                                            values.push_arg(toql::sql_arg::SqlArg:); 
                                                             values.push_literal(", ");
                                                             });
 

@@ -44,6 +44,7 @@ impl<'a> CodegenUpdate<'a> {
         let rust_type_ident = &field.rust_type_ident;
          let toql_field_name= &field.toql_field_name;
          let sql_table_alias = &self.sql_table_alias;
+         let struct_ident = &self.struct_ident;
 
         let unwrap = match field.number_of_options {
                     1 => quote!(.as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?),
@@ -69,6 +70,16 @@ impl<'a> CodegenUpdate<'a> {
                             )
                         }
                     };
+         let role_predicate = match &field.roles.update {
+                        None => quote!(),
+                        Some(role_expr_string) => { 
+                            quote!(
+                               (toql::role_validator::RoleValidator::is_valid(roles, 
+                               &toql::role_expr_macro::role_expr!(#role_expr_string)) && 
+                               fields.contains("*")) && 
+                            )
+                        }
+                    };
           
 
 
@@ -79,73 +90,57 @@ impl<'a> CodegenUpdate<'a> {
                 if let SqlTarget::Expression(_) = regular_attrs.sql_target {
                     return;
                 };
+                if field.skip_mut || regular_attrs.key {
+                    return ;
+                }
+               
+                let value = if field.number_of_options > 0 {
+                    quote!(self . #rust_field_ident .as_ref().unwrap())
+                } else {  
+                    quote!( &self . #rust_field_ident)
+                };
 
-                if !field.skip_mut {
-                    let value = if field.number_of_options > 0 {
-                        quote!(self . #rust_field_ident .as_ref().unwrap())
-                    } else {  
-                        quote!( &self . #rust_field_ident)
+                let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
+                        quote!(
+                                // expr.push_alias(#sql_table_alias);
+                                    //    expr.push_literal(".");
+                                        expr.push_literal(#sql_column);
+                                        expr.push_literal(" = ");
+                                        expr.push_arg(toql::sql_arg::SqlArg::from( #value));
+                                        expr.push_literal(", ");
+                                )
+                    } else {
+                        quote!()
                     };
 
-                    let column_set =  if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
-                            quote!(
-                                    // expr.push_alias(#sql_table_alias);
-                                        //    expr.push_literal(".");
-                                            expr.push_literal(#sql_column);
-                                            expr.push_literal(" = ");
-                                            expr.push_arg(toql::sql_arg::SqlArg::from( #value));
-                                            expr.push_literal(", ");
-                                    )
-                        } else {
-                          quote!()
-                        };
-
+                
                     // Selectable fields
                     // Option<T>, <Option<Option<T>>
-                    if field.number_of_options > 0 && !field.preselect {
-                        /* let unwrap_null = if 2 == field.number_of_options {
-                            quote!(.as_ref().map_or(String::from("NULL"), |x| x.to_string()))
-                        } else {
+                    let opt_field_predicate = if field.number_of_options > 0 && !field.preselect {
+                            quote!(self. #rust_field_ident .is_some() && )                       
+                        }
+                        // Not selectable fields
+                        // T, Option<T> (nullable column)
+                        else {
                             quote!()
-                        }; */
-
-
-                       
-
-                        // update statement
-                        // Doesn't update primary key
-                        if !regular_attrs.key {
-                            self.update_set_code.push(quote!(
-                                    if  self. #rust_field_ident .is_some() 
-                                        && (fields.contains("*") || fields.contains( #toql_field_name)) {
-                                            #role_assert
-                                            #column_set
-                                    }
-                            ));
-                        }
-                        
-                    }
-                    // Not selectable fields
-                    // T, Option<T> (nullable column)
-                    else {
-                    
-                        //update statement
-                        if !regular_attrs.key {
-                            self.update_set_code.push(quote!(
-                                 if fields.contains("*") || fields.contains( #toql_field_name) {
-                                    #role_assert
-                                    #column_set
-                                 }
-                            ));
-                        }
-
-                    }
+                        };
+                    self.update_set_code.push(quote!(
+                            if #opt_field_predicate #role_predicate (fields.contains("*") || fields.contains( #toql_field_name)) {
+                                #role_assert
+                                #column_set
+                            }
+                        ));
+                
                    
-                }
+                
             }
-            FieldKind::Join(_join_attrs) => {
+            FieldKind::Join(join_attrs) => {
+
+                
                
-                if !field.skip_mut{
+                if !(field.skip_mut || join_attrs.key){
+
+                    
                    
                         self.dispatch_update_code.push(
                         quote!(
@@ -156,6 +151,69 @@ impl<'a> CodegenUpdate<'a> {
                                     update(#refer  self. #rust_field_ident # unwrap ,&mut descendents, fields, roles, exprs)?
                                 }
                         )
+                    );
+
+                    let mut inverse_column_translation: Vec<TokenStream> = Vec::new();
+
+                   
+
+                    let args_code = match field.number_of_options {
+                        2 =>  quote!(let args = if let Some(entity) = self. #rust_field_ident.as_ref() .unwrap() {
+                                    toql::key::Key::params(& entity .key())
+                                } else {
+                                    inverse_columns.iter().map(|c| toql::sql_arg::SqlArg::Null).collect::<Vec<_>>()
+                                };),
+                        _ =>   quote!(let args =  toql::key::Key::params(&self. #rust_field_ident.key());)
+                    };
+                   
+                    let opt_field_predicate = if field.number_of_options > 0 && !field.preselect {
+                            quote!(self. #rust_field_ident .is_some() && )                       
+                        }
+                        // Not selectable fields
+                        // T, Option<T> (nullable column)
+                        else {
+                            quote!()
+                        };
+                    
+                     for m in &join_attrs.columns {
+                        let untranslated_column = &m.this;
+                        let other_column = &m.other;
+                                                    
+                        inverse_column_translation.push(
+                            quote!( #untranslated_column => String::from(#other_column),),
+                        );
+                    }
+                        let columns_code= quote!(
+                           let default_inverse_columns= <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::default_inverse_columns();
+                           let inverse_columns = <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+                                let inverse_column = match c.as_str() {
+                                        #(#inverse_column_translation)*
+                                    _ => {
+                                            default_inverse_columns.get(i).unwrap().to_owned()
+                                        }
+                                };
+                                inverse_column
+                            }).collect::<Vec<String>>();
+                        );
+
+                    self.update_set_code.push(
+                       quote!(
+                           if #opt_field_predicate #role_predicate (fields.contains("*") || fields.contains( #toql_field_name)) {
+                   
+                            #role_assert
+                            
+                        
+                            #columns_code
+                            #args_code
+
+                            for (c, a) in inverse_columns.iter().zip(args) {
+                                expr.push_literal(c);
+                                expr.push_literal(" = ");
+                                expr.push_arg(a);
+                                expr.push_literal(", ");
+                            }
+                        }
+                       )
                     );
                 }
             }
@@ -238,7 +296,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
 
                 impl toql::tree::tree_update::TreeUpdate for #struct_ident {
 
-                    #[allow(unused_mut, unused_variables)]
+                    #[allow(unused_mut, unused_variables, unused_parens)]
                     fn update<'a>(&self, mut descendents: &mut  toql::query::field_path::Descendents<'a>, 
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>, 
                     exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>{

@@ -195,7 +195,7 @@ where {
     {
         let mut m = SqlMapper::new_with_handler(&M::table_name(), handler);
 
-        M::map(&mut m, "")?;
+        M::map(&mut m)?;
         Ok(m)
     }
     pub fn joined_mapper(&self, name: &str) -> Option<String> {
@@ -386,7 +386,7 @@ where {
         }
 
         // Add mut field to selection for quicker lookup
-        if options.mut_select {
+        if !options.skip_mut {
             let s = self
                 .selections
                 .entry("mut".to_string())

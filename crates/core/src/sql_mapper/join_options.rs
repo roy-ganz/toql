@@ -7,8 +7,10 @@ use std::sync::Arc;
 /// Options for a mapped field.
 #[derive(Debug)]
 pub struct JoinOptions {
+    pub(crate) key: bool, // Always select this join, regardless of query fields
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
+    pub(crate) skip_mut: bool,  // Ignore field for updates
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
@@ -19,13 +21,21 @@ impl JoinOptions {
     /// Create new mapper options
     pub fn new() -> Self {
         JoinOptions {
+            key: false,
             preselect: false,
             skip_wildcard: false,
+            skip_mut: false,
             load_role_expr: None,
             aux_params: HashMap::new(),
             join_handler: None,
            
         }
+    }
+
+    /// Join is a key.
+    pub fn key(mut self, key: bool) -> Self {
+        self.key = key;
+        self
     }
 
     /// Field is selected, regardless of the query.
@@ -37,6 +47,12 @@ impl JoinOptions {
     /// Field is ignored by the wildcard.
     pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
         self.skip_wildcard = skip_wildcard;
+        self
+    }
+
+    /// Field is ignored by the wildcard.
+    pub fn skip_mut(mut self, skip: bool) -> Self {
+        self.skip_mut = skip;
         self
     }
     /// The field can only be selected and filtered by queries that have

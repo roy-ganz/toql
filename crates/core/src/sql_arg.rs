@@ -12,7 +12,7 @@ pub enum SqlArg {
     F64(f64),
     Str(String),
     Bool(bool),
-    Null(),
+    Null,
 }
 
 impl SqlArg {
@@ -23,7 +23,7 @@ impl SqlArg {
             SqlArg::F64(t) => t.to_string(),
             SqlArg::Str(t) => format!("'{}'", t.replace("'", "''")),
             SqlArg::Bool(t) => t.to_string(),
-            SqlArg::Null() => "NULL".to_string(),
+            SqlArg::Null => "NULL".to_string(),
         }
     }
 
@@ -64,7 +64,7 @@ impl SqlArg {
     }
 
     pub fn is_null(&self) -> bool {
-        if let Self::Null() = self {
+        if let Self::Null = self {
             true
         } else {
             false
@@ -87,7 +87,7 @@ impl ToString for SqlArg {
             SqlArg::F64(t) => t.to_string(),
             SqlArg::Str(t) => t.to_string(),
             SqlArg::Bool(t) => t.to_string(),
-            SqlArg::Null() => "NULL".to_string(),
+            SqlArg::Null => "NULL".to_string(),
         }
     }
 }
