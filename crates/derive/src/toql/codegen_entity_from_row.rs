@@ -104,6 +104,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                                     .is_selected() {
                                    Some(toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?)
                                     } else {
+                                        *iter = it2;
                                         None}
                                 }
                         ));

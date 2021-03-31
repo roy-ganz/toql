@@ -385,6 +385,8 @@ impl<'a> CodegenMapper<'a> {
                     } else {
                      let mut default_join_predicate : Vec<TokenStream> = Vec::new();
                      default_join_predicate.push(quote!(  let mut t =  toql::sql_expr::SqlExpr::new();));
+                     
+                        let composite = merge_attrs.columns.len() > 0;
                         for m in &merge_attrs.columns {
                             let this_column = &m.this;
                             default_join_predicate.push( quote!( 
@@ -395,17 +397,27 @@ impl<'a> CodegenMapper<'a> {
                             match &m.other {
                                 crate::sane::MergeColumn::Aliased(a) => {
                                     default_join_predicate.push( quote!( t.push_literal(#a);));
+                                   
                                 }
                                 crate::sane::MergeColumn::Unaliased(u) => {
                                     default_join_predicate.push( quote!( 
                                         t.push_other_alias(); 
                                         t.push_literal("."); 
                                         t.push_literal(#u); 
-                                        t.push_literal(" AND "); ))
+                                       ))
                                 }
                             }
+                            if composite {
+                                default_join_predicate.push( quote!(t.push_literal(" AND ");));
+                            }
                         }
-                        default_join_predicate.push( quote!(t.pop_literals(5); t));
+
+                        if composite {
+                            // Remove last ' AND '
+                            default_join_predicate.push( quote!(t.pop_literals(5);));
+                        } 
+                        default_join_predicate.push( quote!(t));
+                        
                         
                         quote!(#(#default_join_predicate)*)
                     }
