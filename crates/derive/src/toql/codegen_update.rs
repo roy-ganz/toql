@@ -159,11 +159,12 @@ impl<'a> CodegenUpdate<'a> {
 
                     let args_code = match field.number_of_options {
                         2 =>  quote!(let args = if let Some(entity) = self. #rust_field_ident.as_ref() .unwrap() {
-                                    toql::key::Key::params(& entity .key())
+                                    toql::key::Key::params(&toql::keyed::Keyed::key(& entity))
                                 } else {
                                     inverse_columns.iter().map(|c| toql::sql_arg::SqlArg::Null).collect::<Vec<_>>()
                                 };),
-                        _ =>   quote!(let args =  toql::key::Key::params(&self. #rust_field_ident.key());)
+                        1 =>  quote!(let args =  toql::key::Key::params(&toql::keyed::Keyed::key( &self. #rust_field_ident .as_ref() .unwrap()));),
+                        _ =>   quote!(let args =  toql::key::Key::params(&toql::keyed::Keyed::key(&self. #rust_field_ident));)
                     };
                    
                     let opt_field_predicate = if field.number_of_options > 0 && !field.preselect {

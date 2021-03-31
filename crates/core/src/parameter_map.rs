@@ -1,6 +1,7 @@
 use crate::sql_arg::SqlArg;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct ParameterMap<'a>(&'a [&'a HashMap<String, SqlArg>]);
 
 impl<'a> ParameterMap<'a> {

@@ -61,6 +61,7 @@ impl<'a> CodegenEntityFromRow<'a> {
     pub(crate) fn add_deserialize(&mut self, field: &crate::sane::Field) {
         // Regular fields
         let rust_field_name = &field.rust_field_name;
+        let rust_base_type_ident = &field.rust_base_type_ident;
         let error_field = format!(
             "{}::{}",
             &self.rust_struct.rust_struct_ident, rust_field_name
@@ -71,16 +72,21 @@ impl<'a> CodegenEntityFromRow<'a> {
             match &field.kind {
                 FieldKind::Regular(ref regular_attrs) => {
                     let rust_field_ident = &field.rust_field_ident;
-                    let rust_type_ident = &field.rust_type_ident;
+                   
 
                     // Type bound for regular fields, fields can be optional
                     if field.number_of_options > 1 {
-                        self.impl_opt_types.insert(field.rust_base_type_ident.to_owned());
-                    }else {
+                        //self.impl_opt_types.insert(field.rust_base_type_ident.to_owned());
+                       // self.forwards.push(quote!(  <Option<#rust_base_type_ident> as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
                         self.impl_types.insert(field.rust_base_type_ident.to_owned());
+                        self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
+                    }else {
+                        // Left joins can have null keys, add Option<T>
+                       
+                        self.impl_types.insert(field.rust_base_type_ident.to_owned());
+                        self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
                     }
                     
-                   self.forwards.push(quote!(  <#rust_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
 
 
                     self.regular_fields += 1;
@@ -90,7 +96,15 @@ impl<'a> CodegenEntityFromRow<'a> {
                         2 => {
                             self.deserialize_fields.push(quote!(
                                 #rust_field_ident : {
-                                   toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?
+                                    // TODO use peekable
+                                    let mut it2 = iter.clone();
+                                    if it2.next()
+                                    .ok_or(toql::error::ToqlError::DeserializeError(
+                                            toql::deserialize::error::DeserializeError::StreamEnd))?
+                                    .is_selected() {
+                                   Some(toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )?)
+                                    } else {
+                                        None}
                                 }
                         ));
                         },
@@ -106,9 +120,13 @@ impl<'a> CodegenEntityFromRow<'a> {
                                  if regular_attrs.key {
                                     quote!(
                                         #rust_field_ident : {
-                                            match toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )? {
+                                           /*  match toql::from_row::FromRow::<_,E> :: from_row (  row , i, iter )? {
                                                 Some(s) => s,
                                                 None => return Ok(None)
+                                            } */
+                                            match <#rust_base_type_ident as toql::from_row::FromRow::<_, E>>::from_row(row, i, iter)? {
+                                                Some(s) => s,
+                                                _ => return Ok(None),
                                             }
                                         }
                                     )
@@ -153,6 +171,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                     let rust_field_ident = &field.rust_field_ident;
                     let rust_field_name = &field.rust_field_name;
                     let rust_type_ident = &field.rust_type_ident;
+                    let rust_base_type_ident = &field.rust_base_type_ident;
 
                     // Bound for joins
                     self.impl_types.insert(field.rust_base_type_ident.to_owned());
@@ -183,7 +202,18 @@ impl<'a> CodegenEntityFromRow<'a> {
                                                 toql::deserialize::error::DeserializeError::StreamEnd))?
                                                 .is_selected()
                                         {
-                                            Some(< #rust_type_ident > :: from_row (  row , i, iter )?)
+                                            //Some(< #rust_type_ident > :: from_row (  row , i, iter )?)
+                                            let mut it2 = iter.clone();
+                                            let n = i.clone();
+                                            match <#rust_type_ident>::from_row(row, i, iter)? {
+                                                Some(f) => Some(Some(f)),
+                                                None => { 
+                                                    let s: usize =  <#rust_type_ident as toql::from_row::FromRow::<R,E>>::forward(&mut it2)?;
+                                                    *iter = it2;
+                                                    *i = n + s;
+                                                    Some(None)
+                                                }
+                                            } 
                                         } else {
                                             None
                                         }
@@ -197,7 +227,16 @@ impl<'a> CodegenEntityFromRow<'a> {
                                             .is_selected() {
                                             return Err(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string()).into());
                                         }
-                                       < #rust_type_ident > :: from_row ( row , i, iter )?
+                                       //< #rust_type_ident > :: from_row ( row , i, iter )?
+                                       match <#rust_type_ident>::from_row(row, i, iter)? {
+                                                Some(f) => Some(Some(f)),
+                                                None => { 
+                                                    let s: usize =  <#rust_type_ident as toql::from_row::FromRow::<R,E>>::forward(&mut it2)?;
+                                                    *iter = it2;
+                                                    *i = n + s;
+                                                    Some(None)
+                                                }
+                                            } 
                                                  
                                     }
                                 ),
@@ -248,11 +287,16 @@ impl<'a> CodegenEntityFromRow<'a> {
                     }
                 );
                     // Forward : Evaluate left joins always, inner joins only if selected
-                    self.forwards.push(
+                    /*  let forward_type = if field.number_of_options > 1 { 
+                          quote!(Option<#rust_base_type_ident>)
+                        } else {
+                            quote!(#rust_base_type_ident)
+                        }; */
+                      self.forwards.push(
                         quote!{
                             if  iter.next().ok_or(
                                 toql::error::ToqlError::DeserializeError(toql::deserialize::error::DeserializeError::StreamEnd))?.is_selected() {
-                                     < #rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward (  &mut iter )?
+                                     < #rust_base_type_ident as toql::from_row::FromRow::<R,E>> :: forward (  &mut iter )?
                             } else {
                                 0
                             }
@@ -582,7 +626,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
             #[allow(unused_variables, unused_mut)]
             fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
                 ->std::result:: Result < Option<#struct_ident>, E> 
-                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
+                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> + Clone {
                 use toql::sql_builder::select_stream::Select;
        
                 Ok ( Some(#struct_ident {

@@ -67,18 +67,33 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
                     Self: std::str::FromStr, 
                     E: std::convert::From<toql::error::ToqlError>,
                     {
+                        fn forward<'a, I>(iter: &mut I) -> Result<usize, E> 
+                        where
+                            I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
+                        {
+                            if  iter.next()
+                                .ok_or(toql::error::ToqlError::DeserializeError(
+                                        toql::deserialize::error::DeserializeError::StreamEnd))?
+                                .is_selected() {
+                                Ok(1)
+                            } else {
+                                Ok(0)
+                            }
+                        }
                         fn from_row<'a, I>(
                             row: &R,
                             i: &mut usize,
                             iter: &mut I,
                         ) -> std::result::Result<Option< #name >, E>
                         where
-                            I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
+                            I: Iterator<Item = &'a toql::sql_builder::select_stream::Select> + Clone,
                         {
                             let s: Option<String> = toql::from_row::FromRow::<R, E>::from_row(row, i, iter)?;
                             if let Some(s) = s {
                                 let t = <Self as std::str::FromStr>::from_str(s.as_str())
-                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name_string .to_string(), e.to_string()))?;
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError(
+                                        toql::deserialize::error::DeserializeError::ConversionFailed( #name_string .to_string(), e.to_string()))
+                                    )?;
                                 Ok(Some(t))
 
                             } else {
@@ -94,10 +109,12 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
                         fn try_from(t: &toql::sql_arg::SqlArg) -> Result<Self, Self::Error> {
                         if let toql::sql_arg::SqlArg::Str(s) = t {
                                 let t = <Self as std::str::FromStr>::from_str(s.as_str())
-                                    .map_err(|e|toql::error::ToqlError::DeserializeError( #name_string .to_string(), e.to_string()))?;
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError( 
+                                         toql::deserialize::error::DeserializeError::ConversionFailed(#name_string .to_string(), e.to_string())))?;
                                 Ok(t)
                         } else {
-                            Err(toql::error::ToqlError::DeserializeError(#name_string .to_string(),"Requires string argument.".to_string()))  
+                            Err(toql::error::ToqlError::DeserializeError(
+                                toql::deserialize::error::DeserializeError::ConversionFailed(#name_string .to_string(),"Requires string argument.".to_string())))  
                         }
                         }
                     }

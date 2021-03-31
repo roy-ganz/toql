@@ -34,6 +34,7 @@ impl<'a> CodegenKeyFromRow<'a> {
         let rust_type_ident = &field.rust_type_ident;
         let rust_field_name = &field.rust_field_name;
         let rust_field_ident = &field.rust_field_ident;
+        let rust_base_type_ident = &field.rust_base_type_ident;
         
          let error_field = format!(
                     "{}Key::{}",
@@ -62,7 +63,7 @@ impl<'a> CodegenKeyFromRow<'a> {
                     }
                 ));
               //  self.forward_key_columns = self.forward_key_columns + 1;
-              self.forwards.push(quote!( <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )?) )
+              self.forwards.push(quote!( <#rust_base_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )?) )
             }
             FieldKind::Join(ref join_attrs) => {
                 if !join_attrs.key {
@@ -72,13 +73,9 @@ impl<'a> CodegenKeyFromRow<'a> {
             self.join_types.insert(field.rust_base_type_ident.to_owned());
                 // Impl key from result row
                 self.forwards.push(quote!(
-                    <#rust_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )?
+                    <#rust_base_type_ident as toql::from_row::FromRow::<R,E>> :: forward ( &mut iter )?
                 ));
-               /*  self.forward_join_key.push(quote!(
-                    < #rust_type_ident > ::forward(&mut iter)
-                )); */
-
-              
+                           
                 self.deserialize_key.push(quote!(
                     
                     #rust_field_ident: {
@@ -131,7 +128,7 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
                             #[allow(unused_variables, unused_mut)]
                             fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
                                 -> std::result:: Result < Option<#struct_key_ident>, E> 
-                                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> {
+                                where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> + Clone {
 
                                 Ok ( Some(#struct_key_ident{
                                     #(#deserialize_key),*

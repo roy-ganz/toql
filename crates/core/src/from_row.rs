@@ -30,6 +30,6 @@ pub trait FromRow<R, E>
         iter: &mut I,
     ) -> Result<Option<Self>, E>
     where
-        I: Iterator<Item = &'a Select>,
+        I: Iterator<Item = &'a Select> + Clone,
         Self: std::marker::Sized;
 }

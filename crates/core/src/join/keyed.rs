@@ -16,6 +16,20 @@ where
     }
    
 }
+impl<T> Keyed for &Join<T>
+where
+    T: Keyed,
+    T::Key: Clone,
+{
+    type Key = T::Key;
+    fn key(&self) -> T::Key {
+        match self {
+            Join::Key(k) => k.clone(),
+            Join::Entity(e) => e.key(),
+        }
+    }
+   
+}
 impl<T> KeyedMut for Join<T>
 where
     T: KeyedMut,
@@ -31,5 +45,6 @@ where
         }
     }
 }
+
 
 

@@ -193,6 +193,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
             impl #builder_fields_struct {
                 #rust_struct_visibility fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
                 #rust_struct_visibility fn from_path ( path : String ) -> Self { Self ( path ) }
+                #rust_struct_visibility fn into_name ( self) -> String { self.0}
                 #(#builder_fields)*
                
             }

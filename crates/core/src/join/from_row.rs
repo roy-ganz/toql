@@ -22,7 +22,7 @@ use crate::{error::ToqlError, sql_builder::select_stream::Select};
         iter: &mut I,
     ) -> Result<Option<Self>,E>
     where
-        I: Iterator<Item = &'a Select>,
+        I: Iterator<Item = &'a Select> + Clone,
         Self: Sized {
         
         Ok(<T as FromRow<R, E>>::from_row(row, i, iter)?.map(|e| Join::Entity(Box::new(e))))
