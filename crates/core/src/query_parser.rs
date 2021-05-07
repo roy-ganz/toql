@@ -91,7 +91,7 @@ impl TokenInfo {
 
                 Ok(Some(QueryToken::Selection(Selection {
                     name: String::from(if self.name.is_empty() {
-                        "default"
+                        "std"
                     } else {
                         self.name.as_str()
                     }),

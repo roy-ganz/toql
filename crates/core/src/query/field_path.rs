@@ -50,7 +50,7 @@ impl<'a> FieldPath<'a> {
         let path = format!(
             "{}{}{}",
             self.0.as_ref(),
-            if self.0.is_empty() { "" } else { "_" },
+            if self.0.is_empty() || tail.is_empty() { "" } else { "_" },
             tail,
         );
 
@@ -309,3 +309,6 @@ impl<'a> ToString for FieldPath<'a> {
         self.0.to_string()
     }
 }
+
+
+

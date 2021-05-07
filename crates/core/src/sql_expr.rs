@@ -32,40 +32,47 @@ pub enum SqlExprToken {
 #[derive(Debug, Clone)]
 pub struct SqlExpr {
     tokens: Vec<SqlExprToken>,
+    maybe_aux_params: bool // Hint to speed up function first_aux_param
 }
 
 impl SqlExpr {
     
     pub fn from(tokens: Vec<SqlExprToken>) -> Self {
-        SqlExpr { tokens }
+        let maybe_aux_params = tokens.iter().find(|t| if let SqlExprToken::AuxParam(_) = t {true} else {false}).is_some();
+        SqlExpr { tokens, maybe_aux_params }
     }
     pub fn new() -> Self {
-        SqlExpr { tokens: Vec::new() }
+        SqlExpr { tokens: Vec::new(), maybe_aux_params: false }
     }
     
     pub fn literal(lit: impl Into<String>) -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::Literal(lit.into())],
+             maybe_aux_params: false
         }
     }
     pub fn self_alias() -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::SelfAlias],
+             maybe_aux_params: false
         }
     }
     pub fn other_alias() -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::OtherAlias],
+             maybe_aux_params: false
         }
     }
     pub fn unresolved_arg() -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::UnresolvedArg],
+             maybe_aux_params: false
         }
     }
     pub fn arg(a: SqlArg) -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::Arg(a)],
+             maybe_aux_params: false
         }
     }
     pub fn aliased_column(column_name: String) -> Self {
@@ -75,6 +82,7 @@ impl SqlExpr {
                 SqlExprToken::Literal(".".to_string()),
                 SqlExprToken::Literal(column_name),
             ],
+             maybe_aux_params: false
         }
     }
 
@@ -143,6 +151,18 @@ impl SqlExpr {
         self.tokens.is_empty()
     }
 
+    pub fn first_aux_param(&self) -> Option<&String> {
+
+        if self.maybe_aux_params == true {
+            for t in self.tokens() {
+                if let SqlExprToken::AuxParam(p) = t {
+                    return Some(p);
+                }
+            }
+        }
+        None
+    }
+
 
     pub fn push_predicate(
         &mut self,
@@ -167,7 +187,10 @@ impl SqlExpr {
     }
 
     pub fn extend(&mut self, expr: impl Into<SqlExpr>) -> &mut Self {
-        self.tokens.extend(expr.into().tokens);
+        let tokens = expr.into().tokens;
+        let maybe_aux_params = tokens.iter().find(|t| if let SqlExprToken::AuxParam(_) = t {true} else {false}).is_some();
+        self.maybe_aux_params |= maybe_aux_params;
+        self.tokens.extend(tokens);
         self
     }
     pub fn tokens(&self) -> &[SqlExprToken] {
