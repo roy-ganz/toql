@@ -1,17 +1,17 @@
 use crate::{
-   query::field_path::Descendents, sql_expr::SqlExpr, error::ToqlError,
+   query::field_path::{FieldPath, Descendents}, sql_expr::SqlExpr, error::ToqlError,
 };
 
 // Trait is implemented for structs that can insert 
 pub trait TreeInsert {
-    fn columns<'a>(
-        descendents: &mut Descendents<'a>,  
-    ) -> Result<SqlExpr, ToqlError>;
-     fn values<'a>(
+    fn columns<'a, I>(
+        descendents: &mut I,  
+    ) -> Result<SqlExpr, ToqlError>   where I: Iterator<Item = FieldPath<'a>>;
+     fn values<'a, I>(
         &self,
-        descendents: &mut Descendents<'a>,
+        descendents: &mut I,
         roles: &std::collections::HashSet<String>,
         values:  &mut crate::sql_expr::SqlExpr  
-   ) -> Result<(), ToqlError>; 
+   ) -> Result<(), ToqlError>   where I: Iterator<Item = FieldPath<'a>>; 
   
 }

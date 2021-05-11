@@ -1,4 +1,4 @@
-use crate::query::field_path::Descendents;
+use crate::query::field_path::{FieldPath, Descendents};
 use std::collections::HashMap;
 use std::result::Result;
 use crate::{error::ToqlError};
@@ -8,10 +8,10 @@ use crate::{error::ToqlError};
 pub trait TreeIndex<R, E> 
  where  E: std::convert::From<ToqlError>
 {
-    fn index<'a>(
-        descendents: &mut Descendents<'a>,
+    fn index<'a, I>(
+        descendents: &mut I,
         rows: &[R],
         row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
-    ) -> Result<(), E>;
+    ) -> Result<(), E>   where I: Iterator<Item = FieldPath<'a>>;
 }

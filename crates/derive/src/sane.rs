@@ -94,7 +94,7 @@ pub struct RegularField {
 }
 #[derive(Clone)]
 pub struct JoinField {
-    pub sql_join_table_ident: Ident,
+   // pub sql_join_table_ident: Ident,
     pub sql_join_table_name: String,
     pub join_alias: String,
     pub default_self_column_code: TokenStream,
@@ -121,7 +121,7 @@ pub struct MergeMatch {
 #[derive(Clone)]
 pub struct MergeField {
     // pub columns: RenameCase,
-    pub sql_join_table_ident: Ident,
+ //   pub sql_join_table_ident: Ident,
     pub sql_join_table_name: String,
     pub join_alias: String,
 
@@ -224,7 +224,8 @@ impl Field {
                 &rust_type_name, // field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
-            let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
+          //  let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
+            let sql_join_table_name = renamed_table.to_owned();
             let columns_translation = field
                 .join
                 .as_ref()
@@ -311,7 +312,7 @@ impl Field {
             });
 
             FieldKind::Join(JoinField {
-                sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
+             //   sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
                     .alias
                     .as_ref()
@@ -356,7 +357,8 @@ impl Field {
                  &rust_type_name,  //field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
-            let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
+            //let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
+            let sql_join_table_name = renamed_table.to_owned();
 
             let mut columns: Vec<MergeMatch> = Vec::new();
 
@@ -412,7 +414,7 @@ impl Field {
      
 
             FieldKind::Merge(MergeField {
-                sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
+             //   sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
                     .alias
                     .as_ref()

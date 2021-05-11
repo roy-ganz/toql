@@ -1,4 +1,4 @@
-use crate::query::field_path::Descendents;
+use crate::query::field_path::{FieldPath, Descendents};
 use crate::{error::ToqlError, sql_arg::SqlArg};
 use std::{cell::RefCell, result::Result};
 
@@ -11,9 +11,9 @@ pub trait TreeIdentity {
 
     fn auto_id() -> bool;
 
-    fn set_id<'a, 'b>(
+    fn set_id<'a, 'b, I>(
         &mut self,
-        descendents: &mut Descendents<'a>,
+        descendents: &mut I,
         action: &'b IdentityAction,
-    ) -> Result<(), ToqlError>;
+    ) -> Result<(), ToqlError> where I: Iterator<Item = FieldPath<'a>>;
 }

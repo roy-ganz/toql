@@ -1,5 +1,5 @@
 use crate::{
-     query::field_path::Descendents, sql_builder::select_stream::SelectStream,
+     query::field_path::{FieldPath, Descendents}, sql_builder::select_stream::SelectStream,
 };
 use std::{collections::HashMap};
 
@@ -29,13 +29,13 @@ impl<R> RowIndex<R> for &Vec<R> {
 // R is database specific row
 // Trait is implemented for structs that can deserialize from rows
 pub trait TreeMerge<R, E> {
-    fn merge<'a>(
+    fn merge<'a, I>(
         &mut self,
-        descendents: &mut Descendents<'a>,
+        descendents: &mut I,
         field: &str,
         rows: &[R],
         row_offset: usize,
         index: &HashMap<u64, Vec<usize>>,
         selection_stream: &SelectStream,
-    ) -> Result<(), E>;
+    ) -> Result<(), E>   where I: Iterator<Item = FieldPath<'a>>;
 }

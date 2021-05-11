@@ -1,7 +1,7 @@
 use super::Join;
 use crate::tree::tree_predicate::TreePredicate;
 use crate::error::ToqlError;
-use crate::query::field_path::Descendents;
+use crate::query::field_path::{FieldPath, Descendents};
 use crate::key::Key;
 use crate::keyed::Keyed;
 use crate::sql_arg::SqlArg;
@@ -13,10 +13,12 @@ where
     <T as Keyed>::Key: Clone,
     T: TreePredicate,
 {
-    fn columns<'a>(
+    fn columns<'a, I>(
         &self,
-        descendents: &mut Descendents<'a>,
-    ) -> Result<Vec<String>,ToqlError> {
+        descendents: &mut I,
+    ) -> Result<Vec<String>,ToqlError> 
+    where I: Iterator<Item = FieldPath<'a>>
+    {
         match self {
             Join::Key(_) => match descendents.next() {
                 Some(p) => Err(ToqlError::ValueMissing(
@@ -27,11 +29,11 @@ where
             Join::Entity(e) => e.columns(descendents),
         }
     }
-    fn args<'a>(
+    fn args<'a, I>(
         &self,
-        descendents: &mut Descendents<'a>,
+        descendents: &mut I,
         args: &mut Vec<SqlArg>,
-    ) -> Result<(),ToqlError> {
+    ) -> Result<(),ToqlError> where I: Iterator<Item = FieldPath<'a>> {
         match self {
             Join::Key(k) => match descendents.next() {
                 Some(p) => Err(ToqlError::ValueMissing(

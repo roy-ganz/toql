@@ -1,16 +1,18 @@
 use crate::error::ToqlError;
-use crate::query::field_path::Descendents;
+use crate::query::field_path::{FieldPath, Descendents};
 use crate::sql_arg::SqlArg;
 
 
 
 pub trait TreePredicate {
 
-    fn columns<'a>(&self,descendents: &mut Descendents<'a> ) -> Result<Vec<String>, ToqlError>;
+    fn columns<'a, I>(&self,descendents: &mut I ) -> Result<Vec<String>, ToqlError>
+    where I: Iterator<Item = FieldPath<'a>>;
         
-    fn args<'a>(
+    fn args<'a, I>(
         &self,
-        descendents: &mut Descendents<'a>,
+        descendents: &mut I,
         args: &mut Vec<SqlArg>
-    ) -> Result<(), ToqlError>;
+    ) -> Result<(), ToqlError>
+      where I: Iterator<Item = FieldPath<'a>>;
 }

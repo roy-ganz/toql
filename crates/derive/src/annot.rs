@@ -104,8 +104,8 @@ pub struct ToqlField {
     pub merge: Option<MergeArg>,
     #[darling(default)]
     pub alias: Option<String>,
-    #[darling(default)]
-    pub table: Option<String>, // Alternative sql table name
+   /*  #[darling(default)]
+    pub table: Option<String>, // Alternative sql table name */
     #[darling(default)]
     pub handler: Option<Path>,
     #[darling(multiple)]

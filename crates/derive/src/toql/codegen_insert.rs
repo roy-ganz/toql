@@ -360,8 +360,10 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                 impl toql::tree::tree_insert::TreeInsert for #struct_ident {
 
                     #[allow(unused_mut)]
-                    fn columns<'a>(  mut descendents: &mut toql::query::field_path::Descendents<'a>) 
-                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
+                    fn columns<'a, I>(  mut descendents: &mut I) 
+                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> 
+                             where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                            {
                         
                         let mut e = toql::sql_expr::SqlExpr::new();
                          match descendents.next() {
@@ -382,11 +384,12 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                         Ok(e)
                     }
                     #[allow(unused_mut, unused_variables)]
-                    fn values<'a>(&self,
-                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,
+                    fn values<'a, I>(&self,
+                                        mut descendents: &mut I,
                                         roles: &std::collections::HashSet<String>,  
                                          values:  &mut toql::sql_expr::SqlExpr 
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                                 {
                                   
                                     match descendents.next() {
@@ -413,16 +416,18 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                   impl toql::tree::tree_insert::TreeInsert for &#struct_ident {
 
                     #[allow(unused_mut)]
-                    fn columns<'a>(  mut descendents: &mut toql::query::field_path::Descendents<'a>) 
-                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
+                    fn columns<'a, I>(  mut descendents: &mut I) 
+                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError>
+                             where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> {
                                 <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
                             }
                     #[allow(unused_mut)]
-                     fn values<'a>(&self,
-                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,
+                     fn values<'a, I>(&self,
+                                        mut descendents: &mut  I,
                                         roles: &std::collections::HashSet<String>,  
                                          values:  &mut toql::sql_expr::SqlExpr 
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                                 {
                                     <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, values)
                                 }
@@ -430,16 +435,18 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                   impl toql::tree::tree_insert::TreeInsert for &mut #struct_ident {
 
                     #[allow(unused_mut)]
-                    fn columns<'a>(  mut descendents: &mut toql::query::field_path::Descendents<'a>) 
-                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError> {
+                    fn columns<'a, I>(  mut descendents: &mut I) 
+                            -> std::result::Result<toql::sql_expr::SqlExpr, toql::error::ToqlError>
+                             where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> {
                                 <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
                             }
                     #[allow(unused_mut)]
-                     fn values<'a>(&self,
-                                        mut descendents: &mut  toql::query::field_path::Descendents<'a>,
+                     fn values<'a, I>(&self,
+                                        mut descendents: &mut  I,
                                         roles: &std::collections::HashSet<String>,  
                                          values:  &mut toql::sql_expr::SqlExpr 
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                                 {
                                     <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, values)
                                 }

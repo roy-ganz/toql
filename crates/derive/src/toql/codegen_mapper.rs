@@ -177,7 +177,8 @@ impl<'a> CodegenMapper<'a> {
                    quote!(toql::sql_mapper::join_type::JoinType::Left)
                 };
 
-                let join_statement = format!("{} ", &sql_join_table_name);
+                //let join_statement = format!("{} ", &sql_join_table_name);
+                
 
                 let preselect_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
@@ -212,11 +213,12 @@ impl<'a> CodegenMapper<'a> {
                     .collect::<Vec<TokenStream>>();
 
                 // todo map handler, see regular field
+                let sql_join_table_name_ident = syn::Ident::new(&sql_join_table_name,  proc_macro2::Span::call_site());
 
                 self.field_mappings.push(quote! {
                     mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name, 
                     #join_type,
-                    {let mut t = toql::sql_expr::SqlExpr::literal(#join_statement); t.push_other_alias(); t }, 
+                    {let mut t = toql::sql_expr::SqlExpr::literal(< #sql_join_table_name_ident as toql::sql_mapper::mapped::Mapped>::table_name()); t.push_literal(" "); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
                      toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)* 
                      #preselect_ident #key_ident #skip_load_ident #skip_mut_ident #skip_wc_ident #roles_ident 

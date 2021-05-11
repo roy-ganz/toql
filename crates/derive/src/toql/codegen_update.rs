@@ -298,9 +298,11 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                 impl toql::tree::tree_update::TreeUpdate for #struct_ident {
 
                     #[allow(unused_mut, unused_variables, unused_parens)]
-                    fn update<'a>(&self, mut descendents: &mut  toql::query::field_path::Descendents<'a>, 
+                    fn update<'a, I>(&self, mut descendents: &mut  I, 
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>, 
-                    exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>{
+                    exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
+                    where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    {
 
                                 match descendents.next() {
                                                             
@@ -345,9 +347,11 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                   impl toql::tree::tree_update::TreeUpdate for &mut #struct_ident {
                    
                     #[allow(unused_mut)]
-                    fn update<'a>(&self, mut descendents: &mut  toql::query::field_path::Descendents<'a>, 
+                    fn update<'a, I>(&self, mut descendents: &mut I, 
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>, 
-                    exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>{
+                    exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
+                    where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    {
                         <#struct_ident as toql::tree::tree_update::TreeUpdate>::update(self, descendents, fields, roles, exprs)
                        }
                   }

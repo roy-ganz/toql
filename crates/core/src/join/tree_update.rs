@@ -3,18 +3,20 @@ use super::Join;
 use crate::key::Key;
 use crate::keyed::Keyed;
 use crate::{sql_mapper::mapped::Mapped, error::ToqlError};
-use crate::sql_expr::resolver::Resolver;
+use crate::{query::field_path::FieldPath, sql_expr::resolver::Resolver};
 
 impl<T> TreeUpdate for Join<T>
 where T: Keyed + TreeUpdate + Mapped, <T as Keyed>::Key: Key + Clone
 {
-    fn update<'a>(
+    fn update<'a, I>(
         &self,
-        descendents: &mut crate::query::field_path::Descendents<'a>, 
+        descendents: &mut I, 
         fields: &std::collections::HashSet<String>, // if empty, all fields can be updated (*)
         roles: &std::collections::HashSet<String>,
         exprs : &mut Vec<crate::sql_expr::SqlExpr> 
-    ) -> Result<(), crate::error::ToqlError> {
+    ) -> Result<(), crate::error::ToqlError> 
+     where I:  Iterator<Item = FieldPath<'a>>
+    {
         match self {
             Join::Key(k) => {
                 match descendents.next() {

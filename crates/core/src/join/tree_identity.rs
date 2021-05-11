@@ -5,7 +5,7 @@ use crate::tree::tree_identity::{TreeIdentity, IdentityAction};
 use crate::error::ToqlError;
 use std::convert::TryFrom;
 use crate::sql_arg::SqlArg;
-use crate::query::field_path::Descendents;
+use crate::query::field_path::{FieldPath, Descendents};
 
 impl<T> TreeIdentity for Join<T>
 where
@@ -17,11 +17,11 @@ where
     fn auto_id() -> bool {
         <T as TreeIdentity>::auto_id()
     }
-    fn set_id<'a, 'b>(
+    fn set_id<'a, 'b, I>(
         &mut self,
-        descendents: &mut Descendents<'a>,
+        descendents: &mut I,
         action: &'b IdentityAction,
-    ) -> Result<(), ToqlError> {
+    ) -> Result<(), ToqlError> where I: Iterator<Item = FieldPath<'a>>{
        
        match self {
            Join::Key(k) => { 
