@@ -88,7 +88,9 @@ impl BuildResult {
        }
     */
     pub fn push_join(&mut self, j: SqlExpr) {
-        self.join_expr.push_separator(" ".to_string());
+        if !self.join_expr.is_empty() && !self.join_expr.ends_with_literal(" ") {
+            self.join_expr.push_literal(" ");
+        }
         self.join_expr.extend(j);
     }
 

@@ -103,7 +103,7 @@ impl SqlExpr {
 
     } */
 
-    pub fn push_separator(&mut self, lit: impl Into<String>) -> &mut Self {
+    /* pub fn push_separator(&mut self, lit: impl Into<String>) -> &mut Self {
         if let Some(SqlExprToken::Literal(l)) = self.tokens.last_mut() {
             let lit = lit.into();
             if !l.trim_end().ends_with(lit.as_str()) {
@@ -113,7 +113,7 @@ impl SqlExpr {
             self.tokens.push(SqlExprToken::Literal(lit.into()));
         }
         self
-    }
+    } */
     pub fn pop_literals(&mut self, count: usize) -> &mut Self {
         if let Some(SqlExprToken::Literal(l)) = self.tokens.last_mut() {
             for _ in 0..count {
@@ -121,6 +121,13 @@ impl SqlExpr {
             }
         }
         self
+    }
+    pub fn ends_with_literal(&mut self, lit: &str) -> bool {
+        if let Some(SqlExprToken::Literal(l)) = self.tokens.last_mut() {
+            l.ends_with(lit)
+        } else {
+            false
+        }
     }
     pub fn pop(&mut self) -> &mut Self {
         self.tokens.pop();

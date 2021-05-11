@@ -269,9 +269,7 @@ impl<M> Query<M> {
     where
         T: Into<Query<M>>,
     {
-        // All tokens are b
-        self.tokens
-            .insert(0, QueryToken::LeftBracket(Concatenation::And));
+        self.tokens.push(QueryToken::LeftBracket(Concatenation::And));
         self.tokens.append(&mut query.into().tokens);
         self.tokens.push(QueryToken::RightBracket);
         self
@@ -311,9 +309,7 @@ impl<M> Query<M> {
     where
         T: Into<Query<M>>,
     {
-        // All tokens are b
-        self.tokens
-            .insert(0, QueryToken::LeftBracket(Concatenation::Or));
+        self.tokens.push(QueryToken::LeftBracket(Concatenation::Or));
         self.tokens.append(&mut query.into().tokens);
         self.tokens.push(QueryToken::RightBracket);
         self

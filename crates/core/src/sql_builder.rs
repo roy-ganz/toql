@@ -60,7 +60,7 @@ use crate::sql_mapper_registry::SqlMapperRegistry;
 use crate::sql_arg::SqlArg;
 use crate::{
     parameter_map::ParameterMap,
-    query::{field_order::FieldOrder, field_path::FieldPath},
+    query::{concatenation::Concatenation, field_order::FieldOrder, field_path::FieldPath},
     role_validator::RoleValidator,
     sql_expr::{resolver::Resolver, SqlExpr},
 };
@@ -112,13 +112,16 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-    pub fn merge_expr(&self, field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
-        let mut current_mapper = self
+    pub fn merge_expr(&self, query_field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
+
+        let (basename, query_path) = FieldPath::split_basename(query_field_path);
+        let mapper = self.mapper_for_query_path(&query_path)?;
+        /* let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
-        let (basename, query_path) = FieldPath::split_basename(field_path);
-
+       
+        self.mapper_or_merge_for_path(local_path)
         if !query_path.is_empty() {
             for d in query_path.children() {
                 dbg!(&d);
@@ -132,10 +135,10 @@ impl<'a> SqlBuilder<'a> {
                     return Err(ToqlError::MapperMissing(d.as_str().to_string()));
                 }
             }
-        }
+        } */
 
         // Get merge join statement and on predicate
-        let merge = current_mapper.merge(basename).ok_or(ToqlError::NotFound)?;
+        let merge = mapper.merge(basename).ok_or(ToqlError::NotFound)?;
 
         Ok((
             merge.merge_join.to_owned(),
@@ -567,6 +570,10 @@ impl<'a> SqlBuilder<'a> {
         for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
+                     // Continue if field is not filtered
+                    if field.filter.is_none() {
+                        continue;
+                    }
                     let (field_name, query_path) = FieldPath::split_basename(&field.name);
 
                     // skip if field path is not relative to root path
@@ -603,12 +610,9 @@ impl<'a> SqlBuilder<'a> {
                             let mapped_field = mapper
                                 .fields
                                 .get(field_name)
-                                .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
+                                .ok_or(SqlBuilderError::FieldMissing(field.name.to_string()))?;
 
-                            // Continue if field is not filtered
-                            if field.filter.is_none() {
-                                continue;
-                            }
+                           
                             if let Some(role_expr) = &mapped_field.options.load_role_expr {
                                 if !crate::role_validator::RoleValidator::is_valid(
                                     &self.roles,
@@ -642,8 +646,16 @@ impl<'a> SqlBuilder<'a> {
                             )? {
                                 let resolver = Resolver::new().with_self_alias(&canonical_alias);
                                 let expr = resolver.resolve(&expr)?;
+                                if !result.where_expr.is_empty()  && !result.where_expr.ends_with_literal("(") {
+                                    result.where_expr.push_literal(
+                                        if field.concatenation == Concatenation::And {
+                                            " AND "
+                                        } else {
+                                            " OR "
+                                        },
+                                    );
+                                }
                                 result.where_expr.extend(expr);
-                                result.where_expr.push_literal(" AND ");
                             }
                         }
                         MapperOrMerge::Merge(_merge_path) => {
@@ -696,20 +708,51 @@ impl<'a> SqlBuilder<'a> {
                                 &predicate.args,
                                 &aux_params,
                             )? {
+                                if !result.where_expr.is_empty()
+                                    && !result.where_expr.ends_with_literal("(")
+                                {
+                                    result.where_expr.push_literal(
+                                        if predicate.concatenation == Concatenation::And {
+                                            " AND "
+                                        } else {
+                                            " OR "
+                                        },
+                                    );
+                                }
                                 result.where_expr.extend(expr);
-                                result.where_expr.push_literal(" AND ");
                             }
                         }
                         MapperOrMerge::Merge(_merge_path) => {}
+                    }
+                }
+                QueryToken::LeftBracket(concatenation) => {
+                    if !result.where_expr.is_empty() {
+                        result.where_expr.push_literal(
+                            if concatenation == &Concatenation::And {
+                                " AND "
+                            } else {
+                                " OR "
+                            },
+                        );
+                    }
+                    result.where_expr.push_literal("(");
+                }
+                QueryToken::RightBracket => {
+                    // If parentheses are empty, remove right bracket and concatenation 
+                    if result.where_expr.ends_with_literal("(") {
+                        result.where_expr.pop(); // Remove '(' token
+                        result.where_expr.pop(); // Remove ' AND ' or 'OR ' token
+                    } else {
+                        result.where_expr.push_literal(")");
                     }
                 }
                 _ => {}
             }
         }
 
-        if !result.where_expr.is_empty() {
-            result.where_expr.pop_literals(5); // Remove trailing ' AND '
-        }
+        /*  if !result.where_expr.is_empty() {
+            result.where_expr.pop_literals(if last_concatenation == Concatenation::And {5} else {4}); // Remove trailing ' AND ' resp ' OR '
+        } */
         Ok(())
     }
 
@@ -779,7 +822,7 @@ impl<'a> SqlBuilder<'a> {
                     local_merge_path.to_string(),
                     build_context,
                     unmerged_home_paths,
-                );
+                )?;
             }
         }
         Ok(())
@@ -1054,9 +1097,9 @@ impl<'a> SqlBuilder<'a> {
                             return Err(SqlBuilderError::RoleRequired(load_role_expr.to_string()).into());
                         };
                     } */
-                    /* if build_context.local_selected_paths.contains(merge_path) {
+                   /*  if build_context.local_selected_paths.contains(merge_path) {
                         // result.unmerged_paths.insert(merge_path.to_owned());
-                    } */
+                    }*/ 
                 }
             }
         }
@@ -1081,12 +1124,16 @@ impl<'a> SqlBuilder<'a> {
         };
         //  if !local_path.is_empty() {
         //local_selected_paths.insert(local_path.to_string());
-        if let Some(merge_path) = self.next_merge_path(&local_path)? {
+        if let Some(local_merge_path) = self.next_merge_path(&local_path)? {
             unmerged_home_paths.insert(
                 FieldPath::from(&build_context.query_home_path)
-                    .append(&merge_path)
+                    .append(&local_merge_path)
                     .to_string(),
             );
+          
+            for path in FieldPath::from(&local_merge_path).step_up().skip(1) {
+                build_context.local_joined_paths.insert(path.to_string());
+            }
         } else {
             let query_field = FieldPath::from(&query_field);
             let local_field = match query_field.localize_path(&build_context.query_home_path) {
@@ -1202,13 +1249,16 @@ impl<'a> SqlBuilder<'a> {
                     {
                         // if !local_path.is_empty() {
                         // local_selected_paths.insert(local_path.to_string());
-                        if let Some(merge_path) = self.next_merge_path(&local_path)? {
+                        if let Some(local_merge_path) = self.next_merge_path(&local_path)? {
                             // insert full query path
                             unmerged_home_paths.insert(
                                 FieldPath::from(&build_context.query_home_path)
-                                    .append(&merge_path)
+                                    .append(&local_merge_path)
                                     .to_string(),
                             );
+                            for path in FieldPath::from(&local_merge_path).step_up().skip(1) {
+                                build_context.local_joined_paths.insert(path.to_string());
+                            }
                         } else {
                             build_context
                                 .local_selected_paths
@@ -1226,13 +1276,16 @@ impl<'a> SqlBuilder<'a> {
                     if let Some(local_path) =
                         query_path.localize_path(&build_context.query_home_path)
                     {
-                        if let Some(merge_path) = self.next_merge_path(&local_path)? {
+                        if let Some(local_merge_path) = self.next_merge_path(&local_path)? {
                             // insert full query path
                             unmerged_home_paths.insert(
                                 FieldPath::from(&build_context.query_home_path)
-                                    .append(&merge_path)
+                                    .append(&local_merge_path)
                                     .to_string(),
                             );
+                            for path in FieldPath::from(&local_merge_path).step_up().skip(1) {
+                                build_context.local_joined_paths.insert(path.to_string());
+                            } 
                         } else {
                             let mapper = self.joined_mapper_for_local_path(&local_path)?;
                             match selection_name {
@@ -1320,7 +1373,6 @@ impl<'a> SqlBuilder<'a> {
                                         &mut build_context,
                                         &mut unmerged_home_paths,
                                     )?;
-                                   
                                 }
                             }
                         }
@@ -1330,7 +1382,7 @@ impl<'a> SqlBuilder<'a> {
                         // Let's say selection is  `$users_all` and query_home_path is `users_memberships`
                         // A local selection had to start with `$users_memberships_all`, however we still have to
                         // evaluate `$users_all` because the selection goes down
-                       /*  println!(
+                        /*  println!(
                             "Path `{}` is not local to `{}`",
                             query_path.as_str(),
                             &build_context.query_home_path
@@ -1416,20 +1468,20 @@ impl<'a> SqlBuilder<'a> {
             .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))
     }
     fn next_merge_path(&self, local_path: &FieldPath) -> Result<Option<String>> {
-        let mut mapper = self
+        let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.home_mapper)
             .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
-        for (s, a) in local_path.children().zip(local_path.descendents()) {
-            if mapper.merged_mapper(s.as_str()).is_some() {
-                return Ok(Some(String::from(a.as_str())));
-            } else if let Some(mapper_name) = mapper.merged_mapper(s.as_str()) {
+        for (mapper_name, merge_path) in local_path.children().zip(local_path.step_down()) {
+            if current_mapper.merged_mapper(mapper_name.as_str()).is_some() {
+                return Ok(Some(merge_path.to_string()));
+            } else if let Some(joined_mapper_name) = current_mapper.joined_mapper(mapper_name.as_str()) {
                 let m = self
                     .sql_mapper_registry
-                    .get(&mapper_name)
+                    .get(&joined_mapper_name)
                     .ok_or(ToqlError::MapperMissing(mapper_name.to_string()))?;
-                mapper = m;
+                current_mapper = m;
             } else {
                 break;
             }

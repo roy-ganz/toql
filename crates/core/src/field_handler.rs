@@ -116,20 +116,28 @@ impl FieldHandler for BasicFieldHandler {
                 Ok(Some(select))
             }
             FieldFilter::In(args) => {
+                if args.is_empty() {
+                    return Ok(None);
+                }
                 select.push_literal(" IN (");
                 for a in args {
-                    select.push_separator(", ");
                     select.push_arg(a.clone());
+                    select.push_literal(", ");
                 }
+                select.pop(); // remove last ' ,' token 
                 select.push_literal(")");
                 Ok(Some(select))
             }
             FieldFilter::Out(args) => {
+                if args.is_empty() {
+                    return Ok(None);
+                }
                 select.push_literal(" NOT IN (");
                 for a in args {
-                    select.push_separator(", ");
                     select.push_arg(a.clone());
+                    select.push_literal(", ");
                 }
+                select.pop(); // remove last ' ,' token 
                 select.push_literal(")");
                 Ok(Some(select))
             }
