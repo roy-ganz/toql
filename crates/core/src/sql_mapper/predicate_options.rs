@@ -45,3 +45,9 @@ impl PredicateOptions {
         self
     }
 }
+
+impl Default for PredicateOptions {
+    fn default() -> Self {
+        Self::new()
+    }
+}

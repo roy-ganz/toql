@@ -15,9 +15,8 @@ impl<'a> ParameterMap<'a> {
 
     pub fn get(&self, name: &str) -> Option<&'a SqlArg> {
         for p in self.0 {
-            match p.get(name) {
-                Some(p) => return Some(p),
-                None => {}
+            if let Some(p) = p.get(name) {
+                return Some(p);
             }
         }
         None

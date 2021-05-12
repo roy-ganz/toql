@@ -41,7 +41,7 @@ impl PathTree {
                     let j = self
                         .nodes
                         .entry(p.as_str().to_string())
-                        .or_insert(HashSet::new());
+                        .or_insert_with(HashSet::new);
                     j.insert(a.as_str().to_string());
 
                     if self.nodes.contains_key(a.as_str()) {

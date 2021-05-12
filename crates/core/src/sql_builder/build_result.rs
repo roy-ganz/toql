@@ -118,7 +118,7 @@ impl BuildResult {
         args.extend_from_slice(&join_sql.1);
         args.extend_from_slice(&where_sql.1);
 
-        let mut stmt = String::from(verb_sql.0);
+        let mut stmt = verb_sql.0;
         stmt.push(' ');
 
         if !modifier.is_empty() {

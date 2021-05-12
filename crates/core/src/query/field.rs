@@ -43,7 +43,7 @@ impl Field {
 
         Field {
             concatenation: Concatenation::And,
-            name: name.into(),
+            name,
             hidden: false,
             order: None,
             filter: None,

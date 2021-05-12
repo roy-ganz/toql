@@ -43,8 +43,17 @@ impl SelectStream {
     pub fn len(&mut self) -> usize {
         self.stream.len()
     }
+    pub fn is_empty(&mut self) -> bool {
+        self.stream.is_empty()
+    }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Select> {
         self.stream.iter()
+    }
+}
+
+impl Default for SelectStream {
+    fn default() -> Self {
+        Self::new()
     }
 }

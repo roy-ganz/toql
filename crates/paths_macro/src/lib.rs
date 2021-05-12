@@ -27,7 +27,7 @@
 //!
 
 #![recursion_limit = "512"]
-#![feature(proc_macro_span)]
+//#![feature(proc_macro_span)]
 
 extern crate proc_macro;
 
@@ -46,6 +46,7 @@ mod paths_macro;
 pub fn paths(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
                                     // eprintln!("{:?}", input);
+    log::debug!("Source code for `{:?}`: ", &input);                             
 
     let ast = parse_macro_input!(input as paths_macro::PathsMacro);
 
@@ -58,17 +59,17 @@ pub fn paths(input: TokenStream) -> TokenStream {
         ]))),
     };
 
-    let source = proc_macro::Span::call_site()
+   /*  let source = proc_macro::Span::call_site()
         .source_text()
-        .unwrap_or("".to_string());
+        .unwrap_or("".to_string()); */
 
     match gen {
         Ok(o) => {
-            log::debug!("Source code for `{}`:\n{}", source, o.to_string());
+            log::debug!("{}", o.to_string());
             TokenStream::from(o)
         }
         Err(e) => {
-            log::debug!("Source code for `{}`:\n{}", source, e.to_string());
+            log::debug!("{}",  e.to_string());
             TokenStream::from(e)
         }
     }

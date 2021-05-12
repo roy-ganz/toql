@@ -147,7 +147,7 @@ impl<'a> SqlBuilder<'a> {
                 DeserializeType::Field(name) => {
                     let field = mapper
                         .field(&name)
-                        .ok_or(SqlBuilderError::FieldMissing(name.to_string()))?;
+                        .ok_or_else(|| SqlBuilderError::FieldMissing(name.to_string()))?;
                     columns_expr.extend(resolver.resolve(&field.expression)?);
                     if field.options.key {
                         return Ok(());
@@ -156,8 +156,8 @@ impl<'a> SqlBuilder<'a> {
                 DeserializeType::Join(name) => {
                     let join = mapper
                         .join(&name)
-                        .ok_or(SqlBuilderError::JoinMissing(name.to_string()))?;
-                    if join.options.key != true {
+                        .ok_or_else(|| SqlBuilderError::JoinMissing(name.to_string()))?;
+                    if !join.options.key {
                         return Ok(());
                     }
 
@@ -220,7 +220,7 @@ impl<'a> SqlBuilder<'a> {
             .sql_mapper_registry
             .mappers
             .get(&self.home_mapper)
-            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
         if let Some(role_expr) = &root_mapper.delete_role_expr {
             if !RoleValidator::is_valid(&self.roles, role_expr) {
@@ -251,7 +251,7 @@ impl<'a> SqlBuilder<'a> {
             .sql_mapper_registry
             .mappers
             .get(&self.home_mapper)
-            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
         let (merge_field, base_path) = FieldPath::split_basename(merge_path.as_str());
 
@@ -267,13 +267,13 @@ impl<'a> SqlBuilder<'a> {
 
         let merge = base_mapper
             .merge(merge_field)
-            .ok_or(SqlBuilderError::FieldMissing(merge_field.to_string()))?;
+            .ok_or_else(|| SqlBuilderError::FieldMissing(merge_field.to_string()))?;
 
         let merge_mapper = self
             .sql_mapper_registry
             .mappers
             .get(&merge.merged_mapper)
-            .ok_or(ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
 
         let mut delete_expr = SqlExpr::new();
 
@@ -313,7 +313,7 @@ impl<'a> SqlBuilder<'a> {
         let mapper = self
             .sql_mapper_registry
             .get(&self.home_mapper)
-            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
         let mut result = BuildResult::new(SqlExpr::literal("SELECT"));
         result.set_from(
@@ -395,7 +395,7 @@ impl<'a> SqlBuilder<'a> {
         let mut current_mapper = self
             .sql_mapper_registry
             .get(mapper_name)
-            .ok_or(ToqlError::MapperMissing(mapper_name.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_string()))?;
 
         if !path.is_empty() {
             for p in path.children() {
@@ -404,7 +404,7 @@ impl<'a> SqlBuilder<'a> {
                     current_mapper = self
                         .sql_mapper_registry
                         .get(&join.joined_mapper)
-                        .ok_or(ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
+                        .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                 } else {
                     return Err(SqlBuilderError::JoinMissing(p.as_str().to_string()).into());
                 }
@@ -418,7 +418,7 @@ impl<'a> SqlBuilder<'a> {
         let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.root_mapper)
-            .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(self.root_mapper.to_string()))?;
 
         if !query_path.is_empty() {
             for p in query_path.children() {
@@ -427,12 +427,12 @@ impl<'a> SqlBuilder<'a> {
                     current_mapper = self
                         .sql_mapper_registry
                         .get(&join.joined_mapper)
-                        .ok_or(ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
+                        .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                 } else if let Some(merge) = current_mapper.merges.get(p.as_str()) {
                     current_mapper = self
                         .sql_mapper_registry
                         .get(&merge.merged_mapper)
-                        .ok_or(ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
+                        .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
                 } else {
                     return Err(ToqlError::MapperMissing(p.as_str().to_string()));
                 }
@@ -446,7 +446,7 @@ impl<'a> SqlBuilder<'a> {
         let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.home_mapper)
-            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
         if !local_path.is_empty() {
             for (p, a) in local_path.children().zip(local_path.step_down()) {
@@ -457,11 +457,11 @@ impl<'a> SqlBuilder<'a> {
                 let join = current_mapper
                     .joins
                     .get(p.as_str())
-                    .ok_or(ToqlError::MapperMissing(p.as_str().to_string()))?;
+                    .ok_or_else(|| ToqlError::MapperMissing(p.as_str().to_string()))?;
                 current_mapper = self
                     .sql_mapper_registry
                     .get(&join.joined_mapper)
-                    .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))?;
+                    .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
             }
         }
 
@@ -473,20 +473,20 @@ impl<'a> SqlBuilder<'a> {
             let mut current_mapper = self
                 .sql_mapper_registry
                 .get(current_type)
-                .ok_or(ToqlError::MapperMissing(current_type.to_string()))?;
+                .ok_or_else(|| ToqlError::MapperMissing(current_type.to_string()))?;
 
             for p in path.children() {
                 if let Some(merge) = current_mapper.merges.get(p.as_str()) {
                     current_mapper = self
                         .sql_mapper_registry
                         .get(&merge.merged_mapper)
-                        .ok_or(ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
+                        .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
                     current_type = &merge.merged_mapper;
                 } else if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
                         .sql_mapper_registry
                         .get(&join.joined_mapper)
-                        .ok_or(ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
+                        .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                     current_type = &join.joined_mapper;
                 } else {
                     return Err(ToqlError::MapperMissing(p.to_string()));
@@ -548,7 +548,7 @@ impl<'a> SqlBuilder<'a> {
             let local_mapper = self.joined_mapper_for_local_path(&local_path)?;
             let join = local_mapper
                 .join(join_name)
-                .ok_or(SqlBuilderError::JoinMissing(join_name.to_string()))?;
+                .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string()))?;
 
             let p = [&self.aux_params, &join.options.aux_params];
             let aux_params = ParameterMap::new(&p);
@@ -675,10 +675,9 @@ impl<'a> SqlBuilder<'a> {
 
                     match mapper_or_merge {
                         MapperOrMerge::Mapper(mapper) => {
-                            let mapped_field = mapper
-                                .fields
-                                .get(field_name)
-                                .ok_or(SqlBuilderError::FieldMissing(field.name.to_string()))?;
+                            let mapped_field = mapper.fields.get(field_name).ok_or_else(|| {
+                                SqlBuilderError::FieldMissing(field.name.to_string())
+                            })?;
 
                             if let Some(role_expr) = &mapped_field.options.load_role_expr {
                                 if !crate::role_validator::RoleValidator::is_valid(
@@ -703,7 +702,7 @@ impl<'a> SqlBuilder<'a> {
                             let select_expr = mapped_field
                                 .handler
                                 .build_select(mapped_field.expression.clone(), &aux_params)?
-                                .unwrap_or(SqlExpr::new());
+                                .unwrap_or_default();
 
                             // Does filter apply
                             if let Some(expr) = mapped_field.handler.build_filter(
@@ -751,10 +750,10 @@ impl<'a> SqlBuilder<'a> {
 
                     match mapper_or_merge {
                         MapperOrMerge::Mapper(mapper) => {
-                            let mapped_predicate = mapper
-                                .predicates
-                                .get(basename)
-                                .ok_or(SqlBuilderError::PredicateMissing(basename.to_string()))?;
+                            let mapped_predicate =
+                                mapper.predicates.get(basename).ok_or_else(|| {
+                                    SqlBuilderError::PredicateMissing(basename.to_string())
+                                })?;
 
                             if let Some(role) = &mapped_predicate.options.load_role_expr {
                                 if !RoleValidator::is_valid(&self.roles, role) {
@@ -848,7 +847,7 @@ impl<'a> SqlBuilder<'a> {
     // Add recusivly all joins from a mapper to selected_paths
     fn add_all_joins_as_selected_paths(
         &self,
-        mapper_name: &String,
+        mapper_name: &str,
         local_path: String,
         build_context: &mut BuildContext,
         unmerged_home_paths: &mut HashSet<String>,
@@ -856,7 +855,7 @@ impl<'a> SqlBuilder<'a> {
         let mapper = self
             .sql_mapper_registry
             .get(&mapper_name)
-            .ok_or(ToqlError::MapperMissing(mapper_name.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_string()))?;
         for jm in &mapper.joins {
             let selected_path = FieldPath::from(&local_path).append(jm.0);
             // Resolve, if join is not yet resolved
@@ -916,7 +915,7 @@ impl<'a> SqlBuilder<'a> {
                     let mapper = self.joined_mapper_for_local_path(&local_path)?;
                     let field_info = mapper
                         .field(field_name)
-                        .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
+                        .ok_or_else(|| SqlBuilderError::FieldMissing(field_name.to_string()))?;
 
                     let role_valid =
                         if let Some(load_role_expr) = &field_info.options.load_role_expr {
@@ -1011,7 +1010,7 @@ impl<'a> SqlBuilder<'a> {
 
                     let field_info = mapper
                         .field(field_name)
-                        .ok_or(SqlBuilderError::FieldMissing(field_name.to_string()))?;
+                        .ok_or_else(|| SqlBuilderError::FieldMissing(field_name.to_string()))?;
 
                     let p = [
                         &self.aux_params,
@@ -1117,7 +1116,7 @@ impl<'a> SqlBuilder<'a> {
                 DeserializeType::Join(join_name) => {
                     let join_info = mapper
                         .join(join_name)
-                        .ok_or(SqlBuilderError::JoinMissing(join_name.to_string()))?;
+                        .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string()))?;
 
                     if let Some(load_role_expr) = &join_info.options.load_role_expr {
                         return Err(
@@ -1151,8 +1150,7 @@ impl<'a> SqlBuilder<'a> {
                         result.selection_stream.push(Select::None); // No Join
                     }
                 }
-                DeserializeType::Merge(_) => {
-                }
+                DeserializeType::Merge(_) => {}
             }
         }
 
@@ -1208,20 +1206,17 @@ impl<'a> SqlBuilder<'a> {
     ) -> Result<()> {
         let (selection_name, query_path) = FieldPath::split_basename(query_selection);
         let mapper = self.mapper_for_query_path(&query_path)?;
-        let selection =
-            mapper
-                .selections
-                .get(selection_name)
-                .ok_or(SqlBuilderError::SelectionMissing(
-                    selection_name.to_string(),
-                ))?;
+        let selection = mapper
+            .selections
+            .get(selection_name)
+            .ok_or_else(|| SqlBuilderError::SelectionMissing(selection_name.to_string()))?;
         for local_field_or_path in selection {
             // Path either ends with `*` or `_`
-            if local_field_or_path.ends_with("*") || local_field_or_path.ends_with("_") {
+            if local_field_or_path.ends_with('*') || local_field_or_path.ends_with('_') {
                 let query_path = FieldPath::from(query_path.as_str()).append(
                     local_field_or_path
-                        .trim_end_matches("*")
-                        .trim_end_matches("_"),
+                        .trim_end_matches('*')
+                        .trim_end_matches('_'),
                 );
                 if let Some(local_path) = query_path.localize_path(&build_context.query_home_path) {
                     if let Some(merge_path) = self.next_merge_path(&local_path)? {
@@ -1288,7 +1283,7 @@ impl<'a> SqlBuilder<'a> {
                             build_context
                                 .ordering
                                 .entry(*order)
-                                .or_insert(Vec::new())
+                                .or_insert_with(Vec::new)
                                 .push((o.to_owned(), local_path_with_name.to_string()));
                         }
                     }
@@ -1358,10 +1353,12 @@ impl<'a> SqlBuilder<'a> {
                                     for deserialization_type in &mapper.deserialize_order {
                                         match deserialization_type {
                                             DeserializeType::Field(field_name) => {
-                                                let f = mapper.fields.get(field_name).ok_or(
-                                                    SqlBuilderError::FieldMissing(
-                                                        field_name.to_string(),
-                                                    ),
+                                                let f = mapper.fields.get(field_name).ok_or_else(
+                                                    || {
+                                                        SqlBuilderError::FieldMissing(
+                                                            field_name.to_string(),
+                                                        )
+                                                    },
                                                 )?;
                                                 if !f.options.skip_mut && !f.options.key {
                                                     let query_field = FieldPath::from(
@@ -1378,10 +1375,12 @@ impl<'a> SqlBuilder<'a> {
                                                 }
                                             }
                                             DeserializeType::Join(join_name) => {
-                                                let f = mapper.joins.get(join_name).ok_or(
-                                                    SqlBuilderError::JoinMissing(
-                                                        join_name.to_string(),
-                                                    ),
+                                                let f = mapper.joins.get(join_name).ok_or_else(
+                                                    || {
+                                                        SqlBuilderError::JoinMissing(
+                                                            join_name.to_string(),
+                                                        )
+                                                    },
                                                 )?;
                                                 if !(f.options.skip_mut || f.options.key) {
                                                     // Add keys from that join
@@ -1404,11 +1403,14 @@ impl<'a> SqlBuilder<'a> {
                                         if let DeserializeType::Field(query_field_name) =
                                             deserialization_type
                                         {
-                                            let f = mapper.fields.get(query_field_name).ok_or(
-                                                SqlBuilderError::FieldMissing(
-                                                    query_field_name.to_string(),
-                                                ),
-                                            )?;
+                                            let f = mapper
+                                                .fields
+                                                .get(query_field_name)
+                                                .ok_or_else(|| {
+                                                    SqlBuilderError::FieldMissing(
+                                                        query_field_name.to_string(),
+                                                    )
+                                                })?;
                                             if f.options.count_select {
                                                 self.add_query_field(
                                                     &query_field_name,
@@ -1482,16 +1484,13 @@ impl<'a> SqlBuilder<'a> {
         let joined_mapper = self
             .sql_mapper_registry
             .get(&joined_mapper_name)
-            .ok_or(ToqlError::MapperMissing(joined_mapper_name.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(joined_mapper_name.to_string()))?;
         for deserialization_type in &joined_mapper.deserialize_order {
             match deserialization_type {
                 DeserializeType::Field(field_name) => {
-                    let field =
-                        joined_mapper
-                            .field(field_name)
-                            .ok_or(SqlBuilderError::FieldMissing(
-                                joined_mapper_name.to_string(),
-                            ))?;
+                    let field = joined_mapper.field(field_name).ok_or_else(|| {
+                        SqlBuilderError::FieldMissing(joined_mapper_name.to_string())
+                    })?;
                     if field.options.key {
                         let local_field = local_path.append(field_name);
                         build_context
@@ -1500,9 +1499,9 @@ impl<'a> SqlBuilder<'a> {
                     }
                 }
                 DeserializeType::Join(query_join_name) => {
-                    let join = joined_mapper
-                        .join(query_join_name)
-                        .ok_or(SqlBuilderError::JoinMissing(joined_mapper_name.to_string()))?;
+                    let join = joined_mapper.join(query_join_name).ok_or_else(|| {
+                        SqlBuilderError::JoinMissing(joined_mapper_name.to_string())
+                    })?;
                     if join.options.key {
                         let local_path = local_path.append(query_join_name);
                         self.add_nested_keys(&join.joined_mapper, &local_path, build_context)?;
@@ -1517,13 +1516,13 @@ impl<'a> SqlBuilder<'a> {
     fn root_mapper(&self) -> Result<&SqlMapper> {
         self.sql_mapper_registry
             .get(&self.home_mapper)
-            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))
+            .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))
     }
     fn next_merge_path(&self, local_path: &FieldPath) -> Result<Option<String>> {
         let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.home_mapper)
-            .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
         for (mapper_name, merge_path) in local_path.children().zip(local_path.step_down()) {
             if current_mapper.merged_mapper(mapper_name.as_str()).is_some() {
@@ -1534,7 +1533,7 @@ impl<'a> SqlBuilder<'a> {
                 let m = self
                     .sql_mapper_registry
                     .get(&joined_mapper_name)
-                    .ok_or(ToqlError::MapperMissing(mapper_name.to_string()))?;
+                    .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_string()))?;
                 current_mapper = m;
             } else {
                 break;

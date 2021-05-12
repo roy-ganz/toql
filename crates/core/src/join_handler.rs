@@ -30,3 +30,9 @@ impl DefaultJoinHandler {
 }
 
 impl JoinHandler for DefaultJoinHandler {}
+
+impl Default for DefaultJoinHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}

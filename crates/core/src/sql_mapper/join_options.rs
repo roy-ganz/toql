@@ -1,4 +1,4 @@
-use crate::{join_handler::JoinHandler, sql_arg::SqlArg, role_expr::RoleExpr};
+use crate::{join_handler::JoinHandler, role_expr::RoleExpr, sql_arg::SqlArg};
 use std::{collections::HashMap, sync::Arc};
 
 /// Options for a mapped field.
@@ -69,5 +69,11 @@ impl JoinOptions {
     {
         self.aux_params.insert(name.into(), value.into());
         self
+    }
+}
+
+impl Default for JoinOptions {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -50,3 +50,9 @@ impl Sql {
         self.0.is_empty()
     }
 }
+
+impl Default for Sql {
+    fn default() -> Self {
+        Self::new()
+    }
+}

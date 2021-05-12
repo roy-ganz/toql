@@ -42,7 +42,7 @@ impl Struct {
                 sql: a.sql.clone(),
                 handler: a.handler.clone(),
                 on_param: a.on_param.clone(),
-                count_filter: a.count_filter.clone(),
+                count_filter: a.count_filter,
             })
             .collect::<Vec<_>>();
         let mapped_selections: Vec<SelectionArg> = toql
@@ -65,7 +65,7 @@ impl Struct {
             sql_table_alias: toql
                 .alias
                 .clone()
-                .unwrap_or(toql.ident.to_string())
+                .unwrap_or_else(|| toql.ident.to_string())
                 .to_mixed_case(),
             rust_struct_visibility: toql.vis.clone(),
             mapped_predicates,
@@ -188,14 +188,14 @@ impl Field {
 
         let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
 
-        if field.skip_wildcard == true && field.preselect == true {
+        if field.skip_wildcard && field.preselect {
             return Err(darling::Error::custom(
                 "`skip_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`."
                     .to_string(),
             )
             .with_span(&field.ident));
         }
-        if field.skip_wildcard == true && number_of_options == 0 {
+        if field.skip_wildcard && number_of_options == 0 {
             return Err(darling::Error::custom(
                     "`skip_wildcard` is only allowed on selectable fields. Add `Option<..>` to field type.".to_string(),
                 )
@@ -217,12 +217,12 @@ impl Field {
                 .with_span(&field.ident));
             }
 
-            let renamed_table = crate::util::rename_or_default(
+            let sql_join_table_name = crate::util::rename_or_default(
                 &rust_type_name, // field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
             //  let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
-            let sql_join_table_name = renamed_table.to_owned();
+            //  let sql_join_table_name = renamed_table.to_owned();
             let columns_translation = field
                 .join
                 .as_ref()
@@ -314,8 +314,7 @@ impl Field {
                     .alias
                     .as_ref()
                     .unwrap_or(&rust_field_name)
-                    .to_mixed_case()
-                    .to_owned(),
+                    .to_mixed_case(),
                 sql_join_table_name,
                 default_self_column_code,
                 columns_map_code,
@@ -347,12 +346,12 @@ impl Field {
                 .with_span(&field.ident));
             }
 
-            let renamed_table = crate::util::rename_or_default(
+            let sql_join_table_name = crate::util::rename_or_default(
                 &rust_type_name, //field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
             //let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
-            let sql_join_table_name = renamed_table.to_owned();
+            // let sql_join_table_name = renamed_table.to_owned();
 
             let mut columns: Vec<MergeMatch> = Vec::new();
 
@@ -388,13 +387,11 @@ impl Field {
                     if c == '.' {
                         n += 1;
                         false
+                    } else if n == 2 {
+                        true
                     } else {
-                        if n == 2 {
-                            true
-                        } else {
-                            n = 0;
-                            false
-                        }
+                        n = 0;
+                        false
                     }
                 });
                 if found_self_alias {
@@ -437,7 +434,7 @@ impl Field {
                 } else {
                     // TODO put table renaming into separate function
 
-                    let table_name = toql.table.clone().unwrap_or(toql.ident.to_string());
+                    let table_name = toql.table.clone().unwrap_or_else(|| toql.ident.to_string());
                     Some(crate::util::rename(
                         &format!("{}_{}", &table_name, &rust_field_name),
                         toql.columns.as_ref().unwrap_or(&RenameCase::SnakeCase),
@@ -491,7 +488,7 @@ pub(crate) fn unwrap_type<'a>(ty: &'a syn::Type, number_of_options: &mut u8) -> 
     ty
 }
 
-pub(crate) fn unwrap_base<'a>(ty: &'a syn::Type) -> syn::Ident {
+pub(crate) fn unwrap_base(ty: &syn::Type) -> syn::Ident {
     match ty {
         syn::Type::Path(type_path) if type_path.qself.is_none() => {
             let path_segment = &type_path.path.segments.iter().next().unwrap();

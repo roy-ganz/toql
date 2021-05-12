@@ -6,10 +6,7 @@ use crate::{
     sql_arg::SqlArg,
     sql_expr::{SqlExpr, SqlExprToken},
 };
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-};
+use std::{borrow::Cow, collections::HashMap};
 
 pub struct Resolver<'a> {
     self_alias: Option<&'a str>,
@@ -113,7 +110,7 @@ impl<'a> Resolver<'a> {
                     .aux_params
                     .unwrap()
                     .get(&name)
-                    .ok_or(ResolverError::AuxParamMissing(name.to_string()))?
+                    .ok_or_else(|| ResolverError::AuxParamMissing(name.to_string()))?
                     .to_owned();
                 Ok(Cow::Owned(SqlExprToken::Arg(arg)))
             }
@@ -179,7 +176,7 @@ impl<'a> Resolver<'a> {
                     }))
                 }
             }
-            tok @ _ => Ok(Cow::Borrowed(tok)),
+            tok => Ok(Cow::Borrowed(tok)),
         }
     }
 
@@ -205,7 +202,7 @@ impl<'a> Resolver<'a> {
             }
 
             SqlExprToken::Arg(arg) => {
-                stmt.push_str("?");
+                stmt.push('?');
                 args.push(arg.to_owned());
             }
 
@@ -223,7 +220,7 @@ impl<'a> Resolver<'a> {
                         PredicateColumn::Aliased(canonical_alias, col) => {
                             let alias = alias_translator.translate(canonical_alias);
                             stmt.push_str(&alias);
-                            stmt.push_str(".");
+                            stmt.push('.');
                             stmt.push_str(col);
                         }
                     };
@@ -239,7 +236,7 @@ impl<'a> Resolver<'a> {
                             for _ in 1..a.len() {
                                 stmt.push_str(", ?");
                             }
-                            stmt.push_str(")");
+                            stmt.push(')');
                             args.extend(a.to_owned());
                         }
                     }
@@ -258,7 +255,7 @@ impl<'a> Resolver<'a> {
                                 PredicateColumn::Aliased(canonical_alias, col) => {
                                     let alias = alias_translator.translate(canonical_alias);
                                     stmt.push_str(&alias);
-                                    stmt.push_str(".");
+                                    stmt.push('.');
                                     stmt.push_str(col);
                                 }
                             };
@@ -283,5 +280,11 @@ impl<'a> Resolver<'a> {
             },
         }
         Ok(())
+    }
+}
+
+impl Default for Resolver<'_> {
+    fn default() -> Self {
+        Self::new()
     }
 }

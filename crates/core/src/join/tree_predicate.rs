@@ -2,7 +2,7 @@ use super::Join;
 use crate::error::ToqlError;
 use crate::key::Key;
 use crate::keyed::Keyed;
-use crate::{query::field_path::{ FieldPath}, sql_arg::SqlArg, tree::tree_predicate::TreePredicate};
+use crate::{query::field_path::FieldPath, sql_arg::SqlArg, tree::tree_predicate::TreePredicate};
 
 impl<T> TreePredicate for Join<T>
 where

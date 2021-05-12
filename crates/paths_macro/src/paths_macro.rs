@@ -25,7 +25,7 @@ fn parse_pathlist(input: ParseStream) -> Result<PathsMacro> {
 
 fn parse_top(input: ParseStream) -> Result<PathsMacro> {
     let top: Ident = input.parse()?;
-    if top.to_string() == "top" {
+    if top == "top" {
         Ok(PathsMacro::Top)
     } else {
         println!("Found {}", top);
@@ -53,7 +53,7 @@ pub fn parse(
     match PestFieldListParser::parse(Rule::query, &field_list_string.value()) {
         Ok(pairs) => {
             output_stream.extend(evaluate_pair(
-                &mut pairs.flatten().into_iter(),
+                &mut pairs.flatten(),
                 &struct_type,
             )?);
         }
@@ -72,7 +72,7 @@ fn evaluate_pair(
 ) -> std::result::Result<TokenStream, TokenStream> {
     let mut methods = Vec::new();
 
-    while let Some(pair) = pairs.next() {
+    for pair in pairs {
         let span = pair.clone().as_span();
 
         match pair.as_rule() {
@@ -86,7 +86,7 @@ fn evaluate_pair(
             Rule::field_path => {
                 let method_names = span
                     .as_str()
-                    .split("_")
+                    .split('_')
                     .filter(|p| !p.is_empty())
                     .map(|p| {
                         // Create raw identifier, see https://github.com/dtolnay/syn/issues/628

@@ -161,3 +161,9 @@ impl BasicFieldHandler {
         Self {}
     }
 }
+
+impl Default for BasicFieldHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}

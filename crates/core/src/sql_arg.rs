@@ -61,11 +61,7 @@ impl SqlArg {
     }
 
     pub fn is_null(&self) -> bool {
-        if let Self::Null = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Self::Null)
     }
     pub fn cmp_str(&self, other: &str) -> bool {
         if let Self::Str(v) = self {

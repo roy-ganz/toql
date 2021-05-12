@@ -42,21 +42,27 @@ impl Wildcard {
             }
         }
         // Remove optional trailing *
-        if path.ends_with("*") {
+        if path.ends_with('*') {
             path.pop();
         }
         // Add _ at end if missing
-        if !path.ends_with("_") {
+        if !path.ends_with('_') {
             path.push('_');
         }
 
         Wildcard {
             concatenation: Concatenation::And,
-            path: path.into(),
+            path,
         }
     }
 
     pub fn into_string(self) -> String {
         self.path
+    }
+}
+
+impl Default for Wildcard {
+    fn default() -> Self {
+        Self::new()
     }
 }

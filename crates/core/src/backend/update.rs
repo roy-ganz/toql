@@ -70,7 +70,7 @@ where
     let ty = <T as Mapped>::type_name();
     for path in query_paths {
         let (descendent_name, ancestor_path) =
-            FieldPath::split_basename(path.as_ref().trim_end_matches("_"));
+            FieldPath::split_basename(path.as_ref().trim_end_matches('_'));
 
         let children = ancestor_path.children();
 
@@ -98,22 +98,22 @@ where
         // Join, convert to wildcard
         if mapper.joined_mapper(descendent_name).is_some() {
             fields
-                .entry(path.as_ref().trim_end_matches("_").to_string())
-                .or_insert(HashSet::new())
+                .entry(path.as_ref().trim_end_matches('_').to_string())
+                .or_insert_with(HashSet::new)
                 .insert("*".to_string());
         }
         // Merged field
         else if mapper.merged_mapper(descendent_name).is_some() {
             merges
                 .entry(ancestor_path.to_string())
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .insert(descendent_name.to_string());
         }
         // Normal field
         else {
             fields
                 .entry(ancestor_path.to_string())
-                .or_insert(HashSet::new())
+                .or_insert_with(HashSet::new)
                 .insert(descendent_name.to_string());
         }
     }

@@ -121,7 +121,7 @@ impl<'a> CodegenMapper<'a> {
                 let sql_join_table_name = &join_attrs.sql_join_table_name;
 
                 if join_attrs.key {
-                    if self.key_fields == false {
+                    if !self.key_fields {
                         return Err(darling::Error::custom(
                             "Key must be the first fields in a struct. Move your field."
                                 .to_string(),
@@ -167,7 +167,7 @@ impl<'a> CodegenMapper<'a> {
                  );
 
                 let join_type = if field.number_of_options == 0
-                    || (field.number_of_options == 1 && field.preselect == false)
+                    || (field.number_of_options == 1 && !field.preselect)
                 {
                     quote!(toql::sql_mapper::join_type::JoinType::Inner)
                 } else {
@@ -234,7 +234,7 @@ impl<'a> CodegenMapper<'a> {
                 let toql_field_name = &field.toql_field_name;
 
                 if regular_attrs.key {
-                    if self.key_fields == false {
+                    if !self.key_fields {
                         return Err(darling::Error::custom(
                             "Key must be the first fields in a struct. Move your field."
                                 .to_string(),
@@ -365,66 +365,65 @@ impl<'a> CodegenMapper<'a> {
 
                 let join_predicate = if let Some(custom_on) = &merge_attrs.on_sql {
                     quote!(toql::sql_expr_macro::sql_expr!( #custom_on))
+                } else if merge_attrs.columns.is_empty() {
+                    let self_key_ident = syn::Ident::new(
+                        &format!("{}Key", &self.rust_struct.rust_struct_name),
+                        proc_macro2::Span::call_site(),
+                    );
+                    // let type_key_ident = syn::Ident::new(&format!("{}Key", &field.rust_type_name), proc_macro2::Span::call_site());
+                    quote!(  {
+                    let mut tokens: Vec<toql::sql_expr::SqlExprToken>= Vec::new();
+                        <#self_key_ident as toql::key::Key>::columns().iter()
+                        .zip(<#self_key_ident as toql::key::Key>::default_inverse_columns()).for_each(|(t,o)| {
+                        tokens.extend(vec![toql::sql_expr::SqlExprToken::SelfAlias,
+                        toql::sql_expr::SqlExprToken::Literal(".".to_string()),
+                        toql::sql_expr::SqlExprToken::Literal(t.to_string()),
+                        toql::sql_expr::SqlExprToken::Literal(" = ".to_string()),
+                        toql::sql_expr::SqlExprToken::OtherAlias,
+                        toql::sql_expr::SqlExprToken::Literal(".".to_string()),
+                        toql::sql_expr::SqlExprToken::Literal(o.to_string()),
+                        toql::sql_expr::SqlExprToken::Literal( " AND ".to_string())
+                        ].into_iter())});
+                        tokens.pop(); // ' AND '
+                        toql::sql_expr::SqlExpr::from(tokens)
+                    })
                 } else {
-                    if merge_attrs.columns.is_empty() {
-                        let self_key_ident = syn::Ident::new(
-                            &format!("{}Key", &self.rust_struct.rust_struct_name),
-                            proc_macro2::Span::call_site(),
-                        );
-                        // let type_key_ident = syn::Ident::new(&format!("{}Key", &field.rust_type_name), proc_macro2::Span::call_site());
-                        quote!(  {
-                        let mut tokens: Vec<toql::sql_expr::SqlExprToken>= Vec::new();
-                            <#self_key_ident as toql::key::Key>::columns().iter()
-                            .zip(<#self_key_ident as toql::key::Key>::default_inverse_columns()).for_each(|(t,o)| {
-                            tokens.extend(vec![toql::sql_expr::SqlExprToken::SelfAlias,
-                            toql::sql_expr::SqlExprToken::Literal(".".to_string()),
-                            toql::sql_expr::SqlExprToken::Literal(t.to_string()),
-                            toql::sql_expr::SqlExprToken::Literal(" = ".to_string()),
-                            toql::sql_expr::SqlExprToken::OtherAlias,
-                            toql::sql_expr::SqlExprToken::Literal(".".to_string()),
-                            toql::sql_expr::SqlExprToken::Literal(o.to_string()),
-                            toql::sql_expr::SqlExprToken::Literal( " AND ".to_string())
-                            ].into_iter())});
-                            tokens.pop(); // ' AND '
-                            toql::sql_expr::SqlExpr::from(tokens)
-                        })
-                    } else {
-                        let mut default_join_predicate: Vec<TokenStream> = Vec::new();
-                        default_join_predicate
-                            .push(quote!(  let mut t =  toql::sql_expr::SqlExpr::new();));
+                    let mut default_join_predicate: Vec<TokenStream> = Vec::new();
+                    default_join_predicate
+                        .push(quote!(  let mut t =  toql::sql_expr::SqlExpr::new();));
 
-                        let composite = merge_attrs.columns.len() > 0;
-                        for m in &merge_attrs.columns {
-                            let this_column = &m.this;
-                            default_join_predicate.push(quote!(
+                    let composite = merge_attrs.columns.len() > 1;
+                    for m in &merge_attrs.columns {
+                        let this_column = &m.this;
+                        default_join_predicate.push(quote!(
                                         t.push_self_alias();
                                         t.push_literal(".");
                                         t.push_literal(#this_column);
                                         t.push_literal(" = "); ));
-                            match &m.other {
-                                crate::sane::MergeColumn::Aliased(a) => {
-                                    default_join_predicate.push(quote!( t.push_literal(#a);));
-                                }
-                                crate::sane::MergeColumn::Unaliased(u) => default_join_predicate
-                                    .push(quote!(
-                                     t.push_other_alias();
-                                     t.push_literal(".");
-                                     t.push_literal(#u);
-                                    )),
+                        match &m.other {
+                            crate::sane::MergeColumn::Aliased(a) => {
+                                default_join_predicate.push(quote!( t.push_literal(#a);));
                             }
-                            if composite {
-                                default_join_predicate.push(quote!(t.push_literal(" AND ");));
+                            crate::sane::MergeColumn::Unaliased(u) => {
+                                default_join_predicate.push(quote!(
+                                 t.push_other_alias();
+                                 t.push_literal(".");
+                                 t.push_literal(#u);
+                                ))
                             }
                         }
-
                         if composite {
-                            // Remove last ' AND '
-                            default_join_predicate.push(quote!(t.pop_literals(5);));
+                            default_join_predicate.push(quote!(t.push_literal(" AND ");));
                         }
-                        default_join_predicate.push(quote!(t));
-
-                        quote!(#(#default_join_predicate)*)
                     }
+
+                    if composite {
+                        // Remove last ' AND '
+                        default_join_predicate.push(quote!(t.pop_literals(5);));
+                    }
+                    default_join_predicate.push(quote!(t));
+
+                    quote!(#(#default_join_predicate)*)
                 };
 
                 self.field_mappings.push(quote! {

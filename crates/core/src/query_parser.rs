@@ -109,58 +109,42 @@ impl TokenInfo {
                 let filtername = upc.split_ascii_whitespace().next().unwrap_or("");
                 match filtername {
                     "" => Ok(None),
-                    "EQ" => {
-                        Ok(Some(FieldFilter::Eq(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
+                    "EQ" => Ok(Some(FieldFilter::Eq(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
                     "EQN" => Ok(Some(FieldFilter::Eqn)),
-                    "NE" => {
-                        Ok(Some(FieldFilter::Ne(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
+                    "NE" => Ok(Some(FieldFilter::Ne(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
                     "NEN" => Ok(Some(FieldFilter::Nen)),
-                    "GT" => {
-                        Ok(Some(FieldFilter::Gt(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
-                    "GE" => {
-                        Ok(Some(FieldFilter::Ge(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
-                    "LT" => {
-                        Ok(Some(FieldFilter::Lt(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
-                    "LE" => {
-                        Ok(Some(FieldFilter::Le(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
-                    "LK" => {
-                        Ok(Some(FieldFilter::Lk(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
+                    "GT" => Ok(Some(FieldFilter::Gt(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
+                    "GE" => Ok(Some(FieldFilter::Ge(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
+                    "LT" => Ok(Some(FieldFilter::Lt(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
+                    "LE" => Ok(Some(FieldFilter::Le(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
+                    "LK" => Ok(Some(FieldFilter::Lk(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
                     "IN" => Ok(Some(FieldFilter::In(self.args.drain(..).collect()))),
                     "OUT" => Ok(Some(FieldFilter::Out(self.args.drain(..).collect()))),
                     "BW" => Ok(Some(FieldFilter::Bw(
-                        self.args
-                            .pop()
-                            .ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?,
-                        self.args
-                            .pop()
-                            .ok_or(SqlBuilderError::FilterInvalid(filtername.to_string()))?,
+                        self.args.pop().ok_or_else(|| {
+                            SqlBuilderError::FilterInvalid(filtername.to_string())
+                        })?,
+                        self.args.pop().ok_or_else(|| {
+                            SqlBuilderError::FilterInvalid(filtername.to_string())
+                        })?,
                     ))),
-                    "RE" => {
-                        Ok(Some(FieldFilter::Re(self.args.pop().ok_or(
-                            SqlBuilderError::FilterInvalid(filtername.to_string()),
-                        )?)))
-                    }
+                    "RE" => Ok(Some(FieldFilter::Re(self.args.pop().ok_or_else(|| {
+                        SqlBuilderError::FilterInvalid(filtername.to_string())
+                    })?))),
 
                     _ => {
                         if upc.starts_with("FN ") {
@@ -256,8 +240,8 @@ impl QueryParser {
                 Rule::string => {
                     let v = span
                         .as_str()
-                        .trim_start_matches("'")
-                        .trim_end_matches("'")
+                        .trim_start_matches('\'')
+                        .trim_end_matches('\'')
                         .replace("''", "'");
                     token_info.args.push(SqlArg::from(v));
                 }
@@ -265,13 +249,13 @@ impl QueryParser {
                     token_info.token_type = TokenType::Predicate;
                 }
                 Rule::predicate_name => {
-                    token_info.name = span.as_str().trim_start_matches("@").to_string();
+                    token_info.name = span.as_str().trim_start_matches('@').to_string();
                 }
                 Rule::selection_clause => {
                     token_info.token_type = TokenType::Selection;
                 }
                 Rule::selection_name => {
-                    token_info.name = span.as_str().trim_start_matches("@").to_string();
+                    token_info.name = span.as_str().trim_start_matches('@').to_string();
                 }
                 Rule::rpar => {
                     query.tokens.push(QueryToken::RightBracket);

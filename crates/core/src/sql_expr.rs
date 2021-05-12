@@ -39,14 +39,8 @@ impl SqlExpr {
     pub fn from(tokens: Vec<SqlExprToken>) -> Self {
         let maybe_aux_params = tokens
             .iter()
-            .find(|t| {
-                if let SqlExprToken::AuxParam(_) = t {
-                    true
-                } else {
-                    false
-                }
-            })
-            .is_some();
+            .any(|t| matches!(t, SqlExprToken::AuxParam(_)));
+
         SqlExpr {
             tokens,
             maybe_aux_params,
@@ -171,7 +165,7 @@ impl SqlExpr {
     }
 
     pub fn first_aux_param(&self) -> Option<&String> {
-        if self.maybe_aux_params == true {
+        if self.maybe_aux_params {
             for t in self.tokens() {
                 if let SqlExprToken::AuxParam(p) = t {
                     return Some(p);
@@ -207,14 +201,7 @@ impl SqlExpr {
         let tokens = expr.into().tokens;
         let maybe_aux_params = tokens
             .iter()
-            .find(|t| {
-                if let SqlExprToken::AuxParam(_) = t {
-                    true
-                } else {
-                    false
-                }
-            })
-            .is_some();
+            .any(|t| matches!(t, SqlExprToken::AuxParam(_)));
         self.maybe_aux_params |= maybe_aux_params;
         self.tokens.extend(tokens);
         self
@@ -265,5 +252,11 @@ impl std::convert::From<String> for SqlExpr {
 impl std::convert::From<&String> for SqlExpr {
     fn from(s: &String) -> Self {
         SqlExpr::literal(s)
+    }
+}
+
+impl Default for SqlExpr {
+    fn default() -> Self {
+        Self::new()
     }
 }

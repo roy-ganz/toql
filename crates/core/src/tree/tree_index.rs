@@ -1,5 +1,5 @@
-use crate::{query::field_path::FieldPath, error::ToqlError};
-use std::{result::Result, collections::HashMap};
+use crate::{error::ToqlError, query::field_path::FieldPath};
+use std::{collections::HashMap, result::Result};
 
 // R is database specific row, E the desired output error
 // Trait is implemented for structs that can deserialize from rows

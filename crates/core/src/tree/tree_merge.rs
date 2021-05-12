@@ -1,7 +1,4 @@
-use crate::{
-    query::field_path::FieldPath,
-    sql_builder::select_stream::SelectStream,
-};
+use crate::{query::field_path::FieldPath, sql_builder::select_stream::SelectStream};
 use std::collections::HashMap;
 
 // R is database specific row

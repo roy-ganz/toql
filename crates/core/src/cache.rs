@@ -21,3 +21,9 @@ impl Cache {
         Self::with_capacity(50)
     }
 }
+
+impl Default for Cache {
+    fn default() -> Self {
+        Self::new()
+    }
+}

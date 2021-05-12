@@ -52,7 +52,7 @@ pub fn parse(
 ) -> std::result::Result<TokenStream, TokenStream> {
     // eprintln!("About to parse {}", toql_string);
     match PestSqlExprParser::parse(Rule::query, &sql_expr_string.value()) {
-        Ok(pairs) => Ok(evaluate_pair(&mut pairs.flatten().into_iter(), expr_args)?),
+        Ok(pairs) => Ok(evaluate_pair(&mut pairs.flatten(), expr_args)?),
         Err(e) => {
             let msg = e.to_string();
             Err(quote_spanned!(sql_expr_string.span() => compile_error!(#msg)))
@@ -87,7 +87,7 @@ fn evaluate_pair(
 
     let mut tokens: Vec<TokenStream> = Vec::new(); // collect tokens for vec
 
-    while let Some(pair) = pairs.next() {
+    for pair in pairs {
         let span = pair.clone().as_span();
 
         match pair.as_rule() {
@@ -122,7 +122,7 @@ fn evaluate_pair(
             }
             Rule::aux_param => {
                 append_literal(&mut field_info, &mut tokens);
-                let name = span.as_str().trim_start_matches("<").trim_end_matches(">");
+                let name = span.as_str().trim_start_matches('<').trim_end_matches('>');
                 alias = false;
                 tokens.push(quote!( toql::sql_expr::SqlExprToken::AuxParam(String::from(#name))));
             }
@@ -130,7 +130,7 @@ fn evaluate_pair(
                 // Add a dot if an alias immediately precedes a non whitespace literal (..column_name)
                 let l = span.as_str();
 
-                if alias == true && l != " " {
+                if alias && l != " " {
                     field_info.literal.push('.');
                 }
                 // If literal is ? insert arguments
@@ -139,12 +139,10 @@ fn evaluate_pair(
                     if let Some(a) = expr_args.next() {
                         tokens.push( quote!( toql::sql_expr::SqlExprToken::Arg(toql::sql_arg::SqlArg::from(#a))));
                         with_args = true;
+                    } else if !with_args {
+                        tokens.push(quote!(toql::sql_expr::SqlExprToken::UnresolvedArg));
                     } else {
-                        if with_args == false {
-                            tokens.push(quote!(toql::sql_expr::SqlExprToken::UnresolvedArg));
-                        } else {
-                            return Err(quote!(compile_error!("Missing value for argument")));
-                        }
+                        return Err(quote!(compile_error!("Missing value for argument")));
                     }
                 } else {
                     field_info.literal.push_str(l)

@@ -10,7 +10,7 @@ pub trait PredicateHandler {
     fn build_predicate(
         &self,
         expression: SqlExpr,
-        args: &Vec<SqlArg>,
+        args: &[SqlArg],
         aux_params: &ParameterMap,
     ) -> Result<Option<SqlExpr>, SqlBuilderError>;
 }
@@ -33,7 +33,7 @@ impl PredicateHandler for DefaultPredicateHandler {
     fn build_predicate(
         &self,
         predicate: SqlExpr,
-        _args: &Vec<SqlArg>,
+        _args: &[SqlArg],
         _aux_params: &ParameterMap,
     ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
         // Wrap in parens
@@ -41,5 +41,11 @@ impl PredicateHandler for DefaultPredicateHandler {
         e.extend(predicate);
         e.push_literal(")");
         Ok(Some(e))
+    }
+}
+
+impl Default for DefaultPredicateHandler {
+    fn default() -> Self {
+        Self::new()
     }
 }

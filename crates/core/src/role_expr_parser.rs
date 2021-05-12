@@ -100,6 +100,6 @@ impl RoleExprParser {
             }
         }
         //  println!("{:?}", query);
-        Ok(expr.unwrap_or(RoleExpr::invalid()))
+        Ok(expr.unwrap_or_else(RoleExpr::invalid))
     }
 }

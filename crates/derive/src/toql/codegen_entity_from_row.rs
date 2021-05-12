@@ -3,8 +3,8 @@
 *
 */
 
-use proc_macro2::TokenStream;
 use crate::sane::{FieldKind, MergeColumn, Struct};
+use proc_macro2::TokenStream;
 use std::collections::{HashMap, HashSet};
 
 pub(crate) struct CodegenEntityFromRow<'a> {
@@ -61,7 +61,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                 let rust_field_ident = &field.rust_field_ident;
 
                 // Type bound for regular fields, fields can be optional
-                if field.number_of_options > 1 {
+                /*  if field.number_of_options > 1 {
                     //self.impl_opt_types.insert(field.rust_base_type_ident.to_owned());
                     // self.forwards.push(quote!(  <Option<#rust_base_type_ident> as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
                     self.impl_types
@@ -73,7 +73,11 @@ impl<'a> CodegenEntityFromRow<'a> {
                     self.impl_types
                         .insert(field.rust_base_type_ident.to_owned());
                     self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
-                }
+                } */
+
+                self.impl_types
+                    .insert(field.rust_base_type_ident.to_owned());
+                self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
 
                 self.regular_fields += 1;
 
@@ -559,7 +563,6 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
             .iter()
             .map(|k| quote!( Option<#k> :toql::from_row::FromRow<R,E>, ))
             .collect::<Vec<_>>();
-
 
         let code = quote!(
 

@@ -97,3 +97,9 @@ impl FieldOptions {
         self
     }
 }
+
+impl Default for FieldOptions {
+    fn default() -> Self {
+        Self::new()
+    }
+}

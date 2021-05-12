@@ -5,9 +5,9 @@ use std::collections::HashMap;
 
 pub fn merge<A, K, B, F, G>(
     entities: &mut Vec<A>,
-    pkeys: &Vec<K>,
+    pkeys: &[K],
     merges: Vec<B>,
-    mkeys: &Vec<K>,
+    mkeys: &[K],
     init: F,
     assign: G,
 ) where

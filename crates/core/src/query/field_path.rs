@@ -67,7 +67,7 @@ impl<'a> FieldPath<'a> {
 
     pub fn localize_path(&self, home_path: &str) -> Option<FieldPath> {
         if self.0.starts_with(home_path) {
-            let t = self.0.trim_start_matches(home_path).trim_start_matches("_");
+            let t = self.0.trim_start_matches(home_path).trim_start_matches('_');
             Some(FieldPath::from(t))
         } else {
             None

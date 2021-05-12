@@ -21,7 +21,7 @@ impl WildcardScope {
                 if !path.is_empty() && !path.ends_with('_') {
                     field.push('_');
                 }
-                field.push_str("*");
+                field.push('*');
                 scopes.contains(field.as_str())
             }
         }
@@ -31,10 +31,10 @@ impl WildcardScope {
             WildcardScope::All => true,
             WildcardScope::Only(scopes) => {
                 scopes.contains(field_with_path)
-                    || if !field_with_path.ends_with("*") {
+                    || if !field_with_path.ends_with('*') {
                         // If field is provided check for all fields
                         let mut path = field_with_path.trim_end_matches(|c| c != '_').to_string();
-                        path.push_str("*");
+                        path.push('*');
                         scopes.contains(path.as_str())
                     } else {
                         false
@@ -43,7 +43,7 @@ impl WildcardScope {
         }
     }
     pub fn contains_path(&self, path: &str) -> bool {
-        let path = path.trim_end_matches("_"); // Remove optional trailing underscore
+        let path = path.trim_end_matches('_'); // Remove optional trailing underscore
         match self {
             WildcardScope::All => true,
             WildcardScope::Only(scopes) => {
@@ -53,7 +53,7 @@ impl WildcardScope {
                 scopes.contains(wildcard_path.as_str())
                     || scopes
                         .iter()
-                        .any(|s| s.trim_end_matches(|c| c != '_').trim_end_matches("_") == path)
+                        .any(|s| s.trim_end_matches(|c| c != '_').trim_end_matches('_') == path)
             }
         }
     }

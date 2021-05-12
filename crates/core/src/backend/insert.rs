@@ -83,7 +83,7 @@ where
 
     let mut mapper = mappers
         .get(&ty)
-        .ok_or(ToqlError::MapperMissing(ty.to_owned()))?;
+        .ok_or_else(|| ToqlError::MapperMissing(ty.to_owned()))?;
     let mut alias_translator = AliasTranslator::new(alias_format);
 
     // Walk down mappers
@@ -91,11 +91,12 @@ where
         //for d in path.descendents(){
         let mapper_name = mapper
             .joined_mapper(d.as_str())
-            .or(mapper.merged_mapper(d.as_str()));
-        let mapper_name = mapper_name.ok_or(ToqlError::MapperMissing(d.as_str().to_owned()))?;
+            .or_else(|| mapper.merged_mapper(d.as_str()));
+        let mapper_name =
+            mapper_name.ok_or_else(|| ToqlError::MapperMissing(d.as_str().to_owned()))?;
         mapper = mappers
             .get(&mapper_name)
-            .ok_or(ToqlError::MapperMissing(mapper_name.to_owned()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_owned()))?;
     }
 
     let resolver = Resolver::new()
@@ -110,7 +111,7 @@ where
 
     let mut insert_stmt = String::from("INSERT INTO ");
     insert_stmt.push_str(&mapper.table_name);
-    insert_stmt.push_str(" ");
+    insert_stmt.push(' ');
     insert_stmt.push_str(&columns_sql.0);
     insert_stmt.push_str(" VALUES ");
     insert_stmt.push_str(&values_sql.0);
@@ -158,7 +159,7 @@ where
         let mut level = 0;
         let mut mapper = mappers
             .get(&ty)
-            .ok_or(ToqlError::MapperMissing(ty.to_owned()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(ty.to_owned()))?;
 
         for (d, c) in steps.zip(children) {
             if let Some(j) = mapper.joined_mapper(c.as_str()) {
@@ -171,13 +172,13 @@ where
                 level += 1;
                 mapper = mappers
                     .get(&j)
-                    .ok_or(ToqlError::MapperMissing(j.to_owned()))?;
+                    .ok_or_else(|| ToqlError::MapperMissing(j.to_owned()))?;
             } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
                 level = 0;
                 merges.insert(d.as_str().to_string());
                 mapper = mappers
                     .get(&m)
-                    .ok_or(ToqlError::MapperMissing(m.to_owned()))?;
+                    .ok_or_else(|| ToqlError::MapperMissing(m.to_owned()))?;
             } else {
                 return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned()).into());
             }

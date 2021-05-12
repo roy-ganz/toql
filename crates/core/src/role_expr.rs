@@ -21,6 +21,7 @@ impl RoleExpr {
     pub fn or(self, role_expr: RoleExpr) -> Self {
         RoleExpr::Or(Box::new(self), Box::new(role_expr))
     }
+    #[allow(clippy::clippy::should_implement_trait)]
     pub fn not(self) -> Self {
         RoleExpr::Not(Box::new(self))
     }
@@ -35,12 +36,8 @@ impl ToString for RoleExpr {
             RoleExpr::Or(a, b) => {
                 format!("({}); ({})", a.to_string(), b.to_string())
             }
-            RoleExpr::Not(a) => {
-                format!("{}", a.to_string())
-            }
-            RoleExpr::Role(r) => {
-                format!("{}", r.to_string())
-            }
+            RoleExpr::Not(a) => a.to_string(),
+            RoleExpr::Role(r) => r.to_string(),
             RoleExpr::Invalid => "`false`".to_string(),
         }
     }

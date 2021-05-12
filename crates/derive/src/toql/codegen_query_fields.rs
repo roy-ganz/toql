@@ -74,7 +74,7 @@ impl<'a> CodegenQueryFields<'a> {
                     });
                 }
             }
-            x @ _ => {
+            x => {
                 let toql_field = &field.toql_field_name;
                 if let FieldKind::Join(join_attrs) = x {
                     if join_attrs.key {

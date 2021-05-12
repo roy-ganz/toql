@@ -53,7 +53,7 @@ pub(crate) enum QueryToken {
 
 impl From<&str> for QueryToken {
     fn from(s: &str) -> QueryToken {
-        if s.ends_with("*") {
+        if s.ends_with('*') {
             QueryToken::Wildcard(Wildcard::from(s))
         } else {
             QueryToken::Field(Field::from(s))
@@ -63,7 +63,7 @@ impl From<&str> for QueryToken {
 
 impl ToString for QueryToken {
     fn to_string(&self) -> String {
-        let s = match self {
+        match self {
             QueryToken::RightBracket => String::from(")"),
             QueryToken::LeftBracket(c) => match c {
                 Concatenation::And => String::from("("),
@@ -73,8 +73,7 @@ impl ToString for QueryToken {
             QueryToken::Predicate(predicate) => predicate.to_string(),
             QueryToken::Selection(selection) => selection.name.to_string(),
             QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
-        };
-        s
+        }
     }
 }
 
@@ -170,7 +169,7 @@ impl<M> Query<M> {
     pub fn clone_for_type<T>(&self) -> Query<T> {
         Query::<T> {
             tokens: self.tokens.clone(),
-            distinct: self.distinct.clone(),
+            distinct: self.distinct,
             aux_params: self.aux_params.clone(),
             where_predicates: self.where_predicates.clone(),
             where_predicate_params: self.where_predicate_params.clone(),
@@ -217,8 +216,8 @@ impl<M> Query<M> {
             .collect::<Vec<_>>();
 
         Query::<T> {
-            tokens: tokens,
-            distinct: self.distinct.clone(),
+            tokens,
+            distinct: self.distinct,
             aux_params: self.aux_params.clone(),
             where_predicates: self.where_predicates.clone(),
             where_predicate_params: self.where_predicate_params.clone(),
@@ -418,7 +417,7 @@ impl<M> fmt::Display for Query<M> {
         // To avoid allocation check first if string starts with a separator
         let t = s.chars().next().unwrap_or(' ');
         if t == ',' || t == ';' {
-            s = s.trim_start_matches(",").trim_start_matches(";").to_owned();
+            s = s.trim_start_matches(',').trim_start_matches(';').to_owned();
         }
 
         write!(f, "{}", s)
@@ -459,11 +458,17 @@ impl<M> From<Wildcard> for Query<M> {
 impl<M> From<&str> for Query<M> {
     fn from(string: &str) -> Query<M> {
         let mut q = Query::new();
-        q.tokens.push(if string.ends_with("*") {
+        q.tokens.push(if string.ends_with('*') {
             QueryToken::Wildcard(Wildcard::from(string))
         } else {
             QueryToken::Field(Field::from(string))
         });
         q
+    }
+}
+
+impl<M> Default for Query<M> {
+    fn default() -> Self {
+        Self::new()
     }
 }

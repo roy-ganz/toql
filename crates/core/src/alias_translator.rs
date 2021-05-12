@@ -25,15 +25,15 @@ impl AliasTranslator {
             Entry::Vacant(v) => {
                 let alias = match self.format {
                     AliasFormat::TinyIndex => {
-                        self.table_index = self.table_index + 1;
+                        self.table_index += 1;
                         AliasFormat::tiny_index(self.table_index)
                     }
                     AliasFormat::ShortIndex => {
-                        self.table_index = self.table_index + 1;
+                        self.table_index += 1;
                         AliasFormat::short_index(&canonical_alias, self.table_index)
                     }
                     AliasFormat::MediumIndex => {
-                        self.table_index = self.table_index + 1;
+                        self.table_index += 1;
                         AliasFormat::medium_index(&canonical_alias, self.table_index)
                     }
                     _ => canonical_alias.to_owned(),

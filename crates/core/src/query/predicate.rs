@@ -37,7 +37,7 @@ impl Predicate {
 
         Predicate {
             concatenation: Concatenation::And,
-            name: name.into(),
+            name,
             args: Vec::new(),
         }
     }

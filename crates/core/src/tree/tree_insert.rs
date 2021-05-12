@@ -1,8 +1,4 @@
-use crate::{
-    error::ToqlError,
-    query::field_path::FieldPath,
-    sql_expr::SqlExpr,
-};
+use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr};
 
 // Trait is implemented for structs that can insert
 pub trait TreeInsert {

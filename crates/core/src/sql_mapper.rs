@@ -247,7 +247,7 @@ where {
     pub fn map_handler_with_options<'a, H>(
         &'a mut self,
         toql_field: &str,
-        sql_expression: SqlExpr,
+        expression: SqlExpr,
         handler: H,
         options: FieldOptions,
     ) -> &'a mut Self
@@ -265,9 +265,9 @@ where {
         }); */
 
         let t = Field {
-            options: options,
+            options,
             handler: Arc::new(handler),
-            expression: sql_expression,
+            expression,
             // sql_aux_param_names: sql_aux_param_names,
         };
         self.deserialize_order
@@ -373,7 +373,7 @@ where {
     pub fn map_expr_with_options<'a>(
         &'a mut self,
         toql_field: &str,
-        sql_expression: SqlExpr,
+        expression: SqlExpr,
         options: FieldOptions,
     ) -> &'a mut Self {
         // Add count field to selection for quicker lookup
@@ -381,7 +381,7 @@ where {
             let s = self
                 .selections
                 .entry("count".to_string())
-                .or_insert(Vec::new());
+                .or_insert_with(Vec::new);
             s.push(toql_field.to_string());
         }
 
@@ -390,13 +390,13 @@ where {
             let s = self
                 .selections
                 .entry("mut".to_string())
-                .or_insert(Vec::new());
+                .or_insert_with(Vec::new);
             s.push(toql_field.to_string());
         }
 
         let t = Field {
-            expression: sql_expression,
-            options: options,
+            expression,
+            options,
             handler: Arc::clone(&self.field_handler),
             //  sql_aux_param_names,
         };
@@ -522,13 +522,11 @@ where {
     }
 
     pub fn map_selection(&mut self, name: &str, fields_or_paths: Vec<String>) {
-        if cfg!(debug_assertion) {
-            if name.len() <= 3 {
-                panic!(
-                    "Selection name `{}` is invalid: name must be longer than 3 characters.",
-                    name
-                );
-            }
+        if cfg!(debug_assertion) && name.len() <= 3 {
+            panic!(
+                "Selection name `{}` is invalid: name must be longer than 3 characters.",
+                name
+            );
         }
         self.selections.insert(name.to_string(), fields_or_paths);
     }

@@ -1,4 +1,3 @@
-
 pub struct Paths {
     pub list: Vec<String>,
 }

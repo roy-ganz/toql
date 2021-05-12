@@ -88,7 +88,7 @@ impl FieldInfo {
                 // Separate with underscore, convert to snake_case for rust
                 let fnname = self
                     .name
-                    .split("_")
+                    .split('_')
                     .map(|n| syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case())).unwrap());
                 // let reserved = Ident::new("r#", Span::call_site());
                 let sort = &self.sort;
@@ -103,7 +103,7 @@ impl FieldInfo {
             } else {
                 let fnname = self
                     .name
-                    .split("_")
+                    .split('_')
                     .map(|n| syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case())).unwrap());
 
                 quote!(toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*))
@@ -117,7 +117,7 @@ impl FieldInfo {
                 //let fnname = self.name.split("_").map(|n|  Ident::new(&n.to_snake_case(), Span::call_site()));
                 let fnname = self
                     .name
-                    .split("_")
+                    .split('_')
                     .map(|n| syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case())).unwrap());
                 let are = if self.single_array_argument {
                     quote!(.are( #(#args),* ))
@@ -142,7 +142,7 @@ impl FieldInfo {
 
                     match path {
                         Some(p) => {
-                            let fnname = p.split("_").map(|n| {
+                            let fnname = p.split('_').map(|n| {
                                 syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case()))
                                     .unwrap()
                             });
@@ -233,7 +233,7 @@ pub fn parse(
     match PestQueryParser::parse(Rule::query, &toql_string.value()) {
         Ok(pairs) => {
             output_stream.extend(evaluate_pair(
-                &mut pairs.flatten().into_iter(),
+                &mut pairs.flatten(),
                 &struct_type,
                 query_args,
             )?);
@@ -288,8 +288,8 @@ fn evaluate_pair(
             Rule::wildcard => {
                 field_info.name = span
                     .as_str()
-                    .trim_end_matches("*")
-                    .trim_end_matches("_")
+                    .trim_end_matches('*')
+                    .trim_end_matches('_')
                     .to_string(); // Somehow name rules fdont work
                 field_info.token_type = TokenType::Wildcard;
             }
@@ -323,8 +323,8 @@ fn evaluate_pair(
             Rule::string => {
                 let v = span
                     .as_str()
-                    .trim_start_matches("'")
-                    .trim_end_matches("'")
+                    .trim_start_matches('\'')
+                    .trim_end_matches('\'')
                     .replace("''", "'");
                 field_info.args.push(quote!(#v));
             }
@@ -342,7 +342,7 @@ fn evaluate_pair(
                 field_info.token_type = TokenType::Selection;
             }
             Rule::selection_name => {
-                field_info.name = span.as_str().trim_start_matches("#").to_string();
+                field_info.name = span.as_str().trim_start_matches('#').to_string();
             }
             Rule::predicate_clause => {
                 field_info.token_type = TokenType::Predicate;
@@ -354,7 +354,7 @@ fn evaluate_pair(
                 field_info.token_type = TokenType::Field;
             }
             Rule::predicate_name => {
-                field_info.name = span.as_str().trim_start_matches("@").to_string();
+                field_info.name = span.as_str().trim_start_matches('@').to_string();
             }
             Rule::query_placeholder => {
                 field_info.token_type = TokenType::Query;

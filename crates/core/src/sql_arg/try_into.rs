@@ -30,7 +30,7 @@ macro_rules! try_into_primitives {
                 } else {
                     let v =  self. $fnc().ok_or(TryFromSqlArgError(self.to_owned()))?;
                     <$type as std::convert::TryFrom<_>>::try_from(v)
-                    .map(|v| Some(v))
+                    .map(Some)
                     .map_err(|_|TryFromSqlArgError(self.to_owned()))
                 }
                 }
@@ -44,7 +44,7 @@ macro_rules! try_into_primitives {
                 } else {
                     let v =  self. $fnc().ok_or(TryFromSqlArgError(self.to_owned()))?;
                     <$type as std::convert::TryFrom<_>>::try_from(v)
-                    .map(|v| Some(v))
+                    .map(Some)
                     .map_err(|_|TryFromSqlArgError(self.to_owned()))
                 }
                 }

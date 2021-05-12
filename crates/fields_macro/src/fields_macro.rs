@@ -25,7 +25,7 @@ fn parse_fieldlist(input: ParseStream) -> Result<FieldsMacro> {
 
 fn parse_top(input: ParseStream) -> Result<FieldsMacro> {
     let top: Ident = input.parse()?;
-    if top.to_string() == "top" {
+    if top == "top" {
         Ok(FieldsMacro::Top)
     } else {
         println!("Found {}", top);
@@ -53,9 +53,9 @@ pub fn parse(
     match PestFieldListParser::parse(Rule::query, &field_list_string.value()) {
         Ok(pairs) => {
             output_stream.extend(evaluate_pair(
-                &mut pairs.flatten().into_iter(),
+                &mut pairs.flatten(),
                 &struct_type,
-            )?);
+            ));
         }
         Err(e) => {
             let msg = e.to_string();
@@ -69,22 +69,22 @@ pub fn parse(
 fn evaluate_pair(
     pairs: &mut pest::iterators::FlatPairs<toql_field_list_parser::Rule>,
     struct_type: &Type,
-) -> std::result::Result<TokenStream, TokenStream> {
+) -> TokenStream {
     let mut methods = Vec::new();
 
-    while let Some(pair) = pairs.next() {
+    for pair in pairs {
         let span = pair.clone().as_span();
 
         match pair.as_rule() {
             Rule::wildcard => {
                 let method_names = span
                     .as_str()
-                    .split("_")
+                    .split('_')
                     .filter(|p| !p.is_empty())
                     .filter(|p| *p != "*")
                     .map(|p| {
                         let name =
-                            Ident::new(&format!("{}", &p.to_snake_case()), Span::call_site());
+                            Ident::new(&p.to_snake_case(), Span::call_site());
                         quote!( .#name ())
                     })
                     .collect::<Vec<_>>();
@@ -94,7 +94,7 @@ fn evaluate_pair(
             Rule::field_path => {
                 let method_names = span
                     .as_str()
-                    .split("_")
+                    .split('_')
                     .filter(|p| !p.is_empty())
                     .map(|p| {
                         let raw_string = format!("r#{}", &p.to_snake_case());
@@ -113,8 +113,8 @@ fn evaluate_pair(
         }
     }
 
-    Ok(quote!(
+    quote!(
         //  toql::fields::Fields::<#struct_type>::from(vec![#(#methods),* ])
         toql::backend::fields::Fields::from(vec![#(#methods),* ])
-    ))
+    )
 }

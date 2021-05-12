@@ -13,7 +13,7 @@ pub(crate) struct CodegenTree<'a> {
 
     dispatch_predicate_args_code: Vec<TokenStream>,
     dispatch_predicate_columns_code: Vec<TokenStream>,
-    
+
     merge_columns_code: Vec<TokenStream>,
     merge_predicate_code: Vec<TokenStream>,
 

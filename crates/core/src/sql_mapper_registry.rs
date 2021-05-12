@@ -4,7 +4,9 @@
 //! load the full dependency tree.
 //!
 
-use crate::{field_handler::FieldHandler, result::Result, sql_mapper::mapped::Mapped, sql_mapper::SqlMapper};
+use crate::{
+    field_handler::FieldHandler, result::Result, sql_mapper::mapped::Mapped, sql_mapper::SqlMapper,
+};
 use heck::MixedCase;
 use std::collections::HashMap;
 
@@ -36,7 +38,7 @@ impl SqlMapperRegistry {
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> Result<String> {
         let m = SqlMapper::from_mapped::<M>()?;
-        self.mappers.insert(String::from(M::type_name()), m);
+        self.mappers.insert(M::type_name(), m);
         log::info!("Mapped `{}`", M::type_name());
         Ok(M::type_name())
     }
@@ -46,7 +48,13 @@ impl SqlMapperRegistry {
     {
         let m = SqlMapper::from_mapped_with_handler::<M, _>(handler)?;
         // m.aliased_table = m.translate_aliased_table(&M::table_name(), &M::table_alias());
-        self.mappers.insert(String::from(M::type_name()), m);
+        self.mappers.insert(M::type_name(), m);
         Ok(M::type_name())
+    }
+}
+
+impl Default for SqlMapperRegistry {
+    fn default() -> Self {
+        Self::new()
     }
 }

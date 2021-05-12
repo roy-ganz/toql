@@ -50,7 +50,7 @@ impl<'a> CodegenInsert<'a> {
 
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
-                if regular_attrs.key && self.auto_key == true {
+                if regular_attrs.key && self.auto_key {
                     return Ok(());
                 }
 
@@ -125,7 +125,7 @@ impl<'a> CodegenInsert<'a> {
             }
 
             FieldKind::Join(join_attrs) => {
-                if join_attrs.key && self.auto_key == true {
+                if join_attrs.key && self.auto_key {
                     return Ok(());
                 }
 

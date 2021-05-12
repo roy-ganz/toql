@@ -387,7 +387,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                 })
                 .collect::<Vec<_>>()
         };
-        
+
         let sql_arg_code = &self.sql_arg_code;
 
         let try_from_setters = &self.try_from_setters;

@@ -1,4 +1,4 @@
-use crate::{query::field_path::{FieldPath}, error::ToqlError, sql_arg::SqlArg};
+use crate::{error::ToqlError, query::field_path::FieldPath, sql_arg::SqlArg};
 use std::{cell::RefCell, result::Result};
 
 pub enum IdentityAction {
