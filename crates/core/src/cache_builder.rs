@@ -28,7 +28,7 @@ impl CacheBuilder {
     }
     pub fn into_cache(self)-> Cache {
 
-        let registry = SqlMapperRegistry::with_alias_format(self.alias_format);
+        let registry = SqlMapperRegistry::new();
         Cache {
             registry: RwLock::new(registry),
             registered_roots : RwLock::new(HashSet::new()),

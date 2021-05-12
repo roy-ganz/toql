@@ -22,7 +22,8 @@ pub fn build_update_sql<T, Q>( alias_format: AliasFormat,
 
         let mut exprs = Vec::new();
         for e in entities.iter() {
-            let mut descendents = path.descendents();
+            //let mut descendents = path.descendents();
+            let mut descendents = path.step_down();
             TreeUpdate::update(e.borrow(), &mut descendents, fields, roles, &mut exprs)?;
         }
 

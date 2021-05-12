@@ -107,7 +107,7 @@ impl<'a> FieldPath<'a> {
         }
     }*/
 
-     /// Iterator to yield descendents
+    /*  /// Iterator to yield descendents
     /// Field without path has no descendents.
     /// user_address_country_id -> user,  address, country
     /// TODO: is same as children
@@ -116,7 +116,7 @@ impl<'a> FieldPath<'a> {
             pos: 0,
             path: self.0.as_ref(),
         }
-    }  
+    }   */
     /// Iterator to yield all parents
     /// Field without path has no parents.
     /// user_address_country_id -> country, address, user
@@ -194,12 +194,12 @@ impl<'a> Iterator for StepUp<'a> {
         match p {
             Some(i) => {
                 let end = self.pos;
-                println!(
+               /*  println!(
                     "String {}, from {} , step is `{}`",
                     &self.path,
                     &end,
                     &self.path[..end]
-                );
+                ); */
                 Some((FieldPath::from(&self.path[..end]), self.pos = i).0)
             }
             None if self.pos != 0 => {

@@ -139,7 +139,7 @@ impl<'a> Resolver<'a> {
                         PredicateColumn::SelfAliased(a) => {
                             changed = true;
                             if self.self_alias.is_some() {
-                                PredicateColumn::Literal(format!("{}.{}",self.self_alias.unwrap(), a))
+                                PredicateColumn::Aliased(self.self_alias.unwrap().to_owned(), a.to_owned())
                             } else {
                                 PredicateColumn::SelfAliased(a.to_owned())
                             }
@@ -147,12 +147,13 @@ impl<'a> Resolver<'a> {
                         PredicateColumn::OtherAliased(a) => {
                             changed = true;
                             if self.other_alias.is_some() {
-                                PredicateColumn::Literal(format!("{}.{}",self.other_alias.unwrap(), a))
+                                PredicateColumn::Aliased(self.other_alias.unwrap().to_owned(), a.to_owned())
                             } else {
                                 PredicateColumn::OtherAliased(a.to_owned())
                             }
                         }
                         PredicateColumn::Literal(l) => PredicateColumn::Literal(l.to_owned()),
+                        PredicateColumn::Aliased(a, c) => PredicateColumn::Aliased(a.to_owned(), c.to_owned()),
                     });
                 }
 
@@ -199,37 +200,26 @@ impl<'a> Resolver<'a> {
                 args.push(arg.to_owned());
             }
 
-            /*  SqlExprToken::InClause { column, args: a } => match a.len() {
-                0 => { return Err(ResolverError::ArgumentMissing) }
-                1 => {
-                    stmt.push_str(column);
-                    stmt.push_str(" =  ?");
-                    args.push(a.get(0).unwrap().to_owned());
-                }
-                _ => {
-                    stmt.push_str(column);
-                    stmt.push_str(" IN (");
-                    for a in a {
-                        stmt.push_str("?,");
-                        args.push(a.to_owned());
-                    }
-                    stmt.pop();
-                    stmt.push_str(")");
-                }
-            }, */
+          
             SqlExprToken::Predicate { columns, args: a } => match columns.len() {
                 0 => { /* Omit statement if no columns are provied */ }
                 1 => {
-                    let col = match columns.get(0).unwrap() {
+                     match columns.get(0).unwrap() {
                         PredicateColumn::SelfAliased(_) => {
                             return Err(ResolverError::UnresolvedSelfAlias)
                         }
                         PredicateColumn::OtherAliased(_) => {
                             return Err(ResolverError::UnresolvedOtherAlias)
                         }
-                        PredicateColumn::Literal(l) => l,
+                        PredicateColumn::Literal(l) => stmt.push_str(l),
+                         PredicateColumn::Aliased(canonical_alias,col) => {
+                             let alias =  alias_translator.translate(canonical_alias);
+                             stmt.push_str(&alias);
+                             stmt.push_str(".");
+                             stmt.push_str(col);
+                         }
                     };
-                    stmt.push_str(col);
+                    
                     match a.len() {
                         0 => return Err(ResolverError::ArgumentMissing),
                         1 => {
@@ -249,16 +239,22 @@ impl<'a> Resolver<'a> {
                 _ => {
                     for ar in a {
                         for c in columns {
-                            let c = match c {
+                            match c {
                                 PredicateColumn::SelfAliased(_) => {
                                     return Err(ResolverError::UnresolvedSelfAlias)
                                 }
                                 PredicateColumn::OtherAliased(_) => {
                                     return Err(ResolverError::UnresolvedOtherAlias)
                                 }
-                                PredicateColumn::Literal(l) => l,
+                                PredicateColumn::Literal(lit) =>  stmt.push_str(lit),
+                                PredicateColumn::Aliased(canonical_alias, col) => {
+                                     let alias =  alias_translator.translate(canonical_alias);
+                                    stmt.push_str(&alias);
+                                    stmt.push_str(".");
+                                    stmt.push_str(col);
+                                }
                             };
-                            stmt.push_str(c);
+                           
                             stmt.push_str(" = ? AND ");
                             args.push(ar.to_owned());
                         }

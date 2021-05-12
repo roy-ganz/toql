@@ -9,6 +9,7 @@ pub enum PredicateColumn {
     SelfAliased(String),
     OtherAliased(String),
     Literal(String),
+    Aliased(String, String) // Alias name / column 
 }
 
 #[derive(Debug, Clone)]

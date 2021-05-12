@@ -112,15 +112,79 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-    pub fn merge_expr(&self, query_field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
+    pub fn columns_expr(&self, query_field_path: &str, alias: &str) -> Result<(SqlExpr, SqlExpr, SqlExpr)> {
+        let mut columns_expr = SqlExpr::new();
+        let mut join_expr = SqlExpr::new();
+        let mut on_expr = SqlExpr::new();
 
+        self.resolve_columns_expr(
+            query_field_path,
+            alias,
+            &mut columns_expr,
+            &mut join_expr,
+            &mut on_expr,
+        )?;
+
+        Ok((columns_expr, join_expr, on_expr))
+    }
+    fn resolve_columns_expr(
+        &self,
+        query_path: &str,
+        alias: &str,
+        columns_expr: &mut SqlExpr,
+        join_expr: &mut SqlExpr,
+        on_expr: &mut SqlExpr,
+    ) -> Result<()> {
+        let mapper = self.mapper_for_query_path(&FieldPath::from(query_path))?;
+        let resolver = Resolver::new().with_self_alias(alias);
+
+        for order in &mapper.deserialize_order {
+            match order {
+                DeserializeType::Field(name) => {
+                    let field = mapper
+                        .field(&name)
+                        .ok_or(SqlBuilderError::FieldMissing(name.to_string()))?;
+                    columns_expr.extend( resolver.resolve(&field.expression)?);
+                    if field.options.key {
+                        return Ok(());
+                    }
+                }
+                DeserializeType::Join(name) => {
+                    let join = mapper
+                        .join(&name)
+                        .ok_or(SqlBuilderError::JoinMissing(name.to_string()))?;
+                    if join.options.key != true {
+                        return Ok(());
+                    }
+
+                    on_expr.extend(join.on_expression.to_owned());
+                    join_expr.push_literal("JOIN ");
+                    join_expr.extend(join.table_expression.to_owned());
+                    let joined_query_path = FieldPath::from(query_path).append(&name);
+                    let joined_alias = FieldPath::from(alias).append(&mapper.canonical_table_alias);
+                    self.resolve_columns_expr(
+                        joined_query_path.as_str(),
+                        joined_alias.as_str(),
+                        columns_expr,
+                        join_expr,
+                        on_expr,
+                    )?;
+                }
+
+                DeserializeType::Merge(_) => {}
+            }
+        }
+        Ok(())
+    }
+
+    pub fn merge_expr(&self, query_field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
         let (basename, query_path) = FieldPath::split_basename(query_field_path);
         let mapper = self.mapper_for_query_path(&query_path)?;
         /* let mut current_mapper = self
             .sql_mapper_registry
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
-       
+
         self.mapper_or_merge_for_path(local_path)
         if !query_path.is_empty() {
             for d in query_path.children() {
@@ -547,7 +611,7 @@ impl<'a> SqlBuilder<'a> {
                 None => on_expr,
             };
             */
-            println!("{:?}", &on_expr);
+         //   println!("{:?}", &on_expr);
             join_expr.extend(on_expr);
 
             join_expr.push_literal(") ");
@@ -566,11 +630,11 @@ impl<'a> SqlBuilder<'a> {
         let p = [&self.aux_params, &query.aux_params];
         let aux_params = ParameterMap::new(&p);
 
-        println!("token: {:?}", &query.tokens);
+       // println!("token: {:?}", &query.tokens);
         for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
-                     // Continue if field is not filtered
+                    // Continue if field is not filtered
                     if field.filter.is_none() {
                         continue;
                     }
@@ -612,7 +676,6 @@ impl<'a> SqlBuilder<'a> {
                                 .get(field_name)
                                 .ok_or(SqlBuilderError::FieldMissing(field.name.to_string()))?;
 
-                           
                             if let Some(role_expr) = &mapped_field.options.load_role_expr {
                                 if !crate::role_validator::RoleValidator::is_valid(
                                     &self.roles,
@@ -646,7 +709,9 @@ impl<'a> SqlBuilder<'a> {
                             )? {
                                 let resolver = Resolver::new().with_self_alias(&canonical_alias);
                                 let expr = resolver.resolve(&expr)?;
-                                if !result.where_expr.is_empty()  && !result.where_expr.ends_with_literal("(") {
+                                if !result.where_expr.is_empty()
+                                    && !result.where_expr.ends_with_literal("(")
+                                {
                                     result.where_expr.push_literal(
                                         if field.concatenation == Concatenation::And {
                                             " AND "
@@ -727,18 +792,18 @@ impl<'a> SqlBuilder<'a> {
                 }
                 QueryToken::LeftBracket(concatenation) => {
                     if !result.where_expr.is_empty() {
-                        result.where_expr.push_literal(
-                            if concatenation == &Concatenation::And {
+                        result
+                            .where_expr
+                            .push_literal(if concatenation == &Concatenation::And {
                                 " AND "
                             } else {
                                 " OR "
-                            },
-                        );
+                            });
                     }
                     result.where_expr.push_literal("(");
                 }
                 QueryToken::RightBracket => {
-                    // If parentheses are empty, remove right bracket and concatenation 
+                    // If parentheses are empty, remove right bracket and concatenation
                     if result.where_expr.ends_with_literal("(") {
                         result.where_expr.pop(); // Remove '(' token
                         result.where_expr.pop(); // Remove ' AND ' or 'OR ' token
@@ -815,7 +880,7 @@ impl<'a> SqlBuilder<'a> {
             // Otherwise skip to avoid circular dependency
             if !unmerged_home_paths.contains(query_merge_path.as_str()) {
                 unmerged_home_paths.insert(query_merge_path.to_string());
-                println!("Adding `{}` to merge paths", query_merge_path.as_str());
+              //  println!("Adding `{}` to merge paths", query_merge_path.as_str());
 
                 self.add_all_joins_as_selected_paths(
                     jm.0,
@@ -1064,12 +1129,12 @@ impl<'a> SqlBuilder<'a> {
                         result.selection_stream.push(Select::Query); // Query selected join
                                                                      // join path is the same as to query path
 
-                        dbg!(&local_join_path);
+                       // dbg!(&local_join_path);
 
                         // Seelect fields for this path
                         self.resolve_select(&local_join_path, query, build_context, result)?;
                     } else if join_info.options.preselect {
-                        dbg!(&local_join_path);
+                     //   dbg!(&local_join_path);
                         // Add preselected join to joined paths
                         build_context
                             .local_joined_paths
@@ -1097,9 +1162,9 @@ impl<'a> SqlBuilder<'a> {
                             return Err(SqlBuilderError::RoleRequired(load_role_expr.to_string()).into());
                         };
                     } */
-                   /*  if build_context.local_selected_paths.contains(merge_path) {
+                    /*  if build_context.local_selected_paths.contains(merge_path) {
                         // result.unmerged_paths.insert(merge_path.to_owned());
-                    }*/ 
+                    }*/
                 }
             }
         }
@@ -1130,7 +1195,7 @@ impl<'a> SqlBuilder<'a> {
                     .append(&local_merge_path)
                     .to_string(),
             );
-          
+
             for path in FieldPath::from(&local_merge_path).step_up().skip(1) {
                 build_context.local_joined_paths.insert(path.to_string());
             }
@@ -1285,7 +1350,7 @@ impl<'a> SqlBuilder<'a> {
                             );
                             for path in FieldPath::from(&local_merge_path).step_up().skip(1) {
                                 build_context.local_joined_paths.insert(path.to_string());
-                            } 
+                            }
                         } else {
                             let mapper = self.joined_mapper_for_local_path(&local_path)?;
                             match selection_name {
@@ -1394,7 +1459,7 @@ impl<'a> SqlBuilder<'a> {
                             if selection_name == "all" {
                                 let mapper =
                                     self.joined_mapper_for_local_path(&FieldPath::default())?;
-                                println!("Resolving all");
+                               // println!("Resolving all");
                                 build_context.local_selected_paths.insert("".to_string());
                                 self.add_all_joins_as_selected_paths(
                                     &mapper.table_name,
@@ -1476,7 +1541,9 @@ impl<'a> SqlBuilder<'a> {
         for (mapper_name, merge_path) in local_path.children().zip(local_path.step_down()) {
             if current_mapper.merged_mapper(mapper_name.as_str()).is_some() {
                 return Ok(Some(merge_path.to_string()));
-            } else if let Some(joined_mapper_name) = current_mapper.joined_mapper(mapper_name.as_str()) {
+            } else if let Some(joined_mapper_name) =
+                current_mapper.joined_mapper(mapper_name.as_str())
+            {
                 let m = self
                     .sql_mapper_registry
                     .get(&joined_mapper_name)
@@ -1490,10 +1557,10 @@ impl<'a> SqlBuilder<'a> {
     }
 
     fn home_contains(home_path: &str, query_path: &FieldPath) -> bool {
-        println!(
+      /*   println!(
             "Test if query path  {:?} has home {:?}",
             &query_path, &home_path
-        );
+        ); */
 
         let r = match (home_path.is_empty(), query_path.is_empty()) {
             (true, true) => true,
@@ -1501,7 +1568,7 @@ impl<'a> SqlBuilder<'a> {
             (true, false) => true,
             (false, false) => query_path.as_str().starts_with(home_path),
         };
-        println!("Result {:?}", r);
+      //  println!("Result {:?}", r);
 
         r
     }

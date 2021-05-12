@@ -77,7 +77,7 @@ fn custom_handler() {
         .map_field("title", "b.title");
 
     let query = QueryParser::parse("id GT 2, title FN LN 5").unwrap();
-    println!("{:?}", query);
+   // println!("{:?}", query);
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
     assert_eq!(

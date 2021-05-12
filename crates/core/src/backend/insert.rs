@@ -8,10 +8,11 @@ use crate::result::Result;
 use std::collections::HashSet;
 
 
-    pub fn set_tree_identity<T, Q>(first_id: u64, number_of_ids: u64, entities: &mut[Q], mut descendents: &mut Descendents) -> Result<()>
+    pub fn set_tree_identity<'a, T, Q, I>(first_id: u64, number_of_ids: u64, entities: &mut[Q], mut descendents: &mut I) -> Result<()>
     where
         T:  TreeIdentity,
         Q: BorrowMut<T>,
+        I: Iterator<Item=FieldPath<'a>>
     {
             use crate::tree::tree_identity::IdentityAction;
             use crate::sql_arg::SqlArg;
@@ -53,10 +54,12 @@ use std::collections::HashSet;
         let ty = <T as Mapped>::type_name();
       
         let mut values_expr = SqlExpr::new();
-        let mut d = path.descendents();
+        //let mut d = path.descendents();
+        let mut d = path.step_down();
         let columns_expr = <T as TreeInsert>::columns(&mut d)?;
         for e in entities {
-             let mut d = path.descendents();
+             //let mut d = path.descendents();
+             let mut d = path.step_down();
             <T as TreeInsert>::values(e.borrow(), &mut d, roles, &mut values_expr)?;
         }
         if values_expr.is_empty() {
@@ -70,7 +73,8 @@ use std::collections::HashSet;
         let mut alias_translator = AliasTranslator::new(alias_format);
 
         // Walk down mappers
-        for d in path.descendents(){
+        for d in path.step_down(){
+        //for d in path.descendents(){
             let mapper_name = 
                  mapper.joined_mapper(d.as_str()).or( mapper.merged_mapper(d.as_str()));
            let mapper_name =  mapper_name.ok_or(ToqlError::MapperMissing(d.as_str().to_owned()))?;
