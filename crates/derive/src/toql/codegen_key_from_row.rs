@@ -115,9 +115,6 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
             })
             .collect::<Vec<_>>();
 
-        let regular_types_ref = regular_types.clone();
-        let join_types_ref = join_types.clone();
-
         /*  let forward_key_columns = &self.forward_key_columns;
         let forward_join_key = &self.forward_join_key; */
         let forwards = &self.forwards;

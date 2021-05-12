@@ -1,4 +1,4 @@
-use crate::{alias::AliasFormat, sql_arg::SqlArg, sql_mapper_registry::SqlMapperRegistry};
+use crate::{alias::AliasFormat, sql_arg::SqlArg};
 use std::collections::{HashMap, HashSet};
 
 pub struct Context {

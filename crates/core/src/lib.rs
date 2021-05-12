@@ -26,7 +26,6 @@ pub mod to_query;
 #[macro_use]
 pub mod log_helper;
 
-#[macro_use]
 extern crate lazy_static;
 
 pub mod merge;

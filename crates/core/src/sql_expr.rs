@@ -2,7 +2,7 @@ pub mod resolver;
 pub mod resolver_error;
 
 use crate::sql_arg::SqlArg;
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PredicateColumn {

@@ -1,6 +1,5 @@
 use super::{resolver_error::ResolverError, PredicateColumn};
 use crate::{
-    alias::AliasFormat,
     alias_translator::AliasTranslator,
     parameter_map::ParameterMap,
     sql::Sql,
@@ -9,7 +8,7 @@ use crate::{
 };
 use std::{
     borrow::Cow,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
 };
 
 pub struct Resolver<'a> {

@@ -1,5 +1,3 @@
-use crate::sane::{FieldKind, SqlTarget};
-use proc_macro2::{Span, TokenStream};
 use syn::Ident;
 
 pub(crate) struct CodegenApi<'a> {

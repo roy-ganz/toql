@@ -5,7 +5,7 @@ use std::{collections::HashSet, sync::RwLock};
 pub struct Cache {
     pub registry: RwLock<SqlMapperRegistry>,
     pub registered_roots: RwLock<HashSet<String>>,
-    pub(crate) query_cache: RwLock<LruCache<String, String>>,
+    pub(crate) _query_cache: RwLock<LruCache<String, String>>, // TODO Support cache lookup
 }
 
 impl Cache {
@@ -13,7 +13,7 @@ impl Cache {
         Cache {
             registry: RwLock::new(SqlMapperRegistry::new()),
             registered_roots: RwLock::new(HashSet::new()),
-            query_cache: RwLock::new(LruCache::new(capacity)),
+            _query_cache: RwLock::new(LruCache::new(capacity)),
         }
     }
 

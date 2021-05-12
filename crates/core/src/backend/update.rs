@@ -1,17 +1,18 @@
-use crate::result::Result;
 use crate::{
     alias::AliasFormat,
-    parameter_map::ParameterMap,
+    alias_translator::AliasTranslator,
+    error::ToqlError,
     query::field_path::FieldPath,
+    result::Result,
+    sql::Sql,
+    sql_builder::sql_builder_error::SqlBuilderError,
+    sql_expr::resolver::Resolver,
     sql_mapper::{mapped::Mapped, SqlMapper},
     tree::tree_update::TreeUpdate,
 };
-use crate::{
-    alias_translator::AliasTranslator, error::ToqlError, sql::Sql,
-    sql_builder::sql_builder_error::SqlBuilderError, sql_expr::resolver::Resolver,
-};
+
 use std::{
-    borrow::{Borrow, BorrowMut},
+    borrow::Borrow,
     collections::{HashMap, HashSet},
 };
 
@@ -22,8 +23,8 @@ pub fn build_update_sql<T, Q>(
     path: &FieldPath,
     fields: &HashSet<String>,
     roles: &HashSet<String>,
-    modifier: &str,
-    extra: &str,
+    _modifier: &str,
+    _extra: &str,
 ) -> Result<Vec<Sql>>
 where
     T: Mapped + TreeUpdate,

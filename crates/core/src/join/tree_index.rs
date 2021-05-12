@@ -1,7 +1,7 @@
 use super::Join;
 use crate::error::ToqlError;
 use crate::keyed::Keyed;
-use crate::query::field_path::{Descendents, FieldPath};
+use crate::query::field_path:: FieldPath;
 use crate::tree::tree_index::TreeIndex;
 use std::collections::HashMap;
 

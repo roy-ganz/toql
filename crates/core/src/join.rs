@@ -11,7 +11,7 @@ pub mod tree_update;
 use crate::error::ToqlError;
 use crate::result::Result;
 
-use std::{borrow::Cow, boxed::Box};
+use std::boxed::Box;
 
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(

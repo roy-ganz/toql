@@ -56,7 +56,6 @@ impl<'a> CodegenKey<'a> {
 
     pub fn add_key_field(&mut self, field: &crate::sane::Field) -> darling::error::Result<()> {
         let rust_type_ident = &field.rust_type_ident;
-        let rust_type_name = &field.rust_type_name;
         let rust_field_ident = &field.rust_field_ident;
         let rust_field_name = &field.rust_field_name;
         //  let key_index = syn::Index::from(self.key_fields.len());
@@ -388,9 +387,7 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                 })
                 .collect::<Vec<_>>()
         };
-        let toql_eq_predicates = &self.toql_eq_predicates;
-        let toql_eq_foreign_predicates = &self.toql_eq_foreign_predicates;
-        // let slice_to_query_code = &self.slice_to_query_code;
+        
         let sql_arg_code = &self.sql_arg_code;
 
         let try_from_setters = &self.try_from_setters;

@@ -1,6 +1,6 @@
 use crate::{
     error::ToqlError,
-    query::field_path::{Descendents, FieldPath},
+    query::field_path::FieldPath,
     sql_expr::SqlExpr,
 };
 

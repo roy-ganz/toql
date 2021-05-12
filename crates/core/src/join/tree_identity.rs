@@ -2,7 +2,7 @@ use super::Join;
 use crate::error::ToqlError;
 use crate::key::Key;
 use crate::keyed::Keyed;
-use crate::query::field_path::{Descendents, FieldPath};
+use crate::query::field_path::FieldPath;
 use crate::sql_arg::SqlArg;
 use crate::tree::tree_identity::{IdentityAction, TreeIdentity};
 use std::convert::TryFrom;

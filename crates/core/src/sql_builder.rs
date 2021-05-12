@@ -1151,24 +1151,7 @@ impl<'a> SqlBuilder<'a> {
                         result.selection_stream.push(Select::None); // No Join
                     }
                 }
-                DeserializeType::Merge(merge_path) => {
-                    // TODO role check
-                    // TODO Process load_role on Vec<T> - query select vs preselect
-
-                    /* if !self.roles.is_empty() {
-                        let merge_info = mapper
-                            .merge(merge_path)
-                            .ok_or(SqlBuilderError::JoinMissing(merge_path.to_string()))?;
-                        let merged_mapper = self.sql_mapper_registry.get(&merge_info.merged_mapper)
-                        .ok_or(ToqlError::MapperMissing(self.home_mapper.to_string()));
-
-                        if let Some(load_role_expr) = &merged_mapper.load_role_expr {
-                            return Err(SqlBuilderError::RoleRequired(load_role_expr.to_string()).into());
-                        };
-                    } */
-                    /*  if build_context.local_selected_paths.contains(merge_path) {
-                        // result.unmerged_paths.insert(merge_path.to_owned());
-                    }*/
+                DeserializeType::Merge(_) => {
                 }
             }
         }

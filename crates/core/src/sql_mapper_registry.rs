@@ -3,12 +3,8 @@
 //! To give high level functions all SQL Mappers, they must be put into a registry. This allows to
 //! load the full dependency tree.
 //!
-use crate::alias::AliasFormat;
-use crate::field_handler::FieldHandler;
-/// A registry that holds mappers.
-use crate::result::Result;
-use crate::sql_mapper::mapped::Mapped;
-use crate::sql_mapper::SqlMapper;
+
+use crate::{field_handler::FieldHandler, result::Result, sql_mapper::mapped::Mapped, sql_mapper::SqlMapper};
 use heck::MixedCase;
 use std::collections::HashMap;
 

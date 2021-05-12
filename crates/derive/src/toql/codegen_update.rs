@@ -10,13 +10,8 @@ use syn::Ident;
 pub(crate) struct CodegenUpdate<'a> {
     struct_ident: &'a Ident,
     sql_table_name: String,
-
-    sql_table_alias: String,
-
     update_set_code: Vec<TokenStream>,
-
     struct_upd_roles: &'a Option<String>,
-
     dispatch_update_code: Vec<TokenStream>,
 }
 
@@ -25,12 +20,8 @@ impl<'a> CodegenUpdate<'a> {
         CodegenUpdate {
             struct_ident: &toql.rust_struct_ident,
             sql_table_name: toql.sql_table_name.to_owned(),
-            sql_table_alias: toql.sql_table_alias.to_owned(),
-
             update_set_code: Vec::new(),
-
             struct_upd_roles: &toql.roles.update,
-
             dispatch_update_code: Vec::new(),
         }
     }
@@ -40,7 +31,6 @@ impl<'a> CodegenUpdate<'a> {
         let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
         let toql_field_name = &field.toql_field_name;
-        let sql_table_alias = &self.sql_table_alias;
         let struct_ident = &self.struct_ident;
 
         let unwrap = match field.number_of_options {
@@ -240,7 +230,6 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
         // Generate modules if there are keys available
         let mods = {
             let sql_table_name = &self.sql_table_name;
-            let sql_table_alias = &self.sql_table_alias;
 
             let struct_upd_role_assert = match self.struct_upd_roles {
                 None => quote!(),

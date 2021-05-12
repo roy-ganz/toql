@@ -1,9 +1,9 @@
-use crate::parameter_map::ParameterMap;
 use crate::{
     alias::AliasFormat,
     alias_translator::AliasTranslator,
     error::ToqlError,
-    query::field_path::{Descendents, FieldPath},
+    parameter_map::ParameterMap,
+    query::field_path::FieldPath,
     sql::Sql,
     sql_builder::sql_builder_error::SqlBuilderError,
     sql_expr::resolver::Resolver,
@@ -57,8 +57,8 @@ pub fn build_insert_sql<T, Q>(
     entities: &[Q],
     roles: &HashSet<String>,
     path: &FieldPath,
-    modifier: &str,
-    extra: &str,
+    _modifier: &str,
+    _extra: &str,
 ) -> Result<Option<Sql>>
 where
     T: Mapped + TreeInsert,

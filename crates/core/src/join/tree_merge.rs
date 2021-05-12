@@ -1,8 +1,5 @@
 use super::Join;
-use crate::error::ToqlError;
-use crate::query::field_path::{Descendents, FieldPath};
-use crate::sql_builder::select_stream::SelectStream;
-use crate::tree::tree_merge::TreeMerge;
+use crate::{query::field_path::{ FieldPath}, sql_builder::select_stream::SelectStream, tree::tree_merge::TreeMerge, error::ToqlError};
 use std::collections::HashMap;
 
 impl<T, R, E> TreeMerge<R, E> for Join<T>

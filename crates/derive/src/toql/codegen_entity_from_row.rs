@@ -3,14 +3,8 @@
 *
 */
 
-use proc_macro2::Span;
-
 use proc_macro2::TokenStream;
-use syn::Ident;
-
-use crate::sane::FieldKind;
-use crate::sane::MergeColumn;
-use crate::sane::Struct;
+use crate::sane::{FieldKind, MergeColumn, Struct};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) struct CodegenEntityFromRow<'a> {
@@ -566,8 +560,6 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
             .map(|k| quote!( Option<#k> :toql::from_row::FromRow<R,E>, ))
             .collect::<Vec<_>>();
 
-        let impl_types_ref = impl_types.clone();
-        let impl_opt_types_ref = impl_opt_types.clone();
 
         let code = quote!(
 

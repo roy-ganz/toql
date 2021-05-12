@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 
 pub struct Paths {
     pub list: Vec<String>,

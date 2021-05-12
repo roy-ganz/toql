@@ -458,7 +458,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
             Some(r) => quote!(mapper.restrict_delete( toql::role_expr_macro::role_expr!(#r)); ),
             None => quote!(),
         };
-        let load_role_code = match &self.delete_role_expr {
+        let load_role_code = match &self.load_role_expr {
             Some(r) => quote!(mapper.restrict_load( toql::role_expr_macro::role_expr!(#r)); ),
             None => quote!(),
         };

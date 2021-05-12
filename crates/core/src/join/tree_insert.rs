@@ -1,10 +1,8 @@
 use super::Join;
-use crate::key::Key;
-use crate::keyed::Keyed;
-use crate::query::field_path::{Descendents, FieldPath};
-use crate::sql_expr::SqlExpr;
-use crate::tree::tree_insert::TreeInsert;
-use crate::{error::ToqlError, sql_mapper::mapped::Mapped};
+use crate::{
+    error::ToqlError, key::Key, keyed::Keyed, query::field_path::FieldPath, sql_expr::SqlExpr,
+    sql_mapper::mapped::Mapped, tree::tree_insert::TreeInsert,
+};
 use std::collections::HashSet;
 
 impl<T> TreeInsert for Join<T>

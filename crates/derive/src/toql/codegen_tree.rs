@@ -13,7 +13,7 @@ pub(crate) struct CodegenTree<'a> {
 
     dispatch_predicate_args_code: Vec<TokenStream>,
     dispatch_predicate_columns_code: Vec<TokenStream>,
-    dispatch_merge_key_code: Vec<TokenStream>,
+    
     merge_columns_code: Vec<TokenStream>,
     merge_predicate_code: Vec<TokenStream>,
 
@@ -42,7 +42,6 @@ impl<'a> CodegenTree<'a> {
             dispatch_predicate_args_code: Vec::new(),
             dispatch_predicate_columns_code: Vec::new(),
 
-            dispatch_merge_key_code: Vec::new(),
             merge_columns_code: Vec::new(),
             merge_predicate_code: Vec::new(),
 

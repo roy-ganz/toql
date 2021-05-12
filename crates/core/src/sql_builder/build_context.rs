@@ -1,7 +1,4 @@
-use crate::{
-    query::{field_order::FieldOrder, field_path::FieldPath},
-    sql_expr::SqlExpr,
-};
+use crate::query::{field_order::FieldOrder, field_path::FieldPath};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) struct BuildContext {

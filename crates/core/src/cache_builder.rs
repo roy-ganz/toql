@@ -30,7 +30,7 @@ impl CacheBuilder {
         Cache {
             registry: RwLock::new(registry),
             registered_roots: RwLock::new(HashSet::new()),
-            query_cache: RwLock::new(LruCache::new(self.capacity)),
+            _query_cache: RwLock::new(LruCache::new(self.capacity)),
         }
     }
 }
