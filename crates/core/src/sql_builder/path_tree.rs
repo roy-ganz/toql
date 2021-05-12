@@ -34,7 +34,7 @@ impl PathTree {
 
         for a in path.ancestors() {
             // If Parent exists, its not a tree root
-            
+
             match parents.next() {
                 Some(p) => {
                     // If parent is already in the tree, Add child and leave inner for loop
@@ -49,7 +49,7 @@ impl PathTree {
                     }
                 }
                 None => {
-                    self.roots.insert(a.as_str().to_string()); 
+                    self.roots.insert(a.as_str().to_string());
                     break;
                 }
             }

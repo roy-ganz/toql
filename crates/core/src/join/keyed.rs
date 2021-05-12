@@ -1,4 +1,3 @@
-
 use super::Join;
 use crate::keyed::{Keyed, KeyedMut};
 
@@ -14,7 +13,6 @@ where
             Join::Entity(e) => e.key(),
         }
     }
-   
 }
 impl<T> Keyed for &Join<T>
 where
@@ -28,7 +26,6 @@ where
             Join::Entity(e) => e.key(),
         }
     }
-   
 }
 impl<T> KeyedMut for Join<T>
 where
@@ -39,12 +36,8 @@ where
         match self {
             Join::Key(_) => {
                 *self = Join::Key(key);
-               
             }
             Join::Entity(e) => e.set_key(key),
         }
     }
 }
-
-
-

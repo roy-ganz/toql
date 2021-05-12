@@ -1,7 +1,5 @@
-
 use super::SqlArg;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-
 
 macro_rules! from_float {
        ($($type:ty),+) => {
@@ -161,4 +159,3 @@ where
         }
     }
 }
-

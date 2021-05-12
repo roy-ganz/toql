@@ -4,8 +4,10 @@
 //!
 
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::{sql_expr::resolver_error::ResolverError, sql_mapper::SqlMapperError, 
-    sql_arg::error::TryFromSqlArgError, deserialize::error::DeserializeError};
+use crate::{
+    deserialize::error::DeserializeError, sql_arg::error::TryFromSqlArgError,
+    sql_expr::resolver_error::ResolverError, sql_mapper::SqlMapperError,
+};
 use std::fmt;
 
 use pest::error::Error as PestError;
@@ -47,7 +49,6 @@ pub enum ToqlError {
     /// SQL Builder failed to turn Toql query into SQL query.
     SqlBuilderError(SqlBuilderError),
     /// Toql failed to convert row value into struct field
-   
     DeserializeError(DeserializeError),
 
     /// SQL Builder failed to turn Toql query into SQL query.
@@ -56,8 +57,6 @@ pub enum ToqlError {
     /// Access to shared registry, typically inside cache, failed
     RegistryPoisenError(String),
 }
-
-
 
 impl From<SqlBuilderError> for ToqlError {
     fn from(err: SqlBuilderError) -> ToqlError {
@@ -118,8 +117,14 @@ impl fmt::Display for ToqlError {
             ToqlError::MapperMissing(ref s) => write!(f, "no mapper found for `{}`", s),
             ToqlError::SqlMapperError(ref e) => e.fmt(f),
             ToqlError::ValueMissing(ref s) => write!(f, "no value found for `{}`", s),
-            ToqlError::TryFromSqlArgError(ref a) => write!(f, "unable to convert `{}` into desired type", a.0.to_string()),
-            ToqlError::RegistryPoisenError(ref a) => write!(f, "failed to access registry: `{}`", a.to_string()),
+            ToqlError::TryFromSqlArgError(ref a) => write!(
+                f,
+                "unable to convert `{}` into desired type",
+                a.0.to_string()
+            ),
+            ToqlError::RegistryPoisenError(ref a) => {
+                write!(f, "failed to access registry: `{}`", a.to_string())
+            }
             ToqlError::SqlBuilderError(ref e) => e.fmt(f),
             ToqlError::EncodingError(ref e) => e.fmt(f),
             ToqlError::QueryParserError(ref e) => e.fmt(f),

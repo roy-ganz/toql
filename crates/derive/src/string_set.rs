@@ -1,7 +1,6 @@
 use std::ops::Deref;
 
-
-use syn::{ NestedMeta};
+use syn::NestedMeta;
 
 use darling::{Error, FromMeta, Result};
 use std::collections::HashSet;
@@ -19,8 +18,6 @@ use std::collections::HashSet;
 /// ```
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct StringSet(pub HashSet<String>);
-
-
 
 impl Deref for StringSet {
     type Target = HashSet<String>;
@@ -46,7 +43,7 @@ impl FromMeta for StringSet {
                 return Err(Error::unexpected_type("non-string").with_span(nmi));
             }
         }
-        
+
         Ok(StringSet(paths))
     }
 }

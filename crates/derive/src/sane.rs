@@ -1,13 +1,12 @@
+use crate::annot::FieldRoles;
 use crate::annot::OnParamArg;
 use crate::annot::Pair;
-use crate::annot::FieldRoles;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
 use crate::annot::ToqlField;
-use crate::annot::{PredicateArg, ParamArg, SelectionArg, StructRoles};
+use crate::annot::{ParamArg, PredicateArg, SelectionArg, StructRoles};
 use crate::heck::MixedCase;
 use crate::heck::SnakeCase;
-
 
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
@@ -25,10 +24,10 @@ pub struct Struct {
     pub rust_struct_visibility: Visibility,
     pub mapped_predicates: Vec<PredicateArg>,
     pub mapped_selections: Vec<SelectionArg>,
-    pub roles : StructRoles,
+    pub roles: StructRoles,
     pub wildcard: Option<HashSet<String>>,
-  //  pub count_filter: Option<HashSet<String>>,
-    pub auto_key: bool
+    //  pub count_filter: Option<HashSet<String>>,
+    pub auto_key: bool,
 }
 
 impl Struct {
@@ -43,14 +42,18 @@ impl Struct {
                 sql: a.sql.clone(),
                 handler: a.handler.clone(),
                 on_param: a.on_param.clone(),
-                count_filter: a.count_filter.clone()
+                count_filter: a.count_filter.clone(),
             })
             .collect::<Vec<_>>();
         let mapped_selections: Vec<SelectionArg> = toql
             .selection
             .iter()
             .map(|a| SelectionArg {
-                name: if a.name.is_empty() { "std".to_string()} else {a.name.to_mixed_case()},
+                name: if a.name.is_empty() {
+                    "std".to_string()
+                } else {
+                    a.name.to_mixed_case()
+                },
                 fields: a.fields.clone(),
             })
             .collect::<Vec<_>>();
@@ -68,9 +71,9 @@ impl Struct {
             mapped_predicates,
             mapped_selections,
             roles: toql.roles.clone(),
-            wildcard: toql.wildcard.as_ref().map(|e|e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
-          //  count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
-            auto_key: toql.auto_key
+            wildcard: toql.wildcard.as_ref().map(|e| e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
+            //  count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
+            auto_key: toql.auto_key,
         }
     }
 }
@@ -85,16 +88,16 @@ pub enum SqlTarget {
 pub struct RegularField {
     pub sql_target: SqlTarget,
     pub key: bool,
-  //  pub count_select: bool,
-  //  pub count_filter: bool,
+    //  pub count_select: bool,
+    //  pub count_filter: bool,
     pub handler: Option<Path>,
     pub default_inverse_column: Option<String>,
     pub aux_params: Vec<ParamArg>,
-    pub on_params: Vec<OnParamArg>
+    pub on_params: Vec<OnParamArg>,
 }
 #[derive(Clone)]
 pub struct JoinField {
-   // pub sql_join_table_ident: Ident,
+    // pub sql_join_table_ident: Ident,
     pub sql_join_table_name: String,
     pub join_alias: String,
     pub default_self_column_code: TokenStream,
@@ -104,7 +107,7 @@ pub struct JoinField {
     pub on_sql: Option<String>,
     pub key: bool,
     pub aux_params: Vec<ParamArg>,
-    pub columns: Vec<Pair>
+    pub columns: Vec<Pair>,
 }
 
 #[derive(Clone)]
@@ -121,7 +124,7 @@ pub struct MergeMatch {
 #[derive(Clone)]
 pub struct MergeField {
     // pub columns: RenameCase,
- //   pub sql_join_table_ident: Ident,
+    //   pub sql_join_table_ident: Ident,
     pub sql_join_table_name: String,
     pub join_alias: String,
 
@@ -147,8 +150,6 @@ impl MergeField {
     } */
 }
 
-
-
 #[derive(Clone)]
 pub struct Field {
     pub rust_field_ident: Ident,
@@ -164,7 +165,6 @@ pub struct Field {
     pub kind: FieldKind,
     pub skip_mut: bool,
     pub skip_query: bool,
-    
 }
 
 #[derive(Clone)]
@@ -176,20 +176,17 @@ pub enum FieldKind {
 
 impl Field {
     pub fn create(field: &ToqlField, toql: &Toql) -> Result<Self> {
-
         let mut number_of_options = 0;
         let rust_field_type = unwrap_type(&field.ty, &mut number_of_options);
 
         let rust_field_ident = field.ident.as_ref().unwrap().to_owned();
         let rust_field_name = rust_field_ident.to_string();
         let rust_type_ident = rust_field_type.to_owned();
-        
+
         let rust_base_type_ident = unwrap_base(&rust_field_type);
         let rust_type_name = rust_base_type_ident.to_string();
-      
 
         let toql_field_name = rust_field_name.trim_start_matches("r#").to_mixed_case();
-        
 
         if field.skip_wildcard == true && field.preselect == true {
             return Err(darling::Error::custom(
@@ -224,7 +221,7 @@ impl Field {
                 &rust_type_name, // field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
-          //  let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
+            //  let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
             let sql_join_table_name = renamed_table.to_owned();
             let columns_translation = field
                 .join
@@ -312,7 +309,7 @@ impl Field {
             });
 
             FieldKind::Join(JoinField {
-             //   sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
+                //   sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
                     .alias
                     .as_ref()
@@ -326,8 +323,8 @@ impl Field {
                 translated_columns_map_code,
                 on_sql: field.join.as_ref().unwrap().on_sql.clone(),
                 key: field.key,
-                aux_params :  field.param.clone(),
-                columns: field.join.as_ref().unwrap().columns.clone()
+                aux_params: field.param.clone(),
+                columns: field.join.as_ref().unwrap().columns.clone(),
             })
         } else if field.merge.is_some() {
             if field.key {
@@ -350,11 +347,8 @@ impl Field {
                 .with_span(&field.ident));
             }
 
-            
-            
-
             let renamed_table = crate::util::rename_or_default(
-                 &rust_type_name,  //field.first_non_generic_type().unwrap().to_string().as_str(),
+                &rust_type_name, //field.first_non_generic_type().unwrap().to_string().as_str(),
                 &toql.tables,
             );
             //let sql_join_table_name = field.table.as_ref().unwrap_or(&renamed_table).to_owned();
@@ -387,34 +381,32 @@ impl Field {
                 });
             }
 
-                if let Some (j) =   field.merge.as_ref().unwrap().join_sql.as_ref(){
-                    
-                    // Search for .., ignore ...
-                    let mut n = 0;
-                    let found_self_alias = j.chars().any(|c| { 
-                        if c == '.' {
-                            n += 1;
-                           false
+            if let Some(j) = field.merge.as_ref().unwrap().join_sql.as_ref() {
+                // Search for .., ignore ...
+                let mut n = 0;
+                let found_self_alias = j.chars().any(|c| {
+                    if c == '.' {
+                        n += 1;
+                        false
+                    } else {
+                        if n == 2 {
+                            true
                         } else {
-                            if n == 2 {
-                                true
-                            } else {
-                                n = 0;
-                                false
-                            }
+                            n = 0;
+                            false
                         }
-                    });
-                    if found_self_alias {
-                        return Err(darling::Error::custom(
+                    }
+                });
+                if found_self_alias {
+                    return Err(darling::Error::custom(
                                 "Alias `..` not allowed for merged fields. Use `...` to refer to table of merged entities. Change `#[toql(..)]`.".to_string(),
                             )
                         .with_span(&field.ident));
-                    }
                 }
-     
+            }
 
             FieldKind::Merge(MergeField {
-             //   sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
+                //   sql_join_table_ident: Ident::new(&sql_join_table_name, Span::call_site()),
                 join_alias: field
                     .alias
                     .as_ref()
@@ -452,14 +444,11 @@ impl Field {
                     ))
                 },
                 key: field.key,
-             //   count_select: field.count_select,
+                //   count_select: field.count_select,
                 //count_filter: field.count_filter,
                 handler: field.handler.to_owned(),
-                aux_params :  field.param.clone(),
-                on_params:  field.on_param.clone()
-
-                
-                
+                aux_params: field.param.clone(),
+                on_params: field.on_param.clone(),
             })
         };
 
@@ -479,55 +468,44 @@ impl Field {
             kind,
         })
     }
-
-    
 }
 
-
-
- pub(crate) fn unwrap_type<'a>(ty :&'a syn::Type,  number_of_options : &mut u8) -> &'a syn::Type {
-      
-   
+pub(crate) fn unwrap_type<'a>(ty: &'a syn::Type, number_of_options: &mut u8) -> &'a syn::Type {
     match ty {
-        syn::Type::Path(type_path) if type_path.qself.is_none()  => {
+        syn::Type::Path(type_path) if type_path.qself.is_none() => {
             let path_segment = &type_path.path.segments.iter().next().unwrap();
             if &path_segment.ident == "Option" {
                 let path_arguments = &path_segment.arguments;
                 if let syn::PathArguments::AngleBracketed(params) = path_arguments {
-                    if let  syn::GenericArgument::Type(ty) =  params.args.iter().next().unwrap() {
-
-                            *number_of_options += 1;
-                            return unwrap_type(ty, number_of_options);
-                        }
+                    if let syn::GenericArgument::Type(ty) = params.args.iter().next().unwrap() {
+                        *number_of_options += 1;
+                        return unwrap_type(ty, number_of_options);
                     }
-                } 
-            } 
-
-        _ => {},
+                }
+            }
         }
-    
-    ty
 
+        _ => {}
+    }
+
+    ty
 }
 
-
- pub(crate) fn unwrap_base<'a>(ty :&'a syn::Type) -> syn::Ident {
-
+pub(crate) fn unwrap_base<'a>(ty: &'a syn::Type) -> syn::Ident {
     match ty {
-        syn::Type::Path(type_path) if type_path.qself.is_none()  => {
-            
+        syn::Type::Path(type_path) if type_path.qself.is_none() => {
             let path_segment = &type_path.path.segments.iter().next().unwrap();
             let path_arguments = &path_segment.arguments;
 
             if let syn::PathArguments::AngleBracketed(params) = path_arguments {
-                if let  syn::GenericArgument::Type(ty) =  params.args.iter().next().unwrap() {
+                if let syn::GenericArgument::Type(ty) = params.args.iter().next().unwrap() {
                     return unwrap_base(ty);
                 }
-            } 
-            return path_segment.ident.to_owned()
-        } 
-        _ => {},
+            }
+            return path_segment.ident.to_owned();
         }
-    
-   syn::Ident::new("Unknown", Span::call_site())
+        _ => {}
+    }
+
+    syn::Ident::new("Unknown", Span::call_site())
 }

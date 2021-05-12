@@ -1,21 +1,24 @@
 use crate::keyed::Keyed;
 
 pub struct MapKeyIter<I> {
-    orig: I
+    orig: I,
 }
 
-impl<I> Iterator for MapKeyIter<I> where I: Iterator, I::Item : Keyed
+impl<I> Iterator for MapKeyIter<I>
+where
+    I: Iterator,
+    I::Item: Keyed,
 {
     type Item = <I::Item as Keyed>::Key;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.orig.next().map(|v| v.key() )
+        self.orig.next().map(|v| v.key())
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.orig.size_hint() 
+        self.orig.size_hint()
     }
 }
 
@@ -27,7 +30,7 @@ pub trait MapKey: Sized {
     fn map_key(self) -> MapKeyIter<Self>;
 }
 
-impl <I: Iterator> MapKey for I {
+impl<I: Iterator> MapKey for I {
     fn map_key(self) -> MapKeyIter<Self> {
         map_key(self)
     }

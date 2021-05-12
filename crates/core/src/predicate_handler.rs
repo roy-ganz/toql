@@ -1,5 +1,7 @@
-
-use crate::{sql_expr::SqlExpr, sql_builder::sql_builder_error::SqlBuilderError, parameter_map::ParameterMap, sql_arg::SqlArg};
+use crate::{
+    parameter_map::ParameterMap, sql_arg::SqlArg, sql_builder::sql_builder_error::SqlBuilderError,
+    sql_expr::SqlExpr,
+};
 
 pub trait PredicateHandler {
     /// Match filter and return SQL expression or None, if no filtering is required.
@@ -8,7 +10,7 @@ pub trait PredicateHandler {
     fn build_predicate(
         &self,
         expression: SqlExpr,
-        args : &Vec<SqlArg>,
+        args: &Vec<SqlArg>,
         aux_params: &ParameterMap,
     ) -> Result<Option<SqlExpr>, SqlBuilderError>;
 }

@@ -4,9 +4,9 @@
 //! load the full dependency tree.
 //!
 use crate::alias::AliasFormat;
+use crate::field_handler::FieldHandler;
 /// A registry that holds mappers.
 use crate::result::Result;
-use crate::field_handler::FieldHandler;
 use crate::sql_mapper::mapped::Mapped;
 use crate::sql_mapper::SqlMapper;
 use heck::MixedCase;
@@ -15,11 +15,11 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct SqlMapperRegistry {
     pub mappers: HashMap<String, SqlMapper>,
-  //  pub alias_format: AliasFormat, //
+    //  pub alias_format: AliasFormat, //
 }
 impl SqlMapperRegistry {
     pub fn new() -> SqlMapperRegistry {
-       SqlMapperRegistry {
+        SqlMapperRegistry {
             mappers: HashMap::new(),
         }
     }
@@ -27,7 +27,7 @@ impl SqlMapperRegistry {
         self.mappers.get(name)
     }
 
-     /* pub fn with_alias_format(alias_format: AliasFormat) -> SqlMapperRegistry {
+    /* pub fn with_alias_format(alias_format: AliasFormat) -> SqlMapperRegistry {
         SqlMapperRegistry {
             mappers: HashMap::new(),
       //      alias_format,
@@ -39,7 +39,6 @@ impl SqlMapperRegistry {
             .insert(mapper.table_name.to_mixed_case(), mapper);
     }
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> Result<String> {
-       
         let m = SqlMapper::from_mapped::<M>()?;
         self.mappers.insert(String::from(M::type_name()), m);
         log::info!("Mapped `{}`", M::type_name());

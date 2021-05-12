@@ -3,25 +3,25 @@
 extern crate pest;
 
 // Reexports
-#[cfg(feature= "serde_feature")]
-pub extern crate serde;         // For generated keys and Join<T>
- 
+#[cfg(feature = "serde_feature")]
+pub extern crate serde; // For generated keys and Join<T>
+
 #[macro_use]
 pub mod error;
-pub mod result;
 pub mod alias;
 pub mod deserialize;
 pub mod key;
-pub mod keyed;
 pub mod key_fields;
+pub mod keyed;
 pub mod map_key;
 pub mod page;
+pub mod result;
 //pub mod mutate;
 //pub mod select;
+pub mod map_query;
 pub mod sql;
 pub mod sql_arg;
 pub mod to_query;
-pub mod map_query;
 
 #[macro_use]
 pub mod log_helper;
@@ -32,8 +32,8 @@ extern crate lazy_static;
 pub mod merge;
 pub mod query;
 pub mod query_fields;
-pub mod query_path;
 pub mod query_parser;
+pub mod query_path;
 pub mod sql_builder;
 //pub mod sql_builder_new;
 pub mod sql_expr;
@@ -53,15 +53,14 @@ pub mod sql_mapper_registry;
 //pub mod path_predicate;
 pub mod tree;
 
-pub mod join;
 pub mod backend;
+pub mod join;
 //pub mod update_field;
 //pub mod insert_path;
-pub mod role_expr;
-pub mod role_validator;
-pub mod role_expr_parser;
 pub mod cache;
 pub mod cache_builder;
-
+pub mod role_expr;
+pub mod role_expr_parser;
+pub mod role_validator;
 
 pub use log; // Reexport for generated code from Toql derive

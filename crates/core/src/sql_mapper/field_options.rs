@@ -1,5 +1,5 @@
 use crate::{role_expr::RoleExpr, sql_arg::SqlArg};
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 /// Options for a mapped field.
@@ -7,13 +7,13 @@ pub struct FieldOptions {
     pub(crate) preselect: bool, // Always select this field, regardless of query fields
     pub(crate) count_filter: bool, // Filter field on count query
     pub(crate) count_select: bool, // Select field on count query
-    pub(crate) skip_mut: bool, // Select field on mut select
+    pub(crate) skip_mut: bool,  // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
     pub(crate) skip_load: bool, // Select field for query builder
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
     pub(crate) on_params: Vec<String>, // Identity params for on clauses
-    pub(crate) key: bool,   // Field is part of key
+    pub(crate) key: bool,       // Field is part of key
 }
 
 impl FieldOptions {
@@ -29,7 +29,7 @@ impl FieldOptions {
             load_role_expr: None,
             aux_params: HashMap::new(),
             on_params: Vec::new(),
-            key: false
+            key: false,
         }
     }
 

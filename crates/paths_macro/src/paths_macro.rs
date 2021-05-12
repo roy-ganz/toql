@@ -16,35 +16,30 @@ pub enum PathsMacro {
     Top,
 }
 
-
-
 fn parse_pathlist(input: ParseStream) -> Result<PathsMacro> {
-        Ok(PathsMacro::PathList {
-                struct_type: { (input.parse()?, input.parse::<Token![,]>()?).0 },
-                query: input.parse()?,
-            })
+    Ok(PathsMacro::PathList {
+        struct_type: { (input.parse()?, input.parse::<Token![,]>()?).0 },
+        query: input.parse()?,
+    })
 }
 
 fn parse_top(input: ParseStream) -> Result<PathsMacro> {
-        let top: Ident = input.parse()?;
-            if top.to_string() == "top" {
-                Ok(PathsMacro::Top)
-            } else {
-                println!("Found {}", top);
-                Err(syn::Error::new(
-                    Span::call_site(),
-                    "Keyword `top` expected",
-                ))
-            }
+    let top: Ident = input.parse()?;
+    if top.to_string() == "top" {
+        Ok(PathsMacro::Top)
+    } else {
+        println!("Found {}", top);
+        Err(syn::Error::new(Span::call_site(), "Keyword `top` expected"))
+    }
 }
 
 impl Parse for PathsMacro {
     fn parse(input: ParseStream) -> Result<Self> {
-         let alt = input.fork();
+        let alt = input.fork();
         let f = parse_pathlist(input);
         match f {
-            Ok(_) => {f}
-            Err(_) => {parse_top(&alt)}
+            Ok(_) => f,
+            Err(_) => parse_top(&alt),
         }
     }
 }
@@ -54,7 +49,7 @@ pub fn parse(
     struct_type: Type,
 ) -> std::result::Result<TokenStream, TokenStream> {
     let mut output_stream: TokenStream = TokenStream::new();
-    
+
     match PestFieldListParser::parse(Rule::query, &field_list_string.value()) {
         Ok(pairs) => {
             output_stream.extend(evaluate_pair(
@@ -112,7 +107,7 @@ fn evaluate_pair(
         }
     }
 
-    Ok(quote!(
-        toql::backend::paths::Paths::from(vec![#(#methods),* ])
-    ))
+    Ok(quote!(toql::backend::paths::Paths::from(
+        vec![#(#methods),* ]
+    )))
 }

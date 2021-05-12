@@ -49,7 +49,6 @@ mod annot;
 
 mod toql;
 
-
 mod sane;
 mod util;
 
@@ -62,12 +61,12 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
     let name = &ast.ident;
     let name_string = name.to_string();
     let gen = quote! {
-                       impl<R, E> toql::from_row::FromRow<R, E> for #name 
-                    where String :toql::from_row::FromRow<R, E>, 
-                    Self: std::str::FromStr, 
+                       impl<R, E> toql::from_row::FromRow<R, E> for #name
+                    where String :toql::from_row::FromRow<R, E>,
+                    Self: std::str::FromStr,
                     E: std::convert::From<toql::error::ToqlError>,
                     {
-                        fn forward<'a, I>(iter: &mut I) -> Result<usize, E> 
+                        fn forward<'a, I>(iter: &mut I) -> Result<usize, E>
                         where
                             I: Iterator<Item = &'a toql::sql_builder::select_stream::Select>,
                         {
@@ -102,19 +101,19 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
 
                         }
                     }
-                    impl std::convert::TryFrom<&toql::sql_arg::SqlArg> for #name 
+                    impl std::convert::TryFrom<&toql::sql_arg::SqlArg> for #name
                     where Self: std::str::FromStr {
 
                         type Error =  toql::error::ToqlError;
                         fn try_from(t: &toql::sql_arg::SqlArg) -> Result<Self, Self::Error> {
                         if let toql::sql_arg::SqlArg::Str(s) = t {
                                 let t = <Self as std::str::FromStr>::from_str(s.as_str())
-                                    .map_err(|e|toql::error::ToqlError::DeserializeError( 
+                                    .map_err(|e|toql::error::ToqlError::DeserializeError(
                                          toql::deserialize::error::DeserializeError::ConversionFailed(#name_string .to_string(), e.to_string())))?;
                                 Ok(t)
                         } else {
                             Err(toql::error::ToqlError::DeserializeError(
-                                toql::deserialize::error::DeserializeError::ConversionFailed(#name_string .to_string(),"Requires string argument.".to_string())))  
+                                toql::deserialize::error::DeserializeError::ConversionFailed(#name_string .to_string(),"Requires string argument.".to_string())))
                         }
                         }
                     }
@@ -134,7 +133,6 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(gen)
 }
 
-
 /// Derive to add Toql functionality to your struct.
 #[proc_macro_derive(Toql, attributes(toql))]
 pub fn toql_derive(input: TokenStream) -> TokenStream {
@@ -148,5 +146,3 @@ pub fn toql_derive(input: TokenStream) -> TokenStream {
         Err(error) => TokenStream::from(error.write_errors()),
     }
 }
-
-

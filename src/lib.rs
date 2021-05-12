@@ -48,8 +48,9 @@
 
 pub use toql_core::alias;
 pub use toql_core::alias_translator;
+pub use toql_core::backend::fields;
+pub use toql_core::backend::paths;
 pub use toql_core::error;
-pub use toql_core::result;
 pub use toql_core::from_row;
 pub use toql_core::key;
 pub use toql_core::key_fields;
@@ -57,57 +58,51 @@ pub use toql_core::keyed;
 pub use toql_core::map_key;
 pub use toql_core::merge;
 pub use toql_core::query;
+pub use toql_core::result;
 pub use toql_core::sql;
 pub use toql_core::sql_arg;
 pub use toql_core::sql_expr;
 pub use toql_core::sql_expr_parser;
-pub use toql_core::backend::paths;
-pub use toql_core::backend::fields;
 
 pub use toql_core::log_sql; // Export macro
 pub use toql_core::ok_or_fail; // Export macro
 
+pub use toql_core::backend;
 pub use toql_core::field_handler;
 pub use toql_core::join_handler;
 pub use toql_core::predicate_handler;
 pub use toql_core::query_fields;
-pub use toql_core::query_path;
 pub use toql_core::query_parser;
+pub use toql_core::query_path;
 pub use toql_core::sql_builder;
 pub use toql_core::sql_mapper;
 pub use toql_core::sql_mapper_registry;
 pub use toql_core::to_query;
 pub use toql_core::tree;
-pub use toql_core::backend;
 //pub use toql_core::update_field;
 //pub use toql_core::insert_path;
 pub use toql_core::join;
 
 pub use toql_derive as derive;
-pub use toql_query_macro as query_macro;
 pub use toql_fields_macro as fields_macro;
 pub use toql_paths_macro as paths_macro;
+pub use toql_query_macro as query_macro;
 pub use toql_role_expr_macro as role_expr_macro;
 pub use toql_sql_expr_macro as sql_expr_macro;
 
+pub use toql_core::cache;
+pub use toql_core::deserialize;
+pub use toql_core::page;
+pub use toql_core::parameter_map;
 pub use toql_core::role_expr;
 pub use toql_core::role_expr_parser;
 pub use toql_core::role_validator;
-pub use toql_core::cache;
-pub use toql_core::page;
-pub use toql_core::parameter_map;
-pub use toql_core::deserialize;
-
 
 pub use toql_core::log; // Reexport for derive
 
-#[cfg(feature= "serde")]
+#[cfg(feature = "serde")]
 pub use toql_core::serde; // Reexport for derive
 
 pub use toql_core::log_literal_sql;
-
-
-
-
 
 pub mod prelude;

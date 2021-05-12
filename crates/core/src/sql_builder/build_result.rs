@@ -3,7 +3,8 @@
 
 use super::select_stream::SelectStream;
 use crate::{
-    alias_translator::AliasTranslator, parameter_map::ParameterMap, sql_expr::resolver_error::Result,
+    alias_translator::AliasTranslator, parameter_map::ParameterMap,
+    sql_expr::resolver_error::Result,
 };
 use crate::{
     sql::Sql,
@@ -68,8 +69,8 @@ impl BuildResult {
     pub fn column_counter(&self) -> usize {
         self.column_counter
     }
-   
-    pub fn set_preselect(&mut self, preselect_expr:SqlExpr) {
+
+    pub fn set_preselect(&mut self, preselect_expr: SqlExpr) {
         self.preselect_expr = preselect_expr;
     }
 
@@ -101,8 +102,7 @@ impl BuildResult {
         modifier: &str,
         extra: &str,
     ) -> Result<Sql> {
-        let resolver = Resolver::new()
-            .with_aux_params(aux_params);
+        let resolver = Resolver::new().with_aux_params(aux_params);
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
         let preselect_sql = resolver.to_sql(&self.preselect_expr, alias_translator)?;
         let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
@@ -125,7 +125,7 @@ impl BuildResult {
             stmt.push_str(modifier);
             stmt.push(' ');
         }
-        
+
         if !preselect_sql.is_empty() {
             stmt.push_str(&preselect_sql.0);
             stmt.push_str(", ");
@@ -307,8 +307,4 @@ impl BuildResult {
     pub fn unmerged_home_paths(&self) -> &HashSet<String> {
         &self.unmerged_home_paths
     }
-
-   
-
-   
 }

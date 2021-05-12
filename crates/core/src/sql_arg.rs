@@ -1,9 +1,6 @@
-
-
-
 pub mod error;
-pub mod try_into;
 pub mod from;
+pub mod try_into;
 
 #[derive(Clone, Debug)]
 pub enum SqlArg {
@@ -91,11 +88,11 @@ impl ToString for SqlArg {
         }
     }
 }
-/* 
+/*
 impl TryInto<Option<u32>> for &SqlArg {
     type Error = TryFromSqlArgError;
     fn try_into(self) -> Result<Option<u32>, Self::Error> {
-       
+
        if self.is_null() {
            Ok(None)
        } else {
@@ -106,4 +103,3 @@ impl TryInto<Option<u32>> for &SqlArg {
        }
     }
 }  */
-

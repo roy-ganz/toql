@@ -1,14 +1,13 @@
+use crate::string_set::StringSet;
 use crate::toql::codegen_api::CodegenApi;
-use crate::toql::codegen_update::CodegenUpdate;
-use crate::toql::codegen_key::CodegenKey;
-use crate::toql::codegen_tree::CodegenTree;
-use crate::toql::codegen_mapper::CodegenMapper;
-use crate::toql::codegen_query_fields::CodegenQueryFields;
-use crate::toql::codegen_key_from_row::CodegenKeyFromRow;
 use crate::toql::codegen_entity_from_row::CodegenEntityFromRow;
 use crate::toql::codegen_insert::CodegenInsert;
-use crate::string_set::StringSet;
-
+use crate::toql::codegen_key::CodegenKey;
+use crate::toql::codegen_key_from_row::CodegenKeyFromRow;
+use crate::toql::codegen_mapper::CodegenMapper;
+use crate::toql::codegen_query_fields::CodegenQueryFields;
+use crate::toql::codegen_tree::CodegenTree;
+use crate::toql::codegen_update::CodegenUpdate;
 
 use syn::Path;
 
@@ -20,10 +19,10 @@ pub struct Pair {
 }
 #[derive(Debug, FromMeta, Default, Clone)]
 pub struct FieldRoles {
-     #[darling(default)]
+    #[darling(default)]
     pub load: Option<String>,
-     #[darling(default)]
-    pub update: Option<String>
+    #[darling(default)]
+    pub update: Option<String>,
 }
 #[derive(Debug, FromMeta, Default, Clone)]
 pub struct StructRoles {
@@ -31,10 +30,10 @@ pub struct StructRoles {
     pub load: Option<String>,
     #[darling(default)]
     pub update: Option<String>,
-     #[darling(default)]
+    #[darling(default)]
     pub insert: Option<String>,
-     #[darling(default)]
-    pub delete: Option<String>
+    #[darling(default)]
+    pub delete: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]
@@ -60,14 +59,12 @@ pub struct JoinArg {
 
     #[darling(default)]
     pub on_sql: Option<String>,
-    
-     #[darling(default)]
-    pub join_sql: Option<String>, 
 
+    #[darling(default)]
+    pub join_sql: Option<String>,
     //#[darling(default)]
     //pub discr_sql: Option<String>,
 }
-
 
 // Attribute on struct field
 #[derive(Debug, FromField)]
@@ -77,7 +74,7 @@ pub struct ToqlField {
     pub ty: syn::Type,
     #[darling(default)]
     pub join: Option<JoinArg>,
-     
+
     #[darling(default)]
     pub column: Option<String>,
     #[darling(default)]
@@ -86,7 +83,7 @@ pub struct ToqlField {
     pub skip_mut: bool,
     #[darling(default)]
     pub skip_query: bool,
-   /*  #[darling(default)]
+    /*  #[darling(default)]
     pub count_filter: bool, */
     #[darling(default)]
     pub count_select: bool,
@@ -104,7 +101,7 @@ pub struct ToqlField {
     pub merge: Option<MergeArg>,
     #[darling(default)]
     pub alias: Option<String>,
-   /*  #[darling(default)]
+    /*  #[darling(default)]
     pub table: Option<String>, // Alternative sql table name */
     #[darling(default)]
     pub handler: Option<Path>,
@@ -113,14 +110,8 @@ pub struct ToqlField {
     #[darling(default)]
     pub roles: FieldRoles,
     #[darling(multiple)]
-    pub on_param: Vec<OnParamArg>
-            
+    pub on_param: Vec<OnParamArg>,
 }
-
-
-
- 
-
 
 #[derive(FromMeta, PartialEq, Eq, Clone, Debug)]
 pub enum RenameCase {
@@ -145,7 +136,7 @@ pub struct PredicateArg {
     pub on_param: Vec<PredicateOnParamArg>,
 
     #[darling(default)]
-    pub count_filter: bool
+    pub count_filter: bool,
 }
 #[derive(FromMeta, Clone, Debug)]
 pub struct SelectionArg {
@@ -194,25 +185,23 @@ pub struct Toql {
     pub skip_select: bool,
     #[darling(default)]
     pub skip_query_builder: bool,
-   
+
     #[darling(multiple)]
     pub predicate: Vec<PredicateArg>,
     #[darling(multiple)]
     pub selection: Vec<SelectionArg>,
-     #[darling(default)]
-    pub roles : StructRoles,
-    /* 
+    #[darling(default)]
+    pub roles: StructRoles,
+    /*
     #[darling(multiple)]
     pub insdel_role: Vec<String>,
     #[darling(multiple)]
     pub upd_role: Vec<String>, */
-   
     #[darling(default)]
     pub wildcard: Option<StringSet>,
 
-  /*   #[darling(default)]
+    /*   #[darling(default)]
     pub count_filter: Option<StringSet>, */
-
     pub data: darling::ast::Data<(), ToqlField>,
 }
 
@@ -230,7 +219,6 @@ impl quote::ToTokens for Toql {
         let mut toql_entity_from_row = CodegenEntityFromRow::from_toql(&rust_struct);
         let mut toql_insert = CodegenInsert::from_toql(&rust_struct);
         let toql_api = CodegenApi::from_toql(&rust_struct);
-    
 
         let Toql {
             vis: _,
@@ -248,12 +236,10 @@ impl quote::ToTokens for Toql {
             predicate: _,
             selection: _,
             roles: _,
-            wildcard:_,
-           // count_filter:_,
+            wildcard: _,
+            // count_filter:_,
             ref data,
         } = *self;
-
-       
 
         let fields = data
             .as_ref()
@@ -276,7 +262,7 @@ impl quote::ToTokens for Toql {
                     toql_mapper.add_field_mapping(&f)?;
 
                     // Don't build further code for invalid field, process next field
-                   /*  if result.is_err() {
+                    /*  if result.is_err() {
                         continue;
                     } */
 
@@ -286,24 +272,17 @@ impl quote::ToTokens for Toql {
 
                     toql_key_from_row.add_key_deserialize(&f)?;
 
-                  
                     if field.merge.is_some() {
                         toql_mapper.add_merge_function(&f);
 
-                       
                         toql_entity_from_row.add_ignored_path(&f);
 
-                       
                         toql_entity_from_row.add_path_loader(&f);
                     }
 
-                    
                     toql_entity_from_row.add_deserialize(&f);
 
-                   
-
-                   
-                   /*  if result.is_err() {
+                    /*  if result.is_err() {
                         // tokens.extend(result.err());
                         continue;
                     } */
@@ -313,11 +292,9 @@ impl quote::ToTokens for Toql {
                 // Select is considered part of mutation functionality (Copy)
                 if !skip_mut {
                     toql_update.add_tree_update(&f);
-                
+
                     toql_insert.add_tree_insert(&f)?;
-                 
                 }
-              
             }
 
             // Fail if no keys are found
@@ -328,7 +305,7 @@ impl quote::ToTokens for Toql {
             }
 
             // Build merge functionality
-          
+
             toql_entity_from_row.build_merge();
 
             Ok(())
@@ -353,15 +330,12 @@ impl quote::ToTokens for Toql {
 
                 if !skip_load {
                     tokens.extend(quote!(#toql_mapper));
-                   
                 }
 
                 if !skip_mut {
                     tokens.extend(quote!(#toql_insert));
                     tokens.extend(quote!(#toql_update));
-                  
                 }
-
             }
         }
     }

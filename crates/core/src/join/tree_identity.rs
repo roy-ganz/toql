@@ -1,18 +1,18 @@
 use super::Join;
-use crate::keyed::Keyed;
-use crate::key::Key;
-use crate::tree::tree_identity::{TreeIdentity, IdentityAction};
 use crate::error::ToqlError;
-use std::convert::TryFrom;
+use crate::key::Key;
+use crate::keyed::Keyed;
+use crate::query::field_path::{Descendents, FieldPath};
 use crate::sql_arg::SqlArg;
-use crate::query::field_path::{FieldPath, Descendents};
+use crate::tree::tree_identity::{IdentityAction, TreeIdentity};
+use std::convert::TryFrom;
 
 impl<T> TreeIdentity for Join<T>
 where
     T: Keyed,
     <T as Keyed>::Key: Clone,
     T: TreeIdentity,
-    <T as Keyed>::Key: TryFrom<Vec<SqlArg>, Error=ToqlError >
+    <T as Keyed>::Key: TryFrom<Vec<SqlArg>, Error = ToqlError>,
 {
     fn auto_id() -> bool {
         <T as TreeIdentity>::auto_id()
@@ -21,30 +21,27 @@ where
         &mut self,
         descendents: &mut I,
         action: &'b IdentityAction,
-    ) -> Result<(), ToqlError> where I: Iterator<Item = FieldPath<'a>>{
-       
-       match self {
-           Join::Key(k) => { 
-               match descendents.next() {
-               Some(p) => {  Err(ToqlError::ValueMissing(  p.as_str().to_string()))},
-               None => {
-                   match action {
-                       IdentityAction::Set(ids) => {
-                           let n = <<T as Keyed>::Key as Key>::columns().len();
-                           let end = ids.borrow().len();
-                           let args : Vec<SqlArg> = ids.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
-                            let key = TryFrom::try_from(args)?;
-                            *k = key;
-                            Ok(())
-                       }
-                       IdentityAction::Refresh => {Ok(())}
-                   }
-                   
-               }
-           }
-            }
-           Join::Entity(e) => { e.set_id(descendents, action)}
-       }
-       
+    ) -> Result<(), ToqlError>
+    where
+        I: Iterator<Item = FieldPath<'a>>,
+    {
+        match self {
+            Join::Key(k) => match descendents.next() {
+                Some(p) => Err(ToqlError::ValueMissing(p.as_str().to_string())),
+                None => match action {
+                    IdentityAction::Set(ids) => {
+                        let n = <<T as Keyed>::Key as Key>::columns().len();
+                        let end = ids.borrow().len();
+                        let args: Vec<SqlArg> =
+                            ids.borrow_mut().drain(end - n..).collect::<Vec<_>>();
+                        let key = TryFrom::try_from(args)?;
+                        *k = key;
+                        Ok(())
+                    }
+                    IdentityAction::Refresh => Ok(()),
+                },
+            },
+            Join::Entity(e) => e.set_id(descendents, action),
+        }
     }
 }

@@ -1,4 +1,4 @@
-use super::{QueryToken, concatenation::Concatenation};
+use super::{concatenation::Concatenation, QueryToken};
 
 #[derive(Clone, Debug)]
 pub struct Selection {
@@ -12,14 +12,13 @@ pub struct SelectionPool<'a> {
 }
 
 impl Selection {
-pub fn from<T>(path: T) -> Self
+    pub fn from<T>(path: T) -> Self
     where
         T: Into<String>,
     {
-
         Selection {
             concatenation: Concatenation::And,
-            name : path.into()
+            name: path.into(),
         }
     }
 
@@ -27,15 +26,12 @@ pub fn from<T>(path: T) -> Self
         self.name
     }
 }
-    
 
 impl Into<QueryToken> for Selection {
     fn into(self) -> QueryToken {
         QueryToken::Selection(self)
     }
 }
-
-
 
 impl ToString for Selection {
     fn to_string(&self) -> String {

@@ -124,7 +124,7 @@ impl FieldHandler for BasicFieldHandler {
                     select.push_arg(a.clone());
                     select.push_literal(", ");
                 }
-                select.pop(); // remove last ' ,' token 
+                select.pop(); // remove last ' ,' token
                 select.push_literal(")");
                 Ok(Some(select))
             }
@@ -137,7 +137,7 @@ impl FieldHandler for BasicFieldHandler {
                     select.push_arg(a.clone());
                     select.push_literal(", ");
                 }
-                select.pop(); // remove last ' ,' token 
+                select.pop(); // remove last ' ,' token
                 select.push_literal(")");
                 Ok(Some(select))
             }

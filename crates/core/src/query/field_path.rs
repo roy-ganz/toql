@@ -194,7 +194,7 @@ impl<'a> Iterator for StepUp<'a> {
         match p {
             Some(i) => {
                 let end = self.pos;
-               /*  println!(
+                /*  println!(
                     "String {}, from {} , step is `{}`",
                     &self.path,
                     &end,

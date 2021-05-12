@@ -30,9 +30,9 @@
 //!
 pub mod field_options;
 pub mod join_options;
+pub mod join_type;
 pub mod mapped;
 pub mod predicate_options;
-pub mod join_type;
 
 pub(crate) mod field;
 pub(crate) mod join;
@@ -44,11 +44,11 @@ use heck::{CamelCase, MixedCase};
 use crate::sql_mapper::join_options::JoinOptions;
 use crate::sql_mapper::predicate_options::PredicateOptions;
 
-use crate::result::Result;
 use crate::predicate_handler::{DefaultPredicateHandler, PredicateHandler};
+use crate::result::Result;
 use crate::sql_mapper::field::Field;
 use crate::sql_mapper::field_options::FieldOptions;
-use crate::sql_mapper::join::{Join};
+use crate::sql_mapper::join::Join;
 use crate::sql_mapper::mapped::Mapped;
 use crate::sql_mapper::merge::Merge;
 use crate::sql_mapper::predicate::Predicate;
@@ -57,9 +57,9 @@ use std::collections::HashMap;
 
 use crate::field_handler::{BasicFieldHandler, FieldHandler};
 use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
+use join_type::JoinType;
 use std::fmt;
 use std::sync::Arc;
-use join_type::JoinType;
 
 #[derive(Debug)]
 pub enum DeserializeType {
@@ -180,7 +180,7 @@ where {
             joined_mappers: HashMap::new(),
             selections: HashMap::new(),
             load_role_expr: None,
-            delete_role_expr: None
+            delete_role_expr: None,
         }
     }
     /// Create a new mapper from a struct that implements the Mapped trait.
@@ -454,7 +454,7 @@ where {
 
         self
     }
-   
+
     pub fn map_merge<S>(
         &mut self,
         toql_path: S,
@@ -530,8 +530,7 @@ where {
                 );
             }
         }
-        self.selections
-            .insert(name.to_string(), fields_or_paths);
+        self.selections.insert(name.to_string(), fields_or_paths);
     }
 
     pub fn restrict_delete(&mut self, role_expr: RoleExpr) {
@@ -541,5 +540,4 @@ where {
     pub fn restrict_load(&mut self, role_expr: RoleExpr) {
         self.load_role_expr = Some(role_expr);
     }
-
 }

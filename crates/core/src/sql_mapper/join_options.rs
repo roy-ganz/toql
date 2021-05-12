@@ -1,7 +1,7 @@
 use crate::join_handler::JoinHandler;
 use crate::sql_arg::SqlArg;
 use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Options for a mapped field.
@@ -10,11 +10,10 @@ pub struct JoinOptions {
     pub(crate) key: bool, // Always select this join, regardless of query fields
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
-    pub(crate) skip_mut: bool,  // Ignore field for updates
+    pub(crate) skip_mut: bool, // Ignore field for updates
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
-   
 }
 
 impl JoinOptions {
@@ -28,7 +27,6 @@ impl JoinOptions {
             load_role_expr: None,
             aux_params: HashMap::new(),
             join_handler: None,
-           
         }
     }
 

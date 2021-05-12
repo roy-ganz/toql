@@ -1,4 +1,4 @@
-use crate::{sql_arg::SqlArg, sql_mapper_registry::SqlMapperRegistry, alias::AliasFormat};
+use crate::{alias::AliasFormat, sql_arg::SqlArg, sql_mapper_registry::SqlMapperRegistry};
 use std::collections::{HashMap, HashSet};
 
 pub struct Context {
@@ -8,21 +8,21 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(alias_format:AliasFormat) -> Self{
+    pub fn new(alias_format: AliasFormat) -> Self {
         Context {
-           roles: HashSet::new(),
-           aux_params: HashMap::new(),
-           alias_format
-       }
+            roles: HashSet::new(),
+            aux_params: HashMap::new(),
+            alias_format,
+        }
     }
 }
 
 impl Default for Context {
     fn default() -> Self {
-       Context {
-           roles: HashSet::new(),
-           aux_params: HashMap::new(),
-           alias_format: AliasFormat::Canonical
-       }
+        Context {
+            roles: HashSet::new(),
+            aux_params: HashMap::new(),
+            alias_format: AliasFormat::Canonical,
+        }
     }
 }

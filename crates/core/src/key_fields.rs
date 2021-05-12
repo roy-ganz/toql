@@ -5,7 +5,11 @@
 //! Notice that these operations fail, if the fields that should hold the values are `None`.
 //!
 
-use crate::{to_query::ToQuery, sql_arg::SqlArg, query::{field::Field, Query}};
+use crate::{
+    query::{field::Field, Query},
+    sql_arg::SqlArg,
+    to_query::ToQuery,
+};
 
 mod join;
 mod to_query;
@@ -21,7 +25,3 @@ pub trait KeyFields {
     /// Return key values as params. Useful to loop across a composite key.
     fn params(&self) -> Vec<SqlArg>;
 }
-
-
-
-

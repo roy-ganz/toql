@@ -6,7 +6,6 @@ pub enum Select {
 }
 
 impl Select {
-
     pub fn is_selected(&self) -> bool {
         self != &Select::None
     }

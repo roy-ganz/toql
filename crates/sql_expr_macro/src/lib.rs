@@ -50,7 +50,6 @@ pub fn sql_expr(input: TokenStream) -> TokenStream {
 
     let gen = sql_expr_macro::parse(&ast.query, &mut ast.arguments.iter());
 
-   
     match gen {
         Ok(o) => {
             log::debug!(

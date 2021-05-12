@@ -5,12 +5,11 @@
 
 use crate::sane::{FieldKind, MergeColumn, Struct};
 use proc_macro2::{Span, TokenStream};
-use syn::Ident;
 use std::collections::HashSet;
+use syn::Ident;
 
 pub(crate) struct CodegenTree<'a> {
     rust_struct: &'a Struct,
-    
 
     dispatch_predicate_args_code: Vec<TokenStream>,
     dispatch_predicate_columns_code: Vec<TokenStream>,
@@ -29,8 +28,8 @@ pub(crate) struct CodegenTree<'a> {
     identity_set_merges_key_code: Vec<TokenStream>,
     key_columns: Vec<String>,
 
-     dispatch_map_code: Vec<TokenStream>,
-     dispatch_types: HashSet<Ident>,
+    dispatch_map_code: Vec<TokenStream>,
+    dispatch_types: HashSet<Ident>,
 
     number_of_keys: u8,
 }
@@ -39,7 +38,7 @@ impl<'a> CodegenTree<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenTree {
         CodegenTree {
             rust_struct: &toql,
-           
+
             dispatch_predicate_args_code: Vec::new(),
             dispatch_predicate_columns_code: Vec::new(),
 
@@ -106,7 +105,7 @@ impl<'a> CodegenTree<'a> {
                 if field_attrs.key {
                     self.number_of_keys += 1;
                     if let SqlTarget::Column(column) = &field_attrs.sql_target {
-                        self.key_columns.push (column.to_string())
+                        self.key_columns.push(column.to_string())
                     }
                 }
             }
@@ -115,8 +114,9 @@ impl<'a> CodegenTree<'a> {
                     self.number_of_keys += 1;
                 }
 
-                self.dispatch_types.insert(field.rust_base_type_ident.to_owned());
-                 
+                self.dispatch_types
+                    .insert(field.rust_base_type_ident.to_owned());
+
                 self.dispatch_map_code.push(quote!(
                             <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
                 ));
@@ -134,14 +134,12 @@ impl<'a> CodegenTree<'a> {
                         }
                 ));
 
-                self.dispatch_index_code.push(
-                   quote!(
+                self.dispatch_index_code.push(quote!(
                         #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
                             index(&mut descendents, rows, row_offset, index)?
                         }
-                )
-               );
+                ));
                 self.index_type_bounds.push(quote!(
                     #rust_type_ident : toql :: from_row :: FromRow < R >,
                     E : std::convert::From< < #rust_type_ident as toql :: from_row :: FromRow < R >> :: Error>
@@ -172,17 +170,15 @@ impl<'a> CodegenTree<'a> {
                );
             }
             FieldKind::Merge(merge) => {
-               
-               self.dispatch_types.insert(field.rust_base_type_ident.to_owned());
+                self.dispatch_types
+                    .insert(field.rust_base_type_ident.to_owned());
 
-                self.dispatch_index_code.push(
-                   quote!(
+                self.dispatch_index_code.push(quote!(
                        #toql_field_name => {
                              <#rust_base_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
                             index(&mut descendents, rows, row_offset, index)?
                        }
-                )
-               );
+                ));
                 self.dispatch_merge_code.push(
                    quote!(
                        #toql_field_name => {
@@ -222,7 +218,7 @@ impl<'a> CodegenTree<'a> {
                             <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
                 ));
 
-               /*  self.dispatch_merge_key_code.push(quote!(
+                /*  self.dispatch_merge_key_code.push(quote!(
                        #toql_field_name => {
                             <#rust_base_type_ident as toql::tree::tree_keys::TreeKeys>::
                             keys(&mut descendents, field, key_expr)?
@@ -293,8 +289,8 @@ impl<'a> CodegenTree<'a> {
                 )
                );
 
-              /*   let type_key_ident =
-                    Ident::new(&format!("{}Key", &field.rust_type_name), Span::call_site()); */
+                /*   let type_key_ident =
+                Ident::new(&format!("{}Key", &field.rust_type_name), Span::call_site()); */
 
                 let struct_ident = &self.rust_struct.rust_struct_ident;
 
@@ -355,12 +351,16 @@ impl<'a> CodegenTree<'a> {
 
                 if merge.columns.is_empty() {
                     let rust_struct_name = &self.rust_struct.rust_struct_name;
-                  
+
                     for this_column in &self.key_columns {
-                        let other_column = format!("{}_{}",&heck::SnakeCase::to_snake_case(rust_struct_name.as_str()), this_column);
+                        let other_column = format!(
+                            "{}_{}",
+                            &heck::SnakeCase::to_snake_case(rust_struct_name.as_str()),
+                            this_column
+                        );
                         column_mapping.push(quote!(
                             #this_column => #other_column
-                        
+
                         ));
                     }
                 } else {
@@ -370,9 +370,9 @@ impl<'a> CodegenTree<'a> {
                             MergeColumn::Aliased(_) => skip_identity_code = true,
                             MergeColumn::Unaliased(name) => {
                                 column_mapping.push(quote!(
-                                      #this_column => #name
-                                
-                                 ));
+                                     #this_column => #name
+
+                                ));
                             }
                         }
                     }
@@ -434,7 +434,6 @@ impl<'a> CodegenTree<'a> {
                         }
                 }
             }
-         
         };
     }
 }
@@ -445,9 +444,9 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
         let dispatch_predicate_args_code = &self.dispatch_predicate_args_code;
         let dispatch_predicate_columns_code = &self.dispatch_predicate_columns_code;
-      
+
         let dispatch_index_code = &self.dispatch_index_code;
-      
+
         let dispatch_merge_code = &self.dispatch_merge_code;
         let merge_code = &self.merge_code;
 
@@ -460,21 +459,18 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             &format!("{}Key", &self.rust_struct.rust_struct_ident),
             Span::call_site(),
         );
-      
-       
 
-        let identity_set_self_key_code = 
-            quote!(
-                if let toql::tree::tree_identity::IdentityAction::Set(args) = action {
-                       let n = <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns().len();
-                     let end = args.borrow().len();
-                     let args : Vec<toql::sql_arg::SqlArg> = args.borrow_mut().drain(end-n ..).collect::<Vec<_>>();
-                      let key = std :: convert :: TryFrom::try_from(args)?;
-                    
-                    <Self as toql::keyed::KeyedMut>::set_key(self, key);
-                }
-            );
-    
+        let identity_set_self_key_code = quote!(
+            if let toql::tree::tree_identity::IdentityAction::Set(args) = action {
+                let n = <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns().len();
+                let end = args.borrow().len();
+                let args: Vec<toql::sql_arg::SqlArg> =
+                    args.borrow_mut().drain(end - n..).collect::<Vec<_>>();
+                let key = std::convert::TryFrom::try_from(args)?;
+
+                <Self as toql::keyed::KeyedMut>::set_key(self, key);
+            }
+        );
 
         let identity_set_key = if self.rust_struct.auto_key {
             quote!( #identity_set_self_key_code
@@ -493,359 +489,365 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             quote!(false)
         };
 
-          let tree_index_dispatch_bounds = self.dispatch_types.iter()
-                        .map(|t| quote!( #t :  toql::tree::tree_index::TreeIndex<R, E>,))
-                        .collect::<Vec<_>>();
-            let tree_index_dispatch_bounds_ref = tree_index_dispatch_bounds.clone();
+        let tree_index_dispatch_bounds = self
+            .dispatch_types
+            .iter()
+            .map(|t| quote!( #t :  toql::tree::tree_index::TreeIndex<R, E>,))
+            .collect::<Vec<_>>();
+        let tree_index_dispatch_bounds_ref = tree_index_dispatch_bounds.clone();
 
-          let tree_merge_dispatch_bounds = self.dispatch_types.iter()
-                        .map(|t| quote!( 
-                            #t : toql::tree::tree_merge::TreeMerge<R, E> + toql::from_row::FromRow<R, E>,
-                            ))
-                        .collect::<Vec<_>>();
-            let tree_merge_dispatch_bounds_ref = tree_merge_dispatch_bounds.clone();
+        let tree_merge_dispatch_bounds = self
+            .dispatch_types
+            .iter()
+            .map(|t| {
+                quote!(
+                #t : toql::tree::tree_merge::TreeMerge<R, E> + toql::from_row::FromRow<R, E>,
+                )
+            })
+            .collect::<Vec<_>>();
+        let tree_merge_dispatch_bounds_ref = tree_merge_dispatch_bounds.clone();
 
         let mods = quote! {
 
-                       impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
-                        fn auto_id() -> bool {
-                            #identity_auto_id_code
-                        }
+                impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
+                 fn auto_id() -> bool {
+                     #identity_auto_id_code
+                 }
 
-                        #[allow(unused_variables, unused_mut)]
-                        fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
-                                   -> std :: result :: Result < (), toql::error::ToqlError >
-                                   where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                       {
-                                match descendents.next() {
-                                      Some(d) => match d.as_str() {
-                                          #(#dispatch_identity_code),*
-                                          f @ _ => {
-                                               return Err(
-                                                   toql::error::ToqlError::SqlBuilderError (
-                                                    toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
-                                                   .into());
-                                           }
-                                      },
-                                      None => {
-                                        #identity_set_key
-                                      }
-                               }
-                               Ok(())
-                           }
-                      }
-                       impl toql::tree::tree_identity::TreeIdentity for &mut #struct_ident {
-                        fn auto_id() -> bool {
-                            <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id()
-                        }
-                         #[allow(unused_mut)]
-                        fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
-                                   -> std::result::Result<(),toql::error::ToqlError>
+                 #[allow(unused_variables, unused_mut)]
+                 fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
+                            -> std :: result :: Result < (), toql::error::ToqlError >
                             where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                       {
-                            <#struct_ident as toql::tree::tree_identity::TreeIdentity>::set_id(self, descendents, action)
-                       }
-                       }
-                        impl toql::tree::tree_map::TreeMap for #struct_ident {
-
-                                fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
-
-                                        if registry.get(#struct_name).is_none() {
-                                            registry.insert_new_mapper::<#struct_ident>()?;
-                                        }
-                                        #(#dispatch_map_code)*
-                                        Ok(())
-                                }
-
+                {
+                         match descendents.next() {
+                               Some(d) => match d.as_str() {
+                                   #(#dispatch_identity_code),*
+                                   f @ _ => {
+                                        return Err(
+                                            toql::error::ToqlError::SqlBuilderError (
+                                             toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                            .into());
+                                    }
+                               },
+                               None => {
+                                 #identity_set_key
+                               }
                         }
-                         impl toql::tree::tree_map::TreeMap for &#struct_ident {
+                        Ok(())
+                    }
+               }
+                impl toql::tree::tree_identity::TreeIdentity for &mut #struct_ident {
+                 fn auto_id() -> bool {
+                     <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id()
+                 }
+                  #[allow(unused_mut)]
+                 fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
+                            -> std::result::Result<(),toql::error::ToqlError>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                {
+                     <#struct_ident as toql::tree::tree_identity::TreeIdentity>::set_id(self, descendents, action)
+                }
+                }
+                 impl toql::tree::tree_map::TreeMap for #struct_ident {
 
-                                fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
-                                    <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
-                                }
+                         fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+
+                                 if registry.get(#struct_name).is_none() {
+                                     registry.insert_new_mapper::<#struct_ident>()?;
+                                 }
+                                 #(#dispatch_map_code)*
+                                 Ok(())
                          }
 
-                       impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
+                 }
+                  impl toql::tree::tree_map::TreeMap for &#struct_ident {
 
-                            #[allow(unused_mut)]
-                           fn columns<'a, I>(&self, mut descendents: &mut I )
-                               -> std::result::Result<Vec<String>, toql::error::ToqlError>
-                               where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                               {
-                               Ok(match descendents.next() {
-                                       Some(d) => match d.as_str() {
-                                           #(#dispatch_predicate_columns_code),*
-                                           f @ _ => {
-                                                   return Err(
-                                                       toql::error::ToqlError::SqlBuilderError (
-                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
-                                               }
-                                       },
-                                       None => {
-                                          <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
+                         fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+                             <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
+                         }
+                  }
 
-                                           /*
-                                               match field {
-                                               #(#merge_predicate_code),*
-                                               f @ _ => {
-                                                   return Err(
-                                                       toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
-                                               }
-                                               }*/
+                impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 
-                                       }
-                                   })
-                               }
+                     #[allow(unused_mut)]
+                    fn columns<'a, I>(&self, mut descendents: &mut I )
+                        -> std::result::Result<Vec<String>, toql::error::ToqlError>
+                        where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                        {
+                        Ok(match descendents.next() {
+                                Some(d) => match d.as_str() {
+                                    #(#dispatch_predicate_columns_code),*
+                                    f @ _ => {
+                                            return Err(
+                                                toql::error::ToqlError::SqlBuilderError (
+                                                 toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
+                                        }
+                                },
+                                None => {
+                                   <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
 
-                            #[allow(unused_mut)]
-                           fn args<'a, I>(
-                               &self,
-                               mut descendents: &mut I,
-                               args: &mut Vec<toql::sql_arg::SqlArg>
-                           ) -> std::result::Result<(), toql::error::ToqlError>
-                            where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                           {
-                                   match descendents.next() {
-                                       Some(d) => match d.as_str() {
-                                           #(#dispatch_predicate_args_code),*
-                                           f @ _ => {
-                                                   return Err(
-                                                       toql::error::ToqlError::SqlBuilderError (
-                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
-                                               }
-                                       },
-                                       None => {
-                                            let key = <Self as toql::keyed::Keyed>::key(&self);
-                                           args.extend(<<Self as toql::keyed::Keyed>::Key as toql::key::Key>::params(&key));
-                                      }
-                                   }
-                                   Ok(())
-                               }
-                      }
+                                    /*
+                                        match field {
+                                        #(#merge_predicate_code),*
+                                        f @ _ => {
+                                            return Err(
+                                                toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                        }
+                                        }*/
 
-                       impl toql::tree::tree_predicate::TreePredicate for &#struct_ident {
-
-                            #[allow(unused_mut)]
-                           fn columns<'a, I>(&self, mut descendents: &mut I )
-                               -> std::result::Result<Vec<String>, toql::error::ToqlError>
-                               where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                               {
-                                   <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
-                               }
-
-                            #[allow(unused_mut)]
-                            fn args<'a, I>(
-                               &self,
-                               mut descendents: &mut I,
-                               args: &mut Vec<toql::sql_arg::SqlArg>
-                           ) -> std::result::Result<(), toql::error::ToqlError>
-                            where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                           {
-                               <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
-                           }
-                       }
-                       impl toql::tree::tree_predicate::TreePredicate for &mut #struct_ident {
-
-                           #[allow(unused_mut)]
-                           fn columns<'a, I>(&self, mut descendents: &mut I )
-                               -> std::result::Result<Vec<String>, toql::error::ToqlError>
-                               where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                               {
-                                   <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
-                               }
-
-                            #[allow(unused_mut)]
-                            fn args<'a, I>(
-                               &self,
-                               mut descendents: &mut I,
-                               args: &mut Vec<toql::sql_arg::SqlArg>
-                           ) -> std::result::Result<(), toql::error::ToqlError>
-                            where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                           {
-                               <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
-                           }
-                       }
-
-                      
-                  
-                   
-                        impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for #struct_ident
-                         where  E: std::convert::From<toql::error::ToqlError>, 
-                         #struct_key_ident: toql::from_row::FromRow<R, E>,
-                         #(#tree_index_dispatch_bounds)*
-                      /*  where Self: toql::from_row::FromRow<R>,
-                       #struct_key_ident : toql :: from_row :: FromRow < R >,
-                       E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
-                       E: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>, */
-                    //   #(#index_type_bounds)*
-
-                       {
-                            #[allow(unused_variables, unused_mut)]
-                           fn index<'a, I>( mut descendents: &mut I, 
-                                       rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
-                               -> std::result::Result<(), E>
-                                where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                                {
-
-                               use toql::from_row::FromRow;
-                               use std::hash::Hash;
-                               use std::hash::Hasher;
-                               use std::collections::hash_map::DefaultHasher;
-                                use toql::sql_builder::select_stream::Select;
-
-                             match descendents.next() {
-
-                                       Some(d) => {
-                                           match d.as_str() {
-                                               #(#dispatch_index_code),*
-                                               f @ _ => {
-                                                   return Err(
-                                                       toql::error::ToqlError::SqlBuilderError (
-                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
-                                                        .into());
-                                               }
-                                           }
-                                       },
-                                       None => {
-
-                                              
-                                               for (n, row) in rows.into_iter().enumerate() {
-                                                   let mut iter = std::iter::repeat(&Select::Query);
-                                                   let mut  i= row_offset;
-                                                   let fk = #struct_key_ident ::from_row(&row, &mut i, &mut iter)?
-                                                    .ok_or(toql::error::ToqlError::ValueMissing(
-                                                                    <#struct_key_ident as toql::key::Key>::columns().join(", ")
-                                                                ))?; // SKip Primary key
-
-                                                   let mut s = DefaultHasher::new();
-                                                   fk.hash(&mut s);
-                                                  /*  match field {
-                                                      #(#index_code)*
-
-                                                       f @ _ => {
-                                                           return Err(
-                                                               toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
-                                                       }
-
-                                                   }; */
-                                                   let fk_hash =  s.finish();
-
-                                                   index.entry(fk_hash)
-                                                   .and_modify(|h| h.push(n))
-                                                   .or_insert(vec![n]);
-                                               }
-
-
-
-                                           }
-
-
-
-                               }
-                               Ok(())
-                           }
-
-                       }
-                      
-
-                     impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for &#struct_ident
-                         where  E: std::convert::From<toql::error::ToqlError>, 
-                         #struct_key_ident: toql::from_row::FromRow<R, E>,
-                         #(#tree_index_dispatch_bounds_ref)*
-                      {
-                           #[allow(unused_mut)]
-                           fn index<'a, I>( mut descendents: &mut I,
-                                       rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
-                               -> std::result::Result<(), E>
-                                where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                                {
-                                    <#struct_ident as  toql::tree::tree_index::TreeIndex<R,E>>::index(descendents,  rows, row_offset, index)
                                 }
-                       }
-      
-                     
-
-                       impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for #struct_ident
-                        where  E: std::convert::From<toql::error::ToqlError>,
-                        #struct_key_ident: toql::from_row::FromRow<R, E>,
-                        #(#tree_merge_dispatch_bounds)*
-                     
-
-                       {
-                           #[allow(unreachable_code, unused_variables, unused_mut)]
-                           fn merge<'a, I>(  &mut self, mut descendents: &mut I, field: &str,
-                                       rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
-                               -> std::result::Result<(), E> 
-                               where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                                {
-                               use toql::keyed::Keyed;
-                               use toql::from_row::FromRow;
-                               use std::hash::Hash;
-                               use std::hash::Hasher;
-                               use std::collections::hash_map::DefaultHasher;
-                               use toql::sql_builder::select_stream::Select;
-
-                             match descendents.next() {
-
-                                       Some(d) => {
-                                           match d.as_str() {
-                                               #(#dispatch_merge_code),*
-                                               f @ _ => {
-                                                   return Err(
-                                                      toql::error::ToqlError::SqlBuilderError(
-                                                          toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
-                                                          .into());
-                                               }
-                                           }
-                                       },
-                                       None => {
-
-                                               let pk : #struct_key_ident = <Self as toql::keyed::Keyed>::key(&self); // removed .into()
-                                               let mut s = DefaultHasher::new();
-                                               pk.hash(&mut s);
-                                               let h = s.finish();
-                                               let default_vec: Vec<usize>= Vec::new();
-                                               let row_numbers : &Vec<usize> = index.get(&h).unwrap_or(&default_vec);
-                                               let  n = row_offset;
-
-                                               match field {
-                                                   #(#merge_code)*
-
-                                                   f @ _ => {
-                                                       return Err(
-                                                            toql::error::ToqlError::SqlBuilderError(
-                                                                toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
-                                                            .into());
-                                                   }
-
-                                               };
-
-                                           }
-
-
-
-                               }
-                               Ok(())
-                           }
-
+                            })
                         }
 
-                         impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for &mut #struct_ident
-                        where  E: std::convert::From<toql::error::ToqlError>,
-                        #struct_key_ident: toql::from_row::FromRow<R, E>,
-                        #(#tree_merge_dispatch_bounds_ref)*
-                       {
-                            #[allow(unused_mut)]
-                            fn merge<'a, I>(  &mut self, mut descendents: &mut I, field: &str,
-                                       rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
-                               -> std::result::Result<(), E>
-                                where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
-                                {
-                                    <#struct_ident as toql::tree::tree_merge::TreeMerge<R,E>>::merge(self, descendents, field, rows, row_offset, index, selection_stream)
-                                }
-                       }
+                     #[allow(unused_mut)]
+                    fn args<'a, I>(
+                        &self,
+                        mut descendents: &mut I,
+                        args: &mut Vec<toql::sql_arg::SqlArg>
+                    ) -> std::result::Result<(), toql::error::ToqlError>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    {
+                            match descendents.next() {
+                                Some(d) => match d.as_str() {
+                                    #(#dispatch_predicate_args_code),*
+                                    f @ _ => {
+                                            return Err(
+                                                toql::error::ToqlError::SqlBuilderError (
+                                                 toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string())));
+                                        }
+                                },
+                                None => {
+                                     let key = <Self as toql::keyed::Keyed>::key(&self);
+                                    args.extend(<<Self as toql::keyed::Keyed>::Key as toql::key::Key>::params(&key));
+                               }
+                            }
+                            Ok(())
+                        }
+               }
 
-               };
+                impl toql::tree::tree_predicate::TreePredicate for &#struct_ident {
+
+                     #[allow(unused_mut)]
+                    fn columns<'a, I>(&self, mut descendents: &mut I )
+                        -> std::result::Result<Vec<String>, toql::error::ToqlError>
+                        where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                        {
+                            <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
+                        }
+
+                     #[allow(unused_mut)]
+                     fn args<'a, I>(
+                        &self,
+                        mut descendents: &mut I,
+                        args: &mut Vec<toql::sql_arg::SqlArg>
+                    ) -> std::result::Result<(), toql::error::ToqlError>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    {
+                        <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
+                    }
+                }
+                impl toql::tree::tree_predicate::TreePredicate for &mut #struct_ident {
+
+                    #[allow(unused_mut)]
+                    fn columns<'a, I>(&self, mut descendents: &mut I )
+                        -> std::result::Result<Vec<String>, toql::error::ToqlError>
+                        where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                        {
+                            <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
+                        }
+
+                     #[allow(unused_mut)]
+                     fn args<'a, I>(
+                        &self,
+                        mut descendents: &mut I,
+                        args: &mut Vec<toql::sql_arg::SqlArg>
+                    ) -> std::result::Result<(), toql::error::ToqlError>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    {
+                        <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
+                    }
+                }
+
+
+
+
+                 impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for #struct_ident
+                  where  E: std::convert::From<toql::error::ToqlError>,
+                  #struct_key_ident: toql::from_row::FromRow<R, E>,
+                  #(#tree_index_dispatch_bounds)*
+               /*  where Self: toql::from_row::FromRow<R>,
+                #struct_key_ident : toql :: from_row :: FromRow < R >,
+                E : std::convert::From< <#struct_key_ident as toql :: from_row :: FromRow < R >> :: Error>,
+                E: std::convert ::From<toql :: sql_builder :: sql_builder_error ::  SqlBuilderError>, */
+             //   #(#index_type_bounds)*
+
+                {
+                     #[allow(unused_variables, unused_mut)]
+                    fn index<'a, I>( mut descendents: &mut I,
+                                rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
+                        -> std::result::Result<(), E>
+                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         {
+
+                        use toql::from_row::FromRow;
+                        use std::hash::Hash;
+                        use std::hash::Hasher;
+                        use std::collections::hash_map::DefaultHasher;
+                         use toql::sql_builder::select_stream::Select;
+
+                      match descendents.next() {
+
+                                Some(d) => {
+                                    match d.as_str() {
+                                        #(#dispatch_index_code),*
+                                        f @ _ => {
+                                            return Err(
+                                                toql::error::ToqlError::SqlBuilderError (
+                                                 toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                 .into());
+                                        }
+                                    }
+                                },
+                                None => {
+
+
+                                        for (n, row) in rows.into_iter().enumerate() {
+                                            let mut iter = std::iter::repeat(&Select::Query);
+                                            let mut  i= row_offset;
+                                            let fk = #struct_key_ident ::from_row(&row, &mut i, &mut iter)?
+                                             .ok_or(toql::error::ToqlError::ValueMissing(
+                                                             <#struct_key_ident as toql::key::Key>::columns().join(", ")
+                                                         ))?; // SKip Primary key
+
+                                            let mut s = DefaultHasher::new();
+                                            fk.hash(&mut s);
+                                           /*  match field {
+                                               #(#index_code)*
+
+                                                f @ _ => {
+                                                    return Err(
+                                                        toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
+                                                }
+
+                                            }; */
+                                            let fk_hash =  s.finish();
+
+                                            index.entry(fk_hash)
+                                            .and_modify(|h| h.push(n))
+                                            .or_insert(vec![n]);
+                                        }
+
+
+
+                                    }
+
+
+
+                        }
+                        Ok(())
+                    }
+
+                }
+
+
+              impl<R,E> toql::tree::tree_index::TreeIndex<R, E> for &#struct_ident
+                  where  E: std::convert::From<toql::error::ToqlError>,
+                  #struct_key_ident: toql::from_row::FromRow<R, E>,
+                  #(#tree_index_dispatch_bounds_ref)*
+               {
+                    #[allow(unused_mut)]
+                    fn index<'a, I>( mut descendents: &mut I,
+                                rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
+                        -> std::result::Result<(), E>
+                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         {
+                             <#struct_ident as  toql::tree::tree_index::TreeIndex<R,E>>::index(descendents,  rows, row_offset, index)
+                         }
+                }
+
+
+
+                impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for #struct_ident
+                 where  E: std::convert::From<toql::error::ToqlError>,
+                 #struct_key_ident: toql::from_row::FromRow<R, E>,
+                 #(#tree_merge_dispatch_bounds)*
+
+
+                {
+                    #[allow(unreachable_code, unused_variables, unused_mut)]
+                    fn merge<'a, I>(  &mut self, mut descendents: &mut I, field: &str,
+                                rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
+                        -> std::result::Result<(), E>
+                        where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         {
+                        use toql::keyed::Keyed;
+                        use toql::from_row::FromRow;
+                        use std::hash::Hash;
+                        use std::hash::Hasher;
+                        use std::collections::hash_map::DefaultHasher;
+                        use toql::sql_builder::select_stream::Select;
+
+                      match descendents.next() {
+
+                                Some(d) => {
+                                    match d.as_str() {
+                                        #(#dispatch_merge_code),*
+                                        f @ _ => {
+                                            return Err(
+                                               toql::error::ToqlError::SqlBuilderError(
+                                                   toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                   .into());
+                                        }
+                                    }
+                                },
+                                None => {
+
+                                        let pk : #struct_key_ident = <Self as toql::keyed::Keyed>::key(&self); // removed .into()
+                                        let mut s = DefaultHasher::new();
+                                        pk.hash(&mut s);
+                                        let h = s.finish();
+                                        let default_vec: Vec<usize>= Vec::new();
+                                        let row_numbers : &Vec<usize> = index.get(&h).unwrap_or(&default_vec);
+                                        let  n = row_offset;
+
+                                        match field {
+                                            #(#merge_code)*
+
+                                            f @ _ => {
+                                                return Err(
+                                                     toql::error::ToqlError::SqlBuilderError(
+                                                         toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                                     .into());
+                                            }
+
+                                        };
+
+                                    }
+
+
+
+                        }
+                        Ok(())
+                    }
+
+                 }
+
+                  impl<R,E> toql::tree::tree_merge::TreeMerge<R,E> for &mut #struct_ident
+                 where  E: std::convert::From<toql::error::ToqlError>,
+                 #struct_key_ident: toql::from_row::FromRow<R, E>,
+                 #(#tree_merge_dispatch_bounds_ref)*
+                {
+                     #[allow(unused_mut)]
+                     fn merge<'a, I>(  &mut self, mut descendents: &mut I, field: &str,
+                                rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
+                        -> std::result::Result<(), E>
+                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         {
+                             <#struct_ident as toql::tree::tree_merge::TreeMerge<R,E>>::merge(self, descendents, field, rows, row_offset, index, selection_stream)
+                         }
+                }
+
+        };
 
         log::debug!(
             "Source code for `{}`:\n{}",

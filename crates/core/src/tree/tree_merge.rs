@@ -1,7 +1,8 @@
 use crate::{
-     query::field_path::{FieldPath, Descendents}, sql_builder::select_stream::SelectStream,
+    query::field_path::{Descendents, FieldPath},
+    sql_builder::select_stream::SelectStream,
 };
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 /* pub trait RowIndex<R> {
 
@@ -37,5 +38,7 @@ pub trait TreeMerge<R, E> {
         row_offset: usize,
         index: &HashMap<u64, Vec<usize>>,
         selection_stream: &SelectStream,
-    ) -> Result<(), E>   where I: Iterator<Item = FieldPath<'a>>;
+    ) -> Result<(), E>
+    where
+        I: Iterator<Item = FieldPath<'a>>;
 }

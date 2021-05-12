@@ -1,9 +1,9 @@
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{ Expr, Ident, Type,  LitStr, Result, Token};
+use syn::{Expr, Ident, LitStr, Result, Token, Type};
 
 use heck::SnakeCase;
-use proc_macro2::{ TokenStream};
+use proc_macro2::TokenStream;
 use toql_query_parser::PestQueryParser;
 
 use pest::Parser;
@@ -130,29 +130,32 @@ impl FieldInfo {
             }
             TokenType::Selection => {
                 if self.name.is_empty() {
-                     Some(quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(),"std")))
+                    Some(
+                        quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(),"std")),
+                    )
                 } else {
-
                     let (name, path) = if let Some(pos) = self.name.rfind('_') {
-                        (&self.name[pos + 1..],   Some(&self.name[..pos]))
+                        (&self.name[pos + 1..], Some(&self.name[..pos]))
                     } else {
                         (self.name.as_str(), None)
                     };
 
                     match path {
                         Some(p) => {
-                           let fnname =  p
-                            .split("_")
-                            .map(|n| syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case())).unwrap());
-                             Some(quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*, #name)))
+                            let fnname = p.split("_").map(|n| {
+                                syn::parse_str::<Ident>(&format!("r#{}", n.to_snake_case()))
+                                    .unwrap()
+                            });
+                            Some(
+                                quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).*, #name)),
+                            )
                         }
-                        None => { 
-                             Some(quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(), #name)))
-                        }
+                        None => Some(
+                            quote!(toql::query_path::QueryPath::selection(<#struct_type as toql::query_fields::QueryFields>::fields(), #name)),
+                        ),
                     }
-                   
                 }
-            },
+            }
             TokenType::Unknown => None,
         };
 
@@ -339,7 +342,7 @@ fn evaluate_pair(
                 field_info.token_type = TokenType::Selection;
             }
             Rule::selection_name => {
-               field_info.name = span.as_str().trim_start_matches("#").to_string();
+                field_info.name = span.as_str().trim_start_matches("#").to_string();
             }
             Rule::predicate_clause => {
                 field_info.token_type = TokenType::Predicate;

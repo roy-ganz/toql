@@ -1,7 +1,6 @@
-
-use std::collections::{HashMap, HashSet};
-use crate::{alias::AliasFormat, sql_arg::SqlArg};
 use super::context::Context;
+use crate::{alias::AliasFormat, sql_arg::SqlArg};
+use std::collections::{HashMap, HashSet};
 
 pub struct ContextBuilder {
     pub roles: HashSet<String>,

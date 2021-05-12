@@ -53,9 +53,9 @@ pub fn paths(input: TokenStream) -> TokenStream {
         paths_macro::PathsMacro::PathList { struct_type, query } => {
             paths_macro::parse(&query, struct_type)
         }
-        paths_macro::PathsMacro::Top => Ok(quote!(
-                toql::backend::paths::Paths::from(vec!["".to_string()])
-                )),
+        paths_macro::PathsMacro::Top => Ok(quote!(toql::backend::paths::Paths::from(vec![
+            "".to_string()
+        ]))),
     };
 
     let source = proc_macro::Span::call_site()

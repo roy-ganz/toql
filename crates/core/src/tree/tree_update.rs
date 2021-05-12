@@ -1,19 +1,18 @@
 use crate::{
-   query::field_path::{FieldPath, Descendents},  sql_expr::SqlExpr, error::ToqlError,
+    error::ToqlError,
+    query::field_path::{Descendents, FieldPath},
+    sql_expr::SqlExpr,
 };
 
-// Trait is implemented for structs that can update 
+// Trait is implemented for structs that can update
 pub trait TreeUpdate {
-    fn update<'a, I >
-    (
+    fn update<'a, I>(
         &self,
-        descendents: &mut I, 
+        descendents: &mut I,
         fields: &std::collections::HashSet<String>, // if empty, all fields can be updated (*)
         roles: &std::collections::HashSet<String>,
-        exprs : &mut Vec<SqlExpr> 
+        exprs: &mut Vec<SqlExpr>,
     ) -> Result<(), ToqlError>
-    where I:  Iterator<Item = FieldPath<'a>>
-    ;
-     
-  
+    where
+        I: Iterator<Item = FieldPath<'a>>;
 }

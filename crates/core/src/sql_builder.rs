@@ -112,7 +112,11 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-    pub fn columns_expr(&self, query_field_path: &str, alias: &str) -> Result<(SqlExpr, SqlExpr, SqlExpr)> {
+    pub fn columns_expr(
+        &self,
+        query_field_path: &str,
+        alias: &str,
+    ) -> Result<(SqlExpr, SqlExpr, SqlExpr)> {
         let mut columns_expr = SqlExpr::new();
         let mut join_expr = SqlExpr::new();
         let mut on_expr = SqlExpr::new();
@@ -144,7 +148,7 @@ impl<'a> SqlBuilder<'a> {
                     let field = mapper
                         .field(&name)
                         .ok_or(SqlBuilderError::FieldMissing(name.to_string()))?;
-                    columns_expr.extend( resolver.resolve(&field.expression)?);
+                    columns_expr.extend(resolver.resolve(&field.expression)?);
                     if field.options.key {
                         return Ok(());
                     }
@@ -611,7 +615,7 @@ impl<'a> SqlBuilder<'a> {
                 None => on_expr,
             };
             */
-         //   println!("{:?}", &on_expr);
+            //   println!("{:?}", &on_expr);
             join_expr.extend(on_expr);
 
             join_expr.push_literal(") ");
@@ -630,7 +634,7 @@ impl<'a> SqlBuilder<'a> {
         let p = [&self.aux_params, &query.aux_params];
         let aux_params = ParameterMap::new(&p);
 
-       // println!("token: {:?}", &query.tokens);
+        // println!("token: {:?}", &query.tokens);
         for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
@@ -880,7 +884,7 @@ impl<'a> SqlBuilder<'a> {
             // Otherwise skip to avoid circular dependency
             if !unmerged_home_paths.contains(query_merge_path.as_str()) {
                 unmerged_home_paths.insert(query_merge_path.to_string());
-              //  println!("Adding `{}` to merge paths", query_merge_path.as_str());
+                //  println!("Adding `{}` to merge paths", query_merge_path.as_str());
 
                 self.add_all_joins_as_selected_paths(
                     jm.0,
@@ -1129,12 +1133,12 @@ impl<'a> SqlBuilder<'a> {
                         result.selection_stream.push(Select::Query); // Query selected join
                                                                      // join path is the same as to query path
 
-                       // dbg!(&local_join_path);
+                        // dbg!(&local_join_path);
 
                         // Seelect fields for this path
                         self.resolve_select(&local_join_path, query, build_context, result)?;
                     } else if join_info.options.preselect {
-                     //   dbg!(&local_join_path);
+                        //   dbg!(&local_join_path);
                         // Add preselected join to joined paths
                         build_context
                             .local_joined_paths
@@ -1459,7 +1463,7 @@ impl<'a> SqlBuilder<'a> {
                             if selection_name == "all" {
                                 let mapper =
                                     self.joined_mapper_for_local_path(&FieldPath::default())?;
-                               // println!("Resolving all");
+                                // println!("Resolving all");
                                 build_context.local_selected_paths.insert("".to_string());
                                 self.add_all_joins_as_selected_paths(
                                     &mapper.table_name,
@@ -1557,7 +1561,7 @@ impl<'a> SqlBuilder<'a> {
     }
 
     fn home_contains(home_path: &str, query_path: &FieldPath) -> bool {
-      /*   println!(
+        /*   println!(
             "Test if query path  {:?} has home {:?}",
             &query_path, &home_path
         ); */
@@ -1568,7 +1572,7 @@ impl<'a> SqlBuilder<'a> {
             (true, false) => true,
             (false, false) => query_path.as_str().starts_with(home_path),
         };
-      //  println!("Result {:?}", r);
+        //  println!("Result {:?}", r);
 
         r
     }

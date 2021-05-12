@@ -28,12 +28,12 @@ impl RoleExprParser {
 
             match pair.as_rule() {
                 Rule::role => Some(RoleExpr::role(span.as_str().to_string())),
-               
+
                 Rule::and_clause => {
                     let mut expr: Option<RoleExpr> = None;
-                     let mut negate = false;
+                    let mut negate = false;
                     for p in pair.into_inner() {
-                          if p.as_rule() == Rule::negate {
+                        if p.as_rule() == Rule::negate {
                             negate = true;
                             continue;
                         }
@@ -48,7 +48,7 @@ impl RoleExprParser {
                                         r
                                     };
                                     expr = Some(RoleExpr::And(Box::new(ex), Box::new(e)));
-                                },
+                                }
                                 None => expr = Some(r),
                             }
                         }
@@ -66,7 +66,7 @@ impl RoleExprParser {
                         let res = evaluate_pair(p);
                         if let Some(r) = res {
                             match expr {
-                                Some(ex) => { 
+                                Some(ex) => {
                                     let e = if negate {
                                         negate = false;
                                         RoleExpr::Not(Box::new(r))
@@ -74,8 +74,7 @@ impl RoleExprParser {
                                         r
                                     };
                                     expr = Some(RoleExpr::Or(Box::new(ex), Box::new(e)));
-
-                                },
+                                }
                                 None => expr = Some(r),
                             }
                         }

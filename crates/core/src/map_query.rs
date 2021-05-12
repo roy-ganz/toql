@@ -1,40 +1,44 @@
 use std::marker::PhantomData;
 
-use crate::to_query::ToQuery;
-use crate::query::Query;
 use crate::key::Key;
+use crate::query::Query;
+use crate::to_query::ToQuery;
 
 pub struct MapQueryIter<I, T> {
     orig: I,
-    phantom : PhantomData<T>
+    phantom: PhantomData<T>,
 }
 
-impl<I, T> Iterator for MapQueryIter<I, T> 
-where I: Iterator, 
-    I::Item : ToQuery<T>,
+impl<I, T> Iterator for MapQueryIter<I, T>
+where
+    I: Iterator,
+    I::Item: ToQuery<T>,
 {
-   type Item = Query<T>;
+    type Item = Query<T>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.orig.next().map(|v| v.to_query() )
+        self.orig.next().map(|v| v.to_query())
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.orig.size_hint() 
+        self.orig.size_hint()
     }
 }
 
 pub fn map_query<I: Iterator, T>(xs: I) -> MapQueryIter<I, T> {
-    MapQueryIter { orig: xs, phantom: PhantomData }
+    MapQueryIter {
+        orig: xs,
+        phantom: PhantomData,
+    }
 }
 
 pub trait MapQuery: Sized {
     fn map_query<T>(self) -> MapQueryIter<Self, T>;
 }
 
-impl <I: Iterator> MapQuery for I {
+impl<I: Iterator> MapQuery for I {
     fn map_query<T>(self) -> MapQueryIter<Self, T> {
         map_query(self)
     }
@@ -42,28 +46,29 @@ impl <I: Iterator> MapQuery for I {
 
 // Allows to collect different queries in a query (concatenation is and)
 impl<'a, T> std::iter::FromIterator<Query<T>> for Query<T> {
- fn from_iter<I: IntoIterator<Item = Query<T>>>(iter: I) -> Query<T> {
-      let mut q :Query<T> = Query::new();
-      for i in iter{
-        q = q.and(i);
-      }
+    fn from_iter<I: IntoIterator<Item = Query<T>>>(iter: I) -> Query<T> {
+        let mut q: Query<T> = Query::new();
+        for i in iter {
+            q = q.and(i);
+        }
         q
     }
 }
 
 // Allows to collect different keys in a query (concatenation is or)
- impl<T, K> std::iter::FromIterator<K> for Query<T> 
-where K: Key<Entity=T> + ToQuery<T>
+impl<T, K> std::iter::FromIterator<K> for Query<T>
+where
+    K: Key<Entity = T> + ToQuery<T>,
 {
- fn from_iter<I: IntoIterator<Item =K>>(iter: I) -> Query<T> {
-      let mut q :Query<T> = Query::new();
+    fn from_iter<I: IntoIterator<Item = K>>(iter: I) -> Query<T> {
+        let mut q: Query<T> = Query::new();
         for k in iter {
-            q = q.or(ToQuery::to_query(&k) );
+            q = q.or(ToQuery::to_query(&k));
         }
         q
     }
-} 
-/* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T> 
+}
+/* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T>
 where K: Key<Entity=T> + ToQuery<T> + 'a
 {
  fn from_iter<I: IntoIterator<Item =&'a K>>(iter: I) -> Query<T> {
@@ -74,7 +79,7 @@ where K: Key<Entity=T> + ToQuery<T> + 'a
         q
     }
 } */
- /*impl<'a, T, K> std::iter::FromIterator<K> for Query<T> 
+/*impl<'a, T, K> std::iter::FromIterator<K> for Query<T>
 where K: std::borrow::Borrow<K>,
 K: Key<Entity=T> + ToQuery<T> + 'a
 {

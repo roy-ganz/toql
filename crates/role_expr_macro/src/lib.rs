@@ -50,7 +50,6 @@ pub fn role_expr(input: TokenStream) -> TokenStream {
 
     let gen = role_expr_macro::parse(&ast.query);
 
-    
     match gen {
         Ok(o) => {
             log::debug!(
