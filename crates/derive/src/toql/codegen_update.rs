@@ -112,7 +112,7 @@ impl<'a> CodegenUpdate<'a> {
                     quote!()
                 };
                 self.update_set_code.push(quote!(
-                            if #opt_field_predicate #role_predicate (fields.contains("*") || fields.contains( #toql_field_name)) {
+                            if #opt_field_predicate #role_predicate (path_selected || fields.contains( #toql_field_name)) {
                                 #role_assert
                                 #column_set
                             }
@@ -157,11 +157,14 @@ impl<'a> CodegenUpdate<'a> {
                         let other_column = &m.other;
 
                         inverse_column_translation
-                            .push(quote!( #untranslated_column => String::from(#other_column),));
+                            .push(quote!( #other_column => String::from(#untranslated_column),));
                     }
-                    let columns_code = quote!(
-                       let default_inverse_columns= <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::default_inverse_columns();
-                       let inverse_columns = <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+
+                    let columns_code = if !join_attrs.columns.is_empty() { 
+                        // column translation code
+                        quote!(
+                       let default_inverse_columns= <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::default_inverse_columns();
+                       let inverse_columns = <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
                             let inverse_column = match c.as_str() {
                                     #(#inverse_column_translation)*
                                 _ => {
@@ -170,23 +173,39 @@ impl<'a> CodegenUpdate<'a> {
                             };
                             inverse_column
                         }).collect::<Vec<String>>();
-                    );
+                    ) } else {
+                        // default column naming code
+                        let column_format = format!("{}_{{}}", rust_field_ident);
+                        quote!(
+                              let inverse_columns =
+                        <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
+                            .iter()
+                            .enumerate()
+                            .map(|(i, c)| {
+                                format!(#column_format, c)
+                            })
+                            .collect::<Vec<String>>(); 
+                        )
+                    };
 
-                    self.update_set_code.push(
-                       quote!(
-                           if #opt_field_predicate #role_predicate (fields.contains("*") || fields.contains( #toql_field_name)) {
-                            #role_assert
-                            #columns_code
-                            #args_code
-                            for (c, a) in inverse_columns.iter().zip(args) {
-                                expr.push_literal(c);
-                                expr.push_literal(" = ");
-                                expr.push_arg(a);
-                                expr.push_literal(", ");
+                    // Add if columns should not be skipped
+                    if !join_attrs.skip_mut_self_cols {
+                        self.update_set_code.push(
+                        quote!(
+                            if #opt_field_predicate #role_predicate (path_selected || fields.contains( #toql_field_name)) {
+                                #role_assert
+                                #columns_code
+                                #args_code
+                                for (c, a) in inverse_columns.iter().zip(args) {
+                                    expr.push_literal(c);
+                                    expr.push_literal(" = ");
+                                    expr.push_arg(a);
+                                    expr.push_literal(", ");
+                                }
                             }
-                        }
-                       )
-                    );
+                        )
+                        );
+                    }
                 }
             }
             FieldKind::Merge(_) => {
@@ -267,6 +286,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         }
                                     },
                                     None => {
+                                        let path_selected = fields.contains("*");
                                         #struct_upd_role_assert
 
                                         let mut expr = toql::sql_expr::SqlExpr::new();
@@ -277,14 +297,15 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         expr.push_literal(" SET ");
                                         let tokens = expr.tokens().len();
                                         #(#update_set_code)*
-                                        expr.pop_literals(2);
+                                       // expr.pop_literals(2);
+                                       expr.pop(); // remove ', '
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");
                                             let key = <Self as toql::keyed::Keyed>::key(&self);
                                             //let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
                                             // Qualifierd column name
                                             let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_name);
-                                            expr.extend( resolver.resolve(&toql::key::Key::predicate_expr(&key))?);
+                                            expr.extend( resolver.alias_to_literals(&toql::key::Key::predicate_expr(&key))?);
                                             exprs.push(expr);
                                         }
 

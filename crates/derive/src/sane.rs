@@ -108,6 +108,7 @@ pub struct JoinField {
     pub key: bool,
     pub aux_params: Vec<ParamArg>,
     pub columns: Vec<Pair>,
+    pub skip_mut_self_cols: bool
 }
 
 #[derive(Clone)]
@@ -324,6 +325,7 @@ impl Field {
                 key: field.key,
                 aux_params: field.param.clone(),
                 columns: field.join.as_ref().unwrap().columns.clone(),
+                skip_mut_self_cols: field.join.as_ref().unwrap().skip_mut_self_cols
             })
         } else if field.merge.is_some() {
             if field.key {

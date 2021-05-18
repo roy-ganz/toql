@@ -62,6 +62,9 @@ pub struct JoinArg {
 
     #[darling(default)]
     pub join_sql: Option<String>,
+
+    #[darling(default)]
+    pub skip_mut_self_cols: bool
     //#[darling(default)]
     //pub discr_sql: Option<String>,
 }

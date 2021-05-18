@@ -59,6 +59,12 @@ impl SqlExpr {
             maybe_aux_params: false,
         }
     }
+    pub fn alias(lit: impl Into<String>) -> Self {
+        SqlExpr {
+            tokens: vec![SqlExprToken::Alias(lit.into())],
+            maybe_aux_params: false,
+        }
+    }
     pub fn self_alias() -> Self {
         SqlExpr {
             tokens: vec![SqlExprToken::SelfAlias],

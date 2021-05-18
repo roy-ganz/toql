@@ -57,7 +57,7 @@ pub fn fields(input: TokenStream) -> TokenStream {
             fields_macro::parse(&query, struct_type)
         }
         fields_macro::FieldsMacro::Top => Ok(quote!(toql::backend::fields::Fields::from(vec![
-            "".to_string()
+            "*".to_string()
         ]))),
     };
 

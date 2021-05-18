@@ -8,7 +8,7 @@ pub extern crate serde; // For generated keys and Join<T>
 
 #[macro_use]
 pub mod error;
-pub mod alias;
+pub mod alias_format;
 pub mod deserialize;
 pub mod key;
 pub mod key_fields;

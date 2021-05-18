@@ -41,7 +41,7 @@ pub use toql_core::log_sql; // Export macro // Export macro
 pub use toql_core::backend::api::{Count, Delete, Insert, Load, Update};
 pub use toql_core::from_row::FromRow;
 
-pub use toql_core::alias::AliasFormat;
+pub use toql_core::alias_format::AliasFormat;
 pub use toql_core::backend::context::Context;
 pub use toql_core::backend::context_builder::ContextBuilder;
 pub use toql_core::to_query::ToQuery;

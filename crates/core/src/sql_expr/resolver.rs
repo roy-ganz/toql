@@ -72,6 +72,16 @@ impl<'a> Resolver<'a> {
         Ok(SqlExpr::from(tokens))
     }
 
+    pub fn alias_to_literals(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
+        let mut tokens = Vec::new();
+
+        for token in sql_expr.tokens() {
+            tokens.push(self.resolve_alias_to_literals(token)?.into_owned())
+        }
+
+        Ok(SqlExpr::from(tokens))
+    }
+
     pub fn to_sql(
         &self,
         sql_expr: &SqlExpr,
@@ -86,6 +96,24 @@ impl<'a> Resolver<'a> {
         }
 
         Ok(Sql(stmt, args))
+    }
+
+    fn resolve_alias_to_literals(
+        &self,
+        token: &'a SqlExprToken,
+    ) -> Result<Cow<'a, SqlExprToken>, ResolverError> {
+      
+
+        match token {
+            SqlExprToken::SelfAlias if self.self_alias.is_some() => Ok(Cow::Owned(
+                SqlExprToken::Literal(self.self_alias.unwrap().to_string()),
+            )),
+            SqlExprToken::OtherAlias if self.other_alias.is_some() => Ok(Cow::Owned(
+                SqlExprToken::Literal(self.other_alias.unwrap().to_string()),
+            )),
+              tok => Ok(Cow::Borrowed(tok)),
+        }
+        
     }
 
     fn resolve_token(

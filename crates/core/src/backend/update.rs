@@ -1,5 +1,5 @@
 use crate::{
-    alias::AliasFormat,
+    alias_format::AliasFormat,
     alias_translator::AliasTranslator,
     error::ToqlError,
     query::field_path::FieldPath,

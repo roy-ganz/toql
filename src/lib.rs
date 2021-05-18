@@ -46,7 +46,7 @@
 //! Have a look at the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs) that serves users with Rocket and MySQL.
 //!
 
-pub use toql_core::alias;
+pub use toql_core::alias_format;
 pub use toql_core::alias_translator;
 pub use toql_core::backend::fields;
 pub use toql_core::backend::paths;

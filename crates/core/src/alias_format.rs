@@ -1,29 +1,26 @@
-//! Alias formatter.
-//!
-//! AliasFormat determines how the [SqlMapper](../sql_mapper/struct.SqlMapper.html) formats table aliases in SQL code.
-//! Table aliases are needed for every column. E.g. in  `country.id` the table alias is `country` and `ìd` is the column.
-//!
-//! There are 4 different formats supported:
-//!  - Canonical, this is the internal default alias format.
-//!    It is the most verbose and useful for debugging, it can however blow SQL state up in size.
-//!  - TinyIndex, the shortes possible alias, not human friendly, but useful for production as it's fast for the database to parse.
-//!  - ShortIndex and MediumIndex, readable and fast to parse.
-//!
+//! Alias format for table aliases.
 
-pub trait Aliased {
-    fn canonical_alias() -> String;
-}
 
-/// Represents the table alias format
+/// This determines how the [AliasTranslator](crate::alias_translator::AliasTranslator) formats table aliases in SQL code.
+/// Toql uses table aliases for every column. 
+/// E.g. in  `user_address_country.id` the table alias is `user_address_country` and `id` is the column.
+///
+/// There are 4 different formats to cater for development and production environments:
+///  - [Canonical](AliasFormat::Canonical), this is the internal and default alias. 
+///    It is the most verbose and useful for debugging, it can however heavily blow up SQL statements. Example: `user_address_country`.
+///  - [MediumIndex](AliasFormat::MediumIndex), last part of the canonical alias plus number: `country1`
+///  - [ShortIndex](AliasFormat::ShortIndex), first 2 characters of the last part of the canonical alias plus number: `co1`
+///  - [TinyIndex](AliasFormat::TinyIndex) the shortest possible alias, not human friendly, but useful for production as it's fast for databases to parse. 
+///    Its made up of the letter t plus a number:`t1`
 #[derive(Clone, Debug)]
 pub enum AliasFormat {
-    /// Letter t plus number (t1)
+    /// Letter _t_ plus number
     TinyIndex,
-    /// First 2 characters plus number (co1)
+    /// First 2 characters of last canonical path node plus number 
     ShortIndex,
-    /// Table name plus number (country1)
+    /// Last canonical path node plus number
     MediumIndex,
-    /// Full path (user_address_country)
+    /// Full canonical path
     Canonical,
 }
 

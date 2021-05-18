@@ -112,24 +112,19 @@ impl<'a> SqlBuilder<'a> {
         self
     }
 
-    pub fn columns_expr(
-        &self,
-        query_field_path: &str,
-        alias: &str,
-    ) -> Result<(SqlExpr, SqlExpr, SqlExpr)> {
+    pub fn columns_expr(&self, query_field_path: &str, alias: &str) -> Result<(SqlExpr, SqlExpr)> {
         let mut columns_expr = SqlExpr::new();
         let mut join_expr = SqlExpr::new();
-        let mut on_expr = SqlExpr::new();
 
         self.resolve_columns_expr(
             query_field_path,
             alias,
             &mut columns_expr,
             &mut join_expr,
-            &mut on_expr,
+            //    &mut on_expr,
         )?;
 
-        Ok((columns_expr, join_expr, on_expr))
+        Ok((columns_expr, join_expr))
     }
     fn resolve_columns_expr(
         &self,
@@ -137,10 +132,9 @@ impl<'a> SqlBuilder<'a> {
         alias: &str,
         columns_expr: &mut SqlExpr,
         join_expr: &mut SqlExpr,
-        on_expr: &mut SqlExpr,
+        //   on_expr: &mut SqlExpr,
     ) -> Result<()> {
         let mapper = self.mapper_for_query_path(&FieldPath::from(query_path))?;
-        let resolver = Resolver::new().with_self_alias(alias);
 
         for order in &mapper.deserialize_order {
             match order {
@@ -148,10 +142,14 @@ impl<'a> SqlBuilder<'a> {
                     let field = mapper
                         .field(&name)
                         .ok_or_else(|| SqlBuilderError::FieldMissing(name.to_string()))?;
-                    columns_expr.extend(resolver.resolve(&field.expression)?);
-                    if field.options.key {
+                    if !field.options.key {
                         return Ok(());
                     }
+                    let resolver = Resolver::new().with_self_alias(alias);
+                    if !columns_expr.is_empty() {
+                        columns_expr.push_literal(" AND ");
+                    }
+                    columns_expr.extend(resolver.resolve(&field.expression)?);
                 }
                 DeserializeType::Join(name) => {
                     let join = mapper
@@ -160,18 +158,25 @@ impl<'a> SqlBuilder<'a> {
                     if !join.options.key {
                         return Ok(());
                     }
+                    let other_alias = FieldPath::from(alias).append(&mapper.canonical_table_alias);
+                    let resolver = Resolver::new()
+                        .with_self_alias(alias)
+                        .with_other_alias(other_alias.as_str());
 
-                    on_expr.extend(join.on_expression.to_owned());
                     join_expr.push_literal("JOIN ");
-                    join_expr.extend(join.table_expression.to_owned());
+                    join_expr.extend(resolver.resolve(&join.table_expression)?);
+                    join_expr.push_literal(" ON (");
+                    join_expr.extend(resolver.resolve(&join.on_expression)?);
+                    join_expr.push_literal(") ");
+
                     let joined_query_path = FieldPath::from(query_path).append(&name);
-                    let joined_alias = FieldPath::from(alias).append(&mapper.canonical_table_alias);
+
                     self.resolve_columns_expr(
                         joined_query_path.as_str(),
-                        joined_alias.as_str(),
+                        other_alias.as_str(),
                         columns_expr,
                         join_expr,
-                        on_expr,
+                        //     on_expr,
                     )?;
                 }
 
@@ -234,9 +239,9 @@ impl<'a> SqlBuilder<'a> {
             root_mapper.table_name.to_owned(),
             root_mapper.canonical_table_alias.to_owned(),
         );
-
+        self.preparse_filter_joins(&query, &mut context)?;
         self.build_where_clause(&query, &mut context, false, &mut result)?;
-        self.build_join_clause(&mut context, &mut result)?;
+        self.build_join_clause(&mut context, &mut result, true)?;
 
         Ok(result)
     }
@@ -324,7 +329,7 @@ impl<'a> SqlBuilder<'a> {
         self.preparse_query(&query, &mut context, &mut result)?;
         self.build_where_clause(&query, &mut context, false, &mut result)?;
         self.build_select_clause(&query, &mut context, &mut result)?;
-        self.build_join_clause(&mut context, &mut result)?;
+        self.build_join_clause(&mut context, &mut result, false)?;
         self.build_order_clause(&mut context, &mut result)?;
 
         Ok(result)
@@ -380,7 +385,7 @@ impl<'a> SqlBuilder<'a> {
         // build_context.local_selected_paths = selected_paths;
         //  build_context.all_fields_selected = all_fields;
 
-        self.build_join_clause(&mut build_context, &mut result)?;
+        self.build_join_clause(&mut build_context, &mut result, true)?;
 
         Ok(result)
     }
@@ -503,6 +508,7 @@ impl<'a> SqlBuilder<'a> {
         &self,
         mut build_context: &mut BuildContext,
         result: &mut BuildResult,
+        enforce_inner_joins : bool
     ) -> Result<()> {
         // Build join tree for all selected paths
         // This allows to nest joins properly
@@ -527,6 +533,7 @@ impl<'a> SqlBuilder<'a> {
             &join_tree,
             &join_tree.roots(),
             &mut build_context,
+            enforce_inner_joins
         )?;
         result.join_expr.extend(expr);
         result.join_expr.pop_literals(1); // Remove trailing whitespace
@@ -539,6 +546,7 @@ impl<'a> SqlBuilder<'a> {
         join_tree: &PathTree,
         nodes: &HashSet<String>,
         build_context: &mut BuildContext,
+        enforce_inner_joins: bool
     ) -> Result<SqlExpr> {
         let mut join_expr = SqlExpr::new();
 
@@ -561,10 +569,15 @@ impl<'a> SqlBuilder<'a> {
                 .with_self_alias(&canonical_self_alias)
                 .with_other_alias(&canonical_other_alias);
 
-            join_expr.push_literal(match &join.join_type {
+            
+
+            join_expr.push_literal( if enforce_inner_joins {
+                "JOIN ("
+            } else {
+                match &join.join_type {
                 JoinType::Inner => "JOIN (",
                 JoinType::Left => "LEFT JOIN (",
-            });
+            }});
             let join_e = resolver.resolve(&join.table_expression)?;
             join_expr.extend(join_e);
             join_expr.push_literal(" ");
@@ -576,6 +589,7 @@ impl<'a> SqlBuilder<'a> {
                         join_tree,
                         &subnodes,
                         build_context,
+                        enforce_inner_joins
                     )?;
                     if !subjoin_expr.is_empty() {
                         join_expr.extend(subjoin_expr);
@@ -844,6 +858,7 @@ impl<'a> SqlBuilder<'a> {
 
         Ok(())
     }
+
     // Add recusivly all joins from a mapper to selected_paths
     fn add_all_joins_as_selected_paths(
         &self,
@@ -1256,6 +1271,34 @@ impl<'a> SqlBuilder<'a> {
         Ok(())
     }
 
+    fn preparse_filter_joins<M>(
+        &mut self,
+        query: &Query<M>,
+        build_context: &mut BuildContext,
+    ) -> Result<()> {
+        for token in &query.tokens {
+            match token {
+                QueryToken::Field(field) => {
+                    if field.filter.is_some() {
+                        let query_path = FieldPath::from(&field.name);
+                        if let Some(local_path_with_name) =
+                            query_path.localize_path(&build_context.query_home_path)
+                        {
+                            let (_, field_path) =
+                                FieldPath::split_basename(local_path_with_name.as_str());
+                            if self.next_merge_path(&field_path)?.is_none() {
+                                for path in field_path.step_up() {
+                                    build_context.local_joined_paths.insert(path.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
     fn selection_from_query<M>(
         &mut self,
         query: &Query<M>,

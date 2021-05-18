@@ -177,89 +177,93 @@ impl<'a> CodegenInsert<'a> {
                );
                 let columns_map_code = &join_attrs.columns_map_code;
                 let default_self_column_code = &join_attrs.default_self_column_code;
-                self.insert_columns_code.push(quote!(
-                     for other_column in <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
-                            #default_self_column_code;
-                            let self_column = #columns_map_code;
-                            e.push_literal(self_column);
-                            e.push_literal(", ");
-                     }
-                ));
 
-                self.insert_values_code.push(
-                      match field.number_of_options  {
-                                2 => { // Option<Option<T>>
+                // Add if columns should not be skipped
+                if !join_attrs.skip_mut_self_cols {
+                    self.insert_columns_code.push(quote!(
+                        for other_column in <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
+                                #default_self_column_code;
+                                let self_column = #columns_map_code;
+                                e.push_literal(self_column);
+                                e.push_literal(", ");
+                        }
+                    ));
+
+                    self.insert_values_code.push(
+                        match field.number_of_options  {
+                                    2 => { // Option<Option<T>>
+                                            quote!(
+                                                if let Some(field) = &self. #rust_field_ident {
+                                                    if let Some(f) = field {
+                                                        toql :: key :: Key :: params(& < #rust_type_ident as toql ::
+                                                                                        keyed :: Keyed > ::
+                                                                                        key(f))
+                                                                                        .iter()
+                                                                                        .for_each(|p| {
+                                                                                            values.push_arg(p.to_owned());
+                                                                                            values.push_literal(", ");
+                                                                                            });
+                                                    } else {
+                                                        <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
+                                                        .iter().for_each(|_| {
+                                                                values.push_arg(toql::sql_arg::SqlArg::Null);
+                                                                values.push_literal(", ");});
+
+                                                    }
+                                                } else {
+                                                    <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_| { values.push_literal("DEFAULT, ");});
+                                                }
+
+                                            )
+                                        },
+                                    1 if field.preselect => { // #[toql(preselect)] Option<T> 
+                                    // TODO Option wrapping
+                                        quote!(
+                                            if let Some(f) = field {
+                                                        toql :: key :: Key :: params(& < #rust_type_ident as toql ::
+                                                                                        keyed :: Keyed > ::
+                                                                                        key(f))
+                                                                                        .iter()
+                                                                                        .for_each(|p| {
+                                                                                            values.push_arg(p.to_owned());
+                                                                                            values.push_literal(", ");
+                                                                                            });
+                                                    } else {
+                                                        <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
+                                                        .iter().for_each(|_| {
+                                                                values.push_arg(toql::sql_arg::SqlArg:);
+                                                                values.push_literal(", ");
+                                                                });
+                                                    }
+                                            )
+                                    },
+
+                                    1 if !field.preselect => { // Option<T> selectable 
                                         quote!(
                                             if let Some(field) = &self. #rust_field_ident {
-                                                 if let Some(f) = field {
-                                                    toql :: key :: Key :: params(& < #rust_type_ident as toql ::
-                                                                                    keyed :: Keyed > ::
-                                                                                    key(f))
-                                                                                    .iter()
-                                                                                    .for_each(|p| {
-                                                                                        values.push_arg(p.to_owned());
-                                                                                        values.push_literal(", ");
-                                                                                        });
-                                                } else {
-                                                    <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
-                                                    .iter().for_each(|_| {
-                                                            values.push_arg(toql::sql_arg::SqlArg::Null);
-                                                            values.push_literal(", ");});
-
-                                                }
+                                                        toql :: key :: Key :: params(& < #rust_type_ident as toql ::
+                                                                                        keyed :: Keyed > ::
+                                                                                        key(field))
+                                                                                        .iter()
+                                                                                        .for_each(|p| {
+                                                                                            values.push_arg(p.to_owned());
+                                                                                            values.push_literal(", ");
+                                                                                            });
                                             } else {
-                                                <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().for_each(|_| { values.push_literal("DEFAULT, ");});
+                                                <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
+                                                    .iter().for_each(|_|  {values.push_literal("DEFAULT, ");});
                                             }
-
                                         )
                                     },
-                                1 if field.preselect => { // #[toql(preselect)] Option<T> 
-                                // TODO Option wrapping
-                                    quote!(
-                                         if let Some(f) = field {
-                                                    toql :: key :: Key :: params(& < #rust_type_ident as toql ::
-                                                                                    keyed :: Keyed > ::
-                                                                                    key(f))
-                                                                                    .iter()
-                                                                                    .for_each(|p| {
-                                                                                        values.push_arg(p.to_owned());
-                                                                                        values.push_literal(", ");
-                                                                                        });
-                                                } else {
-                                                    <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
-                                                    .iter().for_each(|_| {
-                                                            values.push_arg(toql::sql_arg::SqlArg:);
-                                                            values.push_literal(", ");
-                                                            });
-                                                }
-                                           )
-                                },
-
-                                1 if !field.preselect => { // Option<T> selectable 
-                                    quote!(
-                                        if let Some(field) = &self. #rust_field_ident {
-                                                    toql :: key :: Key :: params(& < #rust_type_ident as toql ::
-                                                                                    keyed :: Keyed > ::
-                                                                                    key(field))
-                                                                                    .iter()
-                                                                                    .for_each(|p| {
-                                                                                        values.push_arg(p.to_owned());
-                                                                                        values.push_literal(", ");
-                                                                                        });
-                                        } else {
-                                              <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
-                                                .iter().for_each(|_|  {values.push_literal("DEFAULT, ");});
-                                        }
+                                    _ => { // T
+                                        quote!(
+                                            &toql::key::Key::params( &<#rust_type_ident as toql::keyed::Keyed>::key(&self. #rust_field_ident))
+                                        .into_iter() .for_each(|a| {values.push_arg(a); values.push_literal(", " );});
                                     )
-                                },
-                                _ => { // T
-                                    quote!(
-                                        &toql::key::Key::params( &<#rust_type_ident as toql::keyed::Keyed>::key(&self. #rust_field_ident))
-                                       .into_iter() .for_each(|a| {values.push_arg(a); values.push_literal(", " );});
-                                   )
+                                    }
                                 }
-                            }
-                );
+                    );
+                }
                 if join_attrs.key && !field.skip_mut {
                     self.duplicate = true;
                 }
