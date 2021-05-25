@@ -82,9 +82,9 @@ impl<'a> CodegenUpdate<'a> {
                 }
 
                 let value = if field.number_of_options > 0 {
-                    quote!(self . #rust_field_ident .as_ref().unwrap())
+                    quote!( self. #rust_field_ident .as_ref().map(|f|toql::sql_arg::SqlArg::from(f)).unwrap_or(toql::sql_arg::SqlArg::Null))
                 } else {
-                    quote!( &self . #rust_field_ident)
+                    quote!( toql::sql_arg::SqlArg::from(&self . #rust_field_ident))
                 };
 
                 let column_set =
@@ -94,7 +94,7 @@ impl<'a> CodegenUpdate<'a> {
                             //    expr.push_literal(".");
                                 expr.push_literal(#sql_column);
                                 expr.push_literal(" = ");
-                                expr.push_arg(toql::sql_arg::SqlArg::from( #value));
+                                expr.push_arg( #value);
                                 expr.push_literal(", ");
                         )
                     } else {
@@ -121,14 +121,45 @@ impl<'a> CodegenUpdate<'a> {
             FieldKind::Join(join_attrs) => {
                 if !(field.skip_mut || join_attrs.key) {
                     self.dispatch_update_code.push(
-                        quote!(
-                            #toql_field_name => {
-                                    #role_assert
+                        match field.number_of_options {
+                            0 => {
+                                quote!(
+                                    #toql_field_name => {
+                                            #role_assert
 
-                                    <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                    update(#refer  self. #rust_field_ident # unwrap ,&mut descendents, fields, roles, exprs)?
-                                }
-                        )
+                                            <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
+                                            update(#refer  self. #rust_field_ident ,&mut descendents, fields, roles, exprs)?
+                                        }
+                                )
+
+                            },
+                           
+                            1 => {
+                                 quote!(
+                                    #toql_field_name => {
+                                            #role_assert
+                                            if let Some(f) = self. #rust_field_ident .as_ref() {
+                                            <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
+                                            update( f ,&mut descendents, fields, roles, exprs)?
+                                            }
+                                        }
+                                )
+                            }
+                            _ => { // 2
+                                 quote!(
+                                    #toql_field_name => {
+                                            #role_assert
+                                            if let Some(f1) = self. #rust_field_ident .as_ref() {
+                                                if let Some(f2) = f1 {
+                                                    <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
+                                                    update(f2 ,&mut descendents, fields, roles, exprs)?
+                                                    }
+                                            }
+                                        }
+                                )
+                            }
+
+                        }
                     );
 
                     let mut inverse_column_translation: Vec<TokenStream> = Vec::new();

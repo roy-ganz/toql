@@ -66,6 +66,7 @@ impl<'a> CodegenTree<'a> {
         let rust_field_ident = &field.rust_field_ident;
         let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
+        let rust_type_name = &field.rust_type_name;
         let toql_field_name = &field.toql_field_name;
         let rust_base_type_ident = &field.rust_base_type_ident;
 
@@ -167,6 +168,50 @@ impl<'a> CodegenTree<'a> {
                         }
                 )
                );
+
+                if join_attrs.skip_mut_self_cols {
+                    self.identity_set_merges_key_code.push(
+                        quote!(
+                             if let Some(mut f) = self. #rust_field_ident .as_mut() {
+                        // Get INverse columns
+                         let default_inverse_columns = << QuestionAnswer as toql :: keyed ::   Keyed > :: Key as toql :: key :: Key > ::
+                        default_inverse_columns() ;
+
+                        let inverse_columns =
+                            <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
+                                .iter()
+                                .enumerate()
+                                .map(|(i, c)| {
+                                    let inverse_column = match c.as_str() {
+                                        _ => default_inverse_columns.get(i).unwrap().to_owned(),
+                                    };
+                                    inverse_column
+                                })
+                                .collect::<Vec<String>>();
+                        // Pick Key and columns from Question
+                        let key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
+                        let key_args = toql::key::Key::params(&toql::keyed::Keyed::key(&self));
+
+                        // Build target key args
+                        // Build target key args
+                        let mut args = Vec::new();
+                        for c in inverse_columns {
+                            let i = key_columns.iter().position(|&r| r == c)
+                                .ok_or_else(|| toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
+                            args.push(key_args.get(i).ok_or_else(||toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
+                        }
+
+                            
+
+                        let action = toql::tree::tree_identity::IdentityAction::Set(std::cell::RefCell::new(args));
+                        <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::set_id(f, &mut std::iter::empty(), &action)?;
+                             }
+                        )
+                    ); 
+
+                }
+
+
             }
             FieldKind::Merge(merge) => {
                 self.dispatch_types
