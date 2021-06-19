@@ -45,3 +45,4 @@ pub use toql_core::alias_format::AliasFormat;
 pub use toql_core::backend::context::Context;
 pub use toql_core::backend::context_builder::ContextBuilder;
 pub use toql_core::to_query::ToQuery;
+pub use toql_core::sql::Sql;
