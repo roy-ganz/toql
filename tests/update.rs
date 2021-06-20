@@ -1,34 +1,26 @@
 use fixtures::tree1::Alpha;
-use toql::backend::command::update_command::UpdateCommand;
-use toql::prelude::{Result, Sql, SqlMapperRegistry, fields};
-
+use ops::update::TestUpdate;
+use toql::prelude::fields;
+ use toql::backend::ops::update::Update;
 
 mod fixtures;
-
+pub mod ops;
 
 
 #[test]
 fn update_tree1() {
 
-        let registry = SqlMapperRegistry::new();
-        let mut entities = vec![Alpha::default()];
-        let fields= fields!(Alpha, "beta_*, gamma_*");
-        let mut sqls : Vec<Sql>;
-        
-        let mut collect_sql = |sql: Sql| -> Result<()> {
-            // collect statements
-             dbg!(sql.to_unsafe_string());
-             sqls.push(sql);
-             Ok(())
-        };
+       let mut ops = TestUpdate::default();
 
-        let cmd = UpdateCommand::new(&registry, &mut collect_sql);
+       let entities= vec![fixtures::tree1::Alpha::default()];
+
+        let fields= fields!(Alpha, "beta_*, gamma_*");
           
-        cmd.run(&mut entities, fields!(Alpha, "beta_*, gamma_*")).unwrap();
+        ops.update(&mut entities, fields!(Alpha, "beta_*, gamma_*")).unwrap();
         // assert statements
 
-        sqls.clear();
-        cmd.run(&mut entities, fields!(Alpha, "*,beta_*, gamma_*")).unwrap();
+        ops.sqls.clear();
+        ops.update(&mut entities, fields!(Alpha, "*,beta_*, gamma_*")).unwrap();
          // assert statements
 
 }
