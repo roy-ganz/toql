@@ -4,6 +4,7 @@ use toql::backend::ops::update::Update;
 
 use std::collections::{HashMap, HashSet};
 
+
 pub struct TestUpdate {
     pub sqls: Vec<Sql>,
     registry: SqlMapperRegistry,
@@ -27,6 +28,7 @@ impl Default for TestUpdate {
     }
 }
 
+// Implement template functions for updating entities
 impl<T> Update<T> for TestUpdate {
     fn registry(&self) -> &SqlMapperRegistry {
        &self.registry
