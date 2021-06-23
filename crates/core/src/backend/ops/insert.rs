@@ -97,7 +97,7 @@ pub trait Insert {
         let home_path = FieldPath::default();
         let mut descendents = home_path.children();
         // check if base has auto keys
-        // if <a as TreeIdentity>::auto_keys(&mut descendents)
+        if <T as TreeIdentity>::auto_id(&mut descendents)? {
             let ids= self.insert_sql(sql)?;
 
             let mut descendents = home_path.children();
@@ -106,8 +106,9 @@ pub trait Insert {
                 &mut entities,
                 &mut descendents,
             )?;
-        // else
-        // sql.execute_sql(sql)?;
+         }else {
+            self.execute_sql(sql)?;
+         }
 
 
         // Insert joins
@@ -134,7 +135,8 @@ pub trait Insert {
                 }
                 let sql = sql.unwrap();
 
-            // if <a as TreeIdentity>::auto_keys(&mut descendents)
+            let mut descendents = path.children();
+            if <T as TreeIdentity>::auto_id(&mut descendents)? {
                 let ids= self.insert_sql(sql)?;
 
                 let mut descendents = home_path.children();
@@ -143,8 +145,9 @@ pub trait Insert {
                     &mut entities,
                     &mut descendents,
                 )?;
-            // else
-            // sql.execute_sql(sql)?;
+             } else {
+                self.execute_sql(sql)?;
+             }
             }
         }
 

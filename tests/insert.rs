@@ -11,9 +11,7 @@ mod mock;
 fn insert_tree1() {
 
        let mut mock = mock::Mock::default();
-
        let mut entities= vec![fixtures::tree1::Alpha::default()];
-
 
         // Insert top entity
         mock.insert(&mut entities, paths!(top)).unwrap();

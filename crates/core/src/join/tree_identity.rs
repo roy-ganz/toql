@@ -14,9 +14,12 @@ where
     T: TreeIdentity,
     <T as Keyed>::Key: TryFrom<Vec<SqlArg>, Error = ToqlError>,
 {
-    fn auto_id() -> bool {
-        <T as TreeIdentity>::auto_id()
-    }
+    fn auto_id<'a,I>(  descendents: &mut I) -> Result<bool, ToqlError> 
+    where
+        I: Iterator<Item = FieldPath<'a>>
+        {
+            <T as TreeIdentity>::auto_id(descendents)
+        }
     fn set_id<'a, 'b, I>(
         &mut self,
         descendents: &mut I,

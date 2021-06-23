@@ -29,19 +29,16 @@ where
     use crate::tree::tree_identity::IdentityAction;
     use std::cell::RefCell;
 
-    if <T as TreeIdentity>::auto_id() {
-       
-
-        //   let home_path = FieldPath::default();
-        //    let mut descendents= home_path.descendents();
-        let action = IdentityAction::Set(RefCell::new(ids));
-        for e in entities.iter_mut() {
-            {
-                let e_mut = e.borrow_mut();
-                <T as TreeIdentity>::set_id(e_mut, &mut descendents, &action)?;
-            }
+    //   let home_path = FieldPath::default();
+    //    let mut descendents= home_path.descendents();
+    let action = IdentityAction::Set(RefCell::new(ids));
+    for e in entities.iter_mut() {
+        {
+            let e_mut = e.borrow_mut();
+            <T as TreeIdentity>::set_id(e_mut, &mut descendents, &action)?;
         }
     }
+    
     Ok(())
 }
 
@@ -60,7 +57,7 @@ where
     use crate::tree::tree_identity::IdentityAction;
     use std::cell::RefCell;
 
-    if <T as TreeIdentity>::auto_id() {
+   // if <T as TreeIdentity>::auto_id() {
         let mut id: u64 = first_id + number_of_ids;
         let mut ids: Vec<SqlArg> = Vec::with_capacity(number_of_ids as usize);
         for _ in 0..number_of_ids {
@@ -77,7 +74,7 @@ where
                 <T as TreeIdentity>::set_id(e_mut, &mut descendents, &action)?;
             }
         }
-    }
+    //}
     Ok(())
 }
 pub fn build_insert_sql<T, Q>(

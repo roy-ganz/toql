@@ -6,7 +6,10 @@ pub enum IdentityAction {
     Refresh,
 }
 pub trait TreeIdentity {
-    fn auto_id() -> bool;
+    fn auto_id<'a, I>( descendents: &mut I) -> Result<bool, ToqlError>
+      where
+        I: Iterator<Item = FieldPath<'a>>
+    ;
 
     fn set_id<'a, 'b, I>(
         &mut self,

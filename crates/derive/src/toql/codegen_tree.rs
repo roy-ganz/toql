@@ -24,6 +24,7 @@ pub(crate) struct CodegenTree<'a> {
     dispatch_merge_code: Vec<TokenStream>,
     merge_code: Vec<TokenStream>,
 
+    dispatch_auto_id_code: Vec<TokenStream>,
     dispatch_identity_code: Vec<TokenStream>,
     identity_set_merges_key_code: Vec<TokenStream>,
     key_columns: Vec<String>,
@@ -51,6 +52,8 @@ impl<'a> CodegenTree<'a> {
             merge_type_bounds: Vec::new(),
             dispatch_merge_code: Vec::new(),
             merge_code: Vec::new(),
+
+            dispatch_auto_id_code: Vec::new(),
             dispatch_identity_code: Vec::new(),
             identity_set_merges_key_code: Vec::new(),
             key_columns: Vec::new(),
@@ -168,6 +171,13 @@ impl<'a> CodegenTree<'a> {
                         }
                 )
                );
+                self.dispatch_auto_id_code.push(
+                   quote!(
+                       #toql_field_name => {
+                            Ok(<#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::auto_id(&mut descendents)?)
+                        }
+                )
+               );
 
                 if join_attrs.skip_mut_self_cols {
                     self.identity_set_merges_key_code.push(
@@ -268,6 +278,12 @@ impl<'a> CodegenTree<'a> {
                             keys(&mut descendents, field, key_expr)?
                         }
                 )); */
+                self.dispatch_auto_id_code.push(quote!(
+                       #toql_field_name => {
+                                Ok(<#rust_base_type_ident as toql::tree::tree_identity::TreeIdentity>::
+                                auto_id(&mut descendents)?)
+                        }
+                ));
                 self.dispatch_identity_code.push(quote!(
                        #toql_field_name => {
                             for f in #refer_mut self. #rust_field_ident #unwrap_mut {
@@ -494,6 +510,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let dispatch_merge_code = &self.dispatch_merge_code;
         let merge_code = &self.merge_code;
 
+        let dispatch_auto_id_code = &self.dispatch_auto_id_code;
         let dispatch_identity_code = &self.dispatch_identity_code;
         let identity_set_merges_key_code = &self.identity_set_merges_key_code;
 
@@ -554,8 +571,23 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let mods = quote! {
 
                 impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
-                 fn auto_id() -> bool {
-                     #identity_auto_id_code
+                 fn auto_id< 'a, I >(mut descendents : & mut I) -> std :: result :: Result < bool, toql::error::ToqlError >
+                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> {
+                      match descendents.next() {
+                               Some(d) => match d.as_str() {
+                                   #(#dispatch_auto_id_code),*
+                                   f @ _ => {
+                                        return Err(
+                                            toql::error::ToqlError::SqlBuilderError (
+                                             toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()))
+                                            .into());
+                                    }
+                               },
+                               None => {
+                                  Ok(#identity_auto_id_code)
+                               }
+                        }
+                    
                  }
 
                  #[allow(unused_variables, unused_mut)]
@@ -581,8 +613,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                     }
                }
                 impl toql::tree::tree_identity::TreeIdentity for &mut #struct_ident {
-                 fn auto_id() -> bool {
-                     <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id()
+                 fn auto_id< 'a, I >( mut descendents : & mut I) -> std :: result :: Result < bool, toql::error::ToqlError > 
+                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                 {
+                     <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id(descendents)
                  }
                   #[allow(unused_mut)]
                  fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
