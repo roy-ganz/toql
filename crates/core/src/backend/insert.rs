@@ -12,8 +12,38 @@ use crate::{
 };
 use std::{borrow::BorrowMut, collections::HashMap};
 
-use crate::result::Result;
+use crate::{sql_arg::SqlArg, result::Result};
 use std::collections::HashSet;
+
+pub fn set_tree_identity2<'a, T, Q, I>(
+    ids: Vec<SqlArg>,
+    entities: &mut [Q],
+    mut descendents: &mut I,
+) -> Result<()>
+where
+    T: TreeIdentity,
+    Q: BorrowMut<T>,
+    I: Iterator<Item = FieldPath<'a>>,
+{
+    use crate::sql_arg::SqlArg;
+    use crate::tree::tree_identity::IdentityAction;
+    use std::cell::RefCell;
+
+    if <T as TreeIdentity>::auto_id() {
+       
+
+        //   let home_path = FieldPath::default();
+        //    let mut descendents= home_path.descendents();
+        let action = IdentityAction::Set(RefCell::new(ids));
+        for e in entities.iter_mut() {
+            {
+                let e_mut = e.borrow_mut();
+                <T as TreeIdentity>::set_id(e_mut, &mut descendents, &action)?;
+            }
+        }
+    }
+    Ok(())
+}
 
 pub fn set_tree_identity<'a, T, Q, I>(
     first_id: u64,

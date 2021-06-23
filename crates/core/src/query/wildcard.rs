@@ -57,6 +57,9 @@ impl Wildcard {
     }
 
     pub fn into_string(self) -> String {
+        format!("{}{}*", self.path, if self.path.is_empty() {""} else  {"_"})
+    }
+    pub fn into_path(self) -> String {
         self.path
     }
 }

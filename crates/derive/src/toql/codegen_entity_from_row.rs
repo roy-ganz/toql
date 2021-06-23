@@ -209,7 +209,8 @@ impl<'a> CodegenEntityFromRow<'a> {
                                         if iter.next().ok_or(toql::error::ToqlError::DeserializeError(
                                             toql::deserialize::error::DeserializeError::StreamEnd))?
                                             .is_selected() {
-                                            return Err(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string()).into());
+                                            return Err(
+                                                toql::error::ToqlError::DeserializeError(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string())).into());
                                         }
                                        //< #rust_type_ident > :: from_row ( row , i, iter )?
                                        match <#rust_type_ident>::from_row(row, i, iter)? {
@@ -256,8 +257,10 @@ impl<'a> CodegenEntityFromRow<'a> {
                                  } else {
                                     quote!(
                                         #rust_field_ident : {
-                                                let err = toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string()),
-                                                    if iter.next().ok_or(toql::deserialize::error::DeserializeError::StreamEnd)?.is_selected(){
+                                                let err = toql::error::ToqlError::DeserializeError(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string()));
+                                                    if iter.next().ok_or(
+                                                        toql::error::ToqlError::DeserializeError(
+                                                        toql::deserialize::error::DeserializeError::StreamEnd))?.is_selected(){
                                                             < #rust_type_ident > :: from_row ( row , i, iter )?.ok_or(err)?
                                                     } else {
                                                         return Err(err.into());

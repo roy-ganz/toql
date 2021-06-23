@@ -40,6 +40,7 @@ use std::borrow::BorrowMut;
 pub trait Update<T> {
 
    fn registry(&self) -> &SqlMapperRegistry;
+   fn registry_mut(&mut self) -> &mut SqlMapperRegistry;
    fn roles(&self) -> &HashSet<String>;
    fn alias_format(&self) -> AliasFormat;
    fn aux_params(&self) -> &HashMap<String, SqlArg>;
@@ -48,23 +49,27 @@ pub trait Update<T> {
 
 
    fn update(&mut self, entities: &mut [T], fields: Fields) ->Result<()> where 
-    T: Mapped + TreeInsert + TreeIdentity + TreeIdentity + TreeUpdate + TreePredicate
+    T: Mapped + TreeInsert + TreeIdentity + TreeIdentity + TreeUpdate + TreePredicate +TreeMap
     {
         
             // TODO should be possible to impl with &str
-            let mut joins: HashMap<String, HashSet<String>> = HashMap::new();
+            let mut joined_or_merged_fields: HashMap<String, HashSet<String>> = HashMap::new();
             let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
 
-        
+            // Ensure entity is mapped
+            if !self.registry().mappers.contains_key(<T as Mapped>::type_name().as_str()){
+                <T as TreeMap>::map(&mut self.registry_mut())?;
+            }
+
 
             plan_update_order::<T, _>(
                 &self.registry().mappers,
                 fields.list.as_ref(),
-                &mut joins,
+                &mut joined_or_merged_fields,
                 &mut merges,
             )?;
 
-            for (path, fields) in joins {
+            for (path, fields) in joined_or_merged_fields {
                 let sqls = {
                     let field_path = FieldPath::from(&path);
                     build_update_sql::<T, _>(
@@ -88,8 +93,8 @@ pub trait Update<T> {
 
             for (path, fields) in merges {
                 // Build delete sql
-                dbg!(&path);
-                dbg!(&fields);
+               /*  dbg!(&path);
+                dbg!(&fields); */
 
                 let parent_path = FieldPath::from(&path);
                 let entity = entities.get(0).unwrap().borrow();
@@ -155,7 +160,10 @@ pub trait Update<T> {
                         "",
                     )?;
                     if let Some(sql) = sql {
-                    self.execute_sql(sql)?;
+                        self.execute_sql(sql)?;
+
+                        // TODO read auto keys and assign
+
                     }
                 }
             }

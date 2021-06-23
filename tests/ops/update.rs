@@ -13,6 +13,13 @@ pub struct TestUpdate {
     aux_params: HashMap<String, SqlArg>
 }
 
+impl TestUpdate {
+
+    pub fn clear(&mut self) {
+        self.sqls.clear();
+    }
+    
+}
 
 
 impl Default for TestUpdate {
@@ -33,17 +40,19 @@ impl<T> Update<T> for TestUpdate {
     fn registry(&self) -> &SqlMapperRegistry {
        &self.registry
    }
+    fn registry_mut(&mut self) -> &mut SqlMapperRegistry {
+       &mut self.registry
+   }
     fn roles(&self) -> &HashSet<String> {
        &self.roles
    }
     fn alias_format(&self) -> AliasFormat {
-       self.alias_format
+       self.alias_format.clone()
    }
    fn aux_params(&self) -> &HashMap<String, SqlArg> {
        &self.aux_params
    }
    fn execute_sql(&mut self, sql:Sql) -> Result<()> {
-        dbg!(sql.to_unsafe_string());
         self.sqls.push(sql);
         Ok(())
    }
