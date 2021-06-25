@@ -571,6 +571,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
         let mods = quote! {
 
                 impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
+                #[allow(unused_mut)]
                  fn auto_id< 'a, I >(mut descendents : & mut I) -> std :: result :: Result < bool, toql::error::ToqlError >
                  where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> {
                       match descendents.next() {
@@ -613,6 +614,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                     }
                }
                 impl toql::tree::tree_identity::TreeIdentity for &mut #struct_ident {
+                 #[allow(unused_mut)]
                  fn auto_id< 'a, I >( mut descendents : & mut I) -> std :: result :: Result < bool, toql::error::ToqlError > 
                  where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                  {

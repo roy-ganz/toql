@@ -73,7 +73,7 @@ pub struct Gamma {
     text: String,
 }
 
-impl<R, E> toql::backend::api::Load<R, E> for Alpha
+impl<R, E> toql::backend::Load<R, E> for Alpha
 where
     Self: toql::keyed::Keyed
         + toql::sql_mapper::mapped::Mapped
@@ -87,7 +87,7 @@ where
     E: std::convert::From<toql::error::ToqlError>,
 {
 }
-impl<R, E> toql::backend::api::Load<R, E> for &Alpha
+impl<R, E> toql::backend::Load<R, E> for &Alpha
 where
     Self: toql::keyed::Keyed
         + toql::sql_mapper::mapped::Mapped
@@ -101,47 +101,51 @@ where
     E: std::convert::From<toql::error::ToqlError>,
 {
 }
-impl toql::backend::api::Insert for Alpha where
+impl toql::backend::Insert for Alpha where
     Self: toql::tree::tree_insert::TreeInsert
         + toql::sql_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
+        + toql::tree::tree_map::TreeMap
 {
 }
-impl toql::backend::api::Insert for &mut Alpha where
+impl toql::backend::Insert for &mut Alpha where
     Self: toql::tree::tree_insert::TreeInsert
         + toql::sql_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
+        + toql::tree::tree_map::TreeMap
 {
 }
-impl toql::backend::api::Update for Alpha where
+impl toql::backend::Update for Alpha where
     Self: toql::tree::tree_update::TreeUpdate
         + toql::sql_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
+        + toql::tree::tree_map::TreeMap
 {
 }
-impl toql::backend::api::Update for &mut Alpha where
+impl toql::backend::Update for &mut Alpha where
     Self: toql::tree::tree_update::TreeUpdate
         + toql::sql_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
+        + toql::tree::tree_map::TreeMap
 {
 }
-impl toql::backend::api::Count for Alpha where
+impl toql::backend::Count for Alpha where
     Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
-impl toql::backend::api::Count for &Alpha where
+impl toql::backend::Count for &Alpha where
     Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
-impl toql::backend::api::Delete for Alpha where
+impl toql::backend::Delete for Alpha where
     Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
-impl toql::backend::api::Delete for &Alpha where
+impl toql::backend::Delete for &Alpha where
     Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
@@ -1267,7 +1271,7 @@ impl toql::tree::tree_update::TreeUpdate for &mut Alpha {
     }
 }
 
-impl<R, E> toql::backend::api::Load<R, E> for Beta
+impl<R, E> toql::backend::Load<R, E> for Beta
 where
     Self: toql::keyed::Keyed
         + toql::sql_mapper::mapped::Mapped
@@ -1281,7 +1285,7 @@ where
     E: std::convert::From<toql::error::ToqlError>,
 {
 }
-impl<R, E> toql::backend::api::Load<R, E> for &Beta
+impl<R, E> toql::backend::Load<R, E> for &Beta
 where
     Self: toql::keyed::Keyed
         + toql::sql_mapper::mapped::Mapped
@@ -1295,47 +1299,51 @@ where
     E: std::convert::From<toql::error::ToqlError>,
 {
 }
-impl toql::backend::api::Insert for Beta where
+impl toql::backend::Insert for Beta where
     Self: toql::tree::tree_insert::TreeInsert
         + toql::sql_mapper::mapped::Mapped
+        + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
 {
 }
-impl toql::backend::api::Insert for &mut Beta where
+impl toql::backend::Insert for &mut Beta where
     Self: toql::tree::tree_insert::TreeInsert
         + toql::sql_mapper::mapped::Mapped
+        + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
 {
 }
-impl toql::backend::api::Update for Beta where
+impl toql::backend::Update for Beta where
     Self: toql::tree::tree_update::TreeUpdate
         + toql::sql_mapper::mapped::Mapped
+        + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
 {
 }
-impl toql::backend::api::Update for &mut Beta where
+impl toql::backend::Update for &mut Beta where
     Self: toql::tree::tree_update::TreeUpdate
         + toql::sql_mapper::mapped::Mapped
+        + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
 {
 }
-impl toql::backend::api::Count for Beta where
+impl toql::backend::Count for Beta where
     Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
-impl toql::backend::api::Count for &Beta where
+impl toql::backend::Count for &Beta where
     Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
-impl toql::backend::api::Delete for Beta where
+impl toql::backend::Delete for Beta where
     Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
-impl toql::backend::api::Delete for &Beta where
+impl toql::backend::Delete for &Beta where
     Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
@@ -1506,6 +1514,7 @@ impl toql::tree::tree_identity::TreeIdentity for Beta {
     }
 }
 impl toql::tree::tree_identity::TreeIdentity for &mut Beta {
+     #[allow(unused_mut)]
     fn auto_id<'a, I>(mut descendents: &mut I) -> std::result::Result<bool, toql::error::ToqlError>
     where
         I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
@@ -2153,7 +2162,7 @@ impl toql::tree::tree_update::TreeUpdate for &mut Beta {
     }
 }
 
-impl<R, E> toql::backend::api::Load<R, E> for Gamma
+impl<R, E> toql::backend::Load<R, E> for Gamma
 where
     Self: toql::keyed::Keyed
         + toql::sql_mapper::mapped::Mapped
@@ -2167,7 +2176,7 @@ where
     E: std::convert::From<toql::error::ToqlError>,
 {
 }
-impl<R, E> toql::backend::api::Load<R, E> for &Gamma
+impl<R, E> toql::backend::Load<R, E> for &Gamma
 where
     Self: toql::keyed::Keyed
         + toql::sql_mapper::mapped::Mapped
@@ -2181,47 +2190,51 @@ where
     E: std::convert::From<toql::error::ToqlError>,
 {
 }
-impl toql::backend::api::Insert for Gamma where
+impl toql::backend::Insert for Gamma where
     Self: toql::tree::tree_insert::TreeInsert
         + toql::sql_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
+        + toql::tree::tree_map::TreeMap
 {
 }
-impl toql::backend::api::Insert for &mut Gamma where
+impl toql::backend::Insert for &mut Gamma where
     Self: toql::tree::tree_insert::TreeInsert
         + toql::sql_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
+        + toql::tree::tree_map::TreeMap
 {
 }
-impl toql::backend::api::Update for Gamma where
+impl toql::backend::Update for Gamma where
     Self: toql::tree::tree_update::TreeUpdate
         + toql::sql_mapper::mapped::Mapped
+        + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
 {
 }
-impl toql::backend::api::Update for &mut Gamma where
+impl toql::backend::Update for &mut Gamma where
     Self: toql::tree::tree_update::TreeUpdate
         + toql::sql_mapper::mapped::Mapped
+        + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
 {
 }
-impl toql::backend::api::Count for Gamma where
+impl toql::backend::Count for Gamma where
     Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
-impl toql::backend::api::Count for &Gamma where
+impl toql::backend::Count for &Gamma where
     Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
-impl toql::backend::api::Delete for Gamma where
+impl toql::backend::Delete for Gamma where
     Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
-impl toql::backend::api::Delete for &Gamma where
+impl toql::backend::Delete for &Gamma where
     Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }

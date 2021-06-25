@@ -38,7 +38,7 @@ pub use toql_core::log_mut_literal_sql;
 pub use toql_core::log_mut_sql; // Export macro
 pub use toql_core::log_sql; // Export macro // Export macro
 
-pub use toql_core::backend::api::{Count, Delete, Insert, Load, Update};
+pub use toql_core::backend::{Count, Delete, Insert, Load, Update};
 pub use toql_core::from_row::FromRow;
 
 pub use toql_core::alias_format::AliasFormat;
