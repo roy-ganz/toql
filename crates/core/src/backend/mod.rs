@@ -6,6 +6,9 @@ pub mod insert;
 pub mod paths;
 pub mod update;
 
+
+mod map;
+
 //pub mod ops;
 
 
@@ -20,11 +23,12 @@ use crate::{
         tree_identity::{IdentityAction, TreeIdentity}, tree_index::TreeIndex, tree_insert::TreeInsert,
         tree_map::TreeMap, tree_merge::TreeMerge, tree_predicate::TreePredicate,
         tree_update::TreeUpdate,
-    }, sql_mapper_registry::SqlMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, query::field_path::FieldPath, sql_expr::{SqlExpr, PredicateColumn, resolver::Resolver}, sql_builder::SqlBuilder, alias_translator::AliasTranslator, parameter_map::ParameterMap,
+    }, sql_mapper_registry::SqlMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, query::{Query, field_path::FieldPath}, sql_expr::{SqlExpr, PredicateColumn, resolver::Resolver}, sql_builder::{build_result::BuildResult, SqlBuilder}, alias_translator::AliasTranslator, parameter_map::ParameterMap, page::Page,
 };
-use std::collections::{HashMap, HashSet};
+use std::{borrow::Borrow, collections::{HashMap, HashSet}};
 use fields::Fields;
 use paths::Paths;
+
 
 pub trait Load<R, E>:
     Keyed
@@ -49,16 +53,399 @@ pub trait Count: Keyed + Mapped + std::fmt::Debug {}
 pub trait Delete: Mapped + TreeMap + std::fmt::Debug {}
 
 
-pub trait Backend {
+pub trait Backend { // <R,E> for row error
    fn registry(&self) -> &SqlMapperRegistry;
    fn registry_mut(&mut self) -> &mut SqlMapperRegistry;
    fn roles(&self) -> &HashSet<String>;
    fn alias_format(&self) -> AliasFormat;
    fn aux_params(&self) -> &HashMap<String, SqlArg>;
 
+   fn select_sql<T>(&mut self, sql:Sql) -> Result<Vec<T>>;
+   fn prepare_page(&self, result: &mut BuildResult, start:u64, number_of_records: u16); // Modify result, so that page with unlimited page size can be loaded
+   fn select_page_sql<T>(&mut self, sql:Sql, page_size: u16) -> Result<(Vec<T>, u32)>; // Load page and number of records without page limitation
+   fn select_scalar_sql<T>(&mut self, sql:Sql) -> Result<T>; // Load single value
+
    fn execute_sql(&mut self, sql:Sql) -> Result<()>;
    fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>>; // New keys
 
+fn load_count<T, B, R, E>(
+    &mut self,
+    query: &B,
+) -> Result<u32>
+where
+    T: Load<R, E>,
+    B: Borrow<Query<T>>,
+    <T as Keyed>::Key: FromRow<R, E>, 
+    E: From<ToqlError>
+ {
+   
+           
+            let ty = <T as Mapped>::type_name();
+            //let sql = build_load_count_sql(self.alias_format(), registry, ty)?;
+
+            let alias_format = self.alias_format();
+            let mut alias_translator = AliasTranslator::new(alias_format);
+            let aux_params = [self.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params);
+
+            let registry = self.registry();
+            let mut builder = SqlBuilder::new(&ty, registry)
+                .with_aux_params(self.aux_params().clone()) // todo ref
+                .with_roles(self.roles().clone()); // todo ref;
+            let result = builder.build_count("", query.borrow(), true)?;
+            let sql = result
+                .to_sql(&aux_params, &mut alias_translator)
+                .map_err(ToqlError::from)?;
+        
+
+            log_sql!(&sql);
+            
+            let page_count = self.select_scalar_sql(sql)?;
+            /* let Sql(sql_stmt, args) = sql;
+            let args = crate::sql_arg::values_from_ref(&args);
+            let query_results = mysql.conn.prep_exec(sql_stmt, args)?;
+            query_results
+                .into_iter()
+                .next()
+                .unwrap()
+                .unwrap()
+                .get(0)
+                .unwrap()
+        };
+        Some((unpaged_count, unfiltered_count)) */
+    
+    Ok(page_count)
+}
+
+fn load_and_merge<T, B, R, E>(
+    &mut self,
+    query: &B,
+    entities: &mut Vec<T>,
+    unmerged_home_paths: &HashSet<String>,
+) -> std::result::Result<HashSet<String>, E>
+where
+    T: Keyed
+        + Mapped
+        + FromRow<R, E>
+        + TreePredicate
+        + TreeIndex<R, E>
+        + TreeMerge<R, E>
+        + std::fmt::Debug,
+
+    B: Borrow<Query<T>>,
+    <T as crate::keyed::Keyed>::Key: FromRow<R, E>, 
+    E: From<ToqlError>
+    
+{
+    
+
+    let ty = <T as Mapped>::type_name();
+    let mut pending_home_paths = HashSet::new();
+
+    let canonical_base = {
+        let registry = self.registry();
+        let mapper = registry
+            .mappers
+            .get(&ty)
+            .ok_or(ToqlError::MapperMissing(ty.clone()))?;
+        mapper.canonical_table_alias.clone()
+    };
+
+    for home_path in unmerged_home_paths {
+        // Get merge JOIN with ON from mapper
+        let hp = FieldPath::from(&home_path);
+        let parent_home_path = hp.ancestors().nth(1); // Skip unchanged value
+
+        let merge_base_alias = if let Some(hp) = &parent_home_path {
+            format!("{}_{}", &canonical_base, hp.to_string())
+        } else {
+            canonical_base.to_string()
+        };
+
+        let mut result = {
+            let registry = self.registry();
+            let mut builder = SqlBuilder::new(&ty, registry)
+                .with_aux_params(self.aux_params().clone()) // todo ref
+                .with_roles(self.roles().clone()); // todo ref// Add alias format or translator to constructor
+            builder.build_select(home_path.as_str(), query.borrow())?
+        };
+
+        pending_home_paths = result.unmerged_home_paths().clone();
+
+        let other_alias = result.table_alias().clone();
+        let merge_resolver = Resolver::new()
+                .with_self_alias(&merge_base_alias)
+                .with_other_alias(other_alias.as_str());
+
+        // Build merge join
+        // Get merge join and custom on predicate from mapper
+        let (mut merge_join_sql_expr, merge_join_predicate) = {
+            let registry = self.registry();
+            let builder = SqlBuilder::new(&ty, registry)
+                .with_aux_params(self.aux_params().clone()) // TODO ref
+                .with_roles(self.roles().clone());
+            builder.merge_expr(&home_path)?
+        };
+
+        let merge_join_predicate = merge_resolver.resolve(&merge_join_predicate).map_err(ToqlError::from)?;
+
+        // Get key columns 
+        let (merge_join, key_select_expr) = {
+           let parent_home_path = parent_home_path.unwrap_or_default(); 
+            let registry = self.registry();
+            let builder = SqlBuilder::new(&ty, registry); // No aux params for key
+            let (key_select_expr, key_join) =
+                builder.columns_expr(parent_home_path.as_str(), &merge_base_alias)?;
+
+            let merge_join = if key_join.is_empty() {
+                &merge_join_sql_expr
+            } else {
+                merge_join_sql_expr.push_literal(" ").extend(key_join)
+            };
+           
+            (merge_resolver.resolve(merge_join).map_err(ToqlError::from)?, key_select_expr)
+          
+        };
+
+        result.set_preselect(key_select_expr); // Select key columns for indexing
+        result.push_join(merge_join);
+        result.push_join(SqlExpr::literal(" ON ("));
+        result.push_join(merge_join_predicate);
+      
+        // Get ON predicate from entity keys
+        let mut predicate_expr = SqlExpr::new();
+        let (_field, ancestor_path) = FieldPath::split_basename(home_path.as_str());
+        // let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
+        //let mut d = ancestor_path.descendents();
+        let mut d = ancestor_path.children();
+
+        let columns =
+            TreePredicate::columns(entities.get(0).unwrap(), &mut d).map_err(ToqlError::from)?;
+
+        let mut args = Vec::new();
+        //let mut d = ancestor_path.descendents();
+        let mut d = ancestor_path.children();
+        for e in entities.iter() {
+            TreePredicate::args(e, &mut d, &mut args).map_err(ToqlError::from)?;
+        }
+        let predicate_columns = columns
+            .into_iter()
+            .map(|c| PredicateColumn::SelfAliased(c))
+            .collect::<Vec<_>>();
+        predicate_expr.push_predicate(predicate_columns, args);
+
+        let predicate_expr = {
+            let merge_resolver = Resolver::new()
+                .with_self_alias(&merge_base_alias)
+                .with_other_alias(other_alias.as_str());
+            merge_resolver
+                .resolve(&predicate_expr)
+                .map_err(ToqlError::from)?
+        };
+        result.push_join(SqlExpr::literal(" AND "));
+        result.push_join(predicate_expr);
+        result.push_join(SqlExpr::literal(")"));
+
+        // Build SQL query statement
+
+        let mut alias_translator = AliasTranslator::new(self.alias_format());
+        let aux_params = [self.aux_params()];
+        let aux_params = ParameterMap::new(&aux_params);
+        let sql = result
+            .to_sql(&aux_params, &mut alias_translator)
+            .map_err(ToqlError::from)?;
+        log_sql!(sql);
+        
+        //let Sql(sql, args) = sql;
+       /*  dbg!(&sql);
+        dbg!(&args); */
+
+        // Load from database
+        let rows = self.select_sql(sql)?; // Default vector size
+       /*  let args = crate::sql_arg::values_from_ref(&args);
+        let query_results = mysql.conn.prep_exec(sql, args)?; */
+
+        // Build index
+        let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); //hashed key, array positions
+
+        let (field, ancestor_path) = FieldPath::split_basename(home_path.as_str());
+
+        // TODO Batch process rows
+        // TODO Introduce traits that do not need to copy into vec
+      /*   let mut rows = Vec::with_capacity(100);
+
+        for q in query_results {
+            rows.push(Row(q?)); // Stream into Vec because we need random access
+        } */
+
+        let row_offset = 0; // key must be first columns in row
+
+        let (_, ancestor2_path) = FieldPath::split_basename(ancestor_path.as_str());
+        //let mut d = ancestor2_path.descendents();
+        let mut d = ancestor2_path.children();
+        <T as TreeIndex<R, E>>::index(&mut d, &rows, row_offset, &mut index)?;
+
+        //let mut d = ancestor_path.descendents();
+    
+        // Merge into entities
+      //  dbg!(result.selection_stream());
+
+        for e in entities.iter_mut() {
+            let mut d = ancestor_path.children();
+            <T as TreeMerge<_, E>>::merge(
+                e,
+                &mut d,
+                field,
+                &rows,
+                row_offset,
+                &index,
+                result.selection_stream(),
+            )?;
+        }
+    }
+    Ok(pending_home_paths)
+}
+
+fn load_top<T, B, R, E>(
+    &mut self,
+    query: &B,
+    page: Option<Page>,
+) -> std::result::Result<(Vec<T>, HashSet<String>, Option<(u32, u32)>), E>
+where
+    T: Load<R, E>,
+    B: Borrow<Query<T>>,
+    <T as crate::keyed::Keyed>::Key: FromRow<R, E>, 
+    E: From<ToqlError>
+{
+   
+    let alias_format = self.alias_format();
+
+    let ty = <T as Mapped>::type_name();
+
+    let mut result = {
+        let registry = &*self.registry();
+        let mut builder = SqlBuilder::new(&ty, registry)
+            .with_aux_params(self.aux_params().clone()) // todo ref
+            .with_roles(self.roles().clone()); // todo ref;
+        builder.build_select("", query.borrow())?
+    };
+
+    let unmerged = result.unmerged_home_paths().clone();
+    let mut alias_translator = AliasTranslator::new(alias_format);
+    let aux_params = [self.aux_params()];
+    let aux_params = ParameterMap::new(&aux_params);
+
+    let extra = match page {
+        Some(Page::Counted(start, number_of_records)) => {
+            self.prepare_page(&mut result, start, number_of_records);
+            //Cow::Owned(format!("LIMIT {}, {}", start, number_of_records))
+        }
+        Some(Page::Uncounted(start, number_of_records)) => {
+            self.prepare_page(&mut result, start, number_of_records);
+            //Cow::Owned(format!("LIMIT {}, {}", start, number_of_records))
+        }
+        None => {}//Cow::Borrowed(""),
+    };
+
+    let modifier = if let Some(Page::Counted(_, _)) = page {
+        "SQL_CALC_FOUND_ROWS"
+    } else {
+        ""
+    };
+
+    // 
+    
+
+
+    let sql = {
+        result
+            .to_sql(
+                &aux_params,
+                &mut alias_translator,
+            )
+        /* result
+            .to_sql_with_modifier_and_extra(
+                &aux_params,
+                &mut alias_translator,
+                modifier,
+                extra.borrow(),
+            ) */
+            .map_err(ToqlError::from)?
+    };
+
+    log_sql!(&sql);
+    let expected_records = match page {
+        Some(Page::Counted(_, number_of_records)) => number_of_records,
+        Some(Page::Uncounted(_, number_of_records)) => number_of_records,
+        None => 10,
+    };
+    let (entities, page_count) = match page {
+        None => {
+            let entities = self.select_sql(sql)?;
+            (entities, None)}
+        _=> {
+            let (entities, count) = self.select_page_sql(sql, expected_records)?;
+            (entities, Some((count, self.load_count(query)? )))
+        },
+
+    };
+    
+
+   // let Sql(sql_stmt, args) = sql;
+   
+    /* let mut entities: Vec<T> = Vec::with_capacity(capactity.into());
+    for r in query_results {
+        let r = Row(r?);
+      //  dbg!(result.selection_stream());
+        let mut iter = result.selection_stream().iter();
+        let mut i = 0usize;
+        if let Some(e) =
+            <T as toql::from_row::FromRow<Row, ToqlMySqlError>>::from_row(&r, &mut i, &mut iter)?
+        {
+            entities.push(e);
+        }
+    } */
+
+    // Retrieve count information
+  /*   let page_count = if let Some(Page::Counted(_, _)) = page {
+        Some((count, self.load_count(query)?))
+    } else {
+        None
+    }; */
+
+    Ok((entities, unmerged, page_count))
+}
+
+fn load<T, B, R, E>(
+    &mut self,
+    query: B,
+    page: Option<Page>,
+) -> std::result::Result<(Vec<T>, Option<(u32, u32)>), E>
+where
+    E: From<ToqlError>,
+    T: Load<R, E>,
+    B: Borrow<Query<T>>,
+    <T as Keyed>::Key: FromRow<R, E>,
+{
+   
+     map::map::<T>(self.registry_mut())?;
+
+    let (mut entities, unmerged_paths, counts) = self.load_top(&query, page)?;
+    let mut pending_paths = unmerged_paths;
+    loop {
+        pending_paths = self.load_and_merge( &query, &mut entities, &pending_paths)?;
+
+        // Quit, if all paths have been merged
+        if pending_paths.is_empty() {
+            break;
+        }
+
+        // Select and merge next paths
+        // unmerged_paths.extend(pending_paths.drain());
+    }
+
+    Ok((entities, counts))
+}
 
    fn update<T>(&mut self, entities: &mut [T], fields: Fields) ->Result<()> where 
     T: Update 
@@ -73,6 +460,8 @@ pub trait Backend {
             let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
 
             // Ensure entity is mapped
+            map::map::<T>(self.registry_mut())?;
+
             if !self.registry().mappers.contains_key(<T as Mapped>::type_name().as_str()){
                 <T as TreeMap>::map(&mut self.registry_mut())?;
             }
