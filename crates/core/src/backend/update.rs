@@ -95,21 +95,25 @@ where
             .ok_or(ToqlError::MapperMissing(current_mapper))?;
 
         // Triage field
-        // Join, convert to wildcard
-        if mapper.joined_mapper(descendent_name).is_some() {
+        // Join use as normal field (this will insert keys of the join)
+       /*  if mapper.joined_mapper(descendent_name).is_some() {
             fields
+                .entry(ancestor_path.to_string())
+                .or_insert_with(HashSet::new)
+                .insert(descendent_name.to_string());
+          /*   fields
                 .entry(path.as_ref().trim_end_matches('_').to_string())
                 .or_insert_with(HashSet::new)
-                .insert("*".to_string());
-        }
+                .insert("*".to_string()); */
+        } */
         // Merged field
-        else if mapper.merged_mapper(descendent_name).is_some() {
+        if mapper.merged_mapper(descendent_name).is_some() {
             merges
                 .entry(ancestor_path.to_string())
                 .or_insert_with(HashSet::new)
                 .insert(descendent_name.to_string());
         }
-        // Normal field
+        // Joins and normal field
         else {
             fields
                 .entry(ancestor_path.to_string())

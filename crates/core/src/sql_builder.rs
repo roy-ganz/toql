@@ -37,9 +37,9 @@
 pub mod select_stream;
 pub mod sql_builder_error;
 pub mod wildcard_scope;
+pub mod build_result;
 
 pub(crate) mod build_context;
-pub(crate) mod build_result;
 pub(crate) mod path_tree;
 
 use super::sql_builder::build_context::BuildContext;

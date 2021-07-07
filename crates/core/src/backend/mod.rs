@@ -11,7 +11,7 @@ mod map;
 
 //pub mod ops;
 
-
+use async_trait::async_trait;
 
 use crate::{
     result::Result,
@@ -53,6 +53,7 @@ pub trait Count: Keyed + Mapped + std::fmt::Debug {}
 pub trait Delete: Mapped + TreeMap + std::fmt::Debug {}
 
 
+#[async_trait]
 pub trait Backend { // <R,E> for row error
    fn registry(&self) -> &SqlMapperRegistry;
    fn registry_mut(&mut self) -> &mut SqlMapperRegistry;
@@ -60,21 +61,21 @@ pub trait Backend { // <R,E> for row error
    fn alias_format(&self) -> AliasFormat;
    fn aux_params(&self) -> &HashMap<String, SqlArg>;
 
-   fn select_sql<T>(&mut self, sql:Sql) -> Result<Vec<T>>;
+   async fn select_sql<T>(&mut self, sql:Sql) -> Result<Vec<T>>;
    fn prepare_page(&self, result: &mut BuildResult, start:u64, number_of_records: u16); // Modify result, so that page with unlimited page size can be loaded
-   fn select_page_sql<T>(&mut self, sql:Sql, page_size: u16) -> Result<(Vec<T>, u32)>; // Load page and number of records without page limitation
-   fn select_scalar_sql<T>(&mut self, sql:Sql) -> Result<T>; // Load single value
+   async fn select_page_sql<T>(&mut self, sql:Sql) -> Result<(Vec<T>, u32)>; // Load page and number of records without page limitation
+   async fn select_count_sql(&mut self, sql:Sql) -> Result<u32>; // Load single value
 
-   fn execute_sql(&mut self, sql:Sql) -> Result<()>;
-   fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>>; // New keys
+   async fn execute_sql(&mut self, sql:Sql) -> Result<()>;
+   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>>; // New keys
 
-fn load_count<T, B, R, E>(
+async fn load_count<T, B, R, E>(
     &mut self,
     query: &B,
 ) -> Result<u32>
 where
     T: Load<R, E>,
-    B: Borrow<Query<T>>,
+    B: Borrow<Query<T>> + Send + Sync,
     <T as Keyed>::Key: FromRow<R, E>, 
     E: From<ToqlError>
  {
@@ -100,7 +101,7 @@ where
 
             log_sql!(&sql);
             
-            let page_count = self.select_scalar_sql(sql)?;
+            let page_count = self.select_count_sql(sql).await?;
             /* let Sql(sql_stmt, args) = sql;
             let args = crate::sql_arg::values_from_ref(&args);
             let query_results = mysql.conn.prep_exec(sql_stmt, args)?;
@@ -117,11 +118,11 @@ where
     Ok(page_count)
 }
 
-fn load_and_merge<T, B, R, E>(
+async fn load_and_merge<T, B, R, E>(
     &mut self,
     query: &B,
     entities: &mut Vec<T>,
-    unmerged_home_paths: &HashSet<String>,
+    unmerged_home_paths: &HashSet<String>
 ) -> std::result::Result<HashSet<String>, E>
 where
     T: Keyed
@@ -130,9 +131,10 @@ where
         + TreePredicate
         + TreeIndex<R, E>
         + TreeMerge<R, E>
+        + Send
         + std::fmt::Debug,
 
-    B: Borrow<Query<T>>,
+    B: Borrow<Query<T>> + Sync,
     <T as crate::keyed::Keyed>::Key: FromRow<R, E>, 
     E: From<ToqlError>
     
@@ -261,7 +263,7 @@ where
         dbg!(&args); */
 
         // Load from database
-        let rows = self.select_sql(sql)?; // Default vector size
+        let rows = self.select_sql(sql).await?; // Default vector size
        /*  let args = crate::sql_arg::values_from_ref(&args);
         let query_results = mysql.conn.prep_exec(sql, args)?; */
 
@@ -306,14 +308,14 @@ where
     Ok(pending_home_paths)
 }
 
-fn load_top<T, B, R, E>(
+async fn load_top<T, B, R, E>(
     &mut self,
     query: &B,
     page: Option<Page>,
 ) -> std::result::Result<(Vec<T>, HashSet<String>, Option<(u32, u32)>), E>
 where
-    T: Load<R, E>,
-    B: Borrow<Query<T>>,
+    T: Load<R, E> + Send,
+    B: Borrow<Query<T>> + Sync + Send,
     <T as crate::keyed::Keyed>::Key: FromRow<R, E>, 
     E: From<ToqlError>
 {
@@ -381,11 +383,11 @@ where
     };
     let (entities, page_count) = match page {
         None => {
-            let entities = self.select_sql(sql)?;
+            let entities = self.select_sql(sql).await?;
             (entities, None)}
         _=> {
-            let (entities, count) = self.select_page_sql(sql, expected_records)?;
-            (entities, Some((count, self.load_count(query)? )))
+            let (entities, count) = self.select_page_sql(sql).await?;
+            (entities, Some((count, self.load_count(query).await? )))
         },
 
     };
@@ -416,24 +418,24 @@ where
     Ok((entities, unmerged, page_count))
 }
 
-fn load<T, B, R, E>(
+async fn load<T, B, R, E>(
     &mut self,
     query: B,
-    page: Option<Page>,
+    page: Option<Page>
 ) -> std::result::Result<(Vec<T>, Option<(u32, u32)>), E>
 where
     E: From<ToqlError>,
-    T: Load<R, E>,
-    B: Borrow<Query<T>>,
+    T: Load<R, E> + Send,
+    B: Borrow<Query<T>> + Sync + Send,
     <T as Keyed>::Key: FromRow<R, E>,
 {
    
      map::map::<T>(self.registry_mut())?;
 
-    let (mut entities, unmerged_paths, counts) = self.load_top(&query, page)?;
+    let (mut entities, unmerged_paths, counts) = self.load_top(&query, page).await?;
     let mut pending_paths = unmerged_paths;
     loop {
-        pending_paths = self.load_and_merge( &query, &mut entities, &pending_paths)?;
+        pending_paths = self.load_and_merge( &query, &mut entities, &pending_paths).await?;
 
         // Quit, if all paths have been merged
         if pending_paths.is_empty() {
@@ -447,8 +449,8 @@ where
     Ok((entities, counts))
 }
 
-   fn update<T>(&mut self, entities: &mut [T], fields: Fields) ->Result<()> where 
-    T: Update 
+   async fn update<T>(&mut self, entities: &mut [T], fields: Fields) ->Result<()> where 
+    T: Update + Send + Sync,
     {
         use update::{plan_update_order, build_update_sql};
         use insert::build_insert_sql;
@@ -490,7 +492,7 @@ where
 
                 // Update joins
                 for sql in sqls {
-                    self.execute_sql(sql)?;
+                    self.execute_sql(sql).await?;
                 }
             }
 
@@ -536,7 +538,7 @@ where
                     };
 
                     //dbg!(sql.to_unsafe_string());
-                    self.execute_sql(sql)?;
+                    self.execute_sql(sql).await?;
                     
 
                     // Ensure primary keys of collection are valid
@@ -565,7 +567,7 @@ where
                         "",
                     )?;
                     if let Some(sql) = sql {
-                        self.execute_sql(sql)?;
+                        self.execute_sql(sql).await?;
 
                         // TODO read auto keys and assign
 
@@ -575,8 +577,8 @@ where
 
             Ok(())
         }
-         fn insert<T>(&mut self, mut entities: &mut [T], paths: Paths) ->Result<u64> where 
-            T: Insert,
+         async fn insert<T>(&mut self, mut entities: &mut [T], paths: Paths) ->Result<u64> where 
+            T: Insert + Send,
     {
         
      
@@ -632,7 +634,7 @@ where
         let mut descendents = home_path.children();
         // check if base has auto keys
         if <T as TreeIdentity>::auto_id(&mut descendents)? {
-            let ids= self.insert_sql(sql)?;
+            let ids= self.insert_sql(sql).await?;
 
             let mut descendents = home_path.children();
             crate::backend::insert::set_tree_identity2(
@@ -641,7 +643,7 @@ where
                 &mut descendents,
             )?;
          }else {
-            self.execute_sql(sql)?;
+            self.execute_sql(sql).await?;
          }
 
 
@@ -671,7 +673,7 @@ where
 
             let mut descendents = path.children();
             if <T as TreeIdentity>::auto_id(&mut descendents)? {
-                let ids= self.insert_sql(sql)?;
+                let ids= self.insert_sql(sql).await?;
 
                 let mut descendents = home_path.children();
                 crate::backend::insert::set_tree_identity2(
@@ -680,7 +682,7 @@ where
                     &mut descendents,
                 )?;
              } else {
-                self.execute_sql(sql)?;
+                self.execute_sql(sql).await?;
              }
             }
         }
@@ -709,7 +711,7 @@ where
             let sql = sql.unwrap();
 
             // Merges must not contain auto value as identity, skip set_tree_identity
-            self.execute_sql(sql)?;
+            self.execute_sql(sql).await?;
 
         }
 
