@@ -59,22 +59,7 @@ impl<'a> CodegenEntityFromRow<'a> {
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 let rust_field_ident = &field.rust_field_ident;
-
-                // Type bound for regular fields, fields can be optional
-                /*  if field.number_of_options > 1 {
-                    //self.impl_opt_types.insert(field.rust_base_type_ident.to_owned());
-                    // self.forwards.push(quote!(  <Option<#rust_base_type_ident> as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
-                    self.impl_types
-                        .insert(field.rust_base_type_ident.to_owned());
-                    self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
-                } else {
-                    // Left joins can have null keys, add Option<T>
-
-                    self.impl_types
-                        .insert(field.rust_base_type_ident.to_owned());
-                    self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
-                } */
-
+             
                 self.impl_types
                     .insert(field.rust_base_type_ident.to_owned());
                 self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
@@ -212,14 +197,15 @@ impl<'a> CodegenEntityFromRow<'a> {
                                             return Err(
                                                 toql::error::ToqlError::DeserializeError(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string())).into());
                                         }
-                                       //< #rust_type_ident > :: from_row ( row , i, iter )?
+                                        let mut it2 = iter . clone() ; 
+                                      let n = i . clone();
                                        match <#rust_type_ident>::from_row(row, i, iter)? {
-                                                Some(f) => Some(Some(f)),
+                                                Some(f) => Some(f),
                                                 None => {
                                                     let s: usize =  <#rust_type_ident as toql::from_row::FromRow::<R,E>>::forward(&mut it2)?;
                                                     *iter = it2;
                                                     *i = n + s;
-                                                    Some(None)
+                                                    None
                                                 }
                                             }
                                     }

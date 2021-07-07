@@ -219,7 +219,7 @@ impl<'a> CodegenInsert<'a> {
                                     1 if field.preselect => { // #[toql(preselect)] Option<T> 
                                     // TODO Option wrapping
                                         quote!(
-                                            if let Some(f) = field {
+                                            if let Some(f) =  &self. #rust_field_ident {
                                                         toql :: key :: Key :: params(& < #rust_type_ident as toql ::
                                                                                         keyed :: Keyed > ::
                                                                                         key(f))
@@ -231,7 +231,7 @@ impl<'a> CodegenInsert<'a> {
                                                     } else {
                                                         <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
                                                         .iter().for_each(|_| {
-                                                                values.push_arg(toql::sql_arg::SqlArg:);
+                                                                values.push_arg(toql::sql_arg::SqlArg::Null);
                                                                 values.push_literal(", ");
                                                                 });
                                                     }
