@@ -1,14 +1,17 @@
 
-use toql::prelude::{Sql, SqlMapperRegistry, AliasFormat, SqlArg, Result};
+use toql::prelude::{Sql, SqlMapperRegistry, AliasFormat, SqlArg, Result, ToqlError};
 use std::collections::{HashMap, HashSet};
 use toql::backend::{Backend, context::Context};
-use toql::sql_builder::build_result::BuildResult;
+use toql::{page::Page, sql_builder::build_result::BuildResult};
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+ 
+
 
 use async_trait::async_trait;
 
 pub struct Mock {
     pub sqls: Vec<Sql>,
-    registry: SqlMapperRegistry,
+    registry: RwLock<SqlMapperRegistry>,
     context: Context,
 }
 
@@ -27,7 +30,7 @@ impl Default for Mock {
     fn default() -> Self {
         Mock {
         sqls: Vec::new(),
-        registry: SqlMapperRegistry::new(),
+        registry: RwLock::new(SqlMapperRegistry::new()),
         context : Context {
             roles: HashSet::new(),
             alias_format: AliasFormat::Canonical,
@@ -40,7 +43,7 @@ impl Default for Mock {
 
 // Implement template functions for updating entities
 #[async_trait]
-impl Backend for Mock {
+impl Backend<(), ToqlError> for Mock {
     
    async fn execute_sql(&mut self, sql:Sql) -> Result<()> {
         self.sqls.push(sql);
@@ -54,30 +57,30 @@ impl Backend for Mock {
         Ok(ids)
    }
 
-    async fn select_sql<T>(&mut self, sql:Sql) -> Result<Vec<T>> {
+    async fn select_sql(&mut self, sql:Sql) -> Result<Vec<()>> {
         self.sqls.push(sql);
         Ok(vec![])
     }
-    fn prepare_page(&self, _result: &mut BuildResult, _start:u64, _page_size: u16) {
+    fn prepare_page(&self, _result: &mut BuildResult, _page: &Page) {
         
     }
 
-   async  fn select_page_sql<T>(&mut self, sql:Sql) -> Result<(Vec<T>, u32)> {
+   async  fn select_max_page_size_sql(&mut self, sql:Sql) -> Result<u64> {
         self.sqls.push(sql);
-        Ok((vec![], 0))
+        Ok( 0)
    }
-   async fn select_count_sql(&mut self, sql:Sql) -> Result<u32> {
+   async fn select_count_sql(&mut self, sql:Sql) -> Result<u64> {
        self.sqls.push(sql);
        Ok(0)
    } 
 
    
-   fn registry(&self) -> &SqlMapperRegistry {
-       &self.registry
+   fn registry(&self) ->std::result::Result<RwLockReadGuard<'_, SqlMapperRegistry>, ToqlError> {
+       self.registry.read().map_err(ToqlError::from)
    }
 
-   fn registry_mut(&mut self) -> &mut SqlMapperRegistry {
-       &mut self.registry
+   fn registry_mut(&mut self) ->  std::result::Result<RwLockWriteGuard<'_, SqlMapperRegistry>, ToqlError>  {
+      self.registry.write().map_err(ToqlError::from)
    }
 
    fn roles(&self) -> &HashSet<String> { &self.context.roles }

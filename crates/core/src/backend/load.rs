@@ -340,10 +340,11 @@ where
     
     
     let page_count = match page {
-        Some(Page::Counted(start,number_of_records))=> {
+        Some( Page::Counted(start,number_of_records))=> {
                 let count_sql = Sql::new(); // TODO
                 let unfiltered_page_size = backend.select_count_sql(count_sql).await?;
-                backend.prepare_page(&mut result, start, number_of_records);
+                let p = Page::Counted(start,number_of_records);
+                backend.prepare_page(&mut result, &p);
                 let max_page_size_sql = result.to_count_sql(&mut alias_translator).map_err(|e|e.into())?;
                 let max_page_size =  backend.select_max_page_size_sql(max_page_size_sql).await?;
                 Some((unfiltered_page_size, max_page_size))

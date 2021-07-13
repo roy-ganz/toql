@@ -10,13 +10,20 @@ pub mod delete;
 pub mod count;
 mod map;
 
-//pub mod ops;
+// Reexports for derives
+pub use insert::Insert;
+pub use update::Update;
+pub use load::Load;
+pub use count::Count;
+pub use delete::Delete;
+
+
 
 use async_trait::async_trait;
 
 use crate::{
     error::ToqlError,
-   sql_mapper_registry::SqlMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, sql_builder::build_result::BuildResult
+   sql_mapper_registry::SqlMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, sql_builder::build_result::BuildResult, page::Page
 };
 use std::{ collections::{HashMap, HashSet}, sync::{RwLockWriteGuard, RwLockReadGuard}};
 
@@ -34,7 +41,7 @@ where  E: From<ToqlError>
    fn aux_params(&self) -> &HashMap<String, SqlArg>;
 
    async fn select_sql(&mut self, sql:Sql) -> Result<Vec<R>, E>;
-   fn prepare_page(&self, result: &mut BuildResult, start:u64, number_of_records: u16); // Modify result, so that page with unlimited page size can be loaded
+   fn prepare_page(&self, result: &mut BuildResult,  page: &Page); // Modify result, so that page with unlimited page size can be loaded
    async fn select_max_page_size_sql(&mut self, sql:Sql) -> Result<u64, E>; // Load number of records without page limitation
    async fn select_count_sql(&mut self, sql:Sql) -> Result<u64, E>; // Load single value
 

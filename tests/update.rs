@@ -1,7 +1,10 @@
 use fixtures::tree1::Alpha;
 
 use toql::prelude::fields;
- use toql::backend::Backend;
+use toql::backend::Backend;
+use toql::backend::update::update;
+
+ 
 
 mod fixtures;
 mod mock;
@@ -13,7 +16,7 @@ async fn update_tree1() {
        let mut entities= vec![fixtures::tree1::Alpha::default()];
 
         // Update foreign key for Beta in Alpha (no join required)
-        mock.update(&mut entities, fields!(Alpha, "beta")).await.unwrap();
+        update(&mut mock, &mut entities, fields!(Alpha, "beta")).await.unwrap();
 
         for (e, s) in mock.sqls.iter().enumerate(){
                println!("[{}] {}", e, s.to_unsafe_string());
@@ -21,7 +24,7 @@ async fn update_tree1() {
           
         // Update all fields on join beta
         mock.clear();
-        mock.update(&mut entities, fields!(Alpha, "beta_*")).await.unwrap();
+        update(&mut mock, &mut entities, fields!(Alpha, "beta_*")).await.unwrap();
 
         for (e, s) in mock.sqls.iter().enumerate(){
                println!("[{}] {}", e, s.to_unsafe_string());
@@ -30,13 +33,13 @@ async fn update_tree1() {
        
         // Update all fields on merge gamma
         mock.clear();
-        mock.update(&mut entities, fields!(Alpha, "gamma_*")).await.unwrap();
+        update(&mut mock, &mut entities, fields!(Alpha, "gamma_*")).await.unwrap();
         for (e, s) in mock.sqls.iter().enumerate(){
                println!("[{}] {}", e, s.to_unsafe_string());
         }
        // Replace vec gamma (delete + insert)
         mock.clear();
-        mock.update(&mut entities, fields!(Alpha, "gamma")).await.unwrap();
+        update(&mut mock, &mut entities, fields!(Alpha, "gamma")).await.unwrap();
         for (e, s) in mock.sqls.iter().enumerate(){
                println!("[{}] {}", e, s.to_unsafe_string());
         }
