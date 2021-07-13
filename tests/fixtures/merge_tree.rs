@@ -8,7 +8,7 @@ pub struct Alpha {
     text: String,
 
     #[toql(merge())]
-    beta1: Vec<Beta>,  // Preselected 
+    beta1: Vec<Beta>,  // Preselected merge
         
     #[toql(merge())]
     beta2: Option<Vec<Beta>>,  // Selectable merge

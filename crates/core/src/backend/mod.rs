@@ -14,7 +14,6 @@ mod map;
 use async_trait::async_trait;
 
 use crate::{
-    result::Result,
     error::ToqlError,
     from_row::FromRow,
     keyed::Keyed,
@@ -25,7 +24,7 @@ use crate::{
         tree_update::TreeUpdate,
     }, sql_mapper_registry::SqlMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, query::{Query, field_path::FieldPath}, sql_expr::{SqlExpr, PredicateColumn, resolver::Resolver}, sql_builder::{build_result::BuildResult, SqlBuilder}, alias_translator::AliasTranslator, parameter_map::ParameterMap, page::Page,
 };
-use std::{borrow::Borrow, collections::{HashMap, HashSet}};
+use std::{borrow::Borrow, collections::{HashMap, HashSet}, sync::{RwLockWriteGuard, RwLockReadGuard}};
 use fields::Fields;
 use paths::Paths;
 
@@ -54,30 +53,32 @@ pub trait Delete: Mapped + TreeMap + std::fmt::Debug {}
 
 
 #[async_trait]
-pub trait Backend { // <R,E> for row error
-   fn registry(&self) -> &SqlMapperRegistry;
-   fn registry_mut(&mut self) -> &mut SqlMapperRegistry;
+pub trait Backend<R,E> 
+where  E: From<ToqlError>
+{ // <R,E> for row error
+   fn registry(&self) ->Result<RwLockReadGuard<'_, SqlMapperRegistry>, ToqlError>;
+   fn registry_mut(&mut self) -> Result<RwLockWriteGuard<'_, SqlMapperRegistry>, ToqlError>;
    fn roles(&self) -> &HashSet<String>;
    fn alias_format(&self) -> AliasFormat;
    fn aux_params(&self) -> &HashMap<String, SqlArg>;
 
-   async fn select_sql<T>(&mut self, sql:Sql) -> Result<Vec<T>>;
+   async fn select_sql(&mut self, sql:Sql) -> Result<Vec<R>, E>;
    fn prepare_page(&self, result: &mut BuildResult, start:u64, number_of_records: u16); // Modify result, so that page with unlimited page size can be loaded
-   async fn select_page_sql<T>(&mut self, sql:Sql) -> Result<(Vec<T>, u32)>; // Load page and number of records without page limitation
-   async fn select_count_sql(&mut self, sql:Sql) -> Result<u32>; // Load single value
+   async fn select_max_page_size_sql(&mut self, sql:Sql) -> Result<u32, E>; // Load page and number of records without page limitation
+   async fn select_count_sql(&mut self, sql:Sql) -> Result<u32, E>; // Load single value
 
-   async fn execute_sql(&mut self, sql:Sql) -> Result<()>;
-   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>>; // New keys
+   async fn execute_sql(&mut self, sql:Sql) -> Result<(), E>;
+   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>, E>; // New keys
 
-async fn load_count<T, B, R, E>(
+async fn load_count<T, B>(
     &mut self,
     query: &B,
-) -> Result<u32>
+) -> Result<u32, E>
 where
     T: Load<R, E>,
     B: Borrow<Query<T>> + Send + Sync,
     <T as Keyed>::Key: FromRow<R, E>, 
-    E: From<ToqlError>
+  
  {
    
            
@@ -89,14 +90,17 @@ where
             let aux_params = [self.aux_params()];
             let aux_params = ParameterMap::new(&aux_params);
 
-            let registry = self.registry();
-            let mut builder = SqlBuilder::new(&ty, registry)
-                .with_aux_params(self.aux_params().clone()) // todo ref
-                .with_roles(self.roles().clone()); // todo ref;
-            let result = builder.build_count("", query.borrow(), true)?;
-            let sql = result
-                .to_sql(&aux_params, &mut alias_translator)
-                .map_err(ToqlError::from)?;
+            let sql ={
+                let registry =  &*self.registry()?;
+                let mut builder = SqlBuilder::new(&ty, registry)
+                    .with_aux_params(self.aux_params().clone()) // todo ref
+                    .with_roles(self.roles().clone()); // todo ref;
+                let result = builder.build_count("", query.borrow(), true)?;
+                let sql = result
+                    .to_sql(&aux_params, &mut alias_translator)
+                    .map_err(ToqlError::from)?;
+                sql
+            };
         
 
             log_sql!(&sql);
@@ -118,7 +122,7 @@ where
     Ok(page_count)
 }
 
-async fn load_and_merge<T, B, R, E>(
+async fn load_and_merge<T, B>(
     &mut self,
     query: &B,
     entities: &mut Vec<T>,
@@ -145,7 +149,7 @@ where
     let mut pending_home_paths = HashSet::new();
 
     let canonical_base = {
-        let registry = self.registry();
+        let registry = self.registry()?;
         let mapper = registry
             .mappers
             .get(&ty)
@@ -165,8 +169,8 @@ where
         };
 
         let mut result = {
-            let registry = self.registry();
-            let mut builder = SqlBuilder::new(&ty, registry)
+            let registry = self.registry()?;
+            let mut builder = SqlBuilder::new(&ty, &*registry)
                 .with_aux_params(self.aux_params().clone()) // todo ref
                 .with_roles(self.roles().clone()); // todo ref// Add alias format or translator to constructor
             builder.build_select(home_path.as_str(), query.borrow())?
@@ -182,8 +186,8 @@ where
         // Build merge join
         // Get merge join and custom on predicate from mapper
         let (mut merge_join_sql_expr, merge_join_predicate) = {
-            let registry = self.registry();
-            let builder = SqlBuilder::new(&ty, registry)
+            let registry = self.registry()?;
+            let builder = SqlBuilder::new(&ty, &*registry)
                 .with_aux_params(self.aux_params().clone()) // TODO ref
                 .with_roles(self.roles().clone());
             builder.merge_expr(&home_path)?
@@ -194,8 +198,8 @@ where
         // Get key columns 
         let (merge_join, key_select_expr) = {
            let parent_home_path = parent_home_path.unwrap_or_default(); 
-            let registry = self.registry();
-            let builder = SqlBuilder::new(&ty, registry); // No aux params for key
+            let registry = self.registry()?;
+            let builder = SqlBuilder::new(&ty, &*registry); // No aux params for key
             let (key_select_expr, key_join) =
                 builder.columns_expr(parent_home_path.as_str(), &merge_base_alias)?;
 
@@ -308,13 +312,13 @@ where
     Ok(pending_home_paths)
 }
 
-async fn load_top<T, B, R, E>(
+async fn load_top<T, B>(
     &mut self,
     query: &B,
     page: Option<Page>,
 ) -> std::result::Result<(Vec<T>, HashSet<String>, Option<(u32, u32)>), E>
 where
-    T: Load<R, E> + Send,
+    T: Load<R, E> + Send + FromRow<R, E>,
     B: Borrow<Query<T>> + Sync + Send,
     <T as crate::keyed::Keyed>::Key: FromRow<R, E>, 
     E: From<ToqlError>
@@ -325,7 +329,7 @@ where
     let ty = <T as Mapped>::type_name();
 
     let mut result = {
-        let registry = &*self.registry();
+        let registry = &*self.registry()?;
         let mut builder = SqlBuilder::new(&ty, registry)
             .with_aux_params(self.aux_params().clone()) // todo ref
             .with_roles(self.roles().clone()); // todo ref;
@@ -336,7 +340,7 @@ where
     let mut alias_translator = AliasTranslator::new(alias_format);
     let aux_params = [self.aux_params()];
     let aux_params = ParameterMap::new(&aux_params);
-
+/* 
     let extra = match page {
         Some(Page::Counted(start, number_of_records)) => {
             self.prepare_page(&mut result, start, number_of_records);
@@ -354,7 +358,7 @@ where
     } else {
         ""
     };
-
+ */
     // 
     
 
@@ -376,20 +380,36 @@ where
     };
 
     log_sql!(&sql);
-    let expected_records = match page {
-        Some(Page::Counted(_, number_of_records)) => number_of_records,
-        Some(Page::Uncounted(_, number_of_records)) => number_of_records,
-        None => 10,
-    };
-    let (entities, page_count) = match page {
-        None => {
-            let entities = self.select_sql(sql).await?;
-            (entities, None)}
-        _=> {
-            let (entities, count) = self.select_page_sql(sql).await?;
-            (entities, Some((count, self.load_count(query).await? )))
-        },
+    
+    let entities=  {
+        let rows = self.select_sql(sql).await?;
+            let mut entities = Vec::with_capacity(rows.len());
 
+            for r in rows {
+                let mut iter = result.selection_stream().iter();
+                let mut i = 0usize;
+                if let Some(e) =
+                    <T as FromRow<R, E>>::from_row(&r, &mut i, &mut iter)?
+                {
+                    entities.push(e);
+                }
+            }
+        entities
+    };
+
+    
+    
+    
+    let page_count = match page {
+        Some(Page::Counted(start,number_of_records))=> {
+                let count_sql = Sql::new(); // TODO
+                let unfiltered_page_size = self.select_count_sql(count_sql).await?;
+                self.prepare_page(&mut result, start, number_of_records);
+                let max_page_size_sql = result.to_count_sql(&mut alias_translator).map_err(|e|e.into())?;
+                let max_page_size =  self.select_max_page_size_sql(max_page_size_sql).await?;
+                Some((unfiltered_page_size, max_page_size))
+        },
+        _ => None,
     };
     
 
@@ -418,7 +438,7 @@ where
     Ok((entities, unmerged, page_count))
 }
 
-async fn load<T, B, R, E>(
+async fn load<T, B>(
     &mut self,
     query: B,
     page: Option<Page>
@@ -429,8 +449,10 @@ where
     B: Borrow<Query<T>> + Sync + Send,
     <T as Keyed>::Key: FromRow<R, E>,
 {
-   
-     map::map::<T>(self.registry_mut())?;
+    {
+        let registry = &mut *self.registry_mut()?;
+        map::map::<T>(registry)?;
+    }
 
     let (mut entities, unmerged_paths, counts) = self.load_top(&query, page).await?;
     let mut pending_paths = unmerged_paths;
@@ -449,7 +471,7 @@ where
     Ok((entities, counts))
 }
 
-   async fn update<T>(&mut self, entities: &mut [T], fields: Fields) ->Result<()> where 
+   async fn update<T>(&mut self, entities: &mut [T], fields: Fields) ->Result<(), E> where 
     T: Update + Send + Sync,
     {
         use update::{plan_update_order, build_update_sql};
@@ -462,15 +484,20 @@ where
             let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
 
             // Ensure entity is mapped
-            map::map::<T>(self.registry_mut())?;
-
-            if !self.registry().mappers.contains_key(<T as Mapped>::type_name().as_str()){
-                <T as TreeMap>::map(&mut self.registry_mut())?;
+             {
+                let registry = &mut *self.registry_mut()?;
+                map::map::<T>(registry)?;
             }
 
 
+          /*   if !self.registry()?.mappers.contains_key(<T as Mapped>::type_name().as_str()){
+                 let registry = &mut *self.registry_mut()?;
+                <T as TreeMap>::map( self.registry_mut()?)?;
+            } */
+
+
             plan_update_order::<T, _>(
-                &self.registry().mappers,
+                &self.registry()?.mappers,
                 fields.list.as_ref(),
                 &mut joined_or_merged_fields,
                 &mut merges,
@@ -523,8 +550,8 @@ where
                     let merge_path = FieldPath::from(&merge);
                     let sql = {
                         let type_name = <T as Mapped>::type_name();
-                        
-                        let mut sql_builder = SqlBuilder::new(&type_name, &self.registry())
+                        let registry =  &*self.registry()?;
+                        let mut sql_builder = SqlBuilder::new(&type_name,registry)
                             .with_aux_params(self.aux_params().clone()) // todo ref
                             .with_roles(self.roles().clone()); // todo ref
                         let delete_expr =
@@ -557,7 +584,7 @@ where
                     let aux_params = [self.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
                     let sql = build_insert_sql(
-                        &self.registry().mappers,
+                        &self.registry()?.mappers,
                         self.alias_format().clone(),
                         &aux_params,
                         entities,
@@ -577,14 +604,18 @@ where
 
             Ok(())
         }
-         async fn insert<T>(&mut self, mut entities: &mut [T], paths: Paths) ->Result<u64> where 
+         async fn insert<T>(&mut self, mut entities: &mut [T], paths: Paths) ->Result<u64, E> where 
             T: Insert + Send,
     {
         
-     
-        if !self.registry().mappers.contains_key(<T as Mapped>::type_name().as_str()){
-            <T as TreeMap>::map(&mut self.registry_mut())?;
-        }
+         {
+                let registry = &mut *self.registry_mut()?;
+                map::map::<T>(registry)?;
+            }
+     /* 
+        if !self.registry()?.mappers.contains_key(<T as Mapped>::type_name().as_str()){
+            <T as TreeMap>::map(self.registry_mut()?)?;
+        } */
         
 
         // Build up execution tree
@@ -602,7 +633,7 @@ where
 
 
         crate::backend::insert::plan_insert_order::<T, _>(
-            &self.registry().mappers,
+            &self.registry()?.mappers,
             paths.list.as_ref(),
             &mut joins,
             &mut merges,
@@ -615,7 +646,7 @@ where
             let home_path = FieldPath::default();
 
             crate::backend::insert::build_insert_sql::<T, _>(
-                &self.registry().mappers,
+                &self.registry()?.mappers,
                 self.alias_format(),
                 &aux_params,
                 entities,
@@ -656,7 +687,7 @@ where
                     let aux_params = [self.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
                     crate::backend::insert::build_insert_sql::<T, _>(
-                        &self.registry().mappers,
+                        &self.registry()?.mappers,
                         self.alias_format(),
                         &aux_params,
                         entities,
@@ -695,7 +726,7 @@ where
                 let aux_params = [self.aux_params()];
                 let aux_params = ParameterMap::new(&aux_params);
                 crate::backend::insert::build_insert_sql::<T, _>(
-                    &self.registry().mappers,
+                    &self.registry()?.mappers,
                     self.alias_format(),
                     &aux_params,
                     entities,

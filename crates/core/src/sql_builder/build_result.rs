@@ -23,12 +23,14 @@ pub struct BuildResult {
     pub(crate) selection_stream: SelectStream,
     pub(crate) unmerged_home_paths: HashSet<String>,
     pub(crate) verb_expr: SqlExpr,
+    pub(crate) modifier: String,
     pub(crate) preselect_expr: SqlExpr,
     pub(crate) select_expr: SqlExpr,
     pub(crate) from_expr: SqlExpr,
     pub(crate) join_expr: SqlExpr,
     pub(crate) where_expr: SqlExpr,
     pub(crate) order_expr: SqlExpr,
+    pub(crate) extra: String,
     pub(crate) column_counter: usize,
 }
 
@@ -43,12 +45,14 @@ impl BuildResult {
             unmerged_home_paths: HashSet::new(),
             selection_stream: SelectStream::new(),
             verb_expr: verb,
+            modifier: "".to_string(),
             preselect_expr: SqlExpr::new(),
             select_expr: SqlExpr::new(),
             join_expr: SqlExpr::new(),
             from_expr: SqlExpr::new(),
             where_expr: SqlExpr::new(),
             order_expr: SqlExpr::new(),
+            extra: "".to_string(),
             column_counter: 0,
         }
     }
@@ -72,6 +76,12 @@ impl BuildResult {
 
     pub fn set_preselect(&mut self, preselect_expr: SqlExpr) {
         self.preselect_expr = preselect_expr;
+    }
+    pub fn set_modifier(&mut self, modifier: String) {
+        self.modifier = modifier;
+    }
+    pub fn set_extra(&mut self, extra: String) {
+        self.extra = extra;
     }
 
     pub fn set_from(&mut self, table: String, canonical_alias: String) {
