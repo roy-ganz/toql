@@ -8,12 +8,161 @@ use crate::{
     sql_builder::sql_builder_error::SqlBuilderError,
     sql_expr::resolver::Resolver,
     sql_mapper::{mapped::Mapped, SqlMapper},
-    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert},
+    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert, tree_map::TreeMap},
 };
 use std::{borrow::BorrowMut, collections::HashMap};
 
 use crate::{sql_arg::SqlArg, result::Result};
 use std::collections::HashSet;
+use super::{Backend, paths::Paths, map};
+
+pub trait Insert: TreeInsert + Mapped + TreeIdentity +TreeMap + Send{}
+
+
+  pub async fn insert<B, Q, T, R, E>(backend : &mut B, mut entities: &mut [Q], paths: Paths) ->std::result::Result<u64, E> where
+            Q: BorrowMut<T>,
+            T: Insert,
+            B: Backend<R, E>, E: From<ToqlError>
+    {
+        
+         {
+                let registry = &mut *backend.registry_mut()?;
+                map::map::<T>(registry)?;
+            }
+    
+
+        // Build up execution tree
+        // Path `a_b_merge1_c_d_merge2_e` becomes
+        // [0] = [a, c, e]
+        // [1] = [a_b, c_d]
+        // [m] = [merge1, merge2]
+        // Then execution order is [1], [0], [m]
+
+
+        // TODO should be possible to impl with &str
+        let mut joins: Vec<HashSet<String>> = Vec::new();
+        let mut merges: HashSet<String> = HashSet::new();
+
+
+
+        crate::backend::insert::plan_insert_order::<T, _>(
+            &backend.registry()?.mappers,
+            paths.list.as_ref(),
+            &mut joins,
+            &mut merges,
+        )?;
+
+        // Insert root
+        let sql = {
+            let aux_params = [backend.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params);
+            let home_path = FieldPath::default();
+
+            crate::backend::insert::build_insert_sql::<T, _>(
+                &backend.registry()?.mappers,
+                backend.alias_format(),
+                &aux_params,
+                entities,
+                &backend.roles(),
+                &home_path,
+                "",
+                "",
+            )
+        }?;
+        if sql.is_none() {
+            return Ok(0);
+        }
+        let sql = sql.unwrap();
+
+        let home_path = FieldPath::default();
+        let mut descendents = home_path.children();
+        // check if base has auto keys
+        if <T as TreeIdentity>::auto_id(&mut descendents)? {
+            let ids= backend.insert_sql(sql).await?;
+
+            let mut descendents = home_path.children();
+            crate::backend::insert::set_tree_identity2(
+                ids ,
+                &mut entities,
+                &mut descendents,
+            )?;
+         }else {
+            backend.execute_sql(sql).await?;
+         }
+
+
+        // Insert joins
+        for l in (0..joins.len()).rev() { // TEST not rev
+            for p in joins.get(l).unwrap() {
+                let mut path = FieldPath::from(&p);
+
+                let sql = {
+                    let aux_params = [backend.aux_params()];
+                    let aux_params = ParameterMap::new(&aux_params);
+                    crate::backend::insert::build_insert_sql::<T, _>(
+                        &backend.registry()?.mappers,
+                        backend.alias_format(),
+                        &aux_params,
+                        entities,
+                        &backend.roles(),
+                        &mut path,
+                        "",
+                        "",
+                    )
+                }?;
+                if sql.is_none() {
+                    break;
+                }
+                let sql = sql.unwrap();
+
+            let mut descendents = path.children();
+            if <T as TreeIdentity>::auto_id(&mut descendents)? {
+                let ids= backend.insert_sql(sql).await?;
+
+                let mut descendents = home_path.children();
+                crate::backend::insert::set_tree_identity2(
+                    ids ,
+                    &mut entities,
+                    &mut descendents,
+                )?;
+             } else {
+                backend.execute_sql(sql).await?;
+             }
+            }
+        }
+
+        // Insert merges
+        for p in merges {
+            let path = FieldPath::from(&p);
+
+            let sql = {
+                let aux_params = [backend.aux_params()];
+                let aux_params = ParameterMap::new(&aux_params);
+                crate::backend::insert::build_insert_sql::<T, _>(
+                    &backend.registry()?.mappers,
+                    backend.alias_format(),
+                    &aux_params,
+                    entities,
+                    &backend.roles(),
+                    &path,
+                    "",
+                    "",
+                )
+            }?;
+            if sql.is_none() {
+                break;
+            }
+            let sql = sql.unwrap();
+
+            // Merges must not contain auto value as identity, skip set_tree_identity
+            backend.execute_sql(sql).await?;
+
+        }
+
+        Ok(0)
+    }
+    
+
 
 pub fn set_tree_identity2<'a, T, Q, I>(
     ids: Vec<SqlArg>,
