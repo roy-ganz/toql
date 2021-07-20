@@ -69,4 +69,4 @@ pub mod role_expr;
 pub mod role_expr_parser;
 pub mod role_validator;
 
-pub use log; // Reexport for generated code from Toql derive
+pub use log; // Reexport dependency for generated code from Toql derive
