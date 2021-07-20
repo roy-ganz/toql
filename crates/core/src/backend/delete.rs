@@ -7,7 +7,7 @@ use crate::{sql_mapper::mapped::Mapped, query::Query, sql_expr::SqlExpr, error::
 
 use crate::toql_api::delete::Delete;
 
- pub async fn delete_many<B, Q, T, R, E>(backend: &mut B, query: Q) -> std::result::Result<(), E>
+ pub async fn delete<B, Q, T, R, E>(backend: &mut B, query: Q) -> std::result::Result<(), E>
     where
         B:Backend<R,E>,
         T: Delete,
