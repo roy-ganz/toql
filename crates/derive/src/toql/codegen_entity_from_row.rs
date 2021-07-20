@@ -496,7 +496,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                                 }).collect::<Vec<_>>();
 
                                 columns.extend_from_slice(&inverse_columns);
-                                let mut result =<Self as toql::load::Load<#rust_type_ident>>::build_path(self,#toql_field_name, &dep_query, &wildcard_scope, &columns)?;
+                                let mut result =<Self as toql::toql_api::Load<#rust_type_ident>>::build_path(self,#toql_field_name, &dep_query, &wildcard_scope, &columns)?;
                                 if let Some(sql) = result {
 
                                     let mapper = self.registry().mappers.get(#rust_type_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(#rust_type_name)))?;
