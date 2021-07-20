@@ -115,6 +115,6 @@ fn evaluate_pair(
 
     quote!(
         //  toql::fields::Fields::<#struct_type>::from(vec![#(#methods),* ])
-        toql::backend::fields::Fields::from(vec![#(#methods),* ])
+        toql::toql_api::fields::Fields::from(vec![#(#methods),* ])
     )
 }

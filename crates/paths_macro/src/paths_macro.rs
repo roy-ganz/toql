@@ -107,7 +107,7 @@ fn evaluate_pair(
         }
     }
 
-    Ok(quote!(toql::backend::paths::Paths::from(
+    Ok(quote!(toql::toql_api::paths::Paths::from(
         vec![#(#methods),* ]
     )))
 }
