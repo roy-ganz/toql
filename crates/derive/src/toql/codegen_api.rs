@@ -20,7 +20,7 @@ impl<'a> quote::ToTokens for CodegenApi<'a> {
         let api = quote! {
 
 
-            impl<R, E> toql::backend::Load<R,E> for #struct_ident
+            impl<R, E> toql::toql_api::Load<R,E> for #struct_ident
             where
                     Self: toql::keyed::Keyed
                     + toql::sql_mapper::mapped::Mapped
@@ -32,7 +32,7 @@ impl<'a> quote::ToTokens for CodegenApi<'a> {
                     <Self as toql::keyed::Keyed>::Key: toql::from_row::FromRow<R,E>, E: std::convert::From<toql::error::ToqlError>
             {}
 
-            impl<R, E> toql::backend::Load<R,E> for & #struct_ident
+            impl<R, E> toql::toql_api::Load<R,E> for & #struct_ident
             where
                     Self: toql::keyed::Keyed
                     + toql::sql_mapper::mapped::Mapped
@@ -44,21 +44,21 @@ impl<'a> quote::ToTokens for CodegenApi<'a> {
                     <Self as toql::keyed::Keyed>::Key: toql::from_row::FromRow<R,E>, E: std::convert::From<toql::error::ToqlError>
             {}
 
-            impl toql::backend::Insert for #struct_ident
+            impl toql::toql_api::Insert for #struct_ident
             where
                 Self: toql::tree::tree_insert::TreeInsert
                 + toql::sql_mapper::mapped::Mapped
                 + toql::tree::tree_map::TreeMap
                 + toql::tree::tree_identity::TreeIdentity {}
 
-            impl toql::backend::Insert for &mut #struct_ident
+            impl toql::toql_api::Insert for &mut #struct_ident
             where
                 Self: toql::tree::tree_insert::TreeInsert
                 + toql::sql_mapper::mapped::Mapped
                 + toql::tree::tree_map::TreeMap
                 + toql::tree::tree_identity::TreeIdentity {}
 
-            impl toql::backend::Update for #struct_ident
+            impl toql::toql_api::Update for #struct_ident
             where
             Self: toql::tree::tree_update::TreeUpdate
             + toql::sql_mapper::mapped::Mapped
@@ -67,7 +67,7 @@ impl<'a> quote::ToTokens for CodegenApi<'a> {
             + toql::tree::tree_predicate::TreePredicate
             + toql::tree::tree_insert::TreeInsert {}
 
-            impl toql::backend::Update for &mut #struct_ident
+            impl toql::toql_api::Update for &mut #struct_ident
             where
             Self:  toql::tree::tree_update::TreeUpdate
             + toql::sql_mapper::mapped::Mapped
@@ -76,25 +76,25 @@ impl<'a> quote::ToTokens for CodegenApi<'a> {
             + toql::tree::tree_predicate::TreePredicate
             + toql::tree::tree_insert::TreeInsert {}
 
-            impl toql::backend::Count  for #struct_ident
+            impl toql::toql_api::Count  for #struct_ident
             where
             Self: toql::keyed::Keyed
             +  toql::sql_mapper::mapped::Mapped
             + std::fmt::Debug {}
 
-            impl toql::backend::Count  for &#struct_ident
+            impl toql::toql_api::Count  for &#struct_ident
             where
             Self: toql::keyed::Keyed
             + toql::sql_mapper::mapped::Mapped
             + std::fmt::Debug {}
 
-            impl toql::backend::Delete  for #struct_ident
+            impl toql::toql_api::Delete  for #struct_ident
             where
             Self: toql::sql_mapper::mapped::Mapped
             + toql::tree::tree_map::TreeMap
             + std::fmt::Debug {}
 
-            impl toql::backend::Delete  for &#struct_ident
+            impl toql::toql_api::Delete  for &#struct_ident
             where
             Self:  toql::sql_mapper::mapped::Mapped
             + toql::tree::tree_map::TreeMap
