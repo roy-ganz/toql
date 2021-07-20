@@ -204,7 +204,7 @@ impl<'a> CodegenTree<'a> {
                         for c in inverse_columns {
                             let i = key_columns.iter().position(|r| r == &c)
                                 .ok_or_else(|| toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
-                            args.push(self_key_args.get(i).ok_or_else(||toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
+                            args.push(self_key_params.get(i).ok_or_else(||toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
                         }
 
                             
