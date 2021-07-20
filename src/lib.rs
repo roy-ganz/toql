@@ -64,8 +64,9 @@ pub use toql_core::sql_arg;
 pub use toql_core::sql_expr;
 pub use toql_core::sql_expr_parser;
 
-pub use toql_core::log_sql; // Export macro
-pub use toql_core::ok_or_fail; // Export macro
+pub use toql_core::log_sql; // Export macro for derives
+pub use toql_core::ok_or_fail; // Export macro (TODO: check for removal)
+
 
 pub use toql_core::backend;
 pub use toql_core::field_handler;

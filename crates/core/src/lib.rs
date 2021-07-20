@@ -24,7 +24,12 @@ pub mod sql_arg;
 pub mod to_query;
 
 #[macro_use]
-pub mod log_helper;
+pub mod log_macro;
+#[macro_use]
+pub mod join_macro;
+#[macro_use]
+pub mod val_macro;
+
 
 extern crate lazy_static;
 
