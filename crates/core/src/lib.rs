@@ -61,6 +61,7 @@ pub mod tree;
 
 pub mod backend;
 pub mod join;
+pub mod try_join;
 //pub mod update_field;
 //pub mod insert_path;
 pub mod cache;

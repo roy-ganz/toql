@@ -9,7 +9,9 @@ pub use toql_core::result::Result;
 pub use toql_core::sql_arg::SqlArg;
 pub use toql_core::sql_expr::SqlExpr;
 
-pub use toql_core::join::{Join, TryJoin};
+pub use toql_core::join::Join;
+pub use toql_core::try_join::TryJoin;
+
 pub use toql_core::query::{query_with::QueryWith, Query, field::Field, field_filter::FieldFilter};
 pub use toql_core::sql_builder::sql_builder_error::SqlBuilderError;
 pub use toql_fields_macro::fields;
