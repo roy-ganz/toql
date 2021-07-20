@@ -56,6 +56,10 @@ pub enum ToqlError {
 
     /// Access to shared registry, typically inside cache, failed
     RegistryPoisenError(String),
+
+    /// Expected a value in Option<T>, but found none. Includes position. 
+    /// TODO:: Check to replace with std::option::NoneError + Backtrace
+    NoneError(String),
 }
 
 impl From<SqlBuilderError> for ToqlError {
@@ -132,6 +136,7 @@ impl fmt::Display for ToqlError {
             ToqlError::RoleExprParserError(ref e) => e.fmt(f),
             ToqlError::SqlExprResolverError(ref e) => e.fmt(f),
             ToqlError::DeserializeError(ref e) => e.fmt(f),
+            ToqlError::NoneError(ref e) => e.fmt(f),
         }
     }
 }

@@ -29,6 +29,8 @@ pub mod log_macro;
 pub mod join_macro;
 #[macro_use]
 pub mod val_macro;
+#[macro_use]
+pub mod none_error_macro;
 
 
 extern crate lazy_static;
