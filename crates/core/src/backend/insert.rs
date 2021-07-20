@@ -8,15 +8,16 @@ use crate::{
     sql_builder::sql_builder_error::SqlBuilderError,
     sql_expr::resolver::Resolver,
     sql_mapper::{mapped::Mapped, SqlMapper},
-    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert, tree_map::TreeMap},
+    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert},
 };
 use std::{borrow::BorrowMut, collections::HashMap};
 
 use crate::{sql_arg::SqlArg, result::Result};
 use std::collections::HashSet;
-use super::{Backend, paths::Paths, map};
+use super::{Backend, map};
+use crate::toql_api::paths::Paths;
 
-pub trait Insert: TreeInsert + Mapped + TreeIdentity +TreeMap + Send{}
+use crate::toql_api::insert::Insert;
 
 
   pub async fn insert<B, Q, T, R, E>(backend : &mut B, mut entities: &mut [Q], paths: Paths) ->std::result::Result<u64, E> where

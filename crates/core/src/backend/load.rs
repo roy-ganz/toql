@@ -13,23 +13,7 @@ use crate::{
 use std::{borrow::{Borrow}, collections::{HashMap, HashSet},};
 use super::{map, Backend};
 
-pub trait Load<R, E>:
-    Keyed
-    + Mapped
-    + TreeMap
-    + FromRow<R, E>
-    + TreePredicate
-    + TreeIndex<R, E>
-    + TreeMerge<R, E>
-    + std::fmt::Debug
-    + Send
-where
-    <Self as Keyed>::Key: FromRow<R, E>,
-    E: std::convert::From<ToqlError>,
-{
-}
-
-
+use crate::toql_api::load::Load;
 
 
 pub async fn load<B, Q, T, R, E>(

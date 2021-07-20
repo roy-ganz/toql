@@ -9,7 +9,6 @@ pub mod tree_predicate;
 pub mod tree_update;
 
 use crate::error::ToqlError;
-use crate::result::Result;
 
 use std::boxed::Box;
 

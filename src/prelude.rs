@@ -33,10 +33,11 @@ pub use toql_derive::{Toql, ToqlEnum};
  // Export macros
 pub use toql_core::{log_literal_sql, log_mut_literal_sql, log_mut_sql, log_sql, val, rval, join, rjoin, none_error};
 
-pub use toql_core::backend::{count::Count, delete::Delete, insert::Insert, load::Load, update::Update, context::Context,context_builder::ContextBuilder};
+pub use toql_core::backend::{context::Context,context_builder::ContextBuilder};
 pub use toql_core::from_row::FromRow;
 
 pub use toql_core::alias_format::AliasFormat;
 pub use toql_core::to_query::ToQuery;
 pub use toql_core::sql::Sql;
-pub use toql_core::toql_api::ToqlApi;
+pub use toql_core::toql_api::{ToqlApi, count::Count, insert::Insert, update::Update, delete::Delete, load::Load, fields::Fields, paths::Paths};
+

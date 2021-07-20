@@ -8,16 +8,17 @@ use crate::{
     sql_builder::{SqlBuilder, sql_builder_error::SqlBuilderError},
     sql_expr::{PredicateColumn, resolver::Resolver, SqlExpr},
     sql_mapper::{mapped::Mapped, SqlMapper},
-    tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_update::TreeUpdate, tree_predicate::TreePredicate, tree_insert::TreeInsert, tree_map::TreeMap}, parameter_map::ParameterMap,
+    tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_update::TreeUpdate, tree_predicate::TreePredicate, tree_map::TreeMap}, parameter_map::ParameterMap,
 };
 
 use std::{
     borrow::{BorrowMut, Borrow},
     collections::{HashMap, HashSet},
 };
-use super::{map, Backend, insert::build_insert_sql, fields::Fields};
+use super::{map, Backend, insert::build_insert_sql};
 
-pub trait Update: TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert + TreeMap + Send + Sync{}
+use crate::toql_api::{update::Update,fields::Fields};
+
 
 pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: Fields) ->std::result::Result<(), E> where 
     T: Update,
@@ -27,7 +28,7 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
     {
        
         //use insert::build_insert_sql;
-        use std::borrow::{Borrow, BorrowMut};
+        
         
 
          // TODO should be possible to impl with &str

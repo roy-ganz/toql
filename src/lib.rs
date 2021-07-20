@@ -48,8 +48,8 @@
 
 pub use toql_core::alias_format;
 pub use toql_core::alias_translator;
-pub use toql_core::backend::fields;
-pub use toql_core::backend::paths;
+pub use toql_core::toql_api::fields;
+pub use toql_core::toql_api::paths;
 pub use toql_core::error;
 pub use toql_core::from_row;
 pub use toql_core::key;
@@ -99,6 +99,10 @@ pub use toql_core::parameter_map;
 pub use toql_core::role_expr;
 pub use toql_core::role_expr_parser;
 pub use toql_core::role_validator;
+
+pub use toql_core::toql_api::{ insert::Insert, load::Load, count::Count, update::Update, delete::Delete}; // export for derives
+
+
 
 pub use toql_core::log; // Reexport for derive
 

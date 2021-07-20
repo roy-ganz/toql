@@ -2,15 +2,13 @@
 
 use crate::{
     error::ToqlError,
-    from_row::FromRow,
-    keyed::Keyed,
     sql_mapper::mapped::Mapped,
-   query::{Query}, sql_builder::{SqlBuilder}, alias_translator::AliasTranslator, parameter_map::ParameterMap, tree::tree_map::TreeMap, 
+   query::Query, sql_builder::SqlBuilder, alias_translator::AliasTranslator, parameter_map::ParameterMap, 
 };
 use std::{borrow::{Borrow},};
 use super::{map, Backend};
+use crate::toql_api::count::Count;
 
-pub trait Count: Keyed + Mapped + TreeMap + std::fmt::Debug {}
 
 pub async fn count<B, Q, T, R, E>(backend: &mut B,query: Q) -> std::result::Result<u64, E>
 where

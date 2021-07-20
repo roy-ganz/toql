@@ -1,10 +1,11 @@
 
-use crate::{tree::tree_map::TreeMap, sql_mapper::mapped::Mapped};
-        use crate::{query::Query, sql_expr::SqlExpr, error::ToqlError, sql_builder::SqlBuilder, parameter_map::ParameterMap, alias_translator::AliasTranslator};
-        use std::borrow::Borrow;
+use crate::{sql_mapper::mapped::Mapped, query::Query, sql_expr::SqlExpr, error::ToqlError, 
+        sql_builder::SqlBuilder, parameter_map::ParameterMap, 
+        alias_translator::AliasTranslator};
+                use std::borrow::Borrow;
         use super::{Backend, map};
 
-pub trait Delete: Mapped + TreeMap + std::fmt::Debug {}
+use crate::toql_api::delete::Delete;
 
  pub async fn delete_many<B, Q, T, R, E>(backend: &mut B, query: Q) -> std::result::Result<(), E>
     where
