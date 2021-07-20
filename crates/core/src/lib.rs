@@ -22,6 +22,7 @@ pub mod map_query;
 pub mod sql;
 pub mod sql_arg;
 pub mod to_query;
+pub mod toql_api;
 
 #[macro_use]
 pub mod log_macro;
@@ -41,14 +42,11 @@ pub mod query_fields;
 pub mod query_parser;
 pub mod query_path;
 pub mod sql_builder;
-//pub mod sql_builder_new;
 pub mod sql_expr;
 pub mod sql_expr_parser;
-//pub mod sql_expr:resolver; // Bug?
 pub mod alias_translator;
 pub mod parameter_map;
 
-//pub mod sql_builder_result;
 pub mod field_handler;
 pub mod from_row;
 pub mod join_handler;
@@ -56,14 +54,11 @@ pub mod predicate_handler;
 pub mod sql_mapper;
 pub mod sql_mapper_registry;
 
-//pub mod path_predicate;
 pub mod tree;
 
 pub mod backend;
 pub mod join;
 pub mod try_join;
-//pub mod update_field;
-//pub mod insert_path;
 pub mod cache;
 pub mod cache_builder;
 pub mod role_expr;

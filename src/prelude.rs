@@ -39,3 +39,4 @@ pub use toql_core::from_row::FromRow;
 pub use toql_core::alias_format::AliasFormat;
 pub use toql_core::to_query::ToQuery;
 pub use toql_core::sql::Sql;
+pub use toql_core::toql_api::ToqlApi;
