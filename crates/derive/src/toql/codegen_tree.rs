@@ -198,17 +198,13 @@ impl<'a> CodegenTree<'a> {
                                     inverse_column
                                 })
                                 .collect::<Vec<String>>();
-                        // Pick Key and columns from Question
-                        let key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
-                        let key_args = toql::key::Key::params(&toql::keyed::Keyed::key(&self));
-
-                        // Build target key args
+                       
                         // Build target key args
                         let mut args = Vec::new();
                         for c in inverse_columns {
-                            let i = key_columns.iter().position(|&r| r == c)
+                            let i = key_columns.iter().position(|r| r == &c)
                                 .ok_or_else(|| toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
-                            args.push(key_args.get(i).ok_or_else(||toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
+                            args.push(self_key_args.get(i).ok_or_else(||toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
                         }
 
                             
@@ -455,7 +451,7 @@ impl<'a> CodegenTree<'a> {
                                                     };
                                                     if other_column == &calculated_other_column {
                                                         let p = ps.get_mut(i).unwrap();
-                                                        *p = self_params.get(j).unwrap().to_owned();
+                                                        *p = self_key_params.get(j).unwrap().to_owned();
                                                     }
                                                 }
                                             }
@@ -481,7 +477,7 @@ impl<'a> CodegenTree<'a> {
                                                     };
                                                     if other_column == &calculated_other_column {
                                                         let p = ps.get_mut(i).unwrap();
-                                                        *p = self_params.get(j).unwrap().to_owned();
+                                                        *p = self_key_params.get(j).unwrap().to_owned();
                                                     }
                                                 }
                                             }
@@ -537,7 +533,8 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             quote!( #identity_set_self_key_code
 
                     let self_key = <Self as toql::keyed::Keyed>::key(&self);
-                    let self_params = toql::key::Key::params(&self_key);
+                    let self_key_params = toql::key::Key::params(&self_key);
+                    let key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
 
                    #(#identity_set_merges_key_code)*)
         } else {
