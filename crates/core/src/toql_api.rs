@@ -64,7 +64,7 @@ pub trait ToqlApi {
     where T: Count, B: Borrow<Query<T>> + Send + Sync;
 
     async fn delete_one<K>(&mut self, key: &mut K) -> Result<u64, Self::Error>
-    where  K: Key + ToQuery<<K as Key>::Entity>, <K as Key>::Entity: Delete;
+    where  K: Key + ToQuery<<K as Key>::Entity> + Send, <K as Key>::Entity: Delete + Send;
     
     async fn delete_many<T, B>(&mut self, query: B) -> Result<u64, Self::Error>
     where T: Delete, B: Borrow<Query<T>> + Send + Sync;
