@@ -9,6 +9,8 @@ use std::borrow::{Borrow, BorrowMut};
  use crate::key::Key;
  use crate::page::Page;
  use crate::query::Query;
+ use crate::to_query::ToQuery;
+
 
 pub mod count;
 pub mod delete;
@@ -52,7 +54,7 @@ pub trait ToqlApi {
         
     async fn load_many<T, B>(&mut self, query: B) -> Result<Vec<T>, Self::Error>
     where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
-    <Self as ToqlApi>::Error: From<ToqlError>;
+   <Self as ToqlApi>::Error: From<ToqlError> ;
     
     async fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<(u64, u64)>), Self::Error>
     where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
@@ -63,10 +65,9 @@ pub trait ToqlApi {
 
     async fn delete_one<K>(&mut self, key: &mut K) -> Result<u64, Self::Error>
     where  K: Key + ToQuery<<K as Key>::Entity>, <K as Key>::Entity: Delete;
-
+    
     async fn delete_many<T, B>(&mut self, query: B) -> Result<u64, Self::Error>
-    where T: Delelete, B: Borrow<Query<T>> + Send + Sync,
-    <Self as ToqlApi>::Error: From<ToqlError>;
-
+    where T: Delete, B: Borrow<Query<T>> + Send + Sync;
+    
     
 }
