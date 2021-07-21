@@ -643,6 +643,12 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                              <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
                          }
                   }
+                  impl toql::tree::tree_map::TreeMap for &mut #struct_ident {
+
+                         fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+                             <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
+                         }
+                  }
 
                 impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 

@@ -30,7 +30,21 @@ use delete::Delete;
 use fields::Fields;
 use paths::Paths;
 
-
+/// This trait provides a common interface for all database backends. 
+/// That means every database provider must implement this trait.
+/// This ensures that the user of Toql can easily switch backends with less hussle.
+/// The trait can also be used to write database independend code. This however requires more trait bounds
+/// and is usually less ergonomic than writing for a specific database.
+/// The following code shows the function signature to load an entity `MyUser` from a any database:
+/// ```
+/// use toql::prelude::{ToqlError, ToqlApi, Load, FromRow} 
+/// async fn load_user<R, E, A>(toql: &mut A) -> std::result::Result<Vec<MyUser>, MyError>
+/// where A: ToqlApi<Row=R, Error = E>, E: From<ToqlError>, MyUser: Load<R, E>, <MyUser as Keyed>::Key: FromRow<R, E>, MyError: From<E>
+/// {
+///        let users = toql.load_many().await?;
+///        Ok(users)
+///  }
+/// ```
 #[async_trait]
 pub trait ToqlApi {
     type Row;

@@ -31,6 +31,19 @@ where
         self.entity_mut_or_err(ToqlError::NotFound)
     }
 }
+impl<T> TryJoin for &mut Join<T>
+where
+    T: Keyed,
+{
+    type Output = T;
+    fn try_join(&self) -> Result<&Self::Output> {
+        self.entity_or_err(ToqlError::NotFound)
+    }
+    fn try_join_mut(&mut self) -> Result<&mut Self::Output> {
+        self.entity_mut_or_err(ToqlError::NotFound)
+    }
+}
+
 impl<T> TryJoin for Option<Join<T>>
 where
     T: Keyed,
