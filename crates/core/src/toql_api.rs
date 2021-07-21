@@ -6,6 +6,7 @@ use std::borrow::{Borrow, BorrowMut};
  use crate::error::ToqlError;
  use crate::from_row::FromRow;
  use crate::keyed::Keyed;
+ use crate::key::Key;
  use crate::page::Page;
  use crate::query::Query;
 
@@ -59,4 +60,13 @@ pub trait ToqlApi {
 
     async fn count<T, B>(&mut self, query: B) -> Result<u64, Self::Error>
     where T: Count, B: Borrow<Query<T>> + Send + Sync;
+
+    async fn delete_one<K>(&mut self, key: &mut K) -> Result<u64, Self::Error>
+    where  K: Key + ToQuery<<K as Key>::Entity>, <K as Key>::Entity: Delete;
+
+    async fn delete_many<T, B>(&mut self, query: B) -> Result<u64, Self::Error>
+    where T: Delelete, B: Borrow<Query<T>> + Send + Sync,
+    <Self as ToqlApi>::Error: From<ToqlError>;
+
+    
 }
