@@ -1,13 +1,13 @@
 
-#[macro_export]
+// Join returns always a reference#[macro_export]
 macro_rules! join {
     ($x: expr) => {
-        toql::try_join::TryJoin::try_join_or($x, toql::none_error!())?
+        toql::prelude::TryJoin::try_join_or(&$x, toql::none_error!())?
     };
 }
-#[macro_export]
+/* #[macro_export]
 macro_rules! rjoin {
     ($x: expr) => {
-        toql::try_join::TryJoin::try_join_or($x.as_ref(), toql::none_error!())?
+        $x.as_ref().try_join_or(toql::none_error!())?
     };
-}
+} */

@@ -31,7 +31,7 @@ pub use toql_sql_expr_macro::sql_expr;
 pub use toql_derive::{Toql, ToqlEnum};
 
  // Export macros
-pub use toql_core::{log_literal_sql, log_mut_literal_sql, log_mut_sql, log_sql, val, rval, join, rjoin, none_error};
+pub use toql_core::{log_literal_sql, log_mut_literal_sql, log_mut_sql, log_sql, val, rval, join,  none_error};
 
 pub use toql_core::backend::{context::Context,context_builder::ContextBuilder};
 pub use toql_core::from_row::FromRow;
