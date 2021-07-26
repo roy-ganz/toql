@@ -60,7 +60,45 @@ where
             .entity_mut_or_err(ToqlError::JoinExpected)
     }
 }
+impl<T> TryJoin for &mut Option<Join<T>>
+where
+    T: Keyed,
+{
+    type Output = T;
+    fn try_join(&self) -> Result<&Self::Output> {
+        self.as_ref()
+            .ok_or(ToqlError::JoinExpected)?
+            .entity_or_err(ToqlError::JoinExpected)
+    }
+    fn try_join_mut(&mut self) -> Result<&mut Self::Output> {
+        self.as_mut()
+            .ok_or(ToqlError::JoinExpected)?
+            .entity_mut_or_err(ToqlError::JoinExpected)
+    }
+}
+
 impl<T> TryJoin for Option<Option<Join<T>>>
+where
+    T: Keyed,
+{
+    type Output = T;
+    fn try_join(&self) -> Result<&Self::Output> {
+        self.as_ref()
+            .ok_or(ToqlError::JoinExpected)?
+            .as_ref()
+            .ok_or(ToqlError::JoinExpected)?
+            .entity_or_err(ToqlError::JoinExpected)
+    }
+    fn try_join_mut(&mut self) -> Result<&mut Self::Output> {
+        self.as_mut()
+            .ok_or(ToqlError::JoinExpected)?
+            .as_mut()
+            .ok_or(ToqlError::JoinExpected)?
+            .entity_mut_or_err(ToqlError::JoinExpected)
+    }
+}
+
+impl<T> TryJoin for &mut Option<Option<Join<T>>>
 where
     T: Keyed,
 {
