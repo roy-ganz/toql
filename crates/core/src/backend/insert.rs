@@ -244,6 +244,7 @@ where
     use crate::sql_expr::SqlExpr;
 
     let ty = <T as Mapped>::type_name();
+    
 
     let mut values_expr = SqlExpr::new();
     //let mut d = path.descendents();
@@ -252,6 +253,7 @@ where
     for e in entities {
         //let mut d = path.descendents();
         let mut d = path.step_down();
+        dbg!(&roles);
         <T as TreeInsert>::values(e.borrow(), &mut d, roles, &mut values_expr)?;
     }
     if values_expr.is_empty() {

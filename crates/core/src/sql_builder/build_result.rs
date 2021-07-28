@@ -105,12 +105,11 @@ impl BuildResult {
         self.join_expr.extend(j);
     }
 
-    pub fn to_sql_with_modifier_and_extra(
+    //pub fn to_sql_with_modifier_and_extra(
+    pub fn to_sql(
         &self,
         aux_params: &ParameterMap,
         alias_translator: &mut AliasTranslator,
-        modifier: &str,
-        extra: &str,
     ) -> Result<Sql> {
         let resolver = Resolver::new().with_aux_params(aux_params);
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
@@ -131,11 +130,12 @@ impl BuildResult {
         let mut stmt = verb_sql.0;
         stmt.push(' ');
 
-        if !modifier.is_empty() {
-            stmt.push_str(modifier);
+        if !self.modifier.is_empty() {
+            stmt.push_str(&self.modifier);
             stmt.push(' ');
         }
 
+        
         if !preselect_sql.is_empty() {
             stmt.push_str(&preselect_sql.0);
             stmt.push_str(", ");
@@ -164,32 +164,39 @@ impl BuildResult {
             let order_sql = resolver.to_sql(&self.order_expr, alias_translator)?;
             stmt.push_str(&order_sql.0);
         }
-
-        if !extra.is_empty() {
+        if !self.extra.is_empty() {
             stmt.push(' ');
-            stmt.push_str(extra);
+            stmt.push_str(&self.extra);
         }
+
 
         Ok(Sql(stmt, args))
     }
 
-    pub fn to_sql(
+   /*  pub fn to_sql(
         &self,
         aux_params: &ParameterMap,
         alias_translator: &mut AliasTranslator,
     ) -> Result<Sql> {
         self.to_sql_with_modifier_and_extra(aux_params, alias_translator, "", "")
-    }
+    } */
 
     fn sql_body(&self, s: &mut String, alias_translator: &mut AliasTranslator) -> Result<()> {
         let resolver = Resolver::new();
 
-        /*   s.push_str(" FROM ");
+        
+/*
+        s.push_str(" FROM ");
         let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
         s.push_str(&from_sql.0);
         /*   s.push_str(" ");
         s.push_str(&self.canonical_table_alias); // TODO translate */
         s.push_str(" "); */
+        if !self.from_expr.is_empty() {
+            s.push(' ');
+            let from_sql = resolver.to_sql(&self.from_expr, alias_translator)?;
+            s.push_str(&from_sql.0);
+        }
 
         if !self.join_expr.is_empty() {
             s.push(' ');
@@ -289,7 +296,16 @@ impl BuildResult {
     } */
 
     /// Returns count SQL statement.
-    pub fn to_count_sql(&self, alias_translator: &mut AliasTranslator) -> Result<Sql> {
+    pub fn set_count_select(&mut self) {
+         if self.distinct {
+            self.select_expr = SqlExpr::literal("COUNT(DISTINCT *)");
+        } else {
+            self.select_expr = SqlExpr::literal("COUNT(*)");
+        }
+        self.modifier = String::new();
+        self.extra = String::new();
+    }
+  /*   pub fn to_count_sql(&self, alias_translator: &mut AliasTranslator) -> Result<Sql> {
         let mut stmt = String::from("SELECT ");
         if self.distinct {
             stmt.push_str("COUNT(DISTINCT *)");
@@ -309,7 +325,7 @@ impl BuildResult {
         args.extend_from_slice(&where_sql.1);
 
         Ok(Sql(stmt, args))
-    }
+    } */
 
     pub fn selection_stream(&self) -> &SelectStream {
         &self.selection_stream

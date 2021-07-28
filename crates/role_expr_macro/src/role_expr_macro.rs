@@ -33,6 +33,7 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
 
         match pair.as_rule() {
             Rule::role => {
+                
                 let role = span.as_str();
                 Some(quote!(toql::role_expr::RoleExpr::role(#role . to_string())))
             }
@@ -73,6 +74,7 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
                 expr
             }
             Rule::or_clause => {
+                
                 let mut negate = false;
                 let mut expr: Option<TokenStream> = None;
                 for p in pair.into_inner() {
@@ -108,27 +110,30 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
                     }
                 }
                 expr
-            }
+            },
             _ => None,
         }
     }
 
     // eprintln!("About to parse {}", toql_string);
-    match PestRoleExprParser::parse(Rule::or_clause, &role_expr_string.value()) {
-        Ok(pairs) => {
+    match PestRoleExprParser::parse(Rule::query, &role_expr_string.value()) {
+        Ok(mut query_pairs) => {
             let mut expr: Option<TokenStream> = None;
-            for p in pairs {
-                let e = evaluate_pair(p);
-                match (&expr, &e) {
-                    (Some(ex), Some(e)) => {
-                        expr = Some(
-                            quote!(toql::role_expr::RoleExpr::Or(Box::new(#ex)), Box::new(#e)),
-                        );
+            if let Some(query_pair) = query_pairs.next(){ // there can be at most one query pair
+                let pairs = query_pair.into_inner();
+                for p in pairs {
+                    let e = evaluate_pair(p);
+                    match (&expr, &e) {
+                        (Some(ex), Some(e)) => {
+                            expr = Some(
+                                quote!(toql::role_expr::RoleExpr::Or(Box::new(#ex)), Box::new(#e)),
+                            );
+                        }
+                        (None, Some(e)) => {
+                            expr = Some(quote!(#e));
+                        }
+                        _ => {}
                     }
-                    (None, Some(e)) => {
-                        expr = Some(quote!(#e));
-                    }
-                    _ => {}
                 }
             }
 

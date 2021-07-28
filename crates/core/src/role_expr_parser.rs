@@ -85,18 +85,22 @@ impl RoleExprParser {
             }
         }
 
-        let pairs = PestRoleExprParser::parse(Rule::or_clause, role_expr)?;
+        let mut query_pairs = PestRoleExprParser::parse(Rule::query, role_expr)?;
         let mut expr: Option<RoleExpr> = None;
-        for p in pairs {
-            let e = evaluate_pair(p);
-            match (&expr, &e) {
-                (Some(ex), Some(e)) => {
-                    expr = Some(RoleExpr::Or(Box::new(ex.clone()), Box::new(e.clone())));
+
+        if let Some(query_pair) = query_pairs.next() {
+            let pairs = query_pair.into_inner();
+            for p in pairs {
+                let e = evaluate_pair(p);
+                match (&expr, &e) {
+                    (Some(ex), Some(e)) => {
+                        expr = Some(RoleExpr::Or(Box::new(ex.clone()), Box::new(e.clone())));
+                    }
+                    (None, Some(e)) => {
+                        expr = Some(e.clone());
+                    }
+                    _ => {}
                 }
-                (None, Some(e)) => {
-                    expr = Some(e.clone());
-                }
-                _ => {}
             }
         }
         //  println!("{:?}", query);

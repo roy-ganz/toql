@@ -11,7 +11,7 @@ WHITESPACE = _{ " " }
 
 
 // support negate
-role =  @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
+role =  @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_" )* }
 negate = @{"!"}
 and_clause = {  (( negate? ~ role) | (  negate? ~ "(" ~ or_clause ~ ")"))  ~ ("," ~ (( negate? ~ role) | (negate? ~ "(" ~ or_clause ~ ")")))* } 
 or_clause = { and_clause  ~ (";" ~ and_clause)*}
