@@ -1,9 +1,9 @@
 use crate::result::Result;
 use crate::{
-    sql_mapper::mapped::Mapped, sql_mapper_registry::SqlMapperRegistry, tree::tree_map::TreeMap,
+    table_mapper::mapped::Mapped, table_mapper_registry::TableMapperRegistry, tree::tree_map::TreeMap,
 };
 
-pub(crate) fn map<T: Mapped + TreeMap>(registry: &mut SqlMapperRegistry) -> Result<()> {
+pub(crate) fn map<T: Mapped + TreeMap>(registry: &mut TableMapperRegistry) -> Result<()> {
     if !registry
         .mappers
         .contains_key(<T as Mapped>::type_name().as_str())

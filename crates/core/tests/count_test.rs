@@ -1,14 +1,14 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_expr_parser::SqlExprParser;
-use toql_core::sql_mapper::FieldOptions;
-use toql_core::sql_mapper::JoinType;
-use toql_core::sql_mapper::SqlMapper;
+use toql_core::table_mapper::FieldOptions;
+use toql_core::table_mapper::JoinType;
+use toql_core::table_mapper::TableMapper;
 
 struct User {}
 
-fn setup_mapper() -> SqlMapper {
-    let mut mapper = SqlMapper::new::<User>("User");
+fn setup_mapper() -> TableMapper {
+    let mut mapper = TableMapper::new::<User>("User");
     mapper
         .map_join(
             "book",

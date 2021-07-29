@@ -7,7 +7,7 @@ use crate::{
     sql::Sql,
     sql_builder::{SqlBuilder, sql_builder_error::SqlBuilderError},
     sql_expr::{PredicateColumn, resolver::Resolver, SqlExpr},
-    sql_mapper::{mapped::Mapped, SqlMapper},
+    table_mapper::{mapped::Mapped, TableMapper},
     tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_update::TreeUpdate, tree_predicate::TreePredicate, tree_map::TreeMap}, parameter_map::ParameterMap,
 };
 
@@ -200,7 +200,7 @@ where
 // E.g on struct user "userLanguage_order" will update all orders in userLanguages
 // "userLanguage" refers to merges -> will replace rows
 fn plan_update_order<T, S: AsRef<str>>(
-    mappers: &HashMap<String, SqlMapper>,
+    mappers: &HashMap<String, TableMapper>,
     query_paths: &[S],
     fields: &mut HashMap<String, HashSet<String>>, // paths that refer to fields
     merges: &mut HashMap<String, HashSet<String>>, // paths that refer to merges

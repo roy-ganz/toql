@@ -319,7 +319,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                         let untranslated_column = &m.this;
                         match &m.other {
                             MergeColumn::Unaliased(other_column) => {
-                                inverse_column_translation.push( quote!( #untranslated_column => mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_alias(),#other_column), ));
+                                inverse_column_translation.push( quote!( #untranslated_column => mapper.aliased_column(&<#rust_type_ident as toql::table_mapper::mapped::Mapped>::table_alias(),#other_column), ));
                             }
                             MergeColumn::Aliased(other_column) => {
                                 inverse_column_translation.push(
@@ -381,7 +381,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                             let formatted_join = join.replace("...", "{alias}.");
                             quote!(
                                 let join_stmt = &format!(#formatted_join, alias = &mapper.translated_alias(
-                                &<#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_alias() ));
+                                &<#rust_type_ident as toql::table_mapper::mapped::Mapped>::table_alias() ));
                             )
                         } else {
                             quote!( let join_stmt = #join; )
@@ -410,9 +410,9 @@ impl<'a> CodegenEntityFromRow<'a> {
                             for c in &[ #(#self_keys),* ] {
 
                                 if ! <<#struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().contains(&c.to_string()) {
-                                let t = <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_name();
-                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, c.to_string());
-                                let e2 = toql::error::ToqlError::SqlMapperError(e);
+                                let t = <#struct_ident as toql::table_mapper::mapped::Mapped>::table_name();
+                                let e = toql::table_mapper::TableMapperError::ColumnMissing(t, c.to_string());
+                                let e2 = toql::error::ToqlError::TableMapperError(e);
                                 return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
                                 }
                             }
@@ -442,9 +442,9 @@ impl<'a> CodegenEntityFromRow<'a> {
                                         String::from(c)
                                     };
                                 if !<#rust_type_ident as toql::keyed::Keyed>::columns().contains(&unaliased_column) {
-                                let t = <#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_name();
-                                let e = toql::sql_mapper::SqlMapperError::ColumnMissing(t, unaliased_column);
-                                let e2 = toql::error::ToqlError::SqlMapperError(e);
+                                let t = <#rust_type_ident as toql::table_mapper::mapped::Mapped>::table_name();
+                                let e = toql::table_mapper::TableMapperError::ColumnMissing(t, unaliased_column);
+                                let e2 = toql::error::ToqlError::TableMapperError(e);
                                 return Err(toql::mysql::error::ToqlMySqlError::ToqlError(e2));
                                 }
                             }
@@ -457,7 +457,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                     self.path_loaders.push( quote!(
                             #path_test {
                                 #role_test
-                                let type_name = <#rust_type_ident as toql::sql_mapper::mapped::Mapped>::type_name();
+                                let type_name = <#rust_type_ident as toql::table_mapper::mapped::Mapped>::type_name();
                                 let mapper = self.registry().mappers.get(&type_name).ok_or(toql::error::ToqlError::MapperMissing(String::from(&type_name)))?;
                                 let mut dep_query = query.traverse::<#rust_type_ident >(#toql_field_name); //clone_for_type();
 
@@ -470,7 +470,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                                 #(#inverse_column_translation)*
                             _ => {
                                     mapper.aliased_column(
-                                        &<#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_alias(),
+                                        &<#rust_type_ident as toql::table_mapper::mapped::Mapped>::table_alias(),
                                     default_inverse_columns.get(i).unwrap()
                                     )
                                 }
@@ -492,7 +492,7 @@ impl<'a> CodegenEntityFromRow<'a> {
 
                                  // primary keys
                                 let mut columns :Vec<String>=  <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().map(|c|{
-                                        mapper.aliased_column(&<#rust_type_ident as toql::sql_mapper::mapped::Mapped>::table_alias(),&c)
+                                        mapper.aliased_column(&<#rust_type_ident as toql::table_mapper::mapped::Mapped>::table_alias(),&c)
                                 }).collect::<Vec<_>>();
 
                                 columns.extend_from_slice(&inverse_columns);

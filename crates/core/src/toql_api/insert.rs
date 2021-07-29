@@ -1,5 +1,5 @@
 use crate::{
-    sql_mapper::mapped::Mapped,
+    table_mapper::mapped::Mapped,
     tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert, tree_map::TreeMap},
 };
 

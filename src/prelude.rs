@@ -18,7 +18,7 @@ pub use toql_fields_macro::fields;
 pub use toql_paths_macro::paths;
 pub use toql_query_macro::query;
 
-pub use toql_core::sql_mapper_registry::SqlMapperRegistry;
+pub use toql_core::table_mapper_registry::TableMapperRegistry;
 
 pub use toql_core::key::Key;
 pub use toql_core::keyed::{Keyed, KeyedMut};

@@ -3,10 +3,10 @@ use toql_core::query::FieldFilter;
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_builder::SqlBuilderError;
-use toql_core::sql_mapper::BasicFieldHandler;
-use toql_core::sql_mapper::FieldHandler;
-use toql_core::sql_mapper::FieldOptions;
-use toql_core::sql_mapper::SqlMapper;
+use toql_core::table_mapper::BasicFieldHandler;
+use toql_core::table_mapper::FieldHandler;
+use toql_core::table_mapper::FieldOptions;
+use toql_core::table_mapper::TableMapper;
 
 #[test]
 fn custom_handler() {
@@ -71,7 +71,7 @@ fn custom_handler() {
         base: BasicFieldHandler {},
     };
 
-    let mut mapper = SqlMapper::new_with_handler("Book b", h);
+    let mut mapper = TableMapper::new_with_handler("Book b", h);
     mapper
         .map_field_with_options("id", "b.id", FieldOptions::new().preselect(true))
         .map_field("title", "b.title");

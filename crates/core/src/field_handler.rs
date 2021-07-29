@@ -10,7 +10,7 @@ use crate::parameter_map::ParameterMap;
 /// ## Example (see full working example in tests)
 /// ``` ignore
 /// use toql::query::FieldFilter;
-/// use toql::sql_mapper::FieldHandler;
+/// use toql::table_mapper::FieldHandler;
 /// use toql::sql_builder::SqlBuilderError;
 /// struct MyHandler {};
 ///
@@ -21,7 +21,7 @@ use crate::parameter_map::ParameterMap;
 ///     }
 /// }
 /// let my_handler = MyHandler {};
-/// let mapper = SqlMapper::new_with_handler(my_handler);
+/// let mapper = TableMapper::new_with_handler(my_handler);
 ///
 use crate::query::field_filter::FieldFilter;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;

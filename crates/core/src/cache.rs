@@ -1,14 +1,14 @@
 //! Cache to lookup static table information and SQL statements.
 
-use crate::sql_mapper_registry::SqlMapperRegistry;
+use crate::table_mapper_registry::TableMapperRegistry;
 use lru::LruCache;
 use std::{collections::HashSet, sync::RwLock};
 
-/// Cache keeps static table information in the [SQLMapperRegistry](crate::sql_mapper_registry::SqlMapperRegsitry) and 
+/// Cache keeps static table information in the [TableMapperRegistry](crate::table_mapper_registry::TableMapperRegsitry) and 
 /// may lookup SQL statements to bypass the [SqlBuilder](crate::sql_builder::SqlBuilder). However this 
 /// is currently not implemented. 
 pub struct Cache {
-    pub registry: RwLock<SqlMapperRegistry>,
+    pub registry: RwLock<TableMapperRegistry>,
     pub registered_roots: RwLock<HashSet<String>>,
     pub(crate) _query_cache: RwLock<LruCache<String, String>>, // TODO Support cache lookup
 }
@@ -17,7 +17,7 @@ impl Cache {
     /// Creates a new ``Cache` with `capacity` entries.
     pub fn with_capacity(capacity: usize) -> Self {
         Cache {
-            registry: RwLock::new(SqlMapperRegistry::new()),
+            registry: RwLock::new(TableMapperRegistry::new()),
             registered_roots: RwLock::new(HashSet::new()),
             _query_cache: RwLock::new(LruCache::new(capacity)),
         }

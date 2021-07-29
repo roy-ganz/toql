@@ -1,5 +1,5 @@
 
-use crate::{sql_mapper::mapped::Mapped, query::Query, sql_expr::SqlExpr, error::ToqlError, 
+use crate::{table_mapper::mapped::Mapped, query::Query, sql_expr::SqlExpr, error::ToqlError, 
         sql_builder::SqlBuilder, parameter_map::ParameterMap, 
         alias_translator::AliasTranslator};
                 use std::borrow::Borrow;

@@ -1,7 +1,7 @@
 use super::Join;
 use crate::{
     error::ToqlError, key::Key, keyed::Keyed, query::field_path::FieldPath, sql_expr::SqlExpr,
-    sql_mapper::mapped::Mapped, tree::tree_insert::TreeInsert,
+    table_mapper::mapped::Mapped, tree::tree_insert::TreeInsert,
 };
 use std::collections::HashSet;
 

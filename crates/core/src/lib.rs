@@ -51,8 +51,8 @@ pub mod field_handler;
 pub mod from_row;
 pub mod join_handler;
 pub mod predicate_handler;
-pub mod sql_mapper;
-pub mod sql_mapper_registry;
+pub mod table_mapper;
+pub mod table_mapper_registry;
 
 pub mod tree;
 

@@ -1,5 +1,5 @@
 
-use toql::prelude::{Sql, SqlMapperRegistry, AliasFormat, SqlArg, Result, ToqlError};
+use toql::prelude::{Sql, TableMapperRegistry, AliasFormat, SqlArg, Result, ToqlError};
 use std::collections::{HashMap, HashSet};
 use toql::backend::{Backend, context::Context};
 use toql::{page::Page, sql_builder::build_result::BuildResult};
@@ -11,7 +11,7 @@ use async_trait::async_trait;
 
 pub struct Mock {
     pub sqls: Vec<Sql>,
-    registry: RwLock<SqlMapperRegistry>,
+    registry: RwLock<TableMapperRegistry>,
     context: Context,
 }
 
@@ -30,7 +30,7 @@ impl Default for Mock {
     fn default() -> Self {
         Mock {
         sqls: Vec::new(),
-        registry: RwLock::new(SqlMapperRegistry::new()),
+        registry: RwLock::new(TableMapperRegistry::new()),
         context : Context {
             roles: HashSet::new(),
             alias_format: AliasFormat::Canonical,
@@ -75,11 +75,11 @@ impl Backend<(), ToqlError> for Mock {
    } 
 
    
-   fn registry(&self) ->std::result::Result<RwLockReadGuard<'_, SqlMapperRegistry>, ToqlError> {
+   fn registry(&self) ->std::result::Result<RwLockReadGuard<'_, TableMapperRegistry>, ToqlError> {
        self.registry.read().map_err(ToqlError::from)
    }
 
-   fn registry_mut(&mut self) ->  std::result::Result<RwLockWriteGuard<'_, SqlMapperRegistry>, ToqlError>  {
+   fn registry_mut(&mut self) ->  std::result::Result<RwLockWriteGuard<'_, TableMapperRegistry>, ToqlError>  {
       self.registry.write().map_err(ToqlError::from)
    }
 

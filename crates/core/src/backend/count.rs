@@ -2,7 +2,7 @@
 
 use crate::{
     error::ToqlError,
-    sql_mapper::mapped::Mapped,
+    table_mapper::mapped::Mapped,
    query::Query, sql_builder::SqlBuilder, alias_translator::AliasTranslator, parameter_map::ParameterMap, 
 };
 use std::{borrow::{Borrow},};

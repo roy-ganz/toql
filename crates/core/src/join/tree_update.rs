@@ -2,7 +2,7 @@ use super::Join;
 use crate::key::Key;
 use crate::keyed::Keyed;
 use crate::tree::tree_update::TreeUpdate;
-use crate::{error::ToqlError, sql_mapper::mapped::Mapped};
+use crate::{error::ToqlError, table_mapper::mapped::Mapped};
 use crate::{query::field_path::FieldPath, sql_expr::resolver::Resolver};
 
 impl<T> TreeUpdate for Join<T>

@@ -1,5 +1,5 @@
 //!
-//! The SQL Builder turns a [Query](../query/struct.Query.html) with the help of a [SQL Mapper](../sql_mapper/struct.SqlMapper.html)
+//! The SQL Builder turns a [Query](../query/struct.Query.html) with the help of a [SQL Mapper](../table_mapper/struct.TableMapper.html)
 //! into a [SQL Builder Result](../sql_builder_result/BuildResult.html)
 //! The result hold the different parts of an SQL query and can be turned into an SQL query that can be sent to the database.
 //!
@@ -50,12 +50,12 @@ use crate::query::QueryToken;
 use crate::result::Result;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 
-use crate::sql_mapper::{join_type::JoinType, DeserializeType, SqlMapper};
+use crate::table_mapper::{join_type::JoinType, DeserializeType, TableMapper};
 
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::sql_mapper_registry::SqlMapperRegistry;
+use crate::table_mapper_registry::TableMapperRegistry;
 
 use crate::sql_arg::SqlArg;
 use crate::{
@@ -69,7 +69,7 @@ use select_stream::Select;
 use std::borrow::Cow;
 
 enum MapperOrMerge<'a> {
-    Mapper(&'a SqlMapper),
+    Mapper(&'a TableMapper),
     Merge(String),
 }
 
@@ -77,7 +77,7 @@ enum MapperOrMerge<'a> {
 pub struct SqlBuilder<'a> {
     root_mapper: String, // root type
     home_mapper: String, // home mapper, depends on query root
-    sql_mapper_registry: &'a SqlMapperRegistry,
+    table_mapper_registry: &'a TableMapperRegistry,
     roles: HashSet<String>,
     aux_params: HashMap<String, SqlArg>, // Aux params used for all queries with this builder instance, contains typically config or auth data
 
@@ -86,11 +86,11 @@ pub struct SqlBuilder<'a> {
 
 impl<'a> SqlBuilder<'a> {
     /// Create a new SQL Builder
-    pub fn new(base_type: &'a str, sql_mapper_registry: &'a SqlMapperRegistry) -> Self {
+    pub fn new(base_type: &'a str, table_mapper_registry: &'a TableMapperRegistry) -> Self {
         SqlBuilder {
             root_mapper: base_type.to_string(),
             home_mapper: base_type.to_string(),
-            sql_mapper_registry,
+            table_mapper_registry,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
             extra_joins: HashSet::new(),
@@ -190,7 +190,7 @@ impl<'a> SqlBuilder<'a> {
         let (basename, query_path) = FieldPath::split_basename(query_field_path);
         let mapper = self.mapper_for_query_path(&query_path)?;
         /* let mut current_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&self.root_mapper)
             .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
 
@@ -201,7 +201,7 @@ impl<'a> SqlBuilder<'a> {
 
                 if let Some(j) = current_mapper.merge(d.as_str()) {
                     current_mapper = self
-                        .sql_mapper_registry
+                        .table_mapper_registry
                         .get(&j.merged_mapper)
                         .ok_or(ToqlError::MapperMissing(j.merged_mapper.to_string()))?;
                 } else {
@@ -222,7 +222,7 @@ impl<'a> SqlBuilder<'a> {
     pub fn build_delete<M>(&mut self, query: &Query<M>) -> Result<BuildResult> {
         let mut context = BuildContext::new();
         let root_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .mappers
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
@@ -253,7 +253,7 @@ impl<'a> SqlBuilder<'a> {
         key_predicate: SqlExpr,
     ) -> Result<SqlExpr> {
         let root_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .mappers
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
@@ -275,7 +275,7 @@ impl<'a> SqlBuilder<'a> {
             .ok_or_else(|| SqlBuilderError::FieldMissing(merge_field.to_string()))?;
 
         let merge_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .mappers
             .get(&merge.merged_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
@@ -316,7 +316,7 @@ impl<'a> SqlBuilder<'a> {
         self.set_home_joined_mapper_for_path(&FieldPath::from(query_home_path))?;
 
         let mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
@@ -390,15 +390,15 @@ impl<'a> SqlBuilder<'a> {
         Ok(result)
     }
 
-    pub fn joined_mapper_for_local_path(&self, local_path: &FieldPath) -> Result<&SqlMapper> {
+    pub fn joined_mapper_for_local_path(&self, local_path: &FieldPath) -> Result<&TableMapper> {
         self.joined_mapper_for_path(&self.home_mapper, local_path)
     }
-    pub fn joined_mapper_for_query_path(&self, query_path: &FieldPath) -> Result<&SqlMapper> {
+    pub fn joined_mapper_for_query_path(&self, query_path: &FieldPath) -> Result<&TableMapper> {
         self.joined_mapper_for_path(&self.root_mapper, query_path)
     }
-    fn joined_mapper_for_path(&self, mapper_name: &str, path: &FieldPath) -> Result<&SqlMapper> {
+    fn joined_mapper_for_path(&self, mapper_name: &str, path: &FieldPath) -> Result<&TableMapper> {
         let mut current_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(mapper_name)
             .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_string()))?;
 
@@ -407,7 +407,7 @@ impl<'a> SqlBuilder<'a> {
                 //   println!("Getting join for name {}", p.as_str());
                 if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
-                        .sql_mapper_registry
+                        .table_mapper_registry
                         .get(&join.joined_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                 } else {
@@ -419,9 +419,9 @@ impl<'a> SqlBuilder<'a> {
         Ok(current_mapper)
     }
 
-    fn mapper_for_query_path(&self, query_path: &FieldPath) -> Result<&SqlMapper> {
+    fn mapper_for_query_path(&self, query_path: &FieldPath) -> Result<&TableMapper> {
         let mut current_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&self.root_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.root_mapper.to_string()))?;
 
@@ -430,12 +430,12 @@ impl<'a> SqlBuilder<'a> {
                 //   println!("Getting join for name {}", p.as_str());
                 if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
-                        .sql_mapper_registry
+                        .table_mapper_registry
                         .get(&join.joined_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                 } else if let Some(merge) = current_mapper.merges.get(p.as_str()) {
                     current_mapper = self
-                        .sql_mapper_registry
+                        .table_mapper_registry
                         .get(&merge.merged_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
                 } else {
@@ -449,7 +449,7 @@ impl<'a> SqlBuilder<'a> {
 
     fn mapper_or_merge_for_path(&'a self, local_path: &'a FieldPath) -> Result<MapperOrMerge<'a>> {
         let mut current_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
@@ -464,7 +464,7 @@ impl<'a> SqlBuilder<'a> {
                     .get(p.as_str())
                     .ok_or_else(|| ToqlError::MapperMissing(p.as_str().to_string()))?;
                 current_mapper = self
-                    .sql_mapper_registry
+                    .table_mapper_registry
                     .get(&join.joined_mapper)
                     .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
             }
@@ -476,20 +476,20 @@ impl<'a> SqlBuilder<'a> {
         if !path.is_empty() {
             let mut current_type: &str = &self.root_mapper;
             let mut current_mapper = self
-                .sql_mapper_registry
+                .table_mapper_registry
                 .get(current_type)
                 .ok_or_else(|| ToqlError::MapperMissing(current_type.to_string()))?;
 
             for p in path.children() {
                 if let Some(merge) = current_mapper.merges.get(p.as_str()) {
                     current_mapper = self
-                        .sql_mapper_registry
+                        .table_mapper_registry
                         .get(&merge.merged_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
                     current_type = &merge.merged_mapper;
                 } else if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
-                        .sql_mapper_registry
+                        .table_mapper_registry
                         .get(&join.joined_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                     current_type = &join.joined_mapper;
@@ -868,7 +868,7 @@ impl<'a> SqlBuilder<'a> {
         unmerged_home_paths: &mut HashSet<String>,
     ) -> Result<()> {
         let mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&mapper_name)
             .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_string()))?;
         for jm in &mapper.joins {
@@ -1525,7 +1525,7 @@ impl<'a> SqlBuilder<'a> {
         build_context: &mut BuildContext,
     ) -> Result<()> {
         let joined_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&joined_mapper_name)
             .ok_or_else(|| ToqlError::MapperMissing(joined_mapper_name.to_string()))?;
         for deserialization_type in &joined_mapper.deserialize_order {
@@ -1556,14 +1556,14 @@ impl<'a> SqlBuilder<'a> {
         Ok(())
     }
 
-    fn root_mapper(&self) -> Result<&SqlMapper> {
-        self.sql_mapper_registry
+    fn root_mapper(&self) -> Result<&TableMapper> {
+        self.table_mapper_registry
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))
     }
     fn next_merge_path(&self, local_path: &FieldPath) -> Result<Option<String>> {
         let mut current_mapper = self
-            .sql_mapper_registry
+            .table_mapper_registry
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_string()))?;
 
@@ -1574,7 +1574,7 @@ impl<'a> SqlBuilder<'a> {
                 current_mapper.joined_mapper(mapper_name.as_str())
             {
                 let m = self
-                    .sql_mapper_registry
+                    .table_mapper_registry
                     .get(&joined_mapper_name)
                     .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_string()))?;
                 current_mapper = m;

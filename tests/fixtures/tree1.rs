@@ -76,7 +76,7 @@ pub struct Gamma {
 impl<R, E> toql::backend::Load<R, E> for Alpha
 where
     Self: toql::keyed::Keyed
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::from_row::FromRow<R, E>
         + toql::tree::tree_predicate::TreePredicate
@@ -90,7 +90,7 @@ where
 impl<R, E> toql::backend::Load<R, E> for &Alpha
 where
     Self: toql::keyed::Keyed
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::from_row::FromRow<R, E>
         + toql::tree::tree_predicate::TreePredicate
@@ -103,21 +103,21 @@ where
 }
 impl toql::backend::Insert for Alpha where
     Self: toql::tree::tree_insert::TreeInsert
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_map::TreeMap
 {
 }
 impl toql::backend::Insert for &mut Alpha where
     Self: toql::tree::tree_insert::TreeInsert
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_map::TreeMap
 {
 }
 impl toql::backend::Update for Alpha where
     Self: toql::tree::tree_update::TreeUpdate
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
@@ -126,7 +126,7 @@ impl toql::backend::Update for Alpha where
 }
 impl toql::backend::Update for &mut Alpha where
     Self: toql::tree::tree_update::TreeUpdate
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
         + toql::tree::tree_insert::TreeInsert
@@ -134,19 +134,19 @@ impl toql::backend::Update for &mut Alpha where
 {
 }
 impl toql::backend::Count for Alpha where
-    Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
+    Self: toql::keyed::Keyed + toql::table_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
 impl toql::backend::Count for &Alpha where
-    Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
+    Self: toql::keyed::Keyed + toql::table_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
 impl toql::backend::Delete for Alpha where
-    Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
+    Self: toql::table_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
 impl toql::backend::Delete for &Alpha where
-    Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
+    Self: toql::table_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
 
@@ -358,7 +358,7 @@ impl toql::tree::tree_identity::TreeIdentity for &mut Alpha {
 }
 impl toql::tree::tree_map::TreeMap for Alpha {
     fn map(
-        registry: &mut toql::sql_mapper_registry::SqlMapperRegistry,
+        registry: &mut toql::table_mapper_registry::TableMapperRegistry,
     ) -> toql::result::Result<()> {
         if registry.get("Alpha").is_none() {
             registry.insert_new_mapper::<Alpha>()?;
@@ -370,7 +370,7 @@ impl toql::tree::tree_map::TreeMap for Alpha {
 }
 impl toql::tree::tree_map::TreeMap for &Alpha {
     fn map(
-        registry: &mut toql::sql_mapper_registry::SqlMapperRegistry,
+        registry: &mut toql::table_mapper_registry::TableMapperRegistry,
     ) -> toql::result::Result<()> {
         <Alpha as toql::tree::tree_map::TreeMap>::map(registry)
     }
@@ -875,7 +875,7 @@ impl AlphaFields {
     }
 }
 
-impl toql::sql_mapper::mapped::Mapped for Alpha {
+impl toql::table_mapper::mapped::Mapped for Alpha {
     fn type_name() -> String {
         String::from("Alpha")
     }
@@ -885,26 +885,26 @@ impl toql::sql_mapper::mapped::Mapped for Alpha {
     fn table_alias() -> String {
         String::from("alpha")
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
         mapper.map_column_with_options(
             "id",
             "id",
-            toql::sql_mapper::field_options::FieldOptions::new()
+            toql::table_mapper::field_options::FieldOptions::new()
                 .key(true)
                 .preselect(true),
         );
         mapper.map_column_with_options(
             "text",
             "text",
-            toql::sql_mapper::field_options::FieldOptions::new().preselect(true),
+            toql::table_mapper::field_options::FieldOptions::new().preselect(true),
         );
         mapper.map_join_with_options(
             "beta",
             "Beta",
-            toql::sql_mapper::join_type::JoinType::Inner,
+            toql::table_mapper::join_type::JoinType::Inner,
             {
                 let mut t = toql::sql_expr::SqlExpr::literal(
-                    <Beta as toql::sql_mapper::mapped::Mapped>::table_name(),
+                    <Beta as toql::table_mapper::mapped::Mapped>::table_name(),
                 );
                 t.push_literal(" ");
                 t.push_other_alias();
@@ -934,7 +934,7 @@ impl toql::sql_mapper::mapped::Mapped for Alpha {
                 t.pop_literals(5);
                 t
             },
-            toql::sql_mapper::join_options::JoinOptions::new().preselect(true),
+            toql::table_mapper::join_options::JoinOptions::new().preselect(true),
         );
         mapper.map_merge(
             "gamma",
@@ -976,32 +976,32 @@ impl toql::sql_mapper::mapped::Mapped for Alpha {
         Ok(())
     }
 }
-impl toql::sql_mapper::mapped::Mapped for &Alpha {
+impl toql::table_mapper::mapped::Mapped for &Alpha {
     fn type_name() -> String {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::type_name()
+        <Alpha as toql::table_mapper::mapped::Mapped>::type_name()
     }
     fn table_name() -> String {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::table_name()
+        <Alpha as toql::table_mapper::mapped::Mapped>::table_name()
     }
     fn table_alias() -> String {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::table_alias()
+        <Alpha as toql::table_mapper::mapped::Mapped>::table_alias()
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::map(mapper)
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
+        <Alpha as toql::table_mapper::mapped::Mapped>::map(mapper)
     }
 }
-impl toql::sql_mapper::mapped::Mapped for &mut Alpha {
+impl toql::table_mapper::mapped::Mapped for &mut Alpha {
     fn type_name() -> String {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::type_name()
+        <Alpha as toql::table_mapper::mapped::Mapped>::type_name()
     }
     fn table_name() -> String {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::table_name()
+        <Alpha as toql::table_mapper::mapped::Mapped>::table_name()
     }
     fn table_alias() -> String {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::table_alias()
+        <Alpha as toql::table_mapper::mapped::Mapped>::table_alias()
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
-        <Alpha as toql::sql_mapper::mapped::Mapped>::map(mapper)
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
+        <Alpha as toql::table_mapper::mapped::Mapped>::map(mapper)
     }
 }
 
@@ -1274,7 +1274,7 @@ impl toql::tree::tree_update::TreeUpdate for &mut Alpha {
 impl<R, E> toql::backend::Load<R, E> for Beta
 where
     Self: toql::keyed::Keyed
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::from_row::FromRow<R, E>
         + toql::tree::tree_predicate::TreePredicate
@@ -1288,7 +1288,7 @@ where
 impl<R, E> toql::backend::Load<R, E> for &Beta
 where
     Self: toql::keyed::Keyed
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::from_row::FromRow<R, E>
         + toql::tree::tree_predicate::TreePredicate
@@ -1301,21 +1301,21 @@ where
 }
 impl toql::backend::Insert for Beta where
     Self: toql::tree::tree_insert::TreeInsert
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
 {
 }
 impl toql::backend::Insert for &mut Beta where
     Self: toql::tree::tree_insert::TreeInsert
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
 {
 }
 impl toql::backend::Update for Beta where
     Self: toql::tree::tree_update::TreeUpdate
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
@@ -1324,7 +1324,7 @@ impl toql::backend::Update for Beta where
 }
 impl toql::backend::Update for &mut Beta where
     Self: toql::tree::tree_update::TreeUpdate
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
@@ -1332,19 +1332,19 @@ impl toql::backend::Update for &mut Beta where
 {
 }
 impl toql::backend::Count for Beta where
-    Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
+    Self: toql::keyed::Keyed + toql::table_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
 impl toql::backend::Count for &Beta where
-    Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
+    Self: toql::keyed::Keyed + toql::table_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
 impl toql::backend::Delete for Beta where
-    Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
+    Self: toql::table_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
 impl toql::backend::Delete for &Beta where
-    Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
+    Self: toql::table_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
 
@@ -1535,7 +1535,7 @@ impl toql::tree::tree_identity::TreeIdentity for &mut Beta {
 }
 impl toql::tree::tree_map::TreeMap for Beta {
     fn map(
-        registry: &mut toql::sql_mapper_registry::SqlMapperRegistry,
+        registry: &mut toql::table_mapper_registry::TableMapperRegistry,
     ) -> toql::result::Result<()> {
         if registry.get("Beta").is_none() {
             registry.insert_new_mapper::<Beta>()?;
@@ -1545,7 +1545,7 @@ impl toql::tree::tree_map::TreeMap for Beta {
 }
 impl toql::tree::tree_map::TreeMap for &Beta {
     fn map(
-        registry: &mut toql::sql_mapper_registry::SqlMapperRegistry,
+        registry: &mut toql::table_mapper_registry::TableMapperRegistry,
     ) -> toql::result::Result<()> {
         <Beta as toql::tree::tree_map::TreeMap>::map(registry)
     }
@@ -1921,7 +1921,7 @@ impl BetaFields {
     }
 }
 
-impl toql::sql_mapper::mapped::Mapped for Beta {
+impl toql::table_mapper::mapped::Mapped for Beta {
     fn type_name() -> String {
         String::from("Beta")
     }
@@ -1931,48 +1931,48 @@ impl toql::sql_mapper::mapped::Mapped for Beta {
     fn table_alias() -> String {
         String::from("beta")
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
         mapper.map_column_with_options(
             "id",
             "id",
-            toql::sql_mapper::field_options::FieldOptions::new()
+            toql::table_mapper::field_options::FieldOptions::new()
                 .key(true)
                 .preselect(true),
         );
         mapper.map_column_with_options(
             "text",
             "text",
-            toql::sql_mapper::field_options::FieldOptions::new().preselect(true),
+            toql::table_mapper::field_options::FieldOptions::new().preselect(true),
         );
         Ok(())
     }
 }
-impl toql::sql_mapper::mapped::Mapped for &Beta {
+impl toql::table_mapper::mapped::Mapped for &Beta {
     fn type_name() -> String {
-        <Beta as toql::sql_mapper::mapped::Mapped>::type_name()
+        <Beta as toql::table_mapper::mapped::Mapped>::type_name()
     }
     fn table_name() -> String {
-        <Beta as toql::sql_mapper::mapped::Mapped>::table_name()
+        <Beta as toql::table_mapper::mapped::Mapped>::table_name()
     }
     fn table_alias() -> String {
-        <Beta as toql::sql_mapper::mapped::Mapped>::table_alias()
+        <Beta as toql::table_mapper::mapped::Mapped>::table_alias()
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
-        <Beta as toql::sql_mapper::mapped::Mapped>::map(mapper)
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
+        <Beta as toql::table_mapper::mapped::Mapped>::map(mapper)
     }
 }
-impl toql::sql_mapper::mapped::Mapped for &mut Beta {
+impl toql::table_mapper::mapped::Mapped for &mut Beta {
     fn type_name() -> String {
-        <Beta as toql::sql_mapper::mapped::Mapped>::type_name()
+        <Beta as toql::table_mapper::mapped::Mapped>::type_name()
     }
     fn table_name() -> String {
-        <Beta as toql::sql_mapper::mapped::Mapped>::table_name()
+        <Beta as toql::table_mapper::mapped::Mapped>::table_name()
     }
     fn table_alias() -> String {
-        <Beta as toql::sql_mapper::mapped::Mapped>::table_alias()
+        <Beta as toql::table_mapper::mapped::Mapped>::table_alias()
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
-        <Beta as toql::sql_mapper::mapped::Mapped>::map(mapper)
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
+        <Beta as toql::table_mapper::mapped::Mapped>::map(mapper)
     }
 }
 
@@ -2165,7 +2165,7 @@ impl toql::tree::tree_update::TreeUpdate for &mut Beta {
 impl<R, E> toql::backend::Load<R, E> for Gamma
 where
     Self: toql::keyed::Keyed
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::from_row::FromRow<R, E>
         + toql::tree::tree_predicate::TreePredicate
@@ -2179,7 +2179,7 @@ where
 impl<R, E> toql::backend::Load<R, E> for &Gamma
 where
     Self: toql::keyed::Keyed
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::from_row::FromRow<R, E>
         + toql::tree::tree_predicate::TreePredicate
@@ -2192,21 +2192,21 @@ where
 }
 impl toql::backend::Insert for Gamma where
     Self: toql::tree::tree_insert::TreeInsert
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_map::TreeMap
 {
 }
 impl toql::backend::Insert for &mut Gamma where
     Self: toql::tree::tree_insert::TreeInsert
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_map::TreeMap
 {
 }
 impl toql::backend::Update for Gamma where
     Self: toql::tree::tree_update::TreeUpdate
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
@@ -2215,7 +2215,7 @@ impl toql::backend::Update for Gamma where
 }
 impl toql::backend::Update for &mut Gamma where
     Self: toql::tree::tree_update::TreeUpdate
-        + toql::sql_mapper::mapped::Mapped
+        + toql::table_mapper::mapped::Mapped
         + toql::tree::tree_map::TreeMap
         + toql::tree::tree_identity::TreeIdentity
         + toql::tree::tree_predicate::TreePredicate
@@ -2223,19 +2223,19 @@ impl toql::backend::Update for &mut Gamma where
 {
 }
 impl toql::backend::Count for Gamma where
-    Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
+    Self: toql::keyed::Keyed + toql::table_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
 impl toql::backend::Count for &Gamma where
-    Self: toql::keyed::Keyed + toql::sql_mapper::mapped::Mapped + std::fmt::Debug
+    Self: toql::keyed::Keyed + toql::table_mapper::mapped::Mapped + std::fmt::Debug
 {
 }
 impl toql::backend::Delete for Gamma where
-    Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
+    Self: toql::table_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
 impl toql::backend::Delete for &Gamma where
-    Self: toql::sql_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
+    Self: toql::table_mapper::mapped::Mapped + toql::tree::tree_map::TreeMap + std::fmt::Debug
 {
 }
 
@@ -2425,7 +2425,7 @@ impl toql::tree::tree_identity::TreeIdentity for &mut Gamma {
 }
 impl toql::tree::tree_map::TreeMap for Gamma {
     fn map(
-        registry: &mut toql::sql_mapper_registry::SqlMapperRegistry,
+        registry: &mut toql::table_mapper_registry::TableMapperRegistry,
     ) -> toql::result::Result<()> {
         if registry.get("Gamma").is_none() {
             registry.insert_new_mapper::<Gamma>()?;
@@ -2435,7 +2435,7 @@ impl toql::tree::tree_map::TreeMap for Gamma {
 }
 impl toql::tree::tree_map::TreeMap for &Gamma {
     fn map(
-        registry: &mut toql::sql_mapper_registry::SqlMapperRegistry,
+        registry: &mut toql::table_mapper_registry::TableMapperRegistry,
     ) -> toql::result::Result<()> {
         <Gamma as toql::tree::tree_map::TreeMap>::map(registry)
     }
@@ -2811,7 +2811,7 @@ impl GammaFields {
     }
 }
 
-impl toql::sql_mapper::mapped::Mapped for Gamma {
+impl toql::table_mapper::mapped::Mapped for Gamma {
     fn type_name() -> String {
         String::from("Gamma")
     }
@@ -2821,48 +2821,48 @@ impl toql::sql_mapper::mapped::Mapped for Gamma {
     fn table_alias() -> String {
         String::from("gamma")
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
         mapper.map_column_with_options(
             "id",
             "id",
-            toql::sql_mapper::field_options::FieldOptions::new()
+            toql::table_mapper::field_options::FieldOptions::new()
                 .key(true)
                 .preselect(true),
         );
         mapper.map_column_with_options(
             "text",
             "text",
-            toql::sql_mapper::field_options::FieldOptions::new().preselect(true),
+            toql::table_mapper::field_options::FieldOptions::new().preselect(true),
         );
         Ok(())
     }
 }
-impl toql::sql_mapper::mapped::Mapped for &Gamma {
+impl toql::table_mapper::mapped::Mapped for &Gamma {
     fn type_name() -> String {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::type_name()
+        <Gamma as toql::table_mapper::mapped::Mapped>::type_name()
     }
     fn table_name() -> String {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::table_name()
+        <Gamma as toql::table_mapper::mapped::Mapped>::table_name()
     }
     fn table_alias() -> String {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::table_alias()
+        <Gamma as toql::table_mapper::mapped::Mapped>::table_alias()
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::map(mapper)
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
+        <Gamma as toql::table_mapper::mapped::Mapped>::map(mapper)
     }
 }
-impl toql::sql_mapper::mapped::Mapped for &mut Gamma {
+impl toql::table_mapper::mapped::Mapped for &mut Gamma {
     fn type_name() -> String {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::type_name()
+        <Gamma as toql::table_mapper::mapped::Mapped>::type_name()
     }
     fn table_name() -> String {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::table_name()
+        <Gamma as toql::table_mapper::mapped::Mapped>::table_name()
     }
     fn table_alias() -> String {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::table_alias()
+        <Gamma as toql::table_mapper::mapped::Mapped>::table_alias()
     }
-    fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()> {
-        <Gamma as toql::sql_mapper::mapped::Mapped>::map(mapper)
+    fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()> {
+        <Gamma as toql::table_mapper::mapped::Mapped>::map(mapper)
     }
 }
 

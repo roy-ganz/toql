@@ -1,4 +1,4 @@
-/// The filter operation on a field. You use this when creating a [FieldHandler](../sql_mapper/trait.FieldHandler.html)
+/// The filter operation on a field. You use this when creating a [FieldHandler](../table_mapper/trait.FieldHandler.html)
 /// to provide custom functions through the _Fn_ filter or implement a alternative mapping to SQL.
 use crate::sql_arg::SqlArg;
 

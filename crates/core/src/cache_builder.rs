@@ -1,4 +1,4 @@
-use crate::{cache::Cache, sql_mapper_registry::SqlMapperRegistry};
+use crate::{cache::Cache, table_mapper_registry::TableMapperRegistry};
 use lru::LruCache;
 use std::{collections::HashSet, sync::RwLock};
 
@@ -17,7 +17,7 @@ impl CacheBuilder {
     }
 
     pub fn into_cache(self) -> Cache {
-        let registry = SqlMapperRegistry::new();
+        let registry = TableMapperRegistry::new();
         Cache {
             registry: RwLock::new(registry),
             registered_roots: RwLock::new(HashSet::new()),

@@ -20,7 +20,7 @@
 //!
 //!  * A [Query Parser](https://docs.rs/toql_core/0.1/toql_core/query_parser/index.html) to build a Toql query from a string.
 //!  * A [Query](https://docs.rs/toql_core/0.1/toql_core/query/index.html) that can be built with methods.
-//!  * A [SQL Mapper](https://docs.rs/toql_core/0.1/toql_core/sql_mapper/index.html) to map Toql fields to database columns or expressions.
+//!  * A [SQL Mapper](https://docs.rs/toql_core/0.1/toql_core/table_mapper/index.html) to map Toql fields to database columns or expressions.
 //!  * A [SQL Builder](https://docs.rs/toql_core/0.1/toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
 //!  * A [Toql Derive](https://docs.rs/toql_derive/0.1/index.html) to build all the boilerplate code to make some ✨ happen.
 //!  * Integration with
@@ -30,10 +30,10 @@
 //! ## Small Example
 //! Using Toql without any dependency features is possible and easy. Here we go:
 //! ``` rust
-//! use toql::{query_parser::QueryParser, sql_mapper::SqlMapper, sql_builder::SqlBuilder};
+//! use toql::{query_parser::QueryParser, table_mapper::TableMapper, sql_builder::SqlBuilder};
 //!
 //! let query = QueryParser::parse("id, +title LK '%foo%'").unwrap();
-//! let mut mapper = SqlMapper::new("Book b");
+//! let mut mapper = TableMapper::new("Book b");
 //!     mapper
 //!         .map_field("id", "b.id")
 //!         .map_field("title", "b.title");
@@ -76,8 +76,8 @@ pub use toql_core::query_fields;
 pub use toql_core::query_parser;
 pub use toql_core::query_path;
 pub use toql_core::sql_builder;
-pub use toql_core::sql_mapper;
-pub use toql_core::sql_mapper_registry;
+pub use toql_core::table_mapper;
+pub use toql_core::table_mapper_registry;
 pub use toql_core::to_query;
 pub use toql_core::tree;
 //pub use toql_core::update_field;

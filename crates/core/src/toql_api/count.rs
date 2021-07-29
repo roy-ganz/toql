@@ -2,7 +2,7 @@
 
 use crate::{
     keyed::Keyed,
-    sql_mapper::mapped::Mapped,
+    table_mapper::mapped::Mapped,
     tree::tree_map::TreeMap, 
 };
 

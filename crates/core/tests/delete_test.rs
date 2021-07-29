@@ -1,19 +1,19 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
-use toql_core::sql_mapper_registry::SqlMapperRegistry;
+use toql_core::table_mapper_registry::TableMapperRegistry;
 
 use toql_core::alias::AliasFormat;
 use toql_core::alias_translator::AliasTranslator;
 use toql_core::sql_expr_parser::SqlExprParser;
-use toql_core::sql_mapper::SqlMapper;
+use toql_core::table_mapper::TableMapper;
 
 struct User {}
 struct Book {}
 
-fn setup_registry() -> SqlMapperRegistry {
-    let mut registry = SqlMapperRegistry::new();
+fn setup_registry() -> TableMapperRegistry {
+    let mut registry = TableMapperRegistry::new();
 
-    let mut mapper = SqlMapper::new::<User>("User");
+    let mut mapper = TableMapper::new::<User>("User");
     mapper
         .map_column("id", "id")
         .map_column("username", "username")
@@ -25,7 +25,7 @@ fn setup_registry() -> SqlMapperRegistry {
         );
     registry.insert(mapper);
 
-    let mut mapper = SqlMapper::new::<Book>("Book");
+    let mut mapper = TableMapper::new::<Book>("Book");
     mapper
         .map_column("id", "id")
         .map_column("isbn", "isbn")

@@ -126,7 +126,7 @@ pub struct Query<M> {
     /// Select DISTINCT
     pub distinct: bool,
     /* /// Roles a query has to access fields.
-    /// See [MapperOption](../sql_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
+    /// See [MapperOption](../table_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
     pub roles: HashSet<String>, */
     pub aux_params: HashMap<String, SqlArg>, // generic build params
 

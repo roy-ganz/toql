@@ -10,7 +10,7 @@ use crate::query::{Query, concatenation::Concatenation, field_order::FieldOrder}
 
 use crate::query::QueryToken;
 use super::BuildMode;
-use crate::sql_mapper::SqlMapper;
+use crate::table_mapper::TableMapper;
 use super::sql_builder_error::SqlBuilderError;
 use super::wildcard_scope::WildcardScope;
 use crate::sql_arg::SqlArg;
@@ -23,7 +23,7 @@ pub(crate) fn eval_query<M>(
     on_params: &mut HashMap<std::string::String,SqlArg>,
     roles: &HashSet<String>, 
     wildcard_scope: &WildcardScope,
-    sql_mapper: &SqlMapper, 
+    table_mapper: &TableMapper, 
     ignored_paths: &Vec<String>, 
     subpath: &String, 
     mode: &BuildMode, 
@@ -99,7 +99,7 @@ pub(crate) fn eval_query<M>(
                         // Ensure user has load roles for path
                         let mut path = wildcard_path;
                         while !path.is_empty() {
-                            if let Some(join) = sql_mapper.joins.get(path) {
+                            if let Some(join) = table_mapper.joins.get(path) {
                                 assert_roles(&roles, &join.options.roles)
                                     .map_err(|role| SqlBuilderError::RoleRequired(role))?;
                             } else {
@@ -112,7 +112,7 @@ pub(crate) fn eval_query<M>(
                         let mut last_validated_path = ("", true); 
                         let mut last_validated_scope_wildcard = ("", "", false);
 
-                        for (field_name, sql_target) in &sql_mapper.fields {
+                        for (field_name, sql_target) in &table_mapper.fields {
                             
                             if !sql_target.options.query_select {
                                 continue;
@@ -204,7 +204,7 @@ pub(crate) fn eval_query<M>(
                                         }
 
                                         //if ignore wildcard, roles missing validated_path = (path, false)
-                                        if let Some(join) = sql_mapper.joins.get(path) {
+                                        if let Some(join) = table_mapper.joins.get(path) {
                                             if join.options.skip_wildcard {
                                                 last_validated_path = (path, false);
                                                 break;
@@ -293,7 +293,7 @@ pub(crate) fn eval_query<M>(
                                 .trim_start_matches('_')
                         };
 
-                        match sql_mapper.fields.get(field_name) {
+                        match table_mapper.fields.get(field_name) {
                             Some(sql_target) => {
                                 // Verify user role and skip field role mismatches
                                 assert_roles(&roles, &sql_target.options.roles)
@@ -510,7 +510,7 @@ pub(crate) fn eval_query<M>(
                         }
                           
 
-                         match sql_mapper.predicates.get(&query_predicate.name) {
+                         match table_mapper.predicates.get(&query_predicate.name) {
                             Some(predicate) => {
 
                                 if mode == &BuildMode::CountFiltered && !predicate.options.count_filter {

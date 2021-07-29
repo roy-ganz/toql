@@ -17,7 +17,7 @@ use async_trait::async_trait;
 
 use crate::{
     error::ToqlError,
-   sql_mapper_registry::SqlMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, sql_builder::build_result::BuildResult, page::Page
+   table_mapper_registry::TableMapperRegistry, alias_format::AliasFormat, sql_arg::SqlArg, sql::Sql, sql_builder::build_result::BuildResult, page::Page
 };
 use std::{ collections::{HashMap, HashSet}, sync::{RwLockWriteGuard, RwLockReadGuard}};
 
@@ -28,8 +28,8 @@ use std::{ collections::{HashMap, HashSet}, sync::{RwLockWriteGuard, RwLockReadG
 pub trait Backend<R,E> 
 where  E: From<ToqlError>
 { 
-   fn registry(&self) ->Result<RwLockReadGuard<'_, SqlMapperRegistry>, ToqlError>;
-   fn registry_mut(&mut self) -> Result<RwLockWriteGuard<'_, SqlMapperRegistry>, ToqlError>;
+   fn registry(&self) ->Result<RwLockReadGuard<'_, TableMapperRegistry>, ToqlError>;
+   fn registry_mut(&mut self) -> Result<RwLockWriteGuard<'_, TableMapperRegistry>, ToqlError>;
    fn roles(&self) -> &HashSet<String>;
    fn alias_format(&self) -> AliasFormat;
    fn aux_params(&self) -> &HashMap<String, SqlArg>;

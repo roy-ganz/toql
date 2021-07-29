@@ -3,7 +3,7 @@ use crate::{
     error::ToqlError,
     from_row::FromRow,
     keyed::Keyed,
-    sql_mapper::mapped::Mapped,
+    table_mapper::mapped::Mapped,
     tree::{
         tree_index::TreeIndex, 
         tree_map::TreeMap, tree_merge::TreeMerge, tree_predicate::TreePredicate,

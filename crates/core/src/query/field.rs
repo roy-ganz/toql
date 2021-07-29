@@ -153,7 +153,7 @@ impl Field {
         self
     }
     /// Filter records with custom function.
-    /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
+    /// To provide a custom function you must implement (FieldHandler)[../table_mapper/trait.FieldHandler.html]
     /// See _custom handler test_ for an example.
     pub fn fnc<U, T, I>(mut self, name: U, args: I) -> Self
     where
@@ -169,7 +169,7 @@ impl Field {
     }
 
     /// Filter records with custom function.
-    /// To provide a custom function you must implement (FieldHandler)[../sql_mapper/trait.FieldHandler.html]
+    /// To provide a custom function you must implement (FieldHandler)[../table_mapper/trait.FieldHandler.html]
     /// See _custom handler test_ for an example.
     pub fn concatenate(mut self, concatenation: Concatenation) -> Self {
         self.concatenation = concatenation;

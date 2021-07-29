@@ -13,7 +13,7 @@ Especially
  ## Typical usecase
   
   ```rust
-  let cache = SqlMapperRegistry::new();
+  let cache = TableMapperRegistry::new();
   
   let mut user_mapper = User::insert_new_mapper(&cache);
   

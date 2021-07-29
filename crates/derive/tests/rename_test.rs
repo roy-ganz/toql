@@ -37,7 +37,7 @@ struct MyUser {
 
 #[test]
 fn rename() {
-    let mapper = toql::sql_mapper::SqlMapper::from_mapped_with_alias::<MyBook>("b");
+    let mapper = toql::table_mapper::TableMapper::from_mapped_with_alias::<MyBook>("b");
 
     let query = toql::query_parser::QueryParser::parse("*, author_id, coAuthor_id"); // Select all top fields and id from author and co-author
     let result = toql::sql_builder::SqlBuilder::new().build(&mapper, &query.unwrap());

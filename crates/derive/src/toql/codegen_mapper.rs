@@ -57,7 +57,7 @@ impl<'a> CodegenMapper<'a> {
                                     #toql_field_name,
                                     toql::sql_expr_macro::sql_expr!(#sql_mapping),
                                     #handler (),
-                                    toql::sql_mapper::predicate_options::PredicateOptions::new()  #(#on_params)* #countfilter_ident );
+                                    toql::table_mapper::predicate_options::PredicateOptions::new()  #(#on_params)* #countfilter_ident );
                             });
                 }
                 None => {
@@ -65,7 +65,7 @@ impl<'a> CodegenMapper<'a> {
                                 mapper.map_predicate_with_options(
                                 #toql_field_name,
                                 toql::sql_expr_macro::sql_expr!(#sql_mapping),
-                                toql::sql_mapper::predicate_options::PredicateOptions::new() #(#on_params)* #countfilter_ident
+                                toql::table_mapper::predicate_options::PredicateOptions::new() #(#on_params)* #countfilter_ident
                               );
                             });
                 }
@@ -169,9 +169,9 @@ impl<'a> CodegenMapper<'a> {
                 let join_type = if field.number_of_options == 0
                     || (field.number_of_options == 1 && !field.preselect)
                 {
-                    quote!(toql::sql_mapper::join_type::JoinType::Inner)
+                    quote!(toql::table_mapper::join_type::JoinType::Inner)
                 } else {
-                    quote!(toql::sql_mapper::join_type::JoinType::Left)
+                    quote!(toql::table_mapper::join_type::JoinType::Left)
                 };
 
                 //let join_statement = format!("{} ", &sql_join_table_name);
@@ -219,9 +219,9 @@ impl<'a> CodegenMapper<'a> {
                 self.field_mappings.push(quote! {
                     mapper.map_join_with_options(#toql_field_name, #sql_join_mapper_name,
                     #join_type,
-                    {let mut t = toql::sql_expr::SqlExpr::literal(< #sql_join_table_name_ident as toql::sql_mapper::mapped::Mapped>::table_name()); t.push_literal(" "); t.push_other_alias(); t }, 
+                    {let mut t = toql::sql_expr::SqlExpr::literal(< #sql_join_table_name_ident as toql::table_mapper::mapped::Mapped>::table_name()); t.push_literal(" "); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
-                     toql::sql_mapper::join_options::JoinOptions::new() #(#aux_params)*
+                     toql::table_mapper::join_options::JoinOptions::new() #(#aux_params)*
                      #preselect_ident #key_ident #skip_load_ident #skip_mut_ident #skip_wc_ident #roles_ident
                     );
                 });
@@ -303,7 +303,7 @@ impl<'a> CodegenMapper<'a> {
                         };
                         self.field_mappings.push(quote! {
                                 #sql_mapping
-                                mapper.map_handler_with_options( #toql_field_name, #sql_expr, #handler (), toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*
+                                mapper.map_handler_with_options( #toql_field_name, #sql_expr, #handler (), toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*
                                  #key_ident #preselect_ident  #skip_wc_ident #roles_ident #skip_mut_ident #skip_load_ident);
                             });
                     }
@@ -312,14 +312,14 @@ impl<'a> CodegenMapper<'a> {
                             SqlTarget::Expression(ref expression) => {
                                 quote! {
                                     mapper.map_expr_with_options( #toql_field_name,  toql::sql_expr_macro::sql_expr!( #expression),
-                                toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*
+                                toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*
                                  #preselect_ident #skip_wc_ident #roles_ident #skip_mut_ident #skip_load_ident);
                                 }
                             }
                             SqlTarget::Column(ref column) => {
                                 quote! {
                                     mapper.map_column_with_options( #toql_field_name, #column,
-                                    toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*
+                                    toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*
                                     #key_ident #preselect_ident #skip_wc_ident #roles_ident #skip_mut_ident #skip_load_ident);
                                  }
                             }
@@ -327,7 +327,7 @@ impl<'a> CodegenMapper<'a> {
                         /*  self.field_mappings.push(quote! {
                         #sql_mapping
                             mapper.map_column_with_options( #toql_field_name, sql_mapping,
-                            toql::sql_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
+                            toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*  #preselect_ident #ignore_wc_ident #roles_ident #mut_select_ident #query_select_ident);
                         }); */
                     }
                 };
@@ -464,7 +464,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
 
         let builder = quote!(
 
-            impl toql::sql_mapper::mapped::Mapped for #struct_ident {
+            impl toql::table_mapper::mapped::Mapped for #struct_ident {
 
                 fn type_name() -> String {
                     String::from(#struct_name)
@@ -476,7 +476,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                 fn table_alias() -> String {
                     String::from(#sql_table_alias)
                 }
-                fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()>{
+                fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()>{
                   /*   if toql_path.is_empty() {
                         mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);
                     } */
@@ -493,37 +493,37 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                 }
             }
 
-             impl toql::sql_mapper::mapped::Mapped for &#struct_ident {
+             impl toql::table_mapper::mapped::Mapped for &#struct_ident {
 
                   fn type_name() -> String {
-                  <#struct_ident as toql::sql_mapper::mapped::Mapped>::type_name()
+                  <#struct_ident as toql::table_mapper::mapped::Mapped>::type_name()
                 }
 
                 fn table_name() -> String {
-                   <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_name()
+                   <#struct_ident as toql::table_mapper::mapped::Mapped>::table_name()
                 }
                 fn table_alias() -> String {
-                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_alias()
+                    <#struct_ident as toql::table_mapper::mapped::Mapped>::table_alias()
                 }
-                fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()>{
-                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::map(mapper)
+                fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()>{
+                    <#struct_ident as toql::table_mapper::mapped::Mapped>::map(mapper)
                 }
              }
 
-             impl toql::sql_mapper::mapped::Mapped for &mut #struct_ident {
+             impl toql::table_mapper::mapped::Mapped for &mut #struct_ident {
 
                   fn type_name() -> String {
-                  <#struct_ident as toql::sql_mapper::mapped::Mapped>::type_name()
+                  <#struct_ident as toql::table_mapper::mapped::Mapped>::type_name()
                 }
 
                 fn table_name() -> String {
-                   <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_name()
+                   <#struct_ident as toql::table_mapper::mapped::Mapped>::table_name()
                 }
                 fn table_alias() -> String {
-                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::table_alias()
+                    <#struct_ident as toql::table_mapper::mapped::Mapped>::table_alias()
                 }
-                fn map(mapper: &mut toql::sql_mapper::SqlMapper) -> toql::result::Result<()>{
-                    <#struct_ident as toql::sql_mapper::mapped::Mapped>::map(mapper)
+                fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()>{
+                    <#struct_ident as toql::table_mapper::mapped::Mapped>::map(mapper)
                 }
              }
 

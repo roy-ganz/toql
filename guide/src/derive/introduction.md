@@ -29,8 +29,8 @@ use toql::mysql::load_one; // Load function from derive
 use toql::mysql::update_one; // Update function from derive
 
 let conn = --snip--
-let cache = SqlMapperRegistry::new();
-SqlMapper::insert_new_mapper::<User>(&mut cache); // Mapper function from derive
+let cache = TableMapperRegistry::new();
+TableMapper::insert_new_mapper::<User>(&mut cache); // Mapper function from derive
 
 let q = Query::wildcard().and(User::fields.id().eq(5)); // Builder fields from derive
 let user = load_one<User>(&q, &cache, &mut conn); 

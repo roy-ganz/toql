@@ -1,5 +1,5 @@
-fn setup_mapper() -> SqlMapper {
-    let mut mapper = SqlMapper::new("Book");
+fn setup_mapper() -> TableMapper {
+    let mut mapper = TableMapper::new("Book");
     mapper
         .map_predicate("user_id", "SELECT 1 FROM Book WHERE User = ?")
         .map_field_with_options("id", "id", FieldOptions::new().preselect(true))

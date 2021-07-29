@@ -1,5 +1,5 @@
 
-use toql::prelude::{Sql, SqlMapperRegistry, AliasFormat, SqlArg, Result};
+use toql::prelude::{Sql, TableMapperRegistry, AliasFormat, SqlArg, Result};
 use toql::backend::ops::update::Update;
 
 use std::collections::{HashMap, HashSet};
@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 pub struct TestUpdate {
     pub sqls: Vec<Sql>,
-    registry: SqlMapperRegistry,
+    registry: TableMapperRegistry,
     roles: HashSet<String>,
     alias_format: AliasFormat,
     aux_params: HashMap<String, SqlArg>
@@ -26,7 +26,7 @@ impl Default for TestUpdate {
     fn default() -> Self {
         TestUpdate {
         sqls: Vec::new(),
-        registry: SqlMapperRegistry::new(),
+        registry: TableMapperRegistry::new(),
         roles: HashSet::new(),
         alias_format: AliasFormat::Canonical,
         aux_params: HashMap::new()
@@ -37,10 +37,10 @@ impl Default for TestUpdate {
 
 // Implement template functions for updating entities
 impl<T> Update<T> for TestUpdate {
-    fn registry(&self) -> &SqlMapperRegistry {
+    fn registry(&self) -> &TableMapperRegistry {
        &self.registry
    }
-    fn registry_mut(&mut self) -> &mut SqlMapperRegistry {
+    fn registry_mut(&mut self) -> &mut TableMapperRegistry {
        &mut self.registry
    }
     fn roles(&self) -> &HashSet<String> {

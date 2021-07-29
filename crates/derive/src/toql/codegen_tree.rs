@@ -203,8 +203,8 @@ impl<'a> CodegenTree<'a> {
                         let mut args = Vec::new();
                         for c in inverse_columns {
                             let i = key_columns.iter().position(|r| r == &c)
-                                .ok_or_else(|| toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
-                            args.push(self_key_params.get(i).ok_or_else(||toql::sql_mapper::SqlMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
+                                .ok_or_else(|| toql::table_mapper::TableMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
+                            args.push(self_key_params.get(i).ok_or_else(||toql::table_mapper::TableMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
                         }
 
                             
@@ -627,7 +627,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 }
                  impl toql::tree::tree_map::TreeMap for #struct_ident {
 
-                         fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+                         fn map(registry: &mut toql::table_mapper_registry::TableMapperRegistry)-> toql::result::Result<()>{
 
                                  if registry.get(#struct_name).is_none() {
                                      registry.insert_new_mapper::<#struct_ident>()?;
@@ -639,13 +639,13 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                  }
                   impl toql::tree::tree_map::TreeMap for &#struct_ident {
 
-                         fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+                         fn map(registry: &mut toql::table_mapper_registry::TableMapperRegistry)-> toql::result::Result<()>{
                              <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
                          }
                   }
                   impl toql::tree::tree_map::TreeMap for &mut #struct_ident {
 
-                         fn map(registry: &mut toql::sql_mapper_registry::SqlMapperRegistry)-> toql::result::Result<()>{
+                         fn map(registry: &mut toql::table_mapper_registry::TableMapperRegistry)-> toql::result::Result<()>{
                              <#struct_ident as  toql::tree::tree_map::TreeMap>::map(registry)
                          }
                   }

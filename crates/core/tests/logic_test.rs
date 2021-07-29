@@ -1,10 +1,10 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
-use toql_core::sql_mapper::FieldOptions;
-use toql_core::sql_mapper::SqlMapper;
+use toql_core::table_mapper::FieldOptions;
+use toql_core::table_mapper::TableMapper;
 
-fn setup_mapper() -> SqlMapper {
-    let mut mapper = SqlMapper::new("Book");
+fn setup_mapper() -> TableMapper {
+    let mut mapper = TableMapper::new("Book");
     mapper
         .map_field_with_options("id", "id", FieldOptions::new().preselect(true))
         .map_field("title", "title")

@@ -1,10 +1,10 @@
-use crate::sql_mapper::join::{Join, JoinType};
+use crate::table_mapper::join::{Join, JoinType};
 use std::collections::{HashMap, HashSet};
 use crate::sql::Sql;
 use crate::sql_arg::SqlArg;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::sql_builder::build_result::BuildResult;
-use crate::sql_mapper::field::Field as MapperField;
+use crate::table_mapper::field::Field as MapperField;
 use crate::query::field_order::FieldOrder;
 //use crate::sql_builder::sql_target_data::MapperFieldData;
 

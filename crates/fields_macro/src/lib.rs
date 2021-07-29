@@ -5,7 +5,7 @@
 //! You may disable some functionality.
 //!
 //! For a derived struct the following is generated:
-//!  - Trait [Mapped](../toql_core/sql_mapper/trait.Mapped.html) to map struct to [SqlMapper](../toql_core/sql_mapper/struct.SqlMapper.html).
+//!  - Trait [Mapped](../toql_core/table_mapper/trait.Mapped.html) to map struct to [TableMapper](../toql_core/table_mapper/struct.TableMapper.html).
 //!  - Methods for all fields to support building a [Query](../toql_core/query/struct.Query.html).
 //!  - Methods to load, insert, delete and update a struct. Requires database feature.
 //!

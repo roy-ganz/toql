@@ -7,7 +7,7 @@ use crate::{
     sql::Sql,
     sql_builder::sql_builder_error::SqlBuilderError,
     sql_expr::resolver::Resolver,
-    sql_mapper::{mapped::Mapped, SqlMapper},
+    table_mapper::{mapped::Mapped, TableMapper},
     tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert},
 };
 use std::{borrow::BorrowMut, collections::HashMap};
@@ -228,7 +228,7 @@ where
     Ok(())
 }
 pub fn build_insert_sql<T, Q>(
-    mappers: &HashMap<String, SqlMapper>,
+    mappers: &HashMap<String, TableMapper>,
     alias_format: AliasFormat,
     aux_params: &ParameterMap,
     entities: &[Q],
@@ -322,7 +322,7 @@ pub fn split_basename(
 }
 
 pub fn plan_insert_order<T, S: AsRef<str>>(
-    mappers: &HashMap<String, SqlMapper>,
+    mappers: &HashMap<String, TableMapper>,
     paths: &[S],
     joins: &mut Vec<HashSet<String>>,
     merges: &mut HashSet<String>,

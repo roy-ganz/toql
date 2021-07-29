@@ -35,7 +35,7 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
     
 	#[query("/?<toql..>")]
 	fn query(toql: Form<ToqlQuery>,  conn: ExampleDbConnection, 
-		mappers: State<SqlMapperRegistry>) -> Result<Counted<Json<User>>> {
+		mappers: State<TableMapperRegistry>) -> Result<Counted<Json<User>>> {
 		let ExampleDbConnection(mut c) = conn;
 
 		let r = toql::rocket::load_many(toql, mappers, &mut c)?;
@@ -46,8 +46,8 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
 	pub struct ExampleDbConnection(mysql::Conn);
 
 	fn main() {
-		let mut mappers = SqlMapperRegistry::new();
-		SqlMapper::insert_new_mapper::<User>(&mut mappers);
+		let mut mappers = TableMapperRegistry::new();
+		TableMapper::insert_new_mapper::<User>(&mut mappers);
 
 		rocket::ignite().mount("/query", routes![query]).launch();
 	}
