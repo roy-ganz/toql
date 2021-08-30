@@ -9,5 +9,6 @@ Toql is free and open source software, distributed under a dual license of MIT a
 This book is split into several sections, with this introduction being the first. The others are:
 
 * [Concept](concept.md) - The overall concept of Toql.
+* [API](api/introduction.md) - How to use the library.
 * [Query Language](query-language/introduction.md) - How queries look like.
 * [Toql Derive](derive/introduction.md) - Map query fields onto Rust structs and SQL databases.

@@ -9,6 +9,8 @@ pub enum SqlBuilderError {
     PredicateMissing(String),
     /// The join is not mapped to a column or SQL expression. Contains the field name.
     JoinMissing(String),
+    /// The merge is not mapped. Contains the field name.
+    MergeMissing(String),
     /// The selection is not known to the mapper. Contains the field name.
     SelectionMissing(String),
     /// The field requires a role that the query does not have. Contains the role.
@@ -39,6 +41,7 @@ impl fmt::Display for SqlBuilderError {
             SqlBuilderError::SelectionMissing(ref s) => write!(f, "selection `{}` is missing", s),
             SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
             SqlBuilderError::JoinMissing(ref s) => write!(f, "join `{}` is missing", s),
+            SqlBuilderError::MergeMissing(ref s) => write!(f, "merge `{}` is missing", s),
             SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
             SqlBuilderError::KeyMismatch(ref t, ref s) => {

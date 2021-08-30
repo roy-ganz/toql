@@ -25,18 +25,20 @@ use crate::parameter_map::ParameterMap;
 ///
 use crate::query::field_filter::FieldFilter;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::sql_expr::SqlExpr;
+use crate::sql_expr::{SqlExpr, resolver::Resolver};
+
 
 pub trait FieldHandler {
     /// Context parameters allow to share information between different handlers
-
     /// Return sql and params if you want to select it.
     fn build_select(
         &self,
         select: SqlExpr,
-        _aux_params: &ParameterMap,
+        aux_params: &ParameterMap,
     ) -> Result<Option<SqlExpr>, SqlBuilderError> {
-        Ok(Some(select))
+        // Replace aux params in select expr. If params are left unresolved, field will not be selected.
+        let expr = Resolver::resolve_aux_params(select, aux_params);
+        Ok(Some(expr))
     }
 
     /// Match filter and return SQL expression.

@@ -150,7 +150,7 @@ where
         let mut d = ancestor_path.children();
 
         let columns =
-            TreePredicate::columns(entities.get(0).unwrap(), &mut d).map_err(ToqlError::from)?;
+            <T as TreePredicate>::columns(&mut d).map_err(ToqlError::from)?;
 
         let mut args = Vec::new();
         //let mut d = ancestor_path.descendents();

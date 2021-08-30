@@ -10,17 +10,11 @@ where
     <T as Keyed>::Key: Clone,
     T: TreePredicate,
 {
-    fn columns<'a, I>(&self, descendents: &mut I) -> Result<Vec<String>, ToqlError>
+    fn columns<'a, I>(descendents: &mut I) -> Result<Vec<String>, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>,
     {
-        match self {
-            Join::Key(_) => match descendents.next() {
-                Some(p) => Err(ToqlError::ValueMissing(p.as_str().to_string())),
-                None => Ok(<<Self as Keyed>::Key as Key>::columns()),
-            },
-            Join::Entity(e) => e.columns(descendents),
-        }
+        <T as TreePredicate>::columns(descendents)
     }
     fn args<'a, I>(&self, descendents: &mut I, args: &mut Vec<SqlArg>) -> Result<(), ToqlError>
     where

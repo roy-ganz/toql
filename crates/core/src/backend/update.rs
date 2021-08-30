@@ -84,7 +84,7 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
 
                 let parent_path = FieldPath::from(&path);
                 let entity = entities.get(0).unwrap().borrow();
-                let columns = <T as TreePredicate>::columns(entity, &mut parent_path.children())?;
+                let columns = <T as TreePredicate>::columns(&mut parent_path.children())?;
                 let mut args = Vec::new();
                 for e in entities.iter() {
                     <T as TreePredicate>::args(e.borrow(), &mut parent_path.children(), &mut args)?;

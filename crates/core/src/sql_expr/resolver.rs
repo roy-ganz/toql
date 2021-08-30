@@ -62,6 +62,26 @@ impl<'a> Resolver<'a> {
         SqlExpr::from(tokens)
     }
 
+    // Convenience function, that cannot fail
+    pub fn resolve_aux_params(
+        sql_expr: SqlExpr,
+        aux_params: &ParameterMap,
+    ) -> SqlExpr {
+        let mut tokens = Vec::new();
+
+        for token in sql_expr.tokens {
+            if let SqlExprToken::AuxParam(ref name) = token {
+                if let Some(arg) = aux_params.get(name) {
+                    tokens.push(SqlExprToken::Arg(arg.clone()));
+                }
+            } else {
+                tokens.push(token);
+            }
+        }
+        SqlExpr::from(tokens)
+    }
+    
+
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
         let mut tokens = Vec::new();
 
@@ -141,7 +161,7 @@ impl<'a> Resolver<'a> {
                     .ok_or_else(|| ResolverError::AuxParamMissing(name.to_string()))?
                     .to_owned();
                 Ok(Cow::Owned(SqlExprToken::Arg(arg)))
-            }
+            },
             SqlExprToken::UnresolvedArg if arg_iter.is_some() => {
                 let arg = arg_iter
                     .unwrap()

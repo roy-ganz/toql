@@ -1,4 +1,4 @@
-use crate::query::{field_order::FieldOrder, field_path::FieldPath};
+use crate::{sql_arg::SqlArg, query::{field_order::FieldOrder, field_path::FieldPath}};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) struct BuildContext {
@@ -7,6 +7,7 @@ pub(crate) struct BuildContext {
     pub(crate) local_selected_paths: HashSet<String>,
     pub(crate) local_selected_fields: HashSet<String>,
     pub(crate) ordering: HashMap<u8, Vec<(FieldOrder, String)>>,
+    pub(crate) on_aux_params: HashMap<String, SqlArg>, // generic build params
 }
 
 impl BuildContext {
@@ -17,6 +18,7 @@ impl BuildContext {
             local_selected_paths: HashSet::new(),
             local_selected_fields: HashSet::new(),
             ordering: HashMap::new(),
+            on_aux_params: HashMap::new(),
         }
     }
 

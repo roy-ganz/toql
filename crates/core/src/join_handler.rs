@@ -1,14 +1,15 @@
 use crate::parameter_map::ParameterMap;
-use crate::sql_expr::SqlExpr;
+use crate::sql_expr::{resolver::Resolver, SqlExpr};
 
 pub trait JoinHandler {
     /// Return customized SQL on predicate
     fn build_on_predicate(
         &self,
         on_predicate: SqlExpr,
-        _aux_params: &ParameterMap,
+        aux_params: &ParameterMap,
     ) -> Result<SqlExpr, crate::sql_builder::sql_builder_error::SqlBuilderError> {
-        Ok(on_predicate)
+         let expr = Resolver::resolve_aux_params(on_predicate, aux_params);
+         Ok(expr)
     }
 }
 

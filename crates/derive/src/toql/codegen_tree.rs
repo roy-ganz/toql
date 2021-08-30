@@ -124,16 +124,46 @@ impl<'a> CodegenTree<'a> {
                             <#rust_base_type_ident as toql::tree::tree_map::TreeMap>::map(registry)?;
                 ));
 
-                self.dispatch_predicate_args_code.push(quote!(
-                      #toql_field_name => {
-                            <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            args(#refer  self. #rust_field_ident # unwrap ,&mut descendents, args)?
+                self.dispatch_predicate_args_code.push(
+                    match field.number_of_options {
+                        2 => {
+                            quote!(
+                                #toql_field_name => {
+                                    let value= self. #rust_field_ident .as_ref().ok_or(
+                                toql::error::ToqlError::ValueMissing( #toql_field_name.to_string()),
+                                )?;
+                                if let Some(val) = value {
+                                        <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                                        args(val ,&mut descendents, args)?
+                                    }
+                                }
+                            )
+                        },
+                        1 if field.preselect => {
+                            quote!(
+                                #toql_field_name => {
+                                    if let Some(val) = self. #rust_field_ident .as_ref() {
+                                            <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                                            args(val   ,&mut descendents, args)?
+                                        }
+                                    }
+                            )
+                        },
+                        _ => {
+                            quote!(
+                            #toql_field_name => {
+                                    <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                                    args(#refer  self. #rust_field_ident # unwrap ,&mut descendents, args)?
+                                }
+                            )
                         }
-                ));
+
+                    }
+                );
                 self.dispatch_predicate_columns_code.push(quote!(
                       #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            columns(#refer  self. #rust_field_ident # unwrap ,&mut descendents)?
+                            columns(&mut descendents)?
                         }
                 ));
 
@@ -149,14 +179,42 @@ impl<'a> CodegenTree<'a> {
                     ));
 
                 self.dispatch_merge_code.push(
-                   quote!(
-                       #toql_field_name => {
+                    match field.number_of_options {
+                        2 =>  {
+                            quote!(
+                                #toql_field_name => {
+                                  let value =  self. #rust_field_ident .as_mut().ok_or(
+                                    toql::error::ToqlError::ValueMissing( #rust_type_name.to_string()),
+                                    )?;
+                                    if let Some(val) =  value.as_mut() {
+                                    <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
+                                        merge( val, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                                    }
+                                }
+                            )
+                        },
+                        1 if field.preselect =>  {
+                            quote!(
+                                #toql_field_name => {
+                                    if let Some(val) =  self. # rust_field_ident.as_mut() {
+                                    <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
+                                        merge( val, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                                    }
+                                }
+                            )
+                        },
+                        _ =>{
+                        quote!(
+                            #toql_field_name => {
 
-                            <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
-                            merge(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                                    <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
+                                    merge(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, &field, rows, row_offset, index, selection_stream)?
 
-                       }
-                )
+                            }
+                        )
+                        }
+                    }
+                   
                );
                 self.merge_type_bounds.push(quote!(
                     #rust_type_ident : toql :: from_row :: FromRow < R >,
@@ -251,13 +309,9 @@ impl<'a> CodegenTree<'a> {
                 self.dispatch_predicate_columns_code.push(
                    quote!(
                        #toql_field_name => {
-                       let f = #refer self. #rust_field_ident #unwrap .get(0)
-                        .ok_or(
-                            toql::error::ToqlError::SqlBuilderError(
-                             toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(#toql_field_name.to_string())))
-                             ?;
+                       
                             <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            columns(f, &mut descendents)?
+                            columns(&mut descendents)?
 
 
                        }
@@ -653,7 +707,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 
                      #[allow(unused_mut)]
-                    fn columns<'a, I>(&self, mut descendents: &mut I )
+                    fn columns<'a, I>(mut descendents: &mut I )
                         -> std::result::Result<Vec<String>, toql::error::ToqlError>
                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                         {
@@ -668,16 +722,6 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                                 },
                                 None => {
                                    <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns()
-
-                                    /*
-                                        match field {
-                                        #(#merge_predicate_code),*
-                                        f @ _ => {
-                                            return Err(
-                                                toql::sql_builder::sql_builder_error::SqlBuilderError::FieldMissing(f.to_string()).into());
-                                        }
-                                        }*/
-
                                 }
                             })
                         }
@@ -711,11 +755,11 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 impl toql::tree::tree_predicate::TreePredicate for &#struct_ident {
 
                      #[allow(unused_mut)]
-                    fn columns<'a, I>(&self, mut descendents: &mut I )
+                    fn columns<'a, I>( mut descendents: &mut I )
                         -> std::result::Result<Vec<String>, toql::error::ToqlError>
                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                         {
-                            <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
+                            <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(descendents)
                         }
 
                      #[allow(unused_mut)]
@@ -732,11 +776,11 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 impl toql::tree::tree_predicate::TreePredicate for &mut #struct_ident {
 
                     #[allow(unused_mut)]
-                    fn columns<'a, I>(&self, mut descendents: &mut I )
+                    fn columns<'a, I>( mut descendents: &mut I )
                         -> std::result::Result<Vec<String>, toql::error::ToqlError>
                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                         {
-                            <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns(self, descendents)
+                            <#struct_ident as toql::tree::tree_predicate::TreePredicate>::columns( descendents)
                         }
 
                      #[allow(unused_mut)]

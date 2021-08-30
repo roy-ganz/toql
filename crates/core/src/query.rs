@@ -71,7 +71,7 @@ impl ToString for QueryToken {
             },
             QueryToken::Field(field) => field.to_string(),
             QueryToken::Predicate(predicate) => predicate.to_string(),
-            QueryToken::Selection(selection) => selection.name.to_string(),
+            QueryToken::Selection(selection) => format!("${}", &selection.name),
             QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
         }
     }
@@ -401,6 +401,7 @@ impl<M> fmt::Display for Query<M> {
                     }
                     QueryToken::Field(field) => s.push(get_concatenation(&field.concatenation)),
                     QueryToken::Predicate(field) => s.push(get_concatenation(&field.concatenation)),
+                    QueryToken::Selection(selection) => s.push(get_concatenation(&selection.concatenation)),
                     _ => {}
                 }
             }
@@ -410,6 +411,7 @@ impl<M> fmt::Display for Query<M> {
                 QueryToken::Field(..) => concatenation_needed = true,
                 QueryToken::Wildcard(..) => concatenation_needed = true,
                 QueryToken::Predicate(..) => concatenation_needed = true,
+                QueryToken::Selection(..) => concatenation_needed = true,
                 _ => {}
             }
         }

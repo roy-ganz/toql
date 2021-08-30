@@ -112,6 +112,8 @@ impl BuildResult {
         alias_translator: &mut AliasTranslator,
     ) -> Result<Sql> {
         let resolver = Resolver::new().with_aux_params(aux_params);
+
+        // Resolve compulsory parts early to estimate number of arguments
         let verb_sql = resolver.to_sql(&self.verb_expr, alias_translator)?;
         let preselect_sql = resolver.to_sql(&self.preselect_expr, alias_translator)?;
         let select_sql = resolver.to_sql(&self.select_expr, alias_translator)?;
@@ -122,14 +124,12 @@ impl BuildResult {
         let n = preselect_sql.1.len() + select_sql.1.len() + join_sql.1.len() + where_sql.1.len();
         let mut args = Vec::with_capacity(n);
 
-        args.extend_from_slice(&preselect_sql.1);
-        args.extend_from_slice(&select_sql.1);
-        args.extend_from_slice(&join_sql.1);
-        args.extend_from_slice(&where_sql.1);
+        
 
         let mut stmt = verb_sql.0;
         stmt.push(' ');
 
+        // Optional parts
         if !self.modifier.is_empty() {
             stmt.push_str(&self.modifier);
             stmt.push(' ');
@@ -139,30 +139,35 @@ impl BuildResult {
         if !preselect_sql.is_empty() {
             stmt.push_str(&preselect_sql.0);
             stmt.push_str(", ");
+            args.extend_from_slice(&preselect_sql.1);
         }
         stmt.push_str(&select_sql.0);
+        args.extend_from_slice(&select_sql.1);
 
         if !self.from_expr.is_empty() {
             stmt.push_str(" FROM ");
             stmt.push_str(&from_sql.0);
+            args.extend_from_slice(&from_sql.1);
         }
 
         if !self.join_expr.is_empty() {
             stmt.push(' ');
             let join_sql = resolver.to_sql(&self.join_expr, alias_translator)?;
             stmt.push_str(&join_sql.0);
+            args.extend_from_slice(&join_sql.1);
         }
 
         if !self.where_expr.is_empty() {
             stmt.push_str(" WHERE ");
-            let where_sql = resolver.to_sql(&self.where_expr, alias_translator)?;
             stmt.push_str(&where_sql.0);
+            args.extend_from_slice(&where_sql.1);
         }
 
         if !self.order_expr.is_empty() {
             stmt.push_str(" ORDER BY ");
             let order_sql = resolver.to_sql(&self.order_expr, alias_translator)?;
             stmt.push_str(&order_sql.0);
+            args.extend_from_slice(&order_sql.1);
         }
         if !self.extra.is_empty() {
             stmt.push(' ');

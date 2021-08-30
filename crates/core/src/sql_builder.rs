@@ -558,8 +558,7 @@ impl<'a> SqlBuilder<'a> {
                 .join(join_name)
                 .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string()))?;
 
-            let p = [&self.aux_params, &join.options.aux_params];
-            let aux_params = ParameterMap::new(&p);
+         
 
             let canonical_self_alias = self.canonical_alias(&local_path)?.to_string();
             let canonical_other_alias = self
@@ -601,10 +600,16 @@ impl<'a> SqlBuilder<'a> {
 
             let on_expr = resolver.resolve(&join.on_expression)?;
 
-            let on_expr = match &join.options.join_handler {
-                Some(handler) => handler.build_on_predicate(on_expr, &aux_params)?,
-                None => on_expr,
-            };
+            let on_expr ={
+                    let p = [&self.aux_params, &join.options.aux_params, &build_context.on_aux_params];
+                    let aux_params = ParameterMap::new(&p);
+                    match &join.options.join_handler {
+                        Some(handler) => {
+                            handler.build_on_predicate(on_expr, &aux_params)?},
+                        None => {
+                            Resolver::resolve_aux_params(on_expr, &aux_params)
+                        },
+            }};
 
             // Skip left joins with unresolved aux params
             let on_expr = match on_expr.first_aux_param() {
@@ -802,6 +807,18 @@ impl<'a> SqlBuilder<'a> {
                                     );
                                 }
                                 result.where_expr.extend(expr);
+                                if !mapped_predicate.options.on_params.is_empty() {
+                                    for (i ,a) in &mapped_predicate.options.on_params {
+                                        if let Some(v) = predicate.args.get(*i as usize) {
+                                           // log::info!("Setting on param `{}` = `{}`.", &a, v.to_string());
+                                            build_context.on_aux_params.insert(a.clone(), v.clone());
+                                        }
+                                        else {
+                                            log::warn!("Not enough predicate arguments to set on param `{}`.", &a);
+                                        }
+                                    }
+
+                                }
                             }
                         }
                         MapperOrMerge::Merge(_merge_path) => {}
@@ -1052,14 +1069,13 @@ impl<'a> SqlBuilder<'a> {
                             };
                             return Err(SqlBuilderError::RoleRequired(role_string).into());
                         }
-
+                        println!("{:?}", &aux_params);
                         let select_expr = field_info
                             .handler
                             .build_select(field_info.expression.clone(), &aux_params)?;
 
                         if role_valid {
                             // Do not select field, if field is selected through path and aux param is missing
-
                             if let Some(expr) = select_expr {
                                 // Fields with unresolved aux params that are selected through a path are unselected
                                 match expr.first_aux_param() {
@@ -1165,7 +1181,26 @@ impl<'a> SqlBuilder<'a> {
                         result.selection_stream.push(Select::None); // No Join
                     }
                 }
-                DeserializeType::Merge(_) => {}
+                DeserializeType::Merge(merge_name) => {
+                    let merge_info = mapper
+                        .merge(merge_name)
+                        .ok_or_else(|| SqlBuilderError::MergeMissing(merge_name.to_string()))?;
+
+                 /*    if let Some(load_role_expr) = &merge_info.options.load_role_expr {
+                        return Err(
+                            SqlBuilderError::RoleRequired(load_role_expr.to_string()).into()
+                        );
+                    };
+                    if merge_info.options.preselect {
+                        let local_merge_path = local_path.append(merge_name);
+                        result.unmerged_home_paths.insert(
+                                FieldPath::from(&build_context.query_home_path)
+                                    .append(local_merge_path.as_str())
+                                    .to_string(),
+                            );
+                           
+                    } */
+                }
             }
         }
 

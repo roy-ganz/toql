@@ -1,7 +1,7 @@
 use crate::{error::ToqlError, query::field_path::FieldPath, sql_arg::SqlArg};
 
 pub trait TreePredicate {
-    fn columns<'a, I>(&self, descendents: &mut I) -> Result<Vec<String>, ToqlError>
+    fn columns<'a, I>(descendents: &mut I) -> Result<Vec<String>, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>;
 

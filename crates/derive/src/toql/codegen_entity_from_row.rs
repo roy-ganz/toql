@@ -191,7 +191,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                         1 if field.preselect =>   //    #[toql(preselect)] Option<T>  -> Nullable Join -> Left Join
                                 quote!(
                                     #rust_field_ident : {
-                                        if iter.next().ok_or(toql::error::ToqlError::DeserializeError(
+                                        if !iter.next().ok_or(toql::error::ToqlError::DeserializeError(
                                             toql::deserialize::error::DeserializeError::StreamEnd))?
                                             .is_selected() {
                                             return Err(
