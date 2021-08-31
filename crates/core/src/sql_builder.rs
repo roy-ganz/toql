@@ -80,7 +80,6 @@ pub struct SqlBuilder<'a> {
     table_mapper_registry: &'a TableMapperRegistry,
     roles: HashSet<String>,
     aux_params: HashMap<String, SqlArg>, // Aux params used for all queries with this builder instance, contains typically config or auth data
-
     extra_joins: HashSet<String>, // Use this joins
 }
 
