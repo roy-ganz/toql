@@ -28,11 +28,10 @@ impl<'a> CodegenUpdate<'a> {
 
     pub(crate) fn add_tree_update(&mut self, field: &crate::sane::Field) {
         let rust_field_ident = &field.rust_field_ident;
-        let rust_field_name = &field.rust_field_name;
         let rust_type_ident = &field.rust_type_ident;
         let toql_field_name = &field.toql_field_name;
-        let struct_ident = &self.struct_ident;
-
+       
+/* 
         let unwrap = match field.number_of_options {
             1 => {
                 quote!(.as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?)
@@ -41,7 +40,7 @@ impl<'a> CodegenUpdate<'a> {
             _ => {
                 quote!(.as_ref().unwrap().as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?)
             }
-        };
+        }; */
 
         let refer = match field.number_of_options {
             0 => quote!(&),

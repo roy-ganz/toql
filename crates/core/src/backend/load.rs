@@ -6,7 +6,7 @@ use crate::{
     table_mapper::mapped::Mapped,
     tree::{
         tree_index::TreeIndex, 
-        tree_map::TreeMap, tree_merge::TreeMerge, tree_predicate::TreePredicate,
+        tree_merge::TreeMerge, tree_predicate::TreePredicate,
       
     }, sql::Sql, query::{Query, field_path::FieldPath}, sql_expr::{SqlExpr, PredicateColumn, resolver::Resolver}, sql_builder::{SqlBuilder}, alias_translator::AliasTranslator, parameter_map::ParameterMap, page::Page,
 };

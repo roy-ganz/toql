@@ -8,7 +8,7 @@ use crate::{
     sql_builder::{SqlBuilder, sql_builder_error::SqlBuilderError},
     sql_expr::{PredicateColumn, resolver::Resolver, SqlExpr},
     table_mapper::{mapped::Mapped, TableMapper},
-    tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_update::TreeUpdate, tree_predicate::TreePredicate, tree_map::TreeMap}, parameter_map::ParameterMap,
+    tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_update::TreeUpdate, tree_predicate::TreePredicate}, parameter_map::ParameterMap,
 };
 
 use std::{
@@ -78,12 +78,9 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
             // Delete existing merges and insert new merges
 
             for (path, fields) in merges {
-                // Build delete sql
-               /*  dbg!(&path);
-                dbg!(&fields); */
-
+              
                 let parent_path = FieldPath::from(&path);
-                let entity = entities.get(0).unwrap().borrow();
+              
                 let columns = <T as TreePredicate>::columns(&mut parent_path.children())?;
                 let mut args = Vec::new();
                 for e in entities.iter() {

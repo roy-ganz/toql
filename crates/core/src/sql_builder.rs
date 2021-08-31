@@ -238,7 +238,7 @@ impl<'a> SqlBuilder<'a> {
             root_mapper.table_name.to_owned(),
             root_mapper.canonical_table_alias.to_owned(),
         );
-        self.preparse_filter_joins(&query, &mut context)?;
+        self.preparse_filter_joins(&query, &mut context, false)?;
         self.build_where_clause(&query, &mut context, false, &mut result)?;
         self.build_join_clause(&mut context, &mut result, true)?;
 
@@ -344,7 +344,8 @@ impl<'a> SqlBuilder<'a> {
         build_context.query_home_path = query_root_path.to_string();
         let root_mapper = self.root_mapper()?; // self.joined_mapper_for_path(&Self::root_field_path(root_path))?;
 
-        let mut result = BuildResult::new(SqlExpr::literal("SELECT COUNT(*)"));
+        let mut result = BuildResult::new(SqlExpr::literal("SELECT"));
+        result.select_expr.push_literal("COUNT(*)");
 
         result.set_from(
             root_mapper.table_name.to_owned(),
@@ -358,7 +359,7 @@ impl<'a> SqlBuilder<'a> {
             &mut result,
         )?;
 
-        let _unmerged_home_paths = self.selection_from_query(query, &mut build_context)?;
+        /* let _unmerged_home_paths = self.selection_from_query(query, &mut build_context)?;
 
         if count_selection_only {
             // Strip path and fields that are not in count selection
@@ -372,17 +373,15 @@ impl<'a> SqlBuilder<'a> {
                 .unwrap_or(&default_count_selection)
             {
                 if s.ends_with("_*") {
-                    //selected_paths.remove(s.trim_end_matches("_*"));
                     build_context
                         .local_selected_paths
                         .remove(s.trim_end_matches("_*"));
                 }
             }
-            // all_fields = false;
-        }
-
-        // build_context.local_selected_paths = selected_paths;
-        //  build_context.all_fields_selected = all_fields;
+           
+        } */
+       
+        self.preparse_filter_joins(&query, &mut build_context, count_selection_only)?;
 
         self.build_join_clause(&mut build_context, &mut result, true)?;
 
@@ -591,7 +590,7 @@ impl<'a> SqlBuilder<'a> {
                     }
                 }
             }
-
+            join_expr.pop_literals(1); // Remove trailing whitespace
             join_expr.push_literal(") ON (".to_string());
 
             let on_expr = resolver.resolve(&join.on_expression)?;
@@ -1067,7 +1066,7 @@ impl<'a> SqlBuilder<'a> {
                             };
                             return Err(SqlBuilderError::RoleRequired(role_string).into());
                         }
-                        println!("{:?}", &aux_params);
+
                         let select_expr = field_info
                             .handler
                             .build_select(field_info.expression.clone(), &aux_params)?;
@@ -1305,12 +1304,27 @@ impl<'a> SqlBuilder<'a> {
         &mut self,
         query: &Query<M>,
         build_context: &mut BuildContext,
+        count_selection_only: bool
     ) -> Result<()> {
         for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
                     if field.filter.is_some() {
                         let query_path = FieldPath::from(&field.name);
+                         if count_selection_only {
+                            let root_mapper = self.root_mapper()?;
+                            match root_mapper.selections.get("cnt") {
+                                Some(selection) => {
+                                    let wildcard_path = format!("{}_*", field.name.as_str());
+                                    if !selection.contains(&field.name)
+                                        && !selection.contains(&wildcard_path)
+                                    {
+                                        continue;
+                                    }
+                                }
+                                None => continue,
+                            }
+                        }
                         if let Some(local_path_with_name) =
                             query_path.localize_path(&build_context.query_home_path)
                         {

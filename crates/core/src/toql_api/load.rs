@@ -1,6 +1,5 @@
 
 use crate::{
-    error::ToqlError,
     from_row::FromRow,
     keyed::Keyed,
     table_mapper::mapped::Mapped,

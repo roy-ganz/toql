@@ -1,4 +1,4 @@
-use crate::{error::ToqlError, query::field_path::FieldPath};
+use crate::{query::field_path::FieldPath};
 use std::{collections::HashMap, result::Result};
 
 // R is database specific row, E the desired output error
