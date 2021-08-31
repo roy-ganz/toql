@@ -29,6 +29,7 @@
 //!  - to all fields with [new_with_handler()](struct.TableMapper.html#method.new_with_handler).
 //!
 pub mod field_options;
+pub mod merge_options;
 pub mod join_options;
 pub mod join_type;
 pub mod mapped;
@@ -42,6 +43,7 @@ pub(crate) mod predicate;
 use heck::{CamelCase, MixedCase};
 
 use crate::table_mapper::join_options::JoinOptions;
+use crate::table_mapper::merge_options::MergeOptions;
 use crate::table_mapper::predicate_options::PredicateOptions;
 
 use crate::predicate_handler::{DefaultPredicateHandler, PredicateHandler};
@@ -463,16 +465,30 @@ where {
         merge_predicate: SqlExpr,
     ) -> &mut Self
     where
-        S: Into<String>,
+        S: Into<String> + Clone,
+    {
+       self.map_merge_with_options(toql_path, merged_mapper, merge_join, merge_predicate, MergeOptions::new())
+    }
+    pub fn map_merge_with_options<S>(
+        &mut self,
+        toql_path: S,
+        merged_mapper: &str,
+        merge_join: SqlExpr,
+        merge_predicate: SqlExpr,
+        options: MergeOptions
+    ) -> &mut Self
+    where
+        S: Into<String> + Clone,
     {
         self.deserialize_order
-            .push(DeserializeType::Merge(merged_mapper.to_string()));
+            .push(DeserializeType::Merge(toql_path.clone().into()));
         self.merges.insert(
             toql_path.into(),
             merge::Merge {
                 merged_mapper: merged_mapper.to_camel_case(),
                 merge_join,
                 merge_predicate,
+                options
             },
         );
         self

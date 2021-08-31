@@ -34,10 +34,10 @@
 //!  - The first pass will query all users with the user mapper and will ignore the path *phones_*.
 //!  - The second pass will only build the query for the path *phones_* with the help of the phone mapper.
 //!
+pub mod build_result;
 pub mod select_stream;
 pub mod sql_builder_error;
 pub mod wildcard_scope;
-pub mod build_result;
 
 pub(crate) mod build_context;
 pub(crate) mod path_tree;
@@ -508,7 +508,7 @@ impl<'a> SqlBuilder<'a> {
         &self,
         mut build_context: &mut BuildContext,
         result: &mut BuildResult,
-        enforce_inner_joins : bool
+        enforce_inner_joins: bool,
     ) -> Result<()> {
         // Build join tree for all selected paths
         // This allows to nest joins properly
@@ -533,7 +533,7 @@ impl<'a> SqlBuilder<'a> {
             &join_tree,
             &join_tree.roots(),
             &mut build_context,
-            enforce_inner_joins
+            enforce_inner_joins,
         )?;
         result.join_expr.extend(expr);
         result.join_expr.pop_literals(1); // Remove trailing whitespace
@@ -546,7 +546,7 @@ impl<'a> SqlBuilder<'a> {
         join_tree: &PathTree,
         nodes: &HashSet<String>,
         build_context: &mut BuildContext,
-        enforce_inner_joins: bool
+        enforce_inner_joins: bool,
     ) -> Result<SqlExpr> {
         let mut join_expr = SqlExpr::new();
 
@@ -558,8 +558,6 @@ impl<'a> SqlBuilder<'a> {
                 .join(join_name)
                 .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string()))?;
 
-         
-
             let canonical_self_alias = self.canonical_alias(&local_path)?.to_string();
             let canonical_other_alias = self
                 .canonical_alias(&FieldPath::from(local_path_with_join))?
@@ -568,15 +566,14 @@ impl<'a> SqlBuilder<'a> {
                 .with_self_alias(&canonical_self_alias)
                 .with_other_alias(&canonical_other_alias);
 
-            
-
-            join_expr.push_literal( if enforce_inner_joins {
+            join_expr.push_literal(if enforce_inner_joins {
                 "JOIN ("
             } else {
                 match &join.join_type {
-                JoinType::Inner => "JOIN (",
-                JoinType::Left => "LEFT JOIN (",
-            }});
+                    JoinType::Inner => "JOIN (",
+                    JoinType::Left => "LEFT JOIN (",
+                }
+            });
             let join_e = resolver.resolve(&join.table_expression)?;
             join_expr.extend(join_e);
             join_expr.push_literal(" ");
@@ -588,7 +585,7 @@ impl<'a> SqlBuilder<'a> {
                         join_tree,
                         &subnodes,
                         build_context,
-                        enforce_inner_joins
+                        enforce_inner_joins,
                     )?;
                     if !subjoin_expr.is_empty() {
                         join_expr.extend(subjoin_expr);
@@ -600,16 +597,18 @@ impl<'a> SqlBuilder<'a> {
 
             let on_expr = resolver.resolve(&join.on_expression)?;
 
-            let on_expr ={
-                    let p = [&self.aux_params, &join.options.aux_params, &build_context.on_aux_params];
-                    let aux_params = ParameterMap::new(&p);
-                    match &join.options.join_handler {
-                        Some(handler) => {
-                            handler.build_on_predicate(on_expr, &aux_params)?},
-                        None => {
-                            Resolver::resolve_aux_params(on_expr, &aux_params)
-                        },
-            }};
+            let on_expr = {
+                let p = [
+                    &self.aux_params,
+                    &join.options.aux_params,
+                    &build_context.on_aux_params,
+                ];
+                let aux_params = ParameterMap::new(&p);
+                match &join.options.join_handler {
+                    Some(handler) => handler.build_on_predicate(on_expr, &aux_params)?,
+                    None => Resolver::resolve_aux_params(on_expr, &aux_params),
+                }
+            };
 
             // Skip left joins with unresolved aux params
             let on_expr = match on_expr.first_aux_param() {
@@ -808,16 +807,16 @@ impl<'a> SqlBuilder<'a> {
                                 }
                                 result.where_expr.extend(expr);
                                 if !mapped_predicate.options.on_params.is_empty() {
-                                    for (i ,a) in &mapped_predicate.options.on_params {
+                                    for (i, a) in &mapped_predicate.options.on_params {
                                         if let Some(v) = predicate.args.get(*i as usize) {
-                                           // log::info!("Setting on param `{}` = `{}`.", &a, v.to_string());
-                                            build_context.on_aux_params.insert(a.clone(), v.clone());
-                                        }
-                                        else {
+                                            // log::info!("Setting on param `{}` = `{}`.", &a, v.to_string());
+                                            build_context
+                                                .on_aux_params
+                                                .insert(a.clone(), v.clone());
+                                        } else {
                                             log::warn!("Not enough predicate arguments to set on param `{}`.", &a);
                                         }
                                     }
-
                                 }
                             }
                         }
@@ -1186,20 +1185,17 @@ impl<'a> SqlBuilder<'a> {
                         .merge(merge_name)
                         .ok_or_else(|| SqlBuilderError::MergeMissing(merge_name.to_string()))?;
 
-                 /*    if let Some(load_role_expr) = &merge_info.options.load_role_expr {
-                        return Err(
-                            SqlBuilderError::RoleRequired(load_role_expr.to_string()).into()
-                        );
-                    };
                     if merge_info.options.preselect {
-                        let local_merge_path = local_path.append(merge_name);
-                        result.unmerged_home_paths.insert(
-                                FieldPath::from(&build_context.query_home_path)
-                                    .append(local_merge_path.as_str())
-                                    .to_string(),
+                        if let Some(load_role_expr) = &merge_info.options.load_role_expr {
+                            return Err(
+                                SqlBuilderError::RoleRequired(load_role_expr.to_string()).into()
                             );
-                           
-                    } */
+                        };
+                        let merge_field = FieldPath::from(build_context.query_home_path.as_str())
+                            .append(local_path.as_str())
+                            .append(merge_name.as_str());
+                        result.unmerged_home_paths.insert(merge_field.to_string());
+                    }
                 }
             }
         }

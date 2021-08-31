@@ -426,10 +426,17 @@ impl<'a> CodegenMapper<'a> {
                     quote!(#(#default_join_predicate)*)
                 };
 
+                let preselect_ident = if field.preselect || (field.number_of_options == 0) {
+                    quote!( .preselect(true))
+                } else {
+                    quote!()
+                };
+
                 self.field_mappings.push(quote! {
-                        mapper.map_merge(#toql_field_name, #sql_merge_mapper_name,
+                        mapper.map_merge_with_options(#toql_field_name, #sql_merge_mapper_name,
                            {#join_statement},
-                            { #join_predicate }
+                            { #join_predicate },
+                            toql::table_mapper::merge_options::MergeOptions::new() #preselect_ident #roles_ident
                             );
                 });
             }
