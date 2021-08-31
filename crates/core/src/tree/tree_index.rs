@@ -4,8 +4,6 @@ use std::{collections::HashMap, result::Result};
 // R is database specific row, E the desired output error
 // Trait is implemented for structs that can deserialize from rows
 pub trait TreeIndex<R, E>
-where
-    E: std::convert::From<ToqlError>,
 {
     fn index<'a, I>(
         descendents: &mut I,

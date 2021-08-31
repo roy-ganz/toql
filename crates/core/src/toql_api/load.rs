@@ -22,9 +22,6 @@ pub trait Load<R, E>:
     + TreeMerge<R, E>
     + std::fmt::Debug
     + Send
-where
-    <Self as Keyed>::Key: FromRow<R, E>,
-    E: std::convert::From<ToqlError>,
 {
 }
 
