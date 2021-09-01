@@ -39,7 +39,7 @@ impl TableMapperRegistry {
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> Result<String> {
         let m = TableMapper::from_mapped::<M>()?;
         self.mappers.insert(M::type_name(), m);
-        log::info!("Mapped `{}`", M::type_name());
+        tracing::event!(tracing::Level::INFO, ty = %M::type_name(), "Added table mapping information for rust type.");
         Ok(M::type_name())
     }
     pub fn insert_new_mapper_with_handler<M: Mapped, H>(&mut self, handler: H) -> Result<String>

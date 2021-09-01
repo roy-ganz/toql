@@ -12,7 +12,8 @@ repository = "https://github.com/roy-ganz/toql"
 [dependencies]
 pest = "2.0"
 
-log= "0.4"
+#log= "0.4"
+tracing = "0.1"
 regex="1"
 lazy_static = "1.4"
 enquote="1"

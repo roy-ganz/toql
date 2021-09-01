@@ -47,7 +47,7 @@ pub fn fields(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
                                     // eprintln!("{:?}", input);
 
-    log::debug!("Source code for `{}`:\n", &input);
+    tracing::debug!("Source code for `{}`:\n", &input);
     let ast = parse_macro_input!(input as fields_macro::FieldsMacro);
 
     //  let gen = fields_macro::parse(&ast.query, ast.struct_type);
@@ -74,11 +74,11 @@ pub fn fields(input: TokenStream) -> TokenStream {
 
     match gen {
         Ok(o) => {
-            log::debug!("{}", o.to_string());
+            tracing::debug!("{}", o.to_string());
             TokenStream::from(o)
         }
         Err(e) => {
-            log::debug!("{}", e.to_string());
+            tracing::debug!("{}", e.to_string());
             TokenStream::from(e)
         }
     }

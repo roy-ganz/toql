@@ -281,7 +281,7 @@ impl Field {
                                 .iter()
                                 .map(|c| c.to_string())
                                 .collect::<Vec<_>>(); */
-                        toql::log::warn!("On `{}::{}` invalid columns found: `{}`. Valid columns are: `{}`", #rust_type_name, #rust_field_name, invalid_columns.join(","),valid_columns.join(","));
+                        toql::tracing::warn!("On `{}::{}` invalid columns found: `{}`. Valid columns are: `{}`", #rust_type_name, #rust_field_name, invalid_columns.join(","),valid_columns.join(","));
                         }
                     }
                 )

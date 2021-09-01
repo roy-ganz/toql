@@ -22,7 +22,7 @@ heck = "0.3"
 
 proc-macro2 = "0.4"
 
-log = "0.4"
+tracing = "0.1"
 env_logger="0.6"
 
 pest= "2.0"

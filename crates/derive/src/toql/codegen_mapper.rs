@@ -536,7 +536,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
 
         );
 
-        log::debug!(
+        tracing::debug!(
             "Source code for `{}`:\n{}",
             &self.rust_struct.rust_struct_ident,
             builder.to_string()

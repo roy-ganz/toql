@@ -602,7 +602,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
 
         );
 
-        log::debug!(
+        tracing::debug!(
             "Source code for `{}`:\n{}",
             &self.rust_struct.rust_struct_name,
             code.to_string()

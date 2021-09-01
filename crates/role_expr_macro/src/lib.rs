@@ -52,7 +52,7 @@ pub fn role_expr(input: TokenStream) -> TokenStream {
 
     match gen {
         Ok(o) => {
-            log::debug!(
+            tracing::debug!(
                 "Source code for `{}`:\n{}",
                 ast.query.value(),
                 o.to_string()
@@ -60,7 +60,7 @@ pub fn role_expr(input: TokenStream) -> TokenStream {
             TokenStream::from(o)
         }
         Err(e) => {
-            log::debug!(
+            tracing::debug!(
                 "Source code for `{}`:\n{}",
                 ast.query.value(),
                 e.to_string()

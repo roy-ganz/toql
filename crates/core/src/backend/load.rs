@@ -15,7 +15,7 @@ use super::{map, Backend};
 
 use crate::toql_api::load::Load;
 
-
+ 
 pub async fn load<B, Q, T, R, E>(
     backend: &mut B,
     query: Q,
@@ -28,6 +28,7 @@ where
     Q: Borrow<Query<T>> + Sync + Send,
     <T as Keyed>::Key: FromRow<R, E>,
 {
+   
     {
         let registry = &mut *backend.registry_mut()?;
         map::map::<T>(registry)?;
@@ -229,7 +230,7 @@ where
                 &rows,
                 row_offset,
                 &index,
-                result.selection_stream(),
+                result.select_stream(),
             )?;
         }
     }
@@ -255,6 +256,8 @@ where
 
     let (mut result, count_result) = {
         let registry = &*backend.registry()?;
+        tracing::event!(tracing::Level::INFO, query =  %query.borrow(), "Building Sql for Toql query.");
+
         let mut builder = SqlBuilder::new(&ty, registry)
             .with_aux_params(backend.aux_params().clone()) // todo ref
             .with_roles(backend.roles().clone()); // todo ref;
@@ -287,11 +290,12 @@ where
     
     
     let entities=  {
+        
         let rows = backend.select_sql(sql).await?;
             let mut entities = Vec::with_capacity(rows.len());
 
             for r in rows {
-                let mut iter = result.selection_stream().iter();
+                let mut iter = result.select_stream().iter();
                 let mut i = 0usize;
                 if let Some(e) =
                     <T as FromRow<R, E>>::from_row(&r, &mut i, &mut iter)?

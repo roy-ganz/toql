@@ -9,6 +9,7 @@
 /// While the filtered count is almost for free and returned for every query,
 /// the total count needs a seperate query with a different SQL filter predicate.
 /// Toql can do that out of the box, but the fields must be mapped accordingly in the [TableMapper](../table_mapper/struct.TableMapper.html)
+#[derive(Debug)]
 pub enum Page {
     /// Retrieve filtered count only.
     /// Argments are *start index* and *number of records*.

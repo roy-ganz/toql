@@ -59,7 +59,7 @@ pub fn query(input: TokenStream) -> TokenStream {
      */
     match gen {
         Ok(o) => {
-            log::debug!(
+            tracing::debug!(
                 "Source code for `{}`:\n{}",
                 ast.query.value(),
                 o.to_string()
@@ -67,7 +67,7 @@ pub fn query(input: TokenStream) -> TokenStream {
             TokenStream::from(o)
         }
         Err(e) => {
-            log::debug!(
+            tracing::debug!(
                 "Source code for `{}`:\n{}",
                 ast.query.value(),
                 e.to_string()

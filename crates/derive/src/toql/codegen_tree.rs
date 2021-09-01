@@ -976,7 +976,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
         };
 
-        log::debug!(
+        tracing::debug!(
             "Source code for `{}`:\n{}",
             self.rust_struct.rust_struct_ident,
             mods.to_string()

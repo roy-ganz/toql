@@ -102,7 +102,7 @@ impl<'a> quote::ToTokens for CodegenApi<'a> {
 
         };
 
-        log::debug!("Source code for `{}`:\n{}", struct_ident, api.to_string());
+        tracing::debug!("Source code for `{}`:\n{}", struct_ident, api.to_string());
         tokens.extend(api);
     }
 }

@@ -129,7 +129,7 @@ pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
                         }
                     }
     };
-    log::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
+    tracing::debug!("Source code for `{}`:\n{}", &name, gen.to_string());
     TokenStream::from(gen)
 }
 

@@ -613,7 +613,7 @@ impl<'a> SqlBuilder<'a> {
                 Some(p) if join.join_type == JoinType::Left => {
                     let query_path_with_join = FieldPath::from(&build_context.query_home_path)
                         .append(local_path_with_join);
-                    log::info!("Setting condition of left join `{}` to `false`, because aux param `{}` is missing", query_path_with_join.as_str(), &p );
+                    tracing::info!("Setting condition of left join `{}` to `false`, because aux param `{}` is missing", query_path_with_join.as_str(), &p );
                     SqlExpr::literal("false")
                 }
                 _ => on_expr,
@@ -807,12 +807,12 @@ impl<'a> SqlBuilder<'a> {
                                 if !mapped_predicate.options.on_params.is_empty() {
                                     for (i, a) in &mapped_predicate.options.on_params {
                                         if let Some(v) = predicate.args.get(*i as usize) {
-                                            // log::info!("Setting on param `{}` = `{}`.", &a, v.to_string());
+                                            // tracing::info!("Setting on param `{}` = `{}`.", &a, v.to_string());
                                             build_context
                                                 .on_aux_params
                                                 .insert(a.clone(), v.clone());
                                         } else {
-                                            log::warn!("Not enough predicate arguments to set on param `{}`.", &a);
+                                            tracing::warn!("Not enough predicate arguments to set on param `{}`.", &a);
                                         }
                                     }
                                 }
@@ -1080,8 +1080,8 @@ impl<'a> SqlBuilder<'a> {
                                         let query_field =
                                             FieldPath::from(build_context.query_home_path.as_str())
                                                 .append(local_field.as_str());
-                                        log::info!("Unselecting field `{}`  because aux param `{}` is missing", query_field.as_str(), &p );
-                                        result.selection_stream.push(Select::None);
+                                        tracing::info!("Unselecting field `{}`  because aux param `{}` is missing", query_field.as_str(), &p );
+                                        result.select_stream.push(Select::None);
                                     }
                                     _ => {
                                         let resolver =
@@ -1089,15 +1089,15 @@ impl<'a> SqlBuilder<'a> {
                                         let expr = resolver.resolve(&expr)?;
                                         result.select_expr.extend(expr);
                                         result.select_expr.push_literal(", ");
-                                        result.selection_stream.push(Select::Query);
+                                        result.select_stream.push(Select::Query);
                                         result.column_counter += 1;
                                     }
                                 };
                             } else {
-                                result.selection_stream.push(Select::None);
+                                result.select_stream.push(Select::None);
                             }
                         } else {
-                            result.selection_stream.push(Select::None);
+                            result.select_stream.push(Select::None);
                         }
                     }
                     // Field may be preselected (implicit selection)
@@ -1129,16 +1129,16 @@ impl<'a> SqlBuilder<'a> {
                                     .contains(local_path.as_str())
                             {
                                 result.select_expr.extend(expr);
-                                result.selection_stream.push(Select::Preselect);
+                                result.select_stream.push(Select::Preselect);
                             } else {
-                                result.selection_stream.push(Select::None);
+                                result.select_stream.push(Select::None);
                             }
                         } else {
                             // Column / expression is not selected
-                            result.selection_stream.push(Select::None);
+                            result.select_stream.push(Select::None);
                         }
                     } else {
-                        result.selection_stream.push(Select::None);
+                        result.select_stream.push(Select::None);
                     }
                 }
                 DeserializeType::Join(join_name) => {
@@ -1157,7 +1157,7 @@ impl<'a> SqlBuilder<'a> {
                         .local_joined_paths
                         .contains(&local_join_path.to_string())
                     {
-                        result.selection_stream.push(Select::Query); // Query selected join
+                        result.select_stream.push(Select::Query); // Query selected join
                                                                      // join path is the same as to query path
 
                         // dbg!(&local_join_path);
@@ -1171,11 +1171,11 @@ impl<'a> SqlBuilder<'a> {
                             .local_joined_paths
                             .insert(local_join_path.to_string());
 
-                        result.selection_stream.push(Select::Preselect); // Preselected join
+                        result.select_stream.push(Select::Preselect); // Preselected join
 
                         self.resolve_select(&local_join_path, query, build_context, result)?;
                     } else {
-                        result.selection_stream.push(Select::None); // No Join
+                        result.select_stream.push(Select::None); // No Join
                     }
                 }
                 DeserializeType::Merge(merge_name) => {

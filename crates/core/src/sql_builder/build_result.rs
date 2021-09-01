@@ -20,7 +20,7 @@ pub struct BuildResult {
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
     pub(crate) table_alias: String,
-    pub(crate) selection_stream: SelectStream,
+    pub(crate) select_stream: SelectStream,
     pub(crate) unmerged_home_paths: HashSet<String>,
     pub(crate) verb_expr: SqlExpr,
     pub(crate) modifier: String,
@@ -43,7 +43,7 @@ impl BuildResult {
             any_selected: false,
             distinct: false,
             unmerged_home_paths: HashSet::new(),
-            selection_stream: SelectStream::new(),
+            select_stream: SelectStream::new(),
             verb_expr: verb,
             modifier: "".to_string(),
             preselect_expr: SqlExpr::new(),
@@ -189,8 +189,8 @@ impl BuildResult {
         self.extra = String::new();
     }
 
-    pub fn selection_stream(&self) -> &SelectStream {
-        &self.selection_stream
+    pub fn select_stream(&self) -> &SelectStream {
+        &self.select_stream
     }
     pub fn unmerged_home_paths(&self) -> &HashSet<String> {
         &self.unmerged_home_paths

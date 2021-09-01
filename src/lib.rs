@@ -104,7 +104,7 @@ pub use toql_core::toql_api; // export for derives
 
 
 
-pub use toql_core::log; // Reexport for derive
+pub use toql_core::tracing; // Reexport for derive
 
 #[cfg(feature = "serde")]
 pub use toql_core::serde; // Reexport for derive

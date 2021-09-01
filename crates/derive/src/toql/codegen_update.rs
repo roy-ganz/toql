@@ -360,7 +360,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
             }
         };
 
-        log::debug!(
+        tracing::debug!(
             "Source code for `{}`:\n{}",
             self.struct_ident,
             mods.to_string()

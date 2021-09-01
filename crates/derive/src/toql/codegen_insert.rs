@@ -425,7 +425,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                   }
         };
 
-        log::debug!(
+        tracing::debug!(
             "Source code for `{}`:\n{}",
             self.struct_ident,
             mods.to_string()
