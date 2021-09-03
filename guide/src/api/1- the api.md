@@ -146,14 +146,16 @@ let q = query!(User, "*, {}", k.to_query());
 The query macro produces a Query type and can therefore further altered using all methods from that type.
 On interesting method is .with. If can be implemented for any custom Type and can enhance the query.
 
-1. Usecase: Adding config values as aux params to the query
+#### Usecase 1: Adding config values as aux params to the query
+Aux params can be used in Sql expressions. See the Mapping chapter  for more information.
+
 ```
 struct Config {
-    email: String
+    limit_pages: u64
 }
 impl QueryWith for Config {
     pub fn with(&self, query: Query<T>) {
-        query.aux_param("email", self.email)
+        query.aux_param("limit_pages", self.limit_pages)
     }
 }
 ```
@@ -161,13 +163,13 @@ impl QueryWith for Config {
 This can now be used like so:
 ```
 use toql::prelude::query;
-let config = Config {email: "example@email.com"};
+let config = Config {limit_pages: 200};
 let k = UserKey::from(5);
 let q = query!(User, "*, {}", k.to_query()).with(config);
 ```
 
 
-2. Adding an authorisation filter to the query
+#### Usecase 2: Adding an authorisation filter to the query
 ```
 use toql::prelude::{QueryWith, Query, Field}
 struct Auth {
@@ -180,10 +182,10 @@ impl<T> QueryWith<T> for Auth {
 }
 ```
 
-Notice the Field::from method. Queries are always typed, however sometimes some
-hackery is just too convenient to be missed out and Field just allows that. 
+Notice the `Field::from` method. Queries are always typed, however sometimes some
+hackery is just too convenient to be missed out and `Field` just allows that. 
 
-If you are into strict type safety, you can do this
+If you are into stricter type safety, you can do this
 
 ```
 use toql::prelude::{QueryWith, Query, Field}
