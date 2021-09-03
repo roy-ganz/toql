@@ -143,9 +143,68 @@ let k = vec![UserKey::from(5), UserKey(10)];
 let q = query!(User, "*, {}", k.to_query());
 ```
 
-TODO With syntax for custom struct
+The query macro produces a Query type and can therefore further altered using all methods from that type.
+On interesting method is .with. If can be implemented for any custom Type and can enhance the query.
+
+1. Usecase: Adding config values as aux params to the query
+```
+struct Config {
+    email: String
+}
+impl QueryWith for Config {
+    pub fn with(&self, query: Query<T>) {
+        query.aux_param("email", self.email)
+    }
+}
+```
+
+This can now be used like so:
+```
+use toql::prelude::query;
+let config = Config {email: "example@email.com"};
+let k = UserKey::from(5);
+let q = query!(User, "*, {}", k.to_query()).with(config);
+```
 
 
+2. Adding an authorisation filter to the query
+```
+use toql::prelude::{QueryWith, Query, Field}
+struct Auth {
+    author_id: u64
+}
+impl<T> QueryWith<T> for Auth {
+    pub fn with(&self, query: Query<T>) {
+        query.and(Field::from("authorId").eq(self.author_id))
+    }
+}
+```
+
+Notice the Field::from method. Queries are always typed, however sometimes some
+hackery is just too convenient to be missed out and Field just allows that. 
+
+If you are into strict type safety, you can do this
+
+```
+use toql::prelude::{QueryWith, Query, Field}
+struct Auth {
+    user_id: u64
+}
+impl QueryWith<Book> for Auth {
+    pub fn with(&self, query: Query<T>) {
+        query.and(Book::fields().author_id().eq(self.user_id))
+    }
+}
+```
+
+
+Now you can use it like above
+```
+use toql::prelude::query;
+let auth = Auth {author: 5};
+let k = UserKey::from(5);
+let q = query!(User, "*").with(auth);
+```
 
 
 
