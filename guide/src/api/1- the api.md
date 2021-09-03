@@ -96,13 +96,53 @@ The author wants to see all books that contain the word 'world'. What will he ge
    get at most 4 rows back.
  
  In practice the unfiltered page count is not so straight forward to select. 
- However Toql provides that reliably out of the box. How can Toql figure out, 
- which record belongs to author 1 and which to author 2? 
- Toql uses certain fields that are marked to make a difference ('count fields'). 
- Query filters that use one of those fields will be included in the count query.
- A count Selection, see XXX is used to defined those fields.
+ Toql needs to decide, which filters to ignore and which to consider, 
+ when building the count sql statement.
+ Toql considers only filters from the query, whose fields are listed in the special count selection.
+ 
+### Bilding the query argument
+All load functions need a query argument, but how is this build?
+The recommended way is to use the `query!` macro.
+This macro will compile the provided string into Rust code. Any syntax mistakes or wrong path and field names show up 
+as compiler errors!
 
+Here is an example to load all fields from type User with id 5.
+```
+use toql::prelude::query;
 
+let q = query!(User, "*, id eq ?", 5);
+```
+ 
+To include parameters just insert a question mark in the query string and provide the parameter after the string. 
+The Toql query only works with a limited type of parameters (numbers and strings), see `SqlArg`. 
+However this should not be a problem: Since database columns have a type, e.g datetime, 
+the database is able convert a string or number into its column type.
+
+It's also possible to include other querries into a query. Consider this:
+
+```
+use toql::prelude::query;
+let q1 = query!(User, "id eq ?", 5);
+let q = query!(User, "*, {}", q1);
+```
+Here we include the query q1 into q. Notice that queries are typesafe, so you can only include queries of the same type.
+
+Including a query is also useful when you work with keys, since you can turn a key into a filter statement. See here
+
+```
+use toql::prelude::query;
+let k = UserKey::from(5);
+let q = query!(User, "*, {}", k.to_query());
+```
+
+or for a list of keys:
+```
+use toql::prelude::query;
+let k = vec![UserKey::from(5), UserKey(10)];
+let q = query!(User, "*, {}", k.to_query());
+```
+
+For all the 
 
 
 
