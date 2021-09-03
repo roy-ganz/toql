@@ -28,6 +28,9 @@ toql_mysql_async = "0.3"
 Then you can get the backend in your code.
 
 ```
+use mysql_async::MySql;
+use toql_mysql_async::prelude::MySqlAsync;
+
 let mut conn = Mysql::new();
 let toql = MySqlAsync::from(&mut conn);
 ```
@@ -36,8 +39,14 @@ Often you may want to feed in configuration or authentication values into your S
 Do this then:
 
 ```
+use mysql_async::MySql;
+use toql_mysql_async::prelude::MySqlAsync;
+use toql::prelude::ContextBuilder;
+
 let mut conn = Mysql::new();
-let p = 
+let mut p = HashMap::new();
+p.insert("page_limit".into(), 200.into());
+
 let context = ContextBuilder::new().set_aux_params(p).build();
 let toql = MySqlAsync::with_context(&mut conn, context);
 ```
