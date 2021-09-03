@@ -17,7 +17,39 @@ Currently the following backends are available
 |---------|----------------|-------------|
 | MySql   | toql_mysql_async| mysql_async |
 
-To use MySql
+To use MySql you need in add these dependencies in `cargo.toml`:
+```
+[dependency]
+toql = "0.3"
+mysql_async = "0.20"
+toql_mysql_async = "0.3"
+```
+
+Then you can get the backend in your code.
+
+```
+let mut conn = Mysql::new();
+let toql = MySqlAsync::from(&mut conn);
+```
+
+Often you may want to feed in configuration or authentication values into your Sql.
+Do this then:
+
+```
+let mut conn = Mysql::new();
+let p = 
+let context = ContextBuilder::new().set_aux_params(p).build();
+let toql = MySqlAsync::with_context(&mut conn, context);
+```
+
+Note there are two places to feed in aux params: 
+- You can add them in the context and they will be available as long as the
+  toql object lives
+- You can also add them to the query and the will be available only for that query
+
+What you do depends on your usage: Typically configuration values are given for the context
+where as authenicaltion values are given with the query. 
+But it's up to you, the Sql building stage in Toql will combine all of them anyway.
 
 
 
