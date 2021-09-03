@@ -9,6 +9,15 @@ This chapter explains how tu use the ToqlApi.
 It is also possible to write backend agnostic code. See net chapter for details on this.
 
 ## Creating the backend
+To use the toql functions you need a backend for your database. 
+Since Toql is a async ORM, it only supports the async databse drivers.
+Currently the following backends are available
+
+|Database | Toql Crate     | Driver Crate|
+|---------|----------------|-------------|
+| MySql   | toql_mysql_async| mysql_async |
+
+To use MySql
 
 
 
