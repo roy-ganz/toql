@@ -104,7 +104,8 @@ The author wants to see all books that contain the word 'world'. What will he ge
 All load functions need a query argument, but how is this build?
 The recommended way is to use the `query!` macro.
 This macro will compile the provided string into Rust code. Any syntax mistakes or wrong path and field names show up 
-as compiler errors!
+as compiler errors! 
+To learn about Toqls unique query language see it's dedicated chapter. Here we just have a look at the query! macro.
 
 Here is an example to load all fields from type User with id 5.
 ```
@@ -142,7 +143,7 @@ let k = vec![UserKey::from(5), UserKey(10)];
 let q = query!(User, "*, {}", k.to_query());
 ```
 
-For all the 
+TODO With syntax for custom struct
 
 
 
