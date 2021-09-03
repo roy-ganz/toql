@@ -174,9 +174,8 @@ To include query parameters just insert a question mark in the query string and 
 In the example above it would also be possible to put the number 5 directly into the query string, since it's a constant. 
 The resulting Sql would be the same, as Toql extracts the parameter in either case to prevent Sql injections.
 
-The Toql query only works with a limited type of parameters (numbers and strings), see `SqlArg`. 
-However this should not be a problem: Since database columns have a type, e.g datetime, 
-the database is able convert a string or number into its column type.
+The Toql query only works with numbers and strings, see `SqlArg`. 
+However this is not be a problem: Since database columns have a type, the database is able convert a string or number into its column type.
 
 It's also possible to include other queries into a query. Consider this:
 
