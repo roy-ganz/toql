@@ -77,18 +77,17 @@ use crate::toql_api::insert::Insert;
 
         let home_path = FieldPath::default();
         let mut descendents = home_path.children();
-        // check if base has auto keys
-        if <T as TreeIdentity>::auto_id(&mut descendents)? {
-            let ids= backend.insert_sql(sql).await?;
 
+        let ids = backend.insert_sql(sql).await?;
+
+        // Updated auto keys
+        if <T as TreeIdentity>::auto_id(&mut descendents)? {
             let mut descendents = home_path.children();
             crate::backend::insert::set_tree_identity2(
                 ids ,
                 &mut entities,
                 &mut descendents,
             )?;
-         }else {
-            backend.execute_sql(sql).await?;
          }
 
 
@@ -252,7 +251,6 @@ where
     for e in entities {
         //let mut d = path.descendents();
         let mut d = path.step_down();
-        dbg!(&roles);
         <T as TreeInsert>::values(e.borrow(), &mut d, roles, &mut values_expr)?;
     }
     if values_expr.is_empty() {

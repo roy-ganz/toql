@@ -238,11 +238,22 @@ impl<'a> CodegenTree<'a> {
                );
 
                 if join_attrs.skip_mut_self_cols {
+
+                     let inverse_columns_mapping = join_attrs
+                        .columns
+                        .iter()
+                        .map(|column| {
+                            let tc = &column.this;
+                            let oc = &column.other;
+                            quote!(#oc => String::from(#tc), )
+                        })
+                        .collect::<Vec<_>>();
+
                     self.identity_set_merges_key_code.push(
                         quote!(
                              if let Some(mut f) = self. #rust_field_ident .as_mut() {
                         // Get INverse columns
-                         let default_inverse_columns = << QuestionAnswer as toql :: keyed ::   Keyed > :: Key as toql :: key :: Key > ::
+                         let default_inverse_columns = << #rust_type_ident as toql :: keyed ::   Keyed > :: Key as toql :: key :: Key > ::
                         default_inverse_columns() ;
 
                         let inverse_columns =
@@ -251,6 +262,7 @@ impl<'a> CodegenTree<'a> {
                                 .enumerate()
                                 .map(|(i, c)| {
                                     let inverse_column = match c.as_str() {
+                                        #(#inverse_columns_mapping)*
                                         _ => default_inverse_columns.get(i).unwrap().to_owned(),
                                     };
                                     inverse_column
@@ -298,14 +310,29 @@ impl<'a> CodegenTree<'a> {
                 )
                );
 
-                self.dispatch_predicate_args_code.push(quote!(
+                self.dispatch_predicate_args_code.push(
+                    if field.number_of_options > 0{
+                    quote!(
                        #toql_field_name => {
-                        for f in #refer self. #rust_field_ident #unwrap {
-                            <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            args(f, &mut descendents, args)?
-                        }
+                           if let Some(ref fs) = self. #rust_field_ident {
+                            for f in fs {
+                                <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                                args(f, &mut descendents, args)?
+                            }
+                         }
                        }
-                ));
+                    )
+                    } else {
+                        quote!(
+                            #toql_field_name => {
+                                for f in & self. #rust_field_ident {
+                                    <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
+                                    args(f, &mut descendents, args)?
+                                }
+                            }
+                        )
+                    }
+                );
                 self.dispatch_predicate_columns_code.push(
                    quote!(
                        #toql_field_name => {
@@ -426,18 +453,26 @@ impl<'a> CodegenTree<'a> {
                         },
                 ));
                 let merge_push = if field.number_of_options > 0 {
-                    quote!( if self. #rust_field_ident .is_none() {
-                            self. #rust_field_ident = Some(Vec::new())};
+                    quote!( 
                             self. #rust_field_ident .as_mut().unwrap() .push(e);
                     )
                 } else {
                     quote!(self. #rust_field_ident .push(e);)
+                };
+                let empty_vector_init = if field.number_of_options > 0 {
+                    quote!(
+                        if self. #rust_field_ident .is_none() {
+                                self. #rust_field_ident = Some(Vec::new())
+                            })
+                } else {
+                    quote!()
                 };
 
                 self.merge_code.push(
                     quote!(
 
                              #toql_field_name  => {
+                                 #empty_vector_init
                                 for row_number in row_numbers {
                                             let mut i = n;
                                             let mut iter = std::iter::repeat(&Select::Query);
@@ -583,17 +618,17 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             }
         );
 
-        let identity_set_key = if self.rust_struct.auto_key {
+        let identity_set_key = //if !self.rust_struct.auto_key {
             quote!( #identity_set_self_key_code
 
                     let self_key = <Self as toql::keyed::Keyed>::key(&self);
                     let self_key_params = toql::key::Key::params(&self_key);
                     let key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
 
-                   #(#identity_set_merges_key_code)*)
-        } else {
+                   #(#identity_set_merges_key_code)*);
+        /* } else {
             quote!()
-        };
+        }; */
 
         let identity_auto_id_code = if self.number_of_keys == 1 && self.rust_struct.auto_key {
             quote!(true)

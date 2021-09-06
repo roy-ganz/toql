@@ -159,43 +159,42 @@ where
         for e in entities.iter() {
             TreePredicate::args(e, &mut d, &mut args).map_err(ToqlError::from)?;
         }
-        let predicate_columns = columns
-            .into_iter()
-            .map(|c| PredicateColumn::SelfAliased(c))
-            .collect::<Vec<_>>();
-        predicate_expr.push_predicate(predicate_columns, args);
+        let rows= if args.is_empty() {
+                Vec::new()
+            } else{
+            
+            let predicate_columns = columns
+                .into_iter()
+                .map(|c| PredicateColumn::SelfAliased(c))
+                .collect::<Vec<_>>();
+            predicate_expr.push_predicate(predicate_columns, args);
 
-        let predicate_expr = {
-            let merge_resolver = Resolver::new()
-                .with_self_alias(&merge_base_alias)
-                .with_other_alias(other_alias.as_str());
-            merge_resolver
-                .resolve(&predicate_expr)
-                .map_err(ToqlError::from)?
-        };
-        result.push_join(SqlExpr::literal(" AND "));
-        result.push_join(predicate_expr);
-        result.push_join(SqlExpr::literal(")"));
+            let predicate_expr = {
+                let merge_resolver = Resolver::new()
+                    .with_self_alias(&merge_base_alias)
+                    .with_other_alias(other_alias.as_str());
+                merge_resolver
+                    .resolve(&predicate_expr)
+                    .map_err(ToqlError::from)?
+            };
+            result.push_join(SqlExpr::literal(" AND "));
+            result.push_join(predicate_expr);
+            result.push_join(SqlExpr::literal(")"));
 
-        // Build SQL query statement
+            // Build SQL query statement
 
-        let mut alias_translator = AliasTranslator::new(backend.alias_format());
-        let aux_params = [backend.aux_params()];
-        let aux_params = ParameterMap::new(&aux_params);
-        let sql = result
-            .to_sql(&aux_params, &mut alias_translator)
-            .map_err(ToqlError::from)?;
+            let mut alias_translator = AliasTranslator::new(backend.alias_format());
+            let aux_params = [backend.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params);
+            let sql = result
+                .to_sql(&aux_params, &mut alias_translator)
+                .map_err(ToqlError::from)?;
+            
         
-        
-        //let Sql(sql, args) = sql;
-       /*  dbg!(&sql);
-        dbg!(&args); */
-
-        // Load from database
-        let rows = backend.select_sql(sql).await?; // Default vector size
-       /*  let args = crate::sql_arg::values_from_ref(&args);
-        let query_results = mysql.conn.prep_exec(sql, args)?; */
-
+            // Load from database
+                backend.select_sql(sql).await? // Default vector size
+            };
+              
         // Build index
         let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); //hashed key, array positions
 
@@ -203,24 +202,14 @@ where
 
         // TODO Batch process rows
         // TODO Introduce traits that do not need to copy into vec
-      /*   let mut rows = Vec::with_capacity(100);
-
-        for q in query_results {
-            rows.push(Row(q?)); // Stream into Vec because we need random access
-        } */
-
+  
         let row_offset = 0; // key must be first columns in row
-
         let (_, ancestor2_path) = FieldPath::split_basename(ancestor_path.as_str());
-        //let mut d = ancestor2_path.descendents();
+        
         let mut d = ancestor2_path.children();
         <T as TreeIndex<R, E>>::index(&mut d, &rows, row_offset, &mut index)?;
-
-        //let mut d = ancestor_path.descendents();
     
         // Merge into entities
-      //  dbg!(result.selection_stream());
-
         for e in entities.iter_mut() {
             let mut d = ancestor_path.children();
             <T as TreeMerge<_, E>>::merge(
@@ -233,6 +222,7 @@ where
                 result.select_stream(),
             )?;
         }
+        
     }
     Ok(pending_home_paths)
 }
