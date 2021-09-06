@@ -50,10 +50,10 @@ pub trait ToqlApi {
     type Row;
     type Error;
 
-    async fn insert_one<T>(&mut self, entity: &mut T, paths: Paths) -> Result<u64, Self::Error>
+    async fn insert_one<T>(&mut self, entity: &mut T, paths: Paths) -> Result<(), Self::Error>
     where T: Insert;
 
-    async fn insert_many<T, Q>(&mut self, entities: &mut [Q], paths: Paths) -> Result<u64, Self::Error>
+    async fn insert_many<T, Q>(&mut self, entities: &mut [Q], paths: Paths) -> Result<(), Self::Error>
     where  T: Insert, Q: BorrowMut<T> + Send;
 
     async fn update_one<T>(&mut self, entity: &mut T, fields: Fields) -> Result<(), Self::Error>

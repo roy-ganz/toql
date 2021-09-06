@@ -20,7 +20,7 @@ use crate::toql_api::paths::Paths;
 use crate::toql_api::insert::Insert;
 
 
-  pub async fn insert<B, Q, T, R, E>(backend : &mut B, mut entities: &mut [Q], paths: Paths) ->std::result::Result<u64, E> where
+  pub async fn insert<B, Q, T, R, E>(backend : &mut B, mut entities: &mut [Q], paths: Paths) ->std::result::Result<(), E> where
             Q: BorrowMut<T>,
             T: Insert,
             B: Backend<R, E>, E: From<ToqlError>
@@ -71,7 +71,7 @@ use crate::toql_api::insert::Insert;
             )
         }?;
         if sql.is_none() {
-            return Ok(0);
+            return Ok(());
         }
         let sql = sql.unwrap();
 
@@ -159,8 +159,7 @@ use crate::toql_api::insert::Insert;
             backend.execute_sql(sql).await?;
 
         }
-
-        Ok(0)
+        Ok(())
     }
     
 
