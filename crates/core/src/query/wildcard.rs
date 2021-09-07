@@ -46,7 +46,7 @@ impl Wildcard {
             path.pop();
         }
         // Add _ at end if missing
-        if !path.ends_with('_') {
+        if !path.is_empty() && !path.ends_with('_') {
             path.push('_');
         }
 
@@ -57,7 +57,7 @@ impl Wildcard {
     }
 
     pub fn into_string(self) -> String {
-        format!("{}{}*", self.path, if self.path.is_empty() {""} else  {"_"})
+        format!("{}*", self.path)
     }
     pub fn into_path(self) -> String {
         self.path

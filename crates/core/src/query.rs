@@ -243,6 +243,20 @@ impl<M> Query<M> {
             type_marker: std::marker::PhantomData, //  wildcard_scope: None
         }
     }
+    pub fn selection(name: impl Into<String>) -> Self{
+        Query::<M> {
+            tokens: vec![QueryToken::Selection(Selection::from(name.into()))],
+            distinct: false,
+            //roles: HashSet::new(),
+            aux_params: HashMap::new(),
+            where_predicates: Vec::new(),
+            where_predicate_params: Vec::new(),
+            select_columns: Vec::new(),
+            join_stmts: Vec::new(),
+            join_stmt_params: Vec::new(),
+            type_marker: std::marker::PhantomData, //  wildcard_scope: None
+        }
+    }
 
     /// Wrap query with parentheses.
     pub fn parenthesize(mut self) -> Self {

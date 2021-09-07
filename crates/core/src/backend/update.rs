@@ -32,7 +32,7 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
         
 
          // TODO should be possible to impl with &str
-            let mut joined_or_merged_fields: HashMap<String, HashSet<String>> = HashMap::new();
+            let mut joined_or_normal_fields: HashMap<String, HashSet<String>> = HashMap::new();
             let mut merges: HashMap<String, HashSet<String>> = HashMap::new();
 
             // Ensure entity is mapped
@@ -51,11 +51,21 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
             plan_update_order::<T, _>(
                 &backend.registry()?.mappers,
                 fields.list.as_ref(),
-                &mut joined_or_merged_fields,
+                &mut joined_or_normal_fields,
                 &mut merges,
             )?;
 
-            for (path, fields) in joined_or_merged_fields {
+            for (path, fields) in joined_or_normal_fields {
+
+                // Ensure keys are valid
+                for e in entities.iter_mut() {
+                    let  id_path = FieldPath::from(&path);
+                     <T as TreeIdentity>::set_id(
+                            e.borrow_mut(),
+                            &mut id_path.children(),
+                            &IdentityAction::Refresh,
+                        )?;
+                }
                 let sqls = {
                     let field_path = FieldPath::from(&path);
                     build_update_sql::<T, _>(
@@ -76,8 +86,12 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
             }
 
             // Delete existing merges and insert new merges
-
-            for (path, fields) in merges {
+            // Always all fields are inserted 
+            // TODO split up in 3 querries:
+            // - Remove entities that do not belong to current collection
+            // - Update entities according to field list
+            // - Insert new entities (all fields)
+            for (path, _) in merges {
               
                 let parent_path = FieldPath::from(&path);
               
@@ -95,8 +109,8 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
                 let mut key_predicate: SqlExpr = SqlExpr::new();
                 key_predicate.push_predicate(columns, args);
 
-                for merge in fields {
-                    let merge_path = FieldPath::from(&merge);
+                let merge_path = FieldPath::from(&path);
+                    
                     let sql = {
                         let type_name = <T as Mapped>::type_name();
                         let registry =  &*backend.registry()?;
@@ -149,7 +163,6 @@ pub async fn update<B, Q, T, R, E>(backend: &mut B, entities: &mut [Q], fields: 
 
                     }
                 }
-            }
 
             Ok(())
         }
@@ -213,7 +226,9 @@ where
         let children = ancestor_path.children();
 
         let mut current_mapper: String = ty.to_owned();
+       
 
+        let mut is_merge = false;
         // Get mapper for path
         for c in children {
             let mapper = mappers
@@ -221,16 +236,18 @@ where
                 .ok_or(ToqlError::MapperMissing(current_mapper))?;
 
             if let Some(j) = mapper.joined_mapper(c.as_str()) {
+                is_merge = false;
                 current_mapper = j.to_string();
             } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
+                is_merge= true;
                 current_mapper = m.to_string();
             } else {
                 return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned()).into());
             }
         }
-        let mapper = mappers
+       /*  let mapper = mappers
             .get(&current_mapper)
-            .ok_or(ToqlError::MapperMissing(current_mapper))?;
+            .ok_or(ToqlError::MapperMissing(current_mapper))?; */
 
         // Triage field
         // Join use as normal field (this will insert keys of the join)
@@ -245,7 +262,7 @@ where
                 .insert("*".to_string()); */
         } */
         // Merged field
-        if mapper.merged_mapper(descendent_name).is_some() {
+        if is_merge {
             merges
                 .entry(ancestor_path.to_string())
                 .or_insert_with(HashSet::new)

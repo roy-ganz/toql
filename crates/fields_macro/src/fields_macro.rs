@@ -88,7 +88,7 @@ fn evaluate_pair(
                         quote!( .#name ())
                     })
                     .collect::<Vec<_>>();
-                // methods.push( quote!(toql::update_field::UpdateField::into_field( toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*) )  ))
+               
                 methods.push( quote!(toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*).into_string()) )
             }
             Rule::field_path => {
