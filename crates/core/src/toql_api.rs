@@ -57,10 +57,10 @@ pub trait ToqlApi {
     where  T: Insert, Q: BorrowMut<T> + Send;
 
     async fn update_one<T>(&mut self, entity: &mut T, fields: Fields) -> Result<(), Self::Error>
-    where T: Update;
+    where T: Update + Keyed;
 
     async fn update_many<T, Q>(&mut self, entities: &mut [Q], fields: Fields) -> Result<(), Self::Error>
-    where T: Update, Q: BorrowMut<T> + Send;
+    where T: Update + Keyed, Q: BorrowMut<T> + Send + Sync;
 
     async fn load_one<T, B>(&mut self, query: B) -> Result<T, Self::Error>
     where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,

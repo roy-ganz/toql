@@ -1,4 +1,4 @@
-use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr};
+use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr, sql_arg::SqlArg};
 
 // Trait is implemented for structs that can insert
 pub trait TreeInsert {
@@ -9,6 +9,7 @@ pub trait TreeInsert {
         &self,
         descendents: &mut I,
         roles: &std::collections::HashSet<String>,
+        key_limits: Option<&[Vec<SqlArg>]>,
         values: &mut crate::sql_expr::SqlExpr,
     ) -> Result<(), ToqlError>
     where

@@ -1,7 +1,7 @@
 use super::Join;
 use crate::{
     error::ToqlError, key::Key, keyed::Keyed, query::field_path::FieldPath, sql_expr::SqlExpr,
-    table_mapper::mapped::Mapped, tree::tree_insert::TreeInsert,
+    table_mapper::mapped::Mapped, tree::tree_insert::TreeInsert, sql_arg::SqlArg,
 };
 use std::collections::HashSet;
 
@@ -20,6 +20,7 @@ where
         &self,
         descendents: &mut I,
         roles: &HashSet<String>,
+        selected_keys: Option<&[Vec<SqlArg>]>,
         values: &mut SqlExpr,
     ) -> Result<(), ToqlError>
     where
@@ -39,7 +40,7 @@ where
                     Ok(())
                 }
             },
-            Join::Entity(e) => e.values(descendents, roles, values),
+            Join::Entity(e) => e.values(descendents, roles, selected_keys, values),
         }
     }
 }

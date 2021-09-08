@@ -290,8 +290,8 @@ impl<'a> Resolver<'a> {
                     }
                 }
                 _ => {
-                    for ar in a {
-                        for c in columns {
+                        let mut nc = 1;
+                        for (ar, c) in a.iter().zip(columns.iter().cycle())  {
                             match c {
                                 PredicateColumn::SelfAliased(_) => {
                                     return Err(ResolverError::UnresolvedSelfAlias)
@@ -308,22 +308,32 @@ impl<'a> Resolver<'a> {
                                 }
                             };
 
-                            stmt.push_str(" = ? AND ");
+                            stmt.push_str(" = ?");
                             args.push(ar.to_owned());
-                        }
+                            if nc < columns.len() {
+                                 nc += 1;
+                                 stmt.push_str(" AND ");
+                            } else {
+                                 nc = 1;
+                                 stmt.push_str(" OR ");
+                            }
+                             
+                    }
+                    
+                    if nc == 1 { 
+                        // Remove ' OR '
+                        stmt.pop();
+                        stmt.pop();
+                        stmt.pop();
+                        stmt.pop();
+                    } else {
                         // Remove ' AND '
                         stmt.pop();
                         stmt.pop();
                         stmt.pop();
                         stmt.pop();
                         stmt.pop();
-                        stmt.push_str(" OR ");
                     }
-                    // Remove ' OR '
-                    stmt.pop();
-                    stmt.pop();
-                    stmt.pop();
-                    stmt.pop();
                 }
             },
         }

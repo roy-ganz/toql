@@ -1,8 +1,9 @@
 pub mod error;
 pub mod from;
 pub mod try_into;
+pub mod from_row;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SqlArg {
     U64(u64),
     I64(i64),
@@ -84,6 +85,8 @@ impl ToString for SqlArg {
         }
     }
 }
+
+
 /*
 impl TryInto<Option<u32>> for &SqlArg {
     type Error = TryFromSqlArgError;

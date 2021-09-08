@@ -5,7 +5,7 @@ use crate::{
     parameter_map::ParameterMap,
     query::field_path::FieldPath,
     sql::Sql,
-    sql_builder::sql_builder_error::SqlBuilderError,
+    sql_builder::{SqlBuilder, sql_builder_error::SqlBuilderError},
     sql_expr::resolver::Resolver,
     table_mapper::{mapped::Mapped, TableMapper},
     tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert},
@@ -17,7 +17,7 @@ use std::collections::HashSet;
 use super::{Backend, map};
 use crate::toql_api::paths::Paths;
 
-use crate::toql_api::insert::Insert;
+use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert};
 
 
   pub async fn insert<B, Q, T, R, E>(backend : &mut B, mut entities: &mut [Q], paths: Paths) ->std::result::Result<(), E> where
@@ -225,6 +225,84 @@ where
     //}
     Ok(())
 }
+
+pub fn build_insert_sql2<T, Q>(
+    registry: &TableMapperRegistry,
+    alias_format: AliasFormat,
+    aux_params: &ParameterMap,
+    entities: &[Q],
+    roles: &HashSet<String>,
+    path: &FieldPath,
+    _modifier: &str,
+    _extra: &str,
+    key_set: &[Vec<SqlArg>]
+) -> Result<Option<Sql>>
+where
+    T: Mapped + TreeInsert,
+    Q: BorrowMut<T>,
+{
+    use crate::sql_expr::SqlExpr;
+
+    let ty = <T as Mapped>::type_name();
+    
+
+    let mut values_expr = SqlExpr::new();
+    //let mut d = path.descendents();
+    let mut d = path.step_down();
+    let columns_expr = <T as TreeInsert>::columns(&mut d)?;
+    for e in entities{
+    
+        //let mut d = path.descendents();
+        let mut d = path.step_down();
+        <T as TreeInsert>::values(e.borrow(), &mut d, roles, Some(key_set), &mut values_expr)?;
+    
+    }
+    if values_expr.is_empty() {
+        return Ok(None);
+    }
+
+    /* let mut mapper = mappers
+        .get(&ty)
+        .ok_or_else(|| ToqlError::MapperMissing(ty.to_owned()))?; */
+    let mut alias_translator = AliasTranslator::new(alias_format);
+
+    let sql_builder = SqlBuilder::new(&ty, registry);
+    let mapper = sql_builder.mapper_for_query_path(path)?;
+   /*  // Walk down mappers
+    for d in path.step_down() {
+        //for d in path.descendents(){
+        let mapper_name = mapper
+            .joined_mapper(d.as_str())
+            .or_else(|| mapper.merged_mapper(d.as_str()));
+        let mapper_name =
+            mapper_name.ok_or_else(|| ToqlError::MapperMissing(d.as_str().to_owned()))?;
+        mapper = mappers
+            .get(&mapper_name)
+            .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_owned()))?;
+    } */
+
+    let resolver = Resolver::new()
+        .with_aux_params(&aux_params)
+        .with_self_alias(&mapper.canonical_table_alias);
+    let columns_sql = resolver
+        .to_sql(&columns_expr, &mut alias_translator)
+        .map_err(ToqlError::from)?;
+    let values_sql = resolver
+        .to_sql(&values_expr, &mut alias_translator)
+        .map_err(ToqlError::from)?;
+
+    let mut insert_stmt = String::from("INSERT INTO ");
+    insert_stmt.push_str(&mapper.table_name);
+    insert_stmt.push(' ');
+    insert_stmt.push_str(&columns_sql.0);
+    insert_stmt.push_str(" VALUES ");
+    insert_stmt.push_str(&values_sql.0);
+
+    insert_stmt.pop(); // Remove ', '
+    insert_stmt.pop();
+
+    Ok(Some(Sql(insert_stmt, values_sql.1)))
+}
 pub fn build_insert_sql<T, Q>(
     mappers: &HashMap<String, TableMapper>,
     alias_format: AliasFormat,
@@ -251,7 +329,7 @@ where
     for e in entities {
         //let mut d = path.descendents();
         let mut d = path.step_down();
-        <T as TreeInsert>::values(e.borrow(), &mut d, roles, &mut values_expr)?;
+        <T as TreeInsert>::values(e.borrow(), &mut d, roles, None,&mut values_expr)?;
     }
     if values_expr.is_empty() {
         return Ok(None);

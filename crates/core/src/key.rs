@@ -51,7 +51,7 @@ pub trait Key {
         expr
     }
 
-    fn predicate_expr(&self) -> SqlExpr {
+    fn predicate_expr(&self, aliased: bool) -> SqlExpr {
         let columns = Self::columns();
         let mut params = self.params().into_iter();
         let mut expr = SqlExpr::new();
@@ -60,12 +60,15 @@ pub trait Key {
             if !expr.is_empty() {
                 expr.push_literal(" AND ".to_string());
             }
-            expr.push_self_alias();
-            expr.push_literal(".");
+            if aliased{
+                expr.push_self_alias();
+                expr.push_literal(".");
+            }
             expr.push_literal(c);
             expr.push_literal(" = ".to_string());
             expr.push_arg(params.next().unwrap_or(SqlArg::Null));
         }
         expr
     }
+    
 }
