@@ -462,21 +462,22 @@ where
     Ok((entities_to_insert, entities_to_update))
 }
 
-fn build_update_sql<T, Q>(
-    alias_format: AliasFormat,
+fn build_update_sql<B, T, Q, R, E>(
+     backend: &mut B,
     entities: &[Q],
     path: &FieldPath,
     fields: &HashSet<String>,
-    roles: &HashSet<String>,
     selected_keys: Option<&[Vec<SqlArg>]>,
     _modifier: &str,
     _extra: &str,
 ) -> Result<Vec<Sql>>
 where
+    B: Backend<R,E>,
     T: Mapped + TreeUpdate,
-    Q: Borrow<T>,
+    Q: Borrow<T>, 
+    E: From<ToqlError>
 {
-    let mut alias_translator = AliasTranslator::new(alias_format);
+    let mut alias_translator = AliasTranslator::new(backend.alias_format());
 
     let mut update_sqls = Vec::new();
 
@@ -484,7 +485,7 @@ where
     for e in entities.iter() {
         //let mut descendents = path.descendents();
         let mut descendents = path.children();
-        TreeUpdate::update(e.borrow(), &mut descendents, fields, roles, selected_keys, &mut exprs)?;
+        TreeUpdate::update(e.borrow(), &mut descendents, fields, backend.roles(), selected_keys, &mut exprs)?;
     }
 
     // Resolve to Sql
