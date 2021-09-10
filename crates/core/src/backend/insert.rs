@@ -226,20 +226,21 @@ where
     Ok(())
 }
 
-pub fn build_insert_sql2<T, Q>(
-    registry: &TableMapperRegistry,
-    alias_format: AliasFormat,
-    aux_params: &ParameterMap,
+pub fn build_insert_sql2<T, Q, B, R, E>(
+    backend: &mut B,
+   
     entities: &[Q],
-    roles: &HashSet<String>,
-    path: &FieldPath,
+  
+    query_path: &FieldPath,
+    key_set: &[Vec<SqlArg>],
     _modifier: &str,
-    _extra: &str,
-    key_set: &[Vec<SqlArg>]
+    _extra: &str
 ) -> Result<Option<Sql>>
 where
+    B: Backend<R,E>,
     T: Mapped + TreeInsert,
-    Q: BorrowMut<T>,
+    Q: BorrowMut<T>, 
+    E: From<ToqlError>
 {
     use crate::sql_expr::SqlExpr;
 
@@ -247,43 +248,32 @@ where
     
 
     let mut values_expr = SqlExpr::new();
-    //let mut d = path.descendents();
-    let mut d = path.step_down();
+    
+    let mut d = query_path.step_down();
     let columns_expr = <T as TreeInsert>::columns(&mut d)?;
     for e in entities{
-    
-        //let mut d = path.descendents();
-        let mut d = path.step_down();
-        <T as TreeInsert>::values(e.borrow(), &mut d, roles, Some(key_set), &mut values_expr)?;
+        let mut d = query_path.step_down();
+        <T as TreeInsert>::values(e.borrow(), &mut d, backend.roles(), Some(key_set), &mut values_expr)?;
     
     }
     if values_expr.is_empty() {
         return Ok(None);
     }
 
-    /* let mut mapper = mappers
-        .get(&ty)
-        .ok_or_else(|| ToqlError::MapperMissing(ty.to_owned()))?; */
-    let mut alias_translator = AliasTranslator::new(alias_format);
+    
+    let mut alias_translator = AliasTranslator::new(backend.alias_format());
 
+    let registry = &*backend.registry()?;
     let sql_builder = SqlBuilder::new(&ty, registry);
-    let mapper = sql_builder.mapper_for_query_path(path)?;
-   /*  // Walk down mappers
-    for d in path.step_down() {
-        //for d in path.descendents(){
-        let mapper_name = mapper
-            .joined_mapper(d.as_str())
-            .or_else(|| mapper.merged_mapper(d.as_str()));
-        let mapper_name =
-            mapper_name.ok_or_else(|| ToqlError::MapperMissing(d.as_str().to_owned()))?;
-        mapper = mappers
-            .get(&mapper_name)
-            .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_owned()))?;
-    } */
-
+    let mapper= sql_builder.mapper_for_query_path(query_path)?;
+    let canonical_table_alias = &mapper.canonical_table_alias;
+    let table_name= &mapper.table_name;
+   
+    let aux_params = [backend.aux_params()];
+    let aux_params_map = ParameterMap::new(&aux_params);
     let resolver = Resolver::new()
-        .with_aux_params(&aux_params)
-        .with_self_alias(&mapper.canonical_table_alias);
+        .with_aux_params(&aux_params_map)
+        .with_self_alias(&canonical_table_alias);
     let columns_sql = resolver
         .to_sql(&columns_expr, &mut alias_translator)
         .map_err(ToqlError::from)?;
@@ -292,7 +282,7 @@ where
         .map_err(ToqlError::from)?;
 
     let mut insert_stmt = String::from("INSERT INTO ");
-    insert_stmt.push_str(&mapper.table_name);
+    insert_stmt.push_str(&table_name);
     insert_stmt.push(' ');
     insert_stmt.push_str(&columns_sql.0);
     insert_stmt.push_str(" VALUES ");
