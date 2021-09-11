@@ -145,7 +145,7 @@ where
       
         // Get ON predicate from entity keys
         let mut predicate_expr = SqlExpr::new();
-        let (_field, ancestor_path) = FieldPath::split_basename(home_path.as_str());
+        let ancestor_path = FieldPath::trim_basename(home_path.as_str());
         // let ancestor_path = ancestor_path.unwrap_or(FieldPath::from(""));
         //let mut d = ancestor_path.descendents();
         let mut d = ancestor_path.children();
@@ -198,13 +198,13 @@ where
         // Build index
         let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); //hashed key, array positions
 
-        let (field, ancestor_path) = FieldPath::split_basename(home_path.as_str());
+        let (ancestor_path, field) = FieldPath::split_basename(home_path.as_str());
 
         // TODO Batch process rows
         // TODO Introduce traits that do not need to copy into vec
   
         let row_offset = 0; // key must be first columns in row
-        let (_, ancestor2_path) = FieldPath::split_basename(ancestor_path.as_str());
+        let ancestor2_path = FieldPath::trim_basename(ancestor_path.as_str());
         
         let mut d = ancestor2_path.children();
         <T as TreeIndex<R, E>>::index(&mut d, &rows, row_offset, &mut index)?;

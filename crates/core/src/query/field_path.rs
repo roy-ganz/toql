@@ -10,14 +10,21 @@ impl<'a> Default for FieldPath<'a> {
 }
 
 impl<'a> FieldPath<'a> {
-    pub fn split_basename(path_with_basename: &str) -> (&str, FieldPath) {
+    pub fn split_basename(path_with_basename: &str) -> (FieldPath, &str) {
         if let Some(pos) = path_with_basename.rfind('_') {
             (
-                &path_with_basename[pos + 1..],
                 FieldPath::from(&path_with_basename[..pos]),
+                &path_with_basename[pos + 1..]
             )
         } else {
-            (path_with_basename, FieldPath::default())
+            (FieldPath::default(), path_with_basename)
+        }
+    }
+    pub fn trim_basename(path_with_basename: &str) -> FieldPath {
+        if let Some(pos) = path_with_basename.rfind('_') {
+                FieldPath::from(&path_with_basename[..pos])
+        } else {
+            FieldPath::default()
         }
     }
 

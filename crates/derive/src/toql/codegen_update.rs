@@ -127,7 +127,7 @@ impl<'a> CodegenUpdate<'a> {
                                             #role_assert
 
                                             <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                            update(#refer  self. #rust_field_ident ,&mut descendents, fields, roles, selected_keys, exprs)?
+                                            update(#refer  self. #rust_field_ident ,&mut descendents, fields, roles, exprs)?
                                         }
                                 )
 
@@ -139,7 +139,7 @@ impl<'a> CodegenUpdate<'a> {
                                             #role_assert
                                             if let Some(f) = self. #rust_field_ident .as_ref() {
                                             <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                            update( f ,&mut descendents, fields, roles, selected_keys, exprs)?
+                                            update( f ,&mut descendents, fields, roles, exprs)?
                                             }
                                         }
                                 )
@@ -151,7 +151,7 @@ impl<'a> CodegenUpdate<'a> {
                                             if let Some(f1) = self. #rust_field_ident .as_ref() {
                                                 if let Some(f2) = f1 {
                                                     <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                                    update(f2 ,&mut descendents, fields, roles, selected_keys, exprs)?
+                                                    update(f2 ,&mut descendents, fields, roles, exprs)?
                                                     }
                                             }
                                         }
@@ -248,7 +248,7 @@ impl<'a> CodegenUpdate<'a> {
                                     #toql_field_name => {
                                         #role_assert
                                         for f in &self. #rust_field_ident{
-                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, selected_keys, exprs)?
+                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
                                         }
                                     }
                                 )
@@ -258,7 +258,7 @@ impl<'a> CodegenUpdate<'a> {
                                         #role_assert
                                         if let Some (fs) = self. #rust_field_ident .as_ref(){
                                             for f in fs {
-                                                <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, selected_keys, exprs)?
+                                                <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, exprs)?
                                             }
                                         }
                                     }
@@ -300,7 +300,6 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                     #[allow(unused_mut, unused_variables, unused_parens)]
                     fn update<'a, I>(&self, mut descendents: &mut  I,
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>,
-                    selected_keys: Option<&[Vec<toql::sql_arg::SqlArg>]>,
                     exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                     {
@@ -317,12 +316,11 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         }
                                     },
                                     None => {
-                                         if let Some(sk) = selected_keys {
-                                                if !sk.contains(&toql::key::Key::params(&toql::keyed::Keyed::key(self))) {
-                                                    return Ok(());
-                                                }
-                                        } 
-
+                                         let key = <Self as toql::keyed::Keyed>::key(&self);
+                                        if toql::sql_arg::is_unsaved(&toql::key::Key::params(&key)) {
+                                            return Ok(())
+                                        }
+                                        
                                         let path_selected = fields.contains("*");
                                         #struct_upd_role_assert
 
@@ -358,17 +356,16 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                     #[allow(unused_mut)]
                     fn update<'a, I>(&self, mut descendents: &mut I,
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>,
-                     selected_keys: Option<&[Vec<toql::sql_arg::SqlArg>]>,
                     exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                     {
-                        <#struct_ident as toql::tree::tree_update::TreeUpdate>::update(self, descendents, fields, roles, selected_keys, exprs)
+                        <#struct_ident as toql::tree::tree_update::TreeUpdate>::update(self, descendents, fields, roles, exprs)
                        }
                   }
             }
         };
 
-        tracing::debug!(
+        log::debug!(
             "Source code for `{}`:\n{}",
             self.struct_ident,
             mods.to_string()

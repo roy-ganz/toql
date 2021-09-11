@@ -87,6 +87,16 @@ impl ToString for SqlArg {
 }
 
 
+pub fn is_unsaved(args: &[SqlArg]) -> bool {
+
+    args.iter().any(|a| match a {
+     SqlArg::U64(x) => x == &0,
+     SqlArg::Str(x) => x.is_empty(),
+    _ => false    
+    }
+    )
+}
+
 /*
 impl TryInto<Option<u32>> for &SqlArg {
     type Error = TryFromSqlArgError;

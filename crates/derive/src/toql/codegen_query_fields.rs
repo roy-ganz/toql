@@ -192,7 +192,7 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
                     }
                 );
 
-        tracing::debug!(
+        log::debug!(
             "Source code for `{}`:\n{}",
             &self.rust_struct.rust_struct_name,
             builder.to_string()

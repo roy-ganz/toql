@@ -186,7 +186,7 @@ impl<'a> SqlBuilder<'a> {
     }
 
     pub fn merge_expr(&self, query_field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
-        let (basename, query_path) = FieldPath::split_basename(query_field_path);
+        let (query_path, basename) = FieldPath::split_basename(query_field_path);
         let mapper = self.mapper_for_query_path(&query_path)?;
         /* let mut current_mapper = self
             .table_mapper_registry
@@ -257,7 +257,7 @@ impl<'a> SqlBuilder<'a> {
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
-        let (merge_field, base_path) = FieldPath::split_basename(merge_path.as_str());
+        let (base_path, merge_field) = FieldPath::split_basename(merge_path.as_str());
 
         let base_mapper = self.joined_mapper_for_local_path(&base_path)?;
 
@@ -267,7 +267,7 @@ impl<'a> SqlBuilder<'a> {
         } else {
             base_path
         };
-        let (self_field, _) = FieldPath::split_basename(path.as_str());
+        let self_field = FieldPath::trim_basename(path.as_str());
 
         let merge = base_mapper
             .merge(merge_field)
@@ -296,9 +296,9 @@ impl<'a> SqlBuilder<'a> {
         delete_expr.push_literal(" WHERE ");
         delete_expr.extend(key_predicate);
 
-        let merge_field = format!("{}_{}", self_field, merge_field);
+        let merge_field = format!("{}_{}", self_field.as_str(), merge_field);
         let resolver = Resolver::new()
-            .with_self_alias(self_field)
+            .with_self_alias(self_field.as_str())
             .with_other_alias(&merge_field);
 
         resolver.resolve(&delete_expr).map_err(ToqlError::from)
@@ -315,7 +315,7 @@ impl<'a> SqlBuilder<'a> {
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
-        let (merge_field, base_path) = FieldPath::split_basename(merge_path.as_str());
+        let (base_path, merge_field) = FieldPath::split_basename(merge_path.as_str());
 
         let base_mapper = self.joined_mapper_for_local_path(&base_path)?;
 
@@ -325,7 +325,7 @@ impl<'a> SqlBuilder<'a> {
         } else {
             base_path
         };
-        let (self_field, _) = FieldPath::split_basename(path.as_str());
+        let  self_field = FieldPath::trim_basename(path.as_str());
 
         let merge = base_mapper
             .merge(merge_field)
@@ -354,9 +354,9 @@ impl<'a> SqlBuilder<'a> {
         delete_expr.push_literal(" WHERE ");
         delete_expr.extend(key_predicate);
 
-        let merge_field = format!("{}_{}", self_field, merge_field);
+        let merge_field = format!("{}_{}", self_field.as_str(), merge_field);
         let resolver = Resolver::new()
-            .with_self_alias(self_field)
+            .with_self_alias(self_field.as_str())
             .with_other_alias(&merge_field);
 
         resolver.resolve(&delete_expr).map_err(ToqlError::from)
@@ -607,7 +607,7 @@ impl<'a> SqlBuilder<'a> {
         let mut join_expr = SqlExpr::new();
 
         for local_path_with_join in nodes {
-            let (join_name, local_path) = FieldPath::split_basename(local_path_with_join);
+            let (local_path, join_name) = FieldPath::split_basename(local_path_with_join);
 
             let local_mapper = self.joined_mapper_for_local_path(&local_path)?;
             let join = local_mapper
@@ -716,7 +716,7 @@ impl<'a> SqlBuilder<'a> {
                     if field.filter.is_none() {
                         continue;
                     }
-                    let (field_name, query_path) = FieldPath::split_basename(&field.name);
+                    let (query_path, field_name) = FieldPath::split_basename(&field.name);
 
                     // skip if field path is not relative to root path
                     if !Self::home_contains(&build_context.query_home_path, &query_path) {
@@ -807,7 +807,7 @@ impl<'a> SqlBuilder<'a> {
                 }
 
                 QueryToken::Predicate(predicate) => {
-                    let (basename, query_path) = FieldPath::split_basename(&predicate.name);
+                    let (query_path, basename) = FieldPath::split_basename(&predicate.name);
 
                     // skip if field path is not relative to root path
                     if !Self::home_contains(&build_context.query_home_path, &query_path) {
@@ -997,7 +997,7 @@ impl<'a> SqlBuilder<'a> {
         for n in ordinals {
             if let Some(orderings) = build_context.ordering.get(n) {
                 for (ord, local_path_with_basename) in orderings {
-                    let (field_name, local_path) =
+                    let (local_path, field_name) =
                         FieldPath::split_basename(local_path_with_basename);
                     let mapper = self.joined_mapper_for_local_path(&local_path)?;
                     let field_info = mapper
@@ -1266,7 +1266,7 @@ impl<'a> SqlBuilder<'a> {
         unmerged_home_paths: &mut HashSet<String>,
         /*local_selected_fields: &mut HashSet<String>, */
     ) -> Result<()> {
-        let (_, query_path) = FieldPath::split_basename(query_field);
+        let query_path = FieldPath::trim_basename(query_field);
         if !Self::home_contains(&build_context.query_home_path, &query_path) {
             return Ok(());
         }
@@ -1306,7 +1306,7 @@ impl<'a> SqlBuilder<'a> {
         mut build_context: &mut BuildContext,
         mut unmerged_home_paths: &mut HashSet<String>,
     ) -> Result<()> {
-        let (selection_name, query_path) = FieldPath::split_basename(query_selection);
+        let (query_path, selection_name) = FieldPath::split_basename(query_selection);
         let mapper = self.mapper_for_query_path(&query_path)?;
         let selection = mapper
             .selections
@@ -1337,7 +1337,7 @@ impl<'a> SqlBuilder<'a> {
                 let query_field = FieldPath::from(query_path.as_str())
                     .append(local_field_or_path)
                     .to_string();
-                let (_, query_path) = FieldPath::split_basename(query_field.as_str());
+                let query_path = FieldPath::trim_basename(query_field.as_str());
                 if let Some(local_path) = query_path.localize_path(&build_context.query_home_path) {
                     if let Some(merge_path) = self.next_merge_path(&local_path)? {
                         unmerged_home_paths.insert(
@@ -1386,8 +1386,8 @@ impl<'a> SqlBuilder<'a> {
                         if let Some(local_path_with_name) =
                             query_path.localize_path(&build_context.query_home_path)
                         {
-                            let (_, field_path) =
-                                FieldPath::split_basename(local_path_with_name.as_str());
+                            let field_path =
+                                FieldPath::trim_basename(local_path_with_name.as_str());
                             if self.next_merge_path(&field_path)?.is_none() {
                                 for path in field_path.step_up() {
                                     build_context.local_joined_paths.insert(path.to_string());
@@ -1462,7 +1462,7 @@ impl<'a> SqlBuilder<'a> {
                     //  relative_paths.insert(wildcard.path.to_string());
                 }
                 QueryToken::Selection(selection) => {
-                    let (selection_name, query_path) = FieldPath::split_basename(&selection.name);
+                    let (query_path, selection_name) = FieldPath::split_basename(&selection.name);
 
                     // Process only if selection path is a valid local path
                     if let Some(local_path) =

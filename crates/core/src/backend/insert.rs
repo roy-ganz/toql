@@ -226,13 +226,13 @@ where
     Ok(())
 }
 
-pub fn build_insert_sql2<T, Q, B, R, E>(
+pub fn build_insert_sql2<'a, T, Q, B, R, E, J>(
     backend: &mut B,
    
     entities: &[Q],
   
     query_path: &FieldPath,
-    key_set: &[Vec<SqlArg>],
+    inserts: &mut J,
     _modifier: &str,
     _extra: &str
 ) -> Result<Option<Sql>>
@@ -240,7 +240,8 @@ where
     B: Backend<R,E>,
     T: Mapped + TreeInsert,
     Q: BorrowMut<T>, 
-    E: From<ToqlError>
+    E: From<ToqlError>,
+    J: Iterator<Item = &'a bool>
 {
     use crate::sql_expr::SqlExpr;
 
@@ -253,7 +254,7 @@ where
     let columns_expr = <T as TreeInsert>::columns(&mut d)?;
     for e in entities{
         let mut d = query_path.step_down();
-        <T as TreeInsert>::values(e.borrow(), &mut d, backend.roles(), Some(key_set), &mut values_expr)?;
+        <T as TreeInsert>::values(e.borrow(), &mut d, backend.roles(), inserts, &mut values_expr)?;
     
     }
     if values_expr.is_empty() {
@@ -319,7 +320,8 @@ where
     for e in entities {
         //let mut d = path.descendents();
         let mut d = path.step_down();
-        <T as TreeInsert>::values(e.borrow(), &mut d, roles, None,&mut values_expr)?;
+        let mut i = std::iter::repeat(&true);
+        <T as TreeInsert>::values(e.borrow(), &mut d, roles, &mut i,&mut values_expr)?;
     }
     if values_expr.is_empty() {
         return Ok(None);
@@ -371,7 +373,7 @@ pub fn split_basename(
     paths: &mut Vec<String>,
 ) {
     for f in fields {
-        let (base, path) = FieldPath::split_basename(f);
+        let (path, base) = FieldPath::split_basename(f);
         if !path.is_empty() {
             if path_basenames.get(path.as_str()).is_none() {
                 path_basenames.insert(path.as_str().to_string(), HashSet::new());

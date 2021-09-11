@@ -153,7 +153,7 @@ impl<'a> CodegenInsert<'a> {
                                          if let Some(f) = &mut self. #rust_field_ident .as_ref() {
                                               if let Some(f) = f .as_ref() {
                                                 <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
-                                                values(f, &mut descendents, roles, selected_keys, values)?
+                                                values(f, &mut descendents, roles, should_insert, values)?
                                             }
                                          }
                                     }
@@ -162,7 +162,7 @@ impl<'a> CodegenInsert<'a> {
                                     #toql_field_name => {
                                         if let Some(f) = &mut self. #rust_field_ident .as_ref() {
                                             <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
-                                            values(f, &mut descendents, roles, selected_keys, values)?
+                                            values(f, &mut descendents, roles, should_insert, values)?
                                         }
                                     }
                                         ) },
@@ -170,7 +170,7 @@ impl<'a> CodegenInsert<'a> {
                                     quote!(
                                         #toql_field_name => {
                                             <#rust_type_ident as toql::tree::tree_insert::TreeInsert>::
-                                            values(& self. #rust_field_ident, &mut descendents, roles, selected_keys, values)?
+                                            values(& self. #rust_field_ident, &mut descendents, roles, should_insert, values)?
                                         }
                                     )}
                    }
@@ -287,7 +287,7 @@ impl<'a> CodegenInsert<'a> {
                             quote!(
                                 #toql_field_name => {
                                     for f in &self. #rust_field_ident{
-                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, selected_keys, values)?
+                                        <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, should_insert, values)?
                                     }
                                 }
                             )
@@ -296,7 +296,7 @@ impl<'a> CodegenInsert<'a> {
                                 #toql_field_name => {
                                     if let Some (fs) = self. #rust_field_ident .as_ref(){
                                         for f in fs {
-                                            <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, selected_keys, values)?
+                                            <#rust_base_type_ident as toql::tree::tree_insert::TreeInsert>::values(f, &mut descendents, roles, should_insert, values)?
                                         }
                                     }
                                 }
@@ -356,13 +356,14 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                         Ok(e)
                     }
                     #[allow(unused_mut, unused_variables)]
-                    fn values<'a, I>(&self,
+                    fn values<'a,'b, I, J>(&self,
                                         mut descendents: &mut I,
                                         roles: &std::collections::HashSet<String>,
-                                        selected_keys: Option<&[Vec<toql::sql_arg::SqlArg>]>,
+                                         should_insert:  &mut J,
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
-                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
+                                 J: Iterator<Item =&'b bool >
                                 {
 
                                     match descendents.next() {
@@ -374,13 +375,13 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                                 }
                                         },
                                         None => {
+                                              if !*should_insert.next().unwrap_or(&false) {
+                                                    return Ok(())
+                                                }
+
                                             #role_assert
 
-                                             if let Some(kl) = selected_keys {
-                                                if !kl.contains(&toql::key::Key::params(&toql::keyed::Keyed::key(self))) {
-                                                    return Ok(());
-                                                }
-                                            } 
+                                          
 
                                             values.push_literal("(");
                                             #(#insert_values_code)*
@@ -401,15 +402,16 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                 <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
                             }
                     #[allow(unused_mut)]
-                     fn values<'a, I>(&self,
+                     fn values<'a,'b, I, J>(&self,
                                         mut descendents: &mut  I,
                                         roles: &std::collections::HashSet<String>,
-                                        selected_keys: Option<&[Vec<toql::sql_arg::SqlArg>]>,
+                                         should_insert:  &mut J,
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
-                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
+                                 J: Iterator<Item =&'b bool >
                                 {
-                                    <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, selected_keys, values)
+                                    <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, should_insert, values)
                                 }
                   }
                   impl toql::tree::tree_insert::TreeInsert for &mut #struct_ident {
@@ -421,20 +423,21 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                 <#struct_ident as toql::tree::tree_insert::TreeInsert>::columns(descendents)
                             }
                     #[allow(unused_mut)]
-                     fn values<'a, I>(&self,
+                     fn values<'a,'b, I, J>(&self,
                                         mut descendents: &mut  I,
                                         roles: &std::collections::HashSet<String>,
-                                        selected_keys: Option<&[Vec<toql::sql_arg::SqlArg>]>,
+                                         should_insert:  &mut J,
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
-                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
+                                 J: Iterator<Item =&'b bool >
                                 {
-                                    <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, selected_keys, values)
+                                    <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, should_insert, values)
                                 }
                   }
         };
 
-        tracing::debug!(
+        log::debug!(
             "Source code for `{}`:\n{}",
             self.struct_ident,
             mods.to_string()

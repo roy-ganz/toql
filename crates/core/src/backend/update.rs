@@ -56,37 +56,73 @@ where
     }
 
     
-    let (query_path_order, mut auto_key_len, fields_map) =
+    let (query_path_order, fields_map, mut auto_key_len) =
         plan_update_order2::<T, _>(&*backend.registry()?, fields.list.as_ref())?;
 
-    for (query_path, merge) in query_path_order {
+    // Precalculate insert positions for merges
+    let mut query_path_should_insert_map : HashMap<&str, Vec<bool>>= HashMap::new();
+    for (query_merge_path, merge) in &query_path_order {
+        
+            if *merge {
+                 let qp = FieldPath::from(query_merge_path);
+                
+                let cols = <T as TreePredicate>::columns(&mut qp.children())?;
+                for e in entities.iter() {
+                    let mut args = Vec::new();
+                    let qp = FieldPath::from(query_merge_path);
+                    
+
+                
+                    <T as TreePredicate>::args(e.borrow(), &mut qp.children(), &mut args)?;
+                for arg in args.chunks(cols.len()){
+                    query_path_should_insert_map
+                        .entry(query_merge_path)
+                        .or_insert_with(Vec::new)
+                        .push(crate::sql_arg::is_unsaved(&arg));
+                    }
+                }
+            }
+            
+            
+        
+    }
+
+    
+    
+    // Update Keys from parent
+    // TODO add parent paths from normal fields / joins
+   let parent_paths = query_path_should_insert_map.keys().map(|k | {let parent_path =FieldPath::trim_basename(k); parent_path.to_string()}).collect::<HashSet<_>>(); 
+   for p in parent_paths {
+       let path = FieldPath::from(&p);
+        for e in entities.iter_mut() {
+            <T as TreeIdentity>::set_id(e.borrow_mut(), &mut path.children(), &IdentityAction::Refresh)?;
+        }
+   }
+
+    for (query_path, merge) in &query_path_order {
         let empty = HashSet::new();
-        let fields = match fields_map.get(&query_path) {
+        let fields = match fields_map.get(query_path) {
             Some(f) => f,
             None => &empty,
         };
-        println!("Processing path: {}", &query_path);
+        println!("Processing path: {}, fields {:?}", &query_path, &fields);
 
         // Ensure dependend keys are up to date
         // Maybe a seperate query_path list needs to be calculated for more accurate auto id updates.
-         if auto_key_len > 0 {
-             let p = FieldPath::from(&query_path);
-            for e in entities.iter_mut() {
-                <T as TreeIdentity>::set_id(
-                    e.borrow_mut(),
-                    &mut p.children(),
-                    &IdentityAction::Refresh,
-                )?;
-            }
-        } 
+        
+        if *merge {
+            delete_removed_merges(backend, entities, &query_path).await?;
 
-        if merge {
-            update_merge(backend, entities, &query_path, fields).await?;
+            let should_insert = query_path_should_insert_map.get(query_path.as_str()).unwrap();
+            println!("should insert {:?}", should_insert);
+            let mut should_insert =  should_insert .iter();
+            insert_new_merges(backend, entities, &query_path, &mut should_insert).await?;
         } else {
             update_field_or_join(backend, entities, &query_path, fields).await?;
         }
         auto_key_len -= 1;
     }
+   
 
     Ok(())
 }
@@ -106,7 +142,7 @@ where
     // Ensure keys are valid
     let sqls = {
         let field_path = FieldPath::from(&query_path);
-        build_update_sql(backend, entities, &field_path, &fields, None, "", "")
+        build_update_sql(backend, entities, &field_path, &fields, "", "")
     }?;
 
     // Update joins
@@ -116,11 +152,11 @@ where
     Ok(())
 }
 
-async fn update_merge<T, B, R, E, Q>(
+async fn insert_new_merges<'b, T, B, R, E, Q, J>(
     backend: &mut B,
     entities: &mut [Q],
     query_path: &str,
-    fields: &HashSet<String>,
+     inserts: &mut J,
 ) -> std::result::Result<(), E>
 where
     T: Update,
@@ -128,34 +164,19 @@ where
     B: Backend<R, E>,
     E: From<ToqlError>,
     SqlArg: FromRow<R, E>,
+    J: Iterator<Item = &'b bool>
 {
-    delete_unused_merge_items(backend, entities, &query_path).await?;
-    let (inserts, updates) =
-        calculate_insert_and_update_items(backend, entities, &query_path).await?;
-
-    let parent_path = FieldPath::from(&query_path);
+    
+  
+    
     let merge_path = FieldPath::from(&query_path);
 
-    //Update
-    let sqls = build_update_sql(
-        backend,
-        entities,
-        &merge_path,
-        &fields,
-        Some(&updates),
-        "",
-        "",
-    )?;
-    for sql in sqls {
-        backend.execute_sql(sql).await?;
-    }
-
     // Insert
-
-    let sql = build_insert_sql2(backend, entities, &merge_path, &inserts, "", "")?;
+    let sql = build_insert_sql2(backend, entities, &merge_path, inserts, "", "")?;
     if let Some(sql) = sql {
         println!("SQL {:?}", &sql);
-        let mut descendents = parent_path.children();
+        // Insert and refresh generated id
+        let mut descendents = merge_path.children();
         if <T as TreeIdentity>::auto_id(&mut descendents)? {
             let ids = backend.insert_sql(sql).await?;
 
@@ -173,7 +194,7 @@ where
     Ok(())
 }
 
-async fn delete_unused_merge_items<T, B, R, E, Q>(
+async fn delete_removed_merges<T, B, R, E, Q>(
     backend: &mut B,
     entities: &[Q],
     merge_path: &str,
@@ -184,7 +205,7 @@ where
     B: Backend<R, E>,
     E: From<ToqlError>,
 {
-    let (_, parent_path) = FieldPath::split_basename(&merge_path);
+    let parent_path = FieldPath::trim_basename(&merge_path);
     let merge_path = FieldPath::from(&merge_path);
     let mut key_predicate: SqlExpr = SqlExpr::new();
 
@@ -249,7 +270,7 @@ where
     E: From<ToqlError>,
     SqlArg: FromRow<R, E>,
 {
-    let (_, parent_path) = FieldPath::split_basename(&merge_path);
+    let parent_path = FieldPath::trim_basename(&merge_path);
     let merge_path = FieldPath::from(&merge_path);
     let mut key_predicate: SqlExpr = SqlExpr::new();
 
@@ -361,7 +382,6 @@ fn build_update_sql<B, T, Q, R, E>(
     entities: &[Q],
     path: &FieldPath,
     fields: &HashSet<String>,
-    selected_keys: Option<&[Vec<SqlArg>]>,
     _modifier: &str,
     _extra: &str,
 ) -> Result<Vec<Sql>>
@@ -384,7 +404,6 @@ where
             &mut descendents,
             fields,
             backend.roles(),
-            selected_keys,
             &mut exprs,
         )?;
     }
@@ -417,7 +436,7 @@ where
 {
     let ty = <T as Mapped>::type_name();
     for path in query_paths {
-        let (descendent_name, ancestor_path) =
+        let (ancestor_path, descendent_name) =
             FieldPath::split_basename(path.as_ref().trim_end_matches('_'));
 
         let children = ancestor_path.children();
@@ -479,39 +498,52 @@ where
 // "userLanguage" refers to merges -> will replace rows
 fn plan_update_order2<T, S: AsRef<str>>(
     registry: &TableMapperRegistry,
-    query_paths: &[S],
-) -> Result<(Vec<(String, bool)>, usize, HashMap<String, HashSet<String>>)>
+    query_fields: &[S],
+) -> Result<(Vec<(String, bool)>, HashMap<String, HashSet<String>>, usize)>
 // Execution order
 where
     T: Update,
 {
+    
     let mut ak_execution_order = Vec::new();
     let mut execution_order = Vec::new();
     let mut fields: HashMap<String, HashSet<String>> = HashMap::new(); // paths that refer to fields
 
     let ty = <T as Mapped>::type_name();
-    for query_path in query_paths {
-        let (field, query_path) = FieldPath::split_basename(query_path.as_ref());
-        fields
+    for query_field in query_fields {
+        let trimmed_query_field =  query_field.as_ref().trim_end_matches("_");
+        let (query_path, fieldname) = FieldPath::split_basename(trimmed_query_field);
+       
+       
+        let sql_builder = SqlBuilder::new(&ty, registry);
+       // let (parent_path, base_mapper) = FieldPath::split_basename(query_path.as_str());
+
+        let mapper: &TableMapper = sql_builder.mapper_for_query_path(&query_path)?;
+
+        let merge = mapper.merged_mapper(fieldname).is_some();
+        if !merge {
+             fields
             .entry(query_path.to_string())
             .or_insert_with(HashSet::new)
-            .insert(field.to_string());
-        let sql_builder = SqlBuilder::new(&ty, registry);
-        let (base_mapper, parent_path) = FieldPath::split_basename(query_path.as_str());
+            .insert(fieldname.to_string());
 
-        let mapper: &TableMapper = sql_builder.mapper_for_query_path(&parent_path)?;
-
-        let merge = mapper.merged_mapper(base_mapper).is_some();
-
-        let auto_id_path = FieldPath::from(query_path.as_str());
-        if <T as TreeIdentity>::auto_id(&mut auto_id_path.children())? {
-            ak_execution_order.push((query_path.as_str().to_string(), merge));
+            let auto_id_path = FieldPath::from(query_path.as_str());
+            if <T as TreeIdentity>::auto_id(&mut auto_id_path.children())? {
+                ak_execution_order.push((query_path.as_str().to_string(), merge)); // Insert only base path and add fields seperately
+            } else {
+                execution_order.push((query_path.as_str().to_string(), merge));
+            }
         } else {
-            execution_order.push((query_path.as_str().to_string(), merge));
+            let auto_id_path = FieldPath::from(query_path.as_str());
+            if <T as TreeIdentity>::auto_id(&mut auto_id_path.children())? {
+                ak_execution_order.push((trimmed_query_field.to_string(), merge)); // Insert merge path
+            } else {
+                execution_order.push((trimmed_query_field.to_string(), merge));
+            }
         }
     }
 
     let ak_execution_order_len = ak_execution_order.len();
     ak_execution_order.extend_from_slice(&execution_order);
-    Ok((ak_execution_order, ak_execution_order_len, fields))
+    Ok((ak_execution_order,  fields, ak_execution_order_len))
 }

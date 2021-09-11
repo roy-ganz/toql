@@ -158,7 +158,7 @@ impl<'a> quote::ToTokens for CodegenKeyFromRow<'a> {
 
         };
 
-        tracing::debug!(
+        log::debug!(
             "Source code for `{}`:\n{}",
             rust_stuct_ident,
             key.to_string()

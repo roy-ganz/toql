@@ -29,7 +29,7 @@ impl BuildContext {
             }
         }
         for path in self.local_selected_fields.iter().map(|f| {
-            let (_, p) = FieldPath::split_basename(f);
+            let p = FieldPath::trim_basename(f);
             p
         }) {
             for p in path.step_down() {

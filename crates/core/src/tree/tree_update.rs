@@ -7,7 +7,6 @@ pub trait TreeUpdate {
         descendents: &mut I,
         fields: &std::collections::HashSet<String>, // if empty, all fields can be updated (*)
         roles: &std::collections::HashSet<String>,
-         key_limits: Option<&[Vec<SqlArg>]>,
         exprs: &mut Vec<SqlExpr>,
     ) -> Result<(), ToqlError>
     where

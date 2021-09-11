@@ -3,7 +3,7 @@ use crate::key::Key;
 use crate::keyed::Keyed;
 use crate::tree::tree_update::TreeUpdate;
 use crate::{error::ToqlError, table_mapper::mapped::Mapped};
-use crate::{query::field_path::FieldPath, sql_expr::resolver::Resolver, sql_arg::SqlArg};
+use crate::{query::field_path::FieldPath, sql_expr::resolver::Resolver};
 
 impl<T> TreeUpdate for Join<T>
 where
@@ -15,7 +15,6 @@ where
         descendents: &mut I,
         fields: &std::collections::HashSet<String>, // if empty, all fields can be updated (*)
         roles: &std::collections::HashSet<String>,
-        selected_keys: Option<&[Vec<SqlArg>]>,
         exprs: &mut Vec<crate::sql_expr::SqlExpr>,
     ) -> Result<(), crate::error::ToqlError>
     where
@@ -31,7 +30,7 @@ where
                     Ok(())
                 }
             },
-            Join::Entity(e) => e.update(descendents, fields, roles, selected_keys, exprs),
+            Join::Entity(e) => e.update(descendents, fields, roles, exprs),
         }
     }
 }
