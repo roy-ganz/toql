@@ -207,16 +207,6 @@ where {
         self.merge(name).map(|m| m.merged_mapper.to_owned())
     }
 
-    pub fn contains_join_for_columns(&self, cols: &[String]) {
-        for j in self.joins {
-
-            if j.
-
-
-        }
-
-    }
-
     pub(crate) fn join(&self, name: &str) -> Option<&Join> {
         self.joins.get(name)
     }
@@ -226,6 +216,14 @@ where {
     pub(crate) fn field(&self, name: &str) -> Option<&Field> {
         self.fields.get(name)
     }
+
+    pub(crate) fn joined_partial_mappers(&self) -> Vec<String> {
+        self.joins.iter().filter_map(|(n, j)| if j.options.partial_table{ Some(n.to_string())} else {None}).collect()
+    }
+
+
+
+    
 
     /* /// Maps all fields from a struct as a joined dependency.
        /// Example: To map for a user an `Address` struct that implements `Mapped`

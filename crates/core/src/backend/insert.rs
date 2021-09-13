@@ -8,7 +8,7 @@ use crate::{
     sql_builder::{SqlBuilder, sql_builder_error::SqlBuilderError},
     sql_expr::resolver::Resolver,
     table_mapper::{mapped::Mapped, TableMapper},
-    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert},
+    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert, tree_predicate::TreePredicate},
 };
 use std::{borrow::BorrowMut, collections::HashMap};
 
@@ -148,6 +148,24 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
             }
         }
 
+        // Insert partial tables
+         for l in (0..joins.len()).rev() { // TEST not rev
+            for p in joins.get(l).unwrap() {
+                let mut partial_merge_paths = Vec::new();
+                let p = FieldPath::from(&p);
+                add_partial_tables::<T>(&*backend.registry()?, &p, &mut partial_merge_paths)?;
+                
+                for partial_merge_path in partial_merge_paths {
+                    let mut should_insert = std::iter::repeat(&true);
+                    let sql = build_insert_sql2(backend, entities, &FieldPath::from(&partial_merge_path), &mut should_insert, "", "")?;
+                    if let Some(sql) = sql {
+                        backend.execute_sql(sql).await?;
+                    }
+                }
+            }
+         }
+
+
         // Insert merges
         for p in merges {
             let path = FieldPath::from(&p);
@@ -187,6 +205,35 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
     }
     
 
+pub(crate) fn add_partial_tables<T>(
+    registry: &TableMapperRegistry,
+    query_path: &FieldPath,
+    paths: &mut Vec<String>
+) -> std::result::Result<(), ToqlError>
+where
+    T: Mapped + TreePredicate,
+{
+    
+    let ty = <T as Mapped>::type_name();
+   
+    let sql_builder = SqlBuilder::new(&ty, registry);
+    let mapper= sql_builder.mapper_for_query_path(query_path)?;
+
+    
+    let partial_joins : Vec<String> = mapper.joined_partial_mappers();
+    
+    for p in &partial_joins {
+        let qp = query_path.append(p);
+        add_partial_tables::<T>(registry, &qp, paths)?;
+        paths.push(qp.to_string());
+    }
+    
+
+
+   
+
+    Ok(())
+}
 
 pub fn set_tree_identity2<'a, T, Q, I>(
     ids: Vec<SqlArg>,

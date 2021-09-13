@@ -237,7 +237,7 @@ impl<'a> CodegenTree<'a> {
                 )
                );
 
-                if join_attrs.skip_mut_self_cols {
+                if join_attrs.partial_table {
 
                      let inverse_columns_mapping = join_attrs
                         .columns
@@ -530,18 +530,18 @@ impl<'a> CodegenTree<'a> {
                                 for e in #refer self. #rust_field_ident #unwrap_mut {
                                     let key = < #rust_type_ident as toql :: keyed :: Keyed >::key(e);
                                             let mut ps = toql::key::Key::params(&key);
-                                            let invalid = toql::sql_arg::is_invalid(&ps);
+                                            let valid = toql::sql_arg::valid_key(&ps);
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshInvalid
-                                            ) && !invalid
+                                            ) && vvalid
                                             {
                                             continue
                                             }
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshValid
-                                            ) && invalid
+                                            ) && !valid
                                             {
                                             continue
                                             }
@@ -571,18 +571,18 @@ impl<'a> CodegenTree<'a> {
                                         for e in u {
                                             let key = toql::keyed::Keyed::key(e);
                                             let mut ps = toql::key::Key::params(&key);
-                                            let invalid = toql::sql_arg::is_invalid(&ps);
+                                            let valid = toql::sql_arg::valid_key(&ps);
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshInvalid
-                                            ) && !invalid
+                                            ) && valid
                                             {
                                                 continue
                                             }
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshValid
-                                            ) && invalid
+                                            ) && !valid
                                             {
                                                 continue
                                             }

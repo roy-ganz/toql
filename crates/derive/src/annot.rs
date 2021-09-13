@@ -64,7 +64,7 @@ pub struct JoinArg {
     pub join_sql: Option<String>,
 
     #[darling(default)]
-    pub skip_mut_self_cols: bool
+    pub partial_table: bool
     //#[darling(default)]
     //pub discr_sql: Option<String>,
 }

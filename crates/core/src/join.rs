@@ -62,9 +62,12 @@ impl<T> Join<T>
 where
     T: crate::keyed::Keyed,
 {
-    /* pub fn new(key: <T as crate::keyed::Keyed>::Key) -> Self{
-       Join::Key(key)
-    } */
+    pub fn with_entity(entity: T) -> Self{
+       Join::Entity(Box::new(entity))
+    } 
+    pub fn with_key(key: impl Into<<T as crate::keyed::Keyed>::Key>) -> Self{
+       Join::Key(key.into())
+    } 
 
     pub fn entity(&self) -> Option<&T> {
         match self {

@@ -6,6 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 pub struct JoinOptions {
     pub(crate) key: bool, // Always select this join, regardless of query fields
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
+    pub(crate) partial_table: bool, // This joins to a table that shares the same primary key(s)
     pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection
     pub(crate) skip_mut: bool, // Ignore field for updates
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
@@ -19,6 +20,7 @@ impl JoinOptions {
         JoinOptions {
             key: false,
             preselect: false,
+            partial_table : false,
             skip_wildcard: false,
             skip_mut: false,
             load_role_expr: None,
@@ -36,6 +38,12 @@ impl JoinOptions {
     /// Field is selected, regardless of the query.
     pub fn preselect(mut self, preselect: bool) -> Self {
         self.preselect = preselect;
+        self
+    }
+
+    /// Field is selected, regardless of the query.
+    pub fn partial_table(mut self, partial_table: bool) -> Self {
+        self.partial_table = partial_table;
         self
     }
 

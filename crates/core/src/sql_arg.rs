@@ -87,12 +87,12 @@ impl ToString for SqlArg {
 }
 
 
-pub fn is_invalid(args: &[SqlArg]) -> bool {
+pub fn valid_key(args: &[SqlArg]) -> bool {
 
     args.iter().any(|a| match a {
-     SqlArg::U64(x) => x == &0,
-     SqlArg::Str(x) => x.is_empty(),
-    _ => false    
+     SqlArg::U64(x) => x != &0,
+     SqlArg::Str(x) => !x.is_empty(),
+    _ => true    
     }
     )
 }

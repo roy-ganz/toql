@@ -219,7 +219,7 @@ impl<'a> CodegenUpdate<'a> {
                     };
 
                     // Add if columns should not be skipped
-                    if !join_attrs.skip_mut_self_cols {
+                    if !join_attrs.partial_table {
                         self.update_set_code.push(
                         quote!(
                             if #opt_field_predicate #role_predicate (path_selected || fields.contains( #toql_field_name)) {
@@ -316,8 +316,8 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         }
                                     },
                                     None => {
-                                         let key = <Self as toql::keyed::Keyed>::key(&self);
-                                        if toql::sql_arg::is_invalid(&toql::key::Key::params(&key)) {
+                                        let key = <Self as toql::keyed::Keyed>::key(&self);
+                                        if !toql::sql_arg::valid_key(&toql::key::Key::params(&key)) {
                                             return Ok(())
                                         }
                                         

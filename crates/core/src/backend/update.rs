@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-use super::{insert::build_insert_sql2, map, Backend};
+use super::{insert::{add_partial_tables, build_insert_sql2}, map, Backend};
 use std::{
     borrow::{Borrow, BorrowMut},
     collections::{HashMap, HashSet},
@@ -92,7 +92,7 @@ where
                 query_path_should_insert_map
                     .entry(query_merge_path)
                     .or_insert_with(Vec::new)
-                    .push(crate::sql_arg::is_invalid(&arg));
+                    .push(!crate::sql_arg::valid_key(&arg));
             }
         }
     }
@@ -185,11 +185,14 @@ where
             backend.execute_sql(sql).await?;
         }
     }
+
     // Cascade insert for partial tables
-    let partial_merge_paths = vec![];
+    let mut partial_merge_paths = Vec::new();
+    add_partial_tables::<T>(&*backend.registry()?, &merge_path, &mut partial_merge_paths)?;
+       
     for partial_merge_path in partial_merge_paths {
         let mut should_insert = std::iter::repeat(&true);
-        let sql = build_insert_sql2(backend, entities, &partial_merge_path, &mut should_insert, "", "")?;
+        let sql = build_insert_sql2(backend, entities, &FieldPath::from(&partial_merge_path), &mut should_insert, "", "")?;
         if let Some(sql) = sql {
             backend.execute_sql(sql).await?;
         }
@@ -198,37 +201,6 @@ where
     Ok(())
 }
 
-fn collect_partial_tables<T, B, R, E>(
-    backend: &mut B,
-    query_path: &FieldPath,
-    paths: &mut Vec<String>
-) -> std::result::Result<(), E>
-where
-    T: Mapped + TreePredicate,
-    B: Backend<R, E>,
-    E: From<ToqlError>,
-    
-{
-    
-    let ty = <T as Mapped>::type_name();
-   let registry = &*backend.registry()?;
-    let sql_builder = SqlBuilder::new(&ty, registry);
-    let mapper= sql_builder.mapper_for_query_path(query_path)?;
-
-    
-    let partial_joins : &Vec<String> = mapper.partial_table_joins();
-    
-    for p in &partial_joins {
-        let qp = query_path.append(p);
-        collect_partial_tables(backend, &qp, paths)?;
-    }
-    paths.extend(partial_joins);
-
-
-   
-
-    Ok(())
-}
 
 async fn delete_removed_merges<'b, T, B, R, E, Q, J>(
     backend: &mut B,

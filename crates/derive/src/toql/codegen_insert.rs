@@ -19,6 +19,7 @@ pub(crate) struct CodegenInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
     insert_values_code: Vec<TokenStream>,
     struct_ins_roles: &'a Option<String>,
+    key_columns: Vec<String>
 }
 
 impl<'a> CodegenInsert<'a> {
@@ -34,6 +35,7 @@ impl<'a> CodegenInsert<'a> {
             insert_columns_code: Vec::new(),
             insert_values_code: Vec::new(),
             struct_ins_roles: &toql.roles.insert,
+            key_columns : Vec::new()
         }
     }
 
@@ -179,7 +181,9 @@ impl<'a> CodegenInsert<'a> {
                 let default_self_column_code = &join_attrs.default_self_column_code;
 
                 // Add if columns should not be skipped
-                if !join_attrs.skip_mut_self_cols {
+                 
+                                    
+                if !join_attrs.partial_table {
                     self.insert_columns_code.push(quote!(
                         for other_column in <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
                                 #default_self_column_code;

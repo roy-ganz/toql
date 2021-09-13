@@ -108,7 +108,7 @@ pub struct JoinField {
     pub key: bool,
     pub aux_params: Vec<ParamArg>,
     pub columns: Vec<Pair>,
-    pub skip_mut_self_cols: bool
+    pub partial_table: bool
 }
 
 #[derive(Clone)]
@@ -214,6 +214,13 @@ impl Field {
             if field.sql.is_some() {
                 return Err(darling::Error::custom(
                     "`sql` not allowed for joined fields. Remove from `#[toql(..)]`.".to_string(),
+                )
+                .with_span(&field.ident));
+            }
+
+              if field.key &&  field.join.as_ref().unwrap().partial_table {
+                return Err(darling::Error::custom(
+                    "`partial table` not allowed for key fields. Remove from `#[toql(..)]`.".to_string(),
                 )
                 .with_span(&field.ident));
             }
@@ -325,7 +332,7 @@ impl Field {
                 key: field.key,
                 aux_params: field.param.clone(),
                 columns: field.join.as_ref().unwrap().columns.clone(),
-                skip_mut_self_cols: field.join.as_ref().unwrap().skip_mut_self_cols
+                partial_table: field.join.as_ref().unwrap().partial_table
             })
         } else if field.merge.is_some() {
             if field.key {

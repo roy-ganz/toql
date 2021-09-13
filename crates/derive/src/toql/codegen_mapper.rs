@@ -129,6 +129,7 @@ impl<'a> CodegenMapper<'a> {
                         .with_span(&field.rust_field_ident));
                     }
                 } else {
+                     
                     self.key_fields = false;
                 }
 
@@ -181,6 +182,13 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 };
+
+                let partial_table_ident = if join_attrs.partial_table {
+                    quote!( .partial_table(true))
+                } else {
+                    quote!()
+                };
+                
                 let skip_mut_ident = if field.skip_mut {
                     quote!( .skip_mut(true))
                 } else {
@@ -222,7 +230,7 @@ impl<'a> CodegenMapper<'a> {
                     {let mut t = toql::sql_expr::SqlExpr::literal(< #sql_join_table_name_ident as toql::table_mapper::mapped::Mapped>::table_name()); t.push_literal(" "); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
                      toql::table_mapper::join_options::JoinOptions::new() #(#aux_params)*
-                     #preselect_ident #key_ident #skip_load_ident #skip_mut_ident #skip_wc_ident #roles_ident
+                     #preselect_ident #key_ident #skip_load_ident #skip_mut_ident #skip_wc_ident #roles_ident #partial_table_ident
                     );
                 });
 
