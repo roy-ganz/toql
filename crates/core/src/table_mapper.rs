@@ -207,6 +207,16 @@ where {
         self.merge(name).map(|m| m.merged_mapper.to_owned())
     }
 
+    pub fn contains_join_for_columns(&self, cols: &[String]) {
+        for j in self.joins {
+
+            if j.
+
+
+        }
+
+    }
+
     pub(crate) fn join(&self, name: &str) -> Option<&Join> {
         self.joins.get(name)
     }

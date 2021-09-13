@@ -185,6 +185,47 @@ where
             backend.execute_sql(sql).await?;
         }
     }
+    // Cascade insert for partial tables
+    let partial_merge_paths = vec![];
+    for partial_merge_path in partial_merge_paths {
+        let mut should_insert = std::iter::repeat(&true);
+        let sql = build_insert_sql2(backend, entities, &partial_merge_path, &mut should_insert, "", "")?;
+        if let Some(sql) = sql {
+            backend.execute_sql(sql).await?;
+        }
+    }
+
+    Ok(())
+}
+
+fn collect_partial_tables<T, B, R, E>(
+    backend: &mut B,
+    query_path: &FieldPath,
+    paths: &mut Vec<String>
+) -> std::result::Result<(), E>
+where
+    T: Mapped + TreePredicate,
+    B: Backend<R, E>,
+    E: From<ToqlError>,
+    
+{
+    
+    let ty = <T as Mapped>::type_name();
+   let registry = &*backend.registry()?;
+    let sql_builder = SqlBuilder::new(&ty, registry);
+    let mapper= sql_builder.mapper_for_query_path(query_path)?;
+
+    
+    let partial_joins : &Vec<String> = mapper.partial_table_joins();
+    
+    for p in &partial_joins {
+        let qp = query_path.append(p);
+        collect_partial_tables(backend, &qp, paths)?;
+    }
+    paths.extend(partial_joins);
+
+
+   
 
     Ok(())
 }
