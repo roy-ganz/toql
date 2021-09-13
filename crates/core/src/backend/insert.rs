@@ -55,11 +55,19 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
 
         // Insert root
         let sql = {
-            let aux_params = [backend.aux_params()];
-            let aux_params = ParameterMap::new(&aux_params);
-            let home_path = FieldPath::default();
+            /* let aux_params = [backend.aux_params()];
+            let aux_params = ParameterMap::new(&aux_params); */
+            let  home_path = FieldPath::default();
 
-            crate::backend::insert::build_insert_sql::<T, _>(
+             crate::backend::insert::build_insert_sql2(
+                        backend,
+                        entities,
+                        &home_path,
+                        &mut std::iter::repeat(&true),
+                        "",
+                        "",
+                    )
+            /* crate::backend::insert::build_insert_sql::<T, _>(
                 &backend.registry()?.mappers,
                 backend.alias_format(),
                 &aux_params,
@@ -68,7 +76,7 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                 &home_path,
                 "",
                 "",
-            )
+            ) */
         }?;
         if sql.is_none() {
             return Ok(());
@@ -97,7 +105,16 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                 let mut path = FieldPath::from(&p);
 
                 let sql = {
-                    let aux_params = [backend.aux_params()];
+                  
+                    crate::backend::insert::build_insert_sql2(
+                        backend,
+                        entities,
+                        &mut path,
+                        &mut std::iter::repeat(&true),
+                        "",
+                        "",
+                    )
+                    /* let aux_params = [backend.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
                     crate::backend::insert::build_insert_sql::<T, _>(
                         &backend.registry()?.mappers,
@@ -108,7 +125,7 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                         &mut path,
                         "",
                         "",
-                    )
+                    ) */
                 }?;
                 if sql.is_none() {
                     break;
@@ -136,9 +153,17 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
             let path = FieldPath::from(&p);
 
             let sql = {
-                let aux_params = [backend.aux_params()];
-                let aux_params = ParameterMap::new(&aux_params);
-                crate::backend::insert::build_insert_sql::<T, _>(
+                /* let aux_params = [backend.aux_params()];
+                let aux_params = ParameterMap::new(&aux_params); */
+                crate::backend::insert::build_insert_sql2(
+                    backend,
+                    entities,
+                    &path,
+                    &mut std::iter::repeat(&true),
+                    "",
+                    "",
+                )
+               /*  crate::backend::insert::build_insert_sql::<T, _>(
                     &backend.registry()?.mappers,
                     backend.alias_format(),
                     &aux_params,
@@ -147,7 +172,7 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                     &path,
                     "",
                     "",
-                )
+                ) */
             }?;
             if sql.is_none() {
                 break;
@@ -228,14 +253,13 @@ where
 
 pub fn build_insert_sql2<'a, T, Q, B, R, E, J>(
     backend: &mut B,
-   
     entities: &[Q],
-  
     query_path: &FieldPath,
     inserts: &mut J,
     _modifier: &str,
     _extra: &str
 ) -> Result<Option<Sql>>
+
 where
     B: Backend<R,E>,
     T: Mapped + TreeInsert,
@@ -294,7 +318,7 @@ where
 
     Ok(Some(Sql(insert_stmt, values_sql.1)))
 }
-pub fn build_insert_sql<T, Q>(
+/* pub fn build_insert_sql<T, Q>(
     mappers: &HashMap<String, TableMapper>,
     alias_format: AliasFormat,
     aux_params: &ParameterMap,
@@ -366,7 +390,7 @@ where
     insert_stmt.pop();
 
     Ok(Some(Sql(insert_stmt, values_sql.1)))
-}
+} */
 pub fn split_basename(
     fields: &[String],
     path_basenames: &mut HashMap<String, HashSet<String>>,

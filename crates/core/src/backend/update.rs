@@ -1,20 +1,15 @@
 use crate::{
-    alias_format::AliasFormat,
     alias_translator::AliasTranslator,
     error::ToqlError,
     from_row::FromRow,
-    parameter_map::ParameterMap,
-    query::field_path::FieldPath,
     result::Result,
     sql::Sql,
     sql_arg::SqlArg,
-    sql_builder::{sql_builder_error::SqlBuilderError, SqlBuilder},
+    sql_builder::SqlBuilder,
     sql_expr::{resolver::Resolver, PredicateColumn, SqlExpr},
     table_mapper::{mapped::Mapped, TableMapper},
     tree::{
         tree_identity::{IdentityAction, TreeIdentity},
-        tree_index::TreeIndex,
-        tree_insert::TreeInsert,
         tree_predicate::TreePredicate,
         tree_update::TreeUpdate,
     },
@@ -28,7 +23,7 @@ use std::{
 
 use crate::{
     table_mapper_registry::TableMapperRegistry,
-    toql_api::{fields::Fields, update::Update},
+    toql_api::{fields::Fields, update::Update}, query::field_path::FieldPath,
 };
 
 pub async fn update<B, Q, T, R, E>(
@@ -270,7 +265,7 @@ where
 
     Ok(())
 }
-
+/* 
 async fn calculate_insert_and_update_items<T, B, R, E, Q>(
     backend: &mut B,
     entities: &[Q],
@@ -388,7 +383,7 @@ where
     }
 
     Ok((entities_to_insert, entities_to_update))
-}
+} */
 
 fn build_update_sql<B, T, Q, R, E>(
     backend: &mut B,
@@ -435,7 +430,7 @@ where
     Ok(update_sqls)
 }
 
-// separate out fields, that refer to merged entities
+/* // separate out fields, that refer to merged entities
 // E.g on struct user "userLanguage_order" will update all orders in userLanguages
 // "userLanguage" refers to merges -> will replace rows
 fn plan_update_order<T, S: AsRef<str>>(
@@ -559,7 +554,8 @@ where
     let ak_execution_order_len = ak_execution_order.len();
     ak_execution_order.extend_from_slice(&execution_order);
     Ok((ak_execution_order, fields, ak_execution_order_len))
-}
+} */
+
 // separate out fields, that refer to merged entities
 // E.g on struct user "userLanguage_order" will update all orders in userLanguages
 // "userLanguage" refers to merges -> will replace rows
