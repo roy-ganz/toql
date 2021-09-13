@@ -44,8 +44,6 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
         let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: HashSet<String> = HashSet::new();
 
-
-
         crate::backend::insert::plan_insert_order::<T, _>(
             &backend.registry()?.mappers,
             paths.list.as_ref(),
@@ -67,16 +65,7 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                         "",
                         "",
                     )
-            /* crate::backend::insert::build_insert_sql::<T, _>(
-                &backend.registry()?.mappers,
-                backend.alias_format(),
-                &aux_params,
-                entities,
-                &backend.roles(),
-                &home_path,
-                "",
-                "",
-            ) */
+           
         }?;
         if sql.is_none() {
             return Ok(());
@@ -114,18 +103,7 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                         "",
                         "",
                     )
-                    /* let aux_params = [backend.aux_params()];
-                    let aux_params = ParameterMap::new(&aux_params);
-                    crate::backend::insert::build_insert_sql::<T, _>(
-                        &backend.registry()?.mappers,
-                        backend.alias_format(),
-                        &aux_params,
-                        entities,
-                        &backend.roles(),
-                        &mut path,
-                        "",
-                        "",
-                    ) */
+                   
                 }?;
                 if sql.is_none() {
                     break;
@@ -145,6 +123,18 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
              } else {
                 backend.execute_sql(sql).await?;
              }
+            }
+        }
+
+        // Add top partial tables
+        let mut partial_merge_paths = Vec::new();
+        let p = FieldPath::default();
+        add_partial_tables::<T>(&*backend.registry()?, &p, &mut partial_merge_paths)?;
+        for partial_merge_path in partial_merge_paths {
+            let mut should_insert = std::iter::repeat(&true);
+            let sql = build_insert_sql2(backend, entities, &FieldPath::from(&partial_merge_path), &mut should_insert, "", "")?;
+            if let Some(sql) = sql {
+                backend.execute_sql(sql).await?;
             }
         }
 

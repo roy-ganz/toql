@@ -183,7 +183,7 @@ pub struct Toql {
     #[darling(default)]
     pub skip_load: bool,
     #[darling(default)]
-    pub auto_key: Option<bool>,
+    pub auto_key: bool,
     #[darling(default)]
     pub skip_select: bool,
     #[darling(default)]
