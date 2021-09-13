@@ -73,7 +73,7 @@ impl Struct {
             roles: toql.roles.clone(),
             wildcard: toql.wildcard.as_ref().map(|e| e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
             //  count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
-            auto_key: toql.auto_key,
+            auto_key: toql.auto_key.unwrap_or(true),
         }
     }
 }
