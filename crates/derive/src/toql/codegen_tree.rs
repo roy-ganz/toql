@@ -276,7 +276,7 @@ impl<'a> CodegenTree<'a> {
                                 .ok_or_else(|| toql::table_mapper::TableMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
                             args.push(self_key_params.get(i).ok_or_else(||toql::table_mapper::TableMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
                         }
-
+                        
                             
 
                         let action = toql::tree::tree_identity::IdentityAction::Set(std::cell::RefCell::new(args));
@@ -530,6 +530,21 @@ impl<'a> CodegenTree<'a> {
                                 for e in #refer self. #rust_field_ident #unwrap_mut {
                                     let key = < #rust_type_ident as toql :: keyed :: Keyed >::key(e);
                                             let mut ps = toql::key::Key::params(&key);
+                                            let invalid = toql::sql_arg::is_invalid(&ps);
+                                            if matches!(
+                                                action,
+                                                toql::tree::tree_identity::IdentityAction::RefreshInvalid
+                                            ) && !invalid
+                                            {
+                                            continue
+                                            }
+                                            if matches!(
+                                                action,
+                                                toql::tree::tree_identity::IdentityAction::RefreshValid
+                                            ) && invalid
+                                            {
+                                            continue
+                                            }
 
                                             let other_columns = <<#rust_base_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
                                             for (i,other_column) in other_columns.iter().enumerate() {
@@ -556,6 +571,21 @@ impl<'a> CodegenTree<'a> {
                                         for e in u {
                                             let key = toql::keyed::Keyed::key(e);
                                             let mut ps = toql::key::Key::params(&key);
+                                            let invalid = toql::sql_arg::is_invalid(&ps);
+                                            if matches!(
+                                                action,
+                                                toql::tree::tree_identity::IdentityAction::RefreshInvalid
+                                            ) && !invalid
+                                            {
+                                                continue
+                                            }
+                                            if matches!(
+                                                action,
+                                                toql::tree::tree_identity::IdentityAction::RefreshValid
+                                            ) && invalid
+                                            {
+                                                continue
+                                            }
 
                                             let other_columns = <<#rust_base_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
                                             for (i,other_column) in other_columns.iter().enumerate() {
@@ -624,6 +654,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                     let self_key = <Self as toql::keyed::Keyed>::key(&self);
                     let self_key_params = toql::key::Key::params(&self_key);
                     let key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
+
 
                    #(#identity_set_merges_key_code)*);
         /* } else {

@@ -9,6 +9,15 @@ impl<'a> Default for FieldPath<'a> {
     }
 }
 
+impl<'a> std::ops::Deref for FieldPath<'a> {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+
+}
+
 impl<'a> FieldPath<'a> {
     pub fn split_basename(path_with_basename: &str) -> (FieldPath, &str) {
         if let Some(pos) = path_with_basename.rfind('_') {

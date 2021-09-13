@@ -87,7 +87,7 @@ impl ToString for SqlArg {
 }
 
 
-pub fn is_unsaved(args: &[SqlArg]) -> bool {
+pub fn is_invalid(args: &[SqlArg]) -> bool {
 
     args.iter().any(|a| match a {
      SqlArg::U64(x) => x == &0,

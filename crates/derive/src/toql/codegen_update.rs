@@ -317,7 +317,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                     },
                                     None => {
                                          let key = <Self as toql::keyed::Keyed>::key(&self);
-                                        if toql::sql_arg::is_unsaved(&toql::key::Key::params(&key)) {
+                                        if toql::sql_arg::is_invalid(&toql::key::Key::params(&key)) {
                                             return Ok(())
                                         }
                                         

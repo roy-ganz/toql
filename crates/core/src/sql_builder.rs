@@ -160,7 +160,7 @@ impl<'a> SqlBuilder<'a> {
                     let other_alias = FieldPath::from(alias).append(&mapper.canonical_table_alias);
                     let resolver = Resolver::new()
                         .with_self_alias(alias)
-                        .with_other_alias(other_alias.as_str());
+                        .with_other_alias(&other_alias);
 
                     join_expr.push_literal("JOIN ");
                     join_expr.extend(resolver.resolve(&join.table_expression)?);
@@ -171,8 +171,8 @@ impl<'a> SqlBuilder<'a> {
                     let joined_query_path = FieldPath::from(query_path).append(&name);
 
                     self.resolve_columns_expr(
-                        joined_query_path.as_str(),
-                        other_alias.as_str(),
+                        &joined_query_path,
+                        &other_alias,
                         columns_expr,
                         join_expr,
                         //     on_expr,
@@ -257,17 +257,18 @@ impl<'a> SqlBuilder<'a> {
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
-        let (base_path, merge_field) = FieldPath::split_basename(merge_path.as_str());
+        let (query_path, merge_field) = FieldPath::split_basename(&merge_path);
 
-        let base_mapper = self.joined_mapper_for_local_path(&base_path)?;
+        let base_mapper = self.joined_mapper_for_local_path(&query_path)?;
 
         let root_path = FieldPath::from(&root_mapper.canonical_table_alias);
-        let path = if base_path.is_empty() {
+       /*  let root_path = if query_path.is_empty() {
             root_path
         } else {
-            base_path
-        };
-        let self_field = FieldPath::trim_basename(path.as_str());
+            query_path
+        }; */
+        let canonical_path = root_path.append(&query_path);
+       // let self_field = FieldPath::trim_basename(path.as_str());
 
         let merge = base_mapper
             .merge(merge_field)
@@ -296,10 +297,10 @@ impl<'a> SqlBuilder<'a> {
         delete_expr.push_literal(" WHERE ");
         delete_expr.extend(key_predicate);
 
-        let merge_field = format!("{}_{}", self_field.as_str(), merge_field);
+        let canonical_merge_alias = canonical_path.append(merge_field); 
         let resolver = Resolver::new()
-            .with_self_alias(self_field.as_str())
-            .with_other_alias(&merge_field);
+            .with_self_alias(&canonical_path)
+            .with_other_alias(&canonical_merge_alias);
 
         resolver.resolve(&delete_expr).map_err(ToqlError::from)
     }
@@ -315,7 +316,8 @@ impl<'a> SqlBuilder<'a> {
             .get(&self.home_mapper)
             .ok_or_else(|| ToqlError::MapperMissing(self.home_mapper.to_owned()))?;
 
-        let (base_path, merge_field) = FieldPath::split_basename(merge_path.as_str());
+        // TODO maybe alias wrong, see update build_merge_delete
+        let (base_path, merge_field) = FieldPath::split_basename(&merge_path);
 
         let base_mapper = self.joined_mapper_for_local_path(&base_path)?;
 
@@ -325,7 +327,7 @@ impl<'a> SqlBuilder<'a> {
         } else {
             base_path
         };
-        let  self_field = FieldPath::trim_basename(path.as_str());
+        let  self_field = FieldPath::trim_basename(&path);
 
         let merge = base_mapper
             .merge(merge_field)
@@ -467,7 +469,7 @@ impl<'a> SqlBuilder<'a> {
                         .get(&join.joined_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                 } else {
-                    return Err(SqlBuilderError::JoinMissing(p.as_str().to_string()).into());
+                    return Err(SqlBuilderError::JoinMissing(p.to_string()).into());
                 }
             }
         }
@@ -495,7 +497,7 @@ impl<'a> SqlBuilder<'a> {
                         .get(&merge.merged_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(merge.merged_mapper.to_string()))?;
                 } else {
-                    return Err(ToqlError::MapperMissing(p.as_str().to_string()));
+                    return Err(ToqlError::MapperMissing(p.to_string()));
                 }
             }
         }
@@ -518,7 +520,7 @@ impl<'a> SqlBuilder<'a> {
                 let join = current_mapper
                     .joins
                     .get(p.as_str())
-                    .ok_or_else(|| ToqlError::MapperMissing(p.as_str().to_string()))?;
+                    .ok_or_else(|| ToqlError::MapperMissing(p.to_string()))?;
                 current_mapper = self
                     .table_mapper_registry
                     .get(&join.joined_mapper)

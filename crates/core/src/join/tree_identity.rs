@@ -42,6 +42,8 @@ where
                         Ok(())
                     }
                     IdentityAction::Refresh => Ok(()),
+                    IdentityAction::RefreshValid => Ok(()),
+                    IdentityAction::RefreshInvalid => Ok(()),
                 },
             },
             Join::Entity(e) => e.set_id(descendents, action),
