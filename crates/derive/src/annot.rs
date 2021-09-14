@@ -97,6 +97,8 @@ pub struct ToqlField {
     #[darling(default)]
     pub key: bool,
     #[darling(default)]
+    pub foreign_key: bool,
+    #[darling(default)]
     pub field: Option<String>,
     #[darling(default)]
     pub sql: Option<String>,
@@ -184,10 +186,10 @@ pub struct Toql {
     pub skip_load: bool,
     #[darling(default)]
     pub auto_key: bool,
-    #[darling(default)]
+    /* #[darling(default)]
     pub skip_select: bool,
     #[darling(default)]
-    pub skip_query_builder: bool,
+    pub skip_query_builder: bool, */
 
     #[darling(multiple)]
     pub predicate: Vec<PredicateArg>,
@@ -234,8 +236,8 @@ impl quote::ToTokens for Toql {
             skip_mut,
             skip_load,
             auto_key: _,
-            skip_select: _,
-            skip_query_builder,
+         /*    skip_select: _,
+            skip_query_builder, */
             predicate: _,
             selection: _,
             roles: _,
@@ -327,9 +329,9 @@ impl quote::ToTokens for Toql {
                 tokens.extend(quote!(#toql_key_from_row));
                 tokens.extend(quote!(#toql_entity_from_row));
 
-                if !skip_query_builder {
+               // if !skip_query_builder {
                     tokens.extend(quote!(#toql_query_fields));
-                }
+                //}
 
                 if !skip_load {
                     tokens.extend(quote!(#toql_mapper));

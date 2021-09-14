@@ -439,6 +439,8 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                     <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, should_insert, values)
                                 }
                   }
+
+                 
         };
 
         log::debug!(

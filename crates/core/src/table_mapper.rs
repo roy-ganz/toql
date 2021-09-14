@@ -217,8 +217,8 @@ where {
         self.fields.get(name)
     }
 
-    pub(crate) fn joined_partial_mappers(&self) -> Vec<String> {
-        self.joins.iter().filter_map(|(n, j)| if j.options.partial_table{ Some(n.to_string())} else {None}).collect()
+    pub(crate) fn joined_partial_mappers(&self) -> Vec<(String,String)> {
+        self.joins.iter().filter_map(|(n, j)| if j.options.partial_table{ Some((n.to_string(), j.joined_mapper.to_string()))} else {None}).collect()
     }
 
 

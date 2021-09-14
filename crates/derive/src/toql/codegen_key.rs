@@ -6,6 +6,8 @@ pub(crate) struct CodegenKey<'a> {
     rust_struct: &'a crate::sane::Struct,
     key_fields_code: Vec<TokenStream>,
     key_columns_code: Vec<TokenStream>,
+    foreign_key_columns_code: Vec<TokenStream>,
+    foreign_key_set_column_code: Vec<TokenStream>,
     key_inverse_columns_code: Vec<TokenStream>,
     key_params_code: Vec<TokenStream>,
     key_types: Vec<TokenStream>,
@@ -33,6 +35,8 @@ impl<'a> CodegenKey<'a> {
             rust_struct: &toql,
             key_fields_code: Vec::new(),
             key_columns_code: Vec::new(),
+            foreign_key_columns_code: Vec::new(),
+            foreign_key_set_column_code: Vec::new(),
             key_inverse_columns_code: Vec::new(),
             key_params_code: Vec::new(),
             key_types: Vec::new(),
@@ -63,6 +67,23 @@ impl<'a> CodegenKey<'a> {
 
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
+
+                if regular_attrs.foreign_key || regular_attrs.key {
+                      if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
+                        self.foreign_key_columns_code
+                        .push(quote!( columns.push( String::from(#column)); ));
+
+                        let setter_code = match &field.number_of_options {
+                            2 => quote!(self. #rust_field_ident = Some(if value.is_null(){ None}else {Some(value.try_into()?)})),
+                            1 => quote!(self. #rust_field_ident = if value.is_null(){ None}else {Some(value.try_into()?)}),
+                            _ => quote!(self. #rust_field_ident = value.try_into()?)
+                        };
+
+                         self.foreign_key_set_column_code
+                        .push(quote!( #column =>  #setter_code, ));
+                      }
+                }
+
                 if !regular_attrs.key {
                     return Ok(());
                 }
@@ -70,6 +91,8 @@ impl<'a> CodegenKey<'a> {
                 if let SqlTarget::Column(ref column) = &regular_attrs.sql_target {
                     self.key_columns_code
                         .push(quote!( columns.push( String::from(#column)); ));
+
+                    
 
                     self.key_fields_code
                         .push(quote!( fields.push( String::from(#toql_field_name)); ));
@@ -296,6 +319,10 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
 
         let try_from_setters = &self.try_from_setters;
 
+        let foreign_key_columns_code = &self.foreign_key_columns_code;
+        let foreign_key_set_column_code = &self.foreign_key_set_column_code;
+        let number_of_foreign_columns= self.foreign_key_columns_code.len();
+
         let key = quote! {
 
 
@@ -452,8 +479,26 @@ impl<'a> quote::ToTokens for CodegenKey<'a> {
                             <#rust_stuct_ident as toql::keyed::Keyed>::key(self).hash(state);
                         }
                     }
+                    
+                    impl toql::identity::Identity for #rust_stuct_ident {
+                        fn columns() -> Vec<String> {
+                            let mut columns = Vec::with_capacity(#number_of_foreign_columns);
+                            #(#foreign_key_columns_code)*
+                            columns
 
-                    //#partial_key
+                        }
+                        fn set_column(&mut self, column:&str, value: &toql::sql_arg::SqlArg) -> toql::result::Result<()> {
+                            use std::convert::TryInto;
+                            match column {
+                                 #(#foreign_key_set_column_code)*
+                                 _ => {}
+
+                            }
+                            Ok(())
+
+                        }
+
+                    }
 
                 };
 

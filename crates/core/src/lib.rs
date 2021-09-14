@@ -12,6 +12,7 @@ pub mod alias_format;
 pub mod deserialize;
 pub mod key;
 pub mod key_fields;
+pub mod identity;
 pub mod keyed;
 pub mod map_key;
 pub mod page;

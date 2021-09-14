@@ -72,6 +72,7 @@ impl<'a> CodegenTree<'a> {
         let rust_type_name = &field.rust_type_name;
         let toql_field_name = &field.toql_field_name;
         let rust_base_type_ident = &field.rust_base_type_ident;
+        let rust_struct_name = &self.rust_struct.rust_struct_name;
 
         // Handle key predicate and parameters
         let unwrap = match field.number_of_options {
@@ -272,7 +273,7 @@ impl<'a> CodegenTree<'a> {
                         // Build target key args
                         let mut args = Vec::new();
                         for c in inverse_columns {
-                            let i = key_columns.iter().position(|r| r == &c)
+                            let i = self_key_columns.iter().position(|r| r == &c)
                                 .ok_or_else(|| toql::table_mapper::TableMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?;
                             args.push(self_key_params.get(i).ok_or_else(||toql::table_mapper::TableMapperError::ColumnMissing(#rust_type_name.to_string(), c.to_string()))?.to_owned());
                         }
@@ -526,11 +527,12 @@ impl<'a> CodegenTree<'a> {
                     match field.number_of_options {
                          0 => {self.identity_set_merges_key_code.push(
                             quote!(
-                                let self_columns = <#struct_key_ident as toql::key::Key>::columns();
+                               // let self_columns = <#struct_key_ident as toql::key::Key>::columns();
                                 for e in #refer self. #rust_field_ident #unwrap_mut {
                                     let key = < #rust_type_ident as toql :: keyed :: Keyed >::key(e);
-                                            let mut ps = toql::key::Key::params(&key);
-                                            let valid = toql::sql_arg::valid_key(&ps);
+                                            let merge_key = toql::keyed::Keyed::key(e);
+                                            let merge_key_params = toql::key::Key::params(&merge_key);
+                                            let valid = toql::sql_arg::valid_key(&merge_key_params);
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshInvalid
@@ -546,32 +548,34 @@ impl<'a> CodegenTree<'a> {
                                             continue
                                             }
 
-                                            let other_columns = <<#rust_base_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
-                                            for (i,other_column) in other_columns.iter().enumerate() {
-                                                for (j,self_column) in self_columns.iter().enumerate() {
-                                                    let calculated_other_column= match self_column.as_str() {
+                                            
+                                                for (self_key_column, self_key_params) in self_key_columns.iter().zip(self_key_params)() {
+                                                    let calculated_other_column= match self_key_column.as_str() {
                                                         #(#column_mapping,)*
                                                         x @ _ => x
                                                     };
-                                                    if other_column == &calculated_other_column {
-                                                        let p = ps.get_mut(i).unwrap();
-                                                        *p = self_key_params.get(j).unwrap().to_owned();
+                                                    if cfg!(debug_assertions) {
+                                                        let foreign_identity_columns = <#rust_base_type_ident as toql::identity::Identity>::columns();
+                                                        if !foreign_identity_columns.contains(&calculated_other_column.to_string()) {
+                                                            toql::tracing::warn!("`{}` cannot find column `{}` in `{}`. \
+                                                            Try adding `#[toql(foreign_key)]` in `{}` to the missing field.", #rust_struct_name, calculated_other_column, #rust_type_name, #rust_type_name)
+                                                        }
                                                     }
+                                                    toql::identity::Identity::set_column(e, calculated_other_column, self_key_param)?;
                                                 }
-                                            }
-                                            let key = <<#rust_base_type_ident as toql::keyed::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
-                                            toql::keyed::KeyedMut::set_key(e, key);
+                                            
+                                            
                                 }
                             )
                         )  },
                         _ => {
                              self.identity_set_merges_key_code.push( quote!(
-                                  let self_columns = <#struct_key_ident as toql::key::Key>::columns();
+                                  
                                     if let Some(u) = self. #rust_field_ident .as_mut() {
                                         for e in u {
-                                            let key = toql::keyed::Keyed::key(e);
-                                            let mut ps = toql::key::Key::params(&key);
-                                            let valid = toql::sql_arg::valid_key(&ps);
+                                            let merge_key = toql::keyed::Keyed::key(e);
+                                            let merge_key_params = toql::key::Key::params(&merge_key);
+                                            let valid = toql::sql_arg::valid_key(&merge_key_params);
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshInvalid
@@ -586,22 +590,21 @@ impl<'a> CodegenTree<'a> {
                                             {
                                                 continue
                                             }
-
-                                            let other_columns = <<#rust_base_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
-                                            for (i,other_column) in other_columns.iter().enumerate() {
-                                                for (j,self_column) in self_columns.iter().enumerate() {
-                                                    let calculated_other_column= match self_column.as_str() {
-                                                        #(#column_mapping,)*
-                                                        x @ _ => x
-                                                    };
-                                                    if other_column == &calculated_other_column {
-                                                        let p = ps.get_mut(i).unwrap();
-                                                        *p = self_key_params.get(j).unwrap().to_owned();
+                                          
+                                            for (self_key_column, self_key_param) in self_key_columns.iter().zip(&self_key_params) {
+                                                let calculated_other_column= match self_key_column.as_str() {
+                                                    #(#column_mapping,)*
+                                                    x @ _ => x
+                                                };
+                                                if cfg!(debug_assertions) {
+                                                        let foreign_identity_columns = <#rust_base_type_ident as toql::identity::Identity>::columns();
+                                                        if !foreign_identity_columns.contains(&calculated_other_column.to_string()) {
+                                                            toql::tracing::warn!("`{}` cannot find column `{}` in `{}`. \
+                                                            Try adding `#[toql(foreign_key)]` in `{}` to the missing field.", #rust_struct_name, calculated_other_column, #rust_type_name, #rust_type_name)
+                                                        }
                                                     }
-                                                }
+                                                toql::identity::Identity::set_column(e, calculated_other_column, self_key_param)?;
                                             }
-                                            let key = <<#rust_base_type_ident as toql::keyed::Keyed>::Key as std::convert::TryFrom<_>>::try_from(ps)?;
-                                            toql::keyed::KeyedMut::set_key(e, key);
                                         }
 
                                     }))
@@ -653,7 +656,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                     let self_key = <Self as toql::keyed::Keyed>::key(&self);
                     let self_key_params = toql::key::Key::params(&self_key);
-                    let key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
+                    let self_key_columns =  <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns();
 
 
                    #(#identity_set_merges_key_code)*);

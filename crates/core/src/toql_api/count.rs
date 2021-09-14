@@ -6,5 +6,5 @@ use crate::{
     tree::tree_map::TreeMap, 
 };
 
-pub trait Count: Keyed + Mapped + TreeMap + std::fmt::Debug {}
+pub trait Count: Keyed + Mapped + TreeMap  {}
 
