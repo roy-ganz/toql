@@ -44,20 +44,24 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
         let mut joins: Vec<HashSet<String>> = Vec::new();
         let mut merges: HashSet<String> = HashSet::new();
 
-        crate::backend::insert::plan_insert_order::<T, _>(
+        plan_insert_order::<T, _>(
             &backend.registry()?.mappers,
             paths.list.as_ref(),
             &mut joins,
             &mut merges,
         )?;
+        plan_insert_partial_tables_order::<T, _>(
+            &*backend.registry()?,
+            paths.list.as_ref(),
+            &mut joins,
+        )?;
+
+
 
         // Insert root
         let sql = {
-            /* let aux_params = [backend.aux_params()];
-            let aux_params = ParameterMap::new(&aux_params); */
             let  home_path = FieldPath::default();
-
-             crate::backend::insert::build_insert_sql2(
+             build_insert_sql2(
                         backend,
                         entities,
                         &home_path,
@@ -76,11 +80,12 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
         let mut descendents = home_path.children();
 
         let ids = backend.insert_sql(sql).await?;
+        println!("Got keys {:?}", &ids);
 
         // Updated auto keys
         if <T as TreeIdentity>::auto_id(&mut descendents)? {
             let mut descendents = home_path.children();
-            crate::backend::insert::set_tree_identity2(
+            set_tree_identity2(
                 ids ,
                 &mut entities,
                 &mut descendents,
@@ -126,7 +131,7 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
             }
         }
 
-        // Add top partial tables
+      /*   // Add top partial tables
         let mut partial_merge_paths = Vec::new();
         let p = FieldPath::default();
         add_partial_tables::<T>(&*backend.registry()?, &p, &mut partial_merge_paths)?;
@@ -153,13 +158,13 @@ use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert
                     }
                 }
             }
-         }
+         } */
 
 
         // Insert merges
         for p in merges {
             let path = FieldPath::from(&p);
-
+            
             let sql = {
                 /* let aux_params = [backend.aux_params()];
                 let aux_params = ParameterMap::new(&aux_params); */
@@ -489,6 +494,50 @@ where
             } else {
                 return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned()).into());
             }
+        }
+    }
+    Ok(())
+}
+
+pub fn plan_insert_partial_tables_order<T, S: AsRef<str>>(
+    registry: &TableMapperRegistry,
+    paths: &[S],
+    joins: &mut Vec<HashSet<String>>,
+) -> Result<()>
+where
+    T: Mapped,
+{
+    let ty = <T as Mapped>::type_name();
+    let sql_builder = SqlBuilder::new(&ty, registry);
+    let level = 0;
+    for path in paths {
+        let path = FieldPath::from(path.as_ref());
+        plan_partial_tables_order(&sql_builder, level, &path, joins)?
+    }
+    Ok(())
+}
+
+
+fn plan_partial_tables_order( 
+    sql_builder: &SqlBuilder,
+    level: usize,
+    query_path: &FieldPath,
+    joins: &mut Vec<HashSet<String>>) -> Result<()>{
+
+    /* let ty = <T as Mapped>::type_name();
+   
+    let sql_builder = SqlBuilder::new(&ty, registry);*/
+    if let Ok(mapper) = sql_builder.joined_mapper_for_query_path(query_path){
+     
+        let partial_joins : Vec<String> = mapper.joined_partial_mappers();
+        
+        for p in &partial_joins {
+            let qp = query_path.append(p);
+            plan_partial_tables_order(&sql_builder, level + 1, &qp, joins)?;
+            if joins.len() <= level {
+                joins.push(HashSet::new())
+            }
+            joins.get_mut(level).unwrap().insert(qp.as_str().to_string());
         }
     }
     Ok(())
