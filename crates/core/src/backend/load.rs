@@ -155,9 +155,10 @@ where
 
         let mut args = Vec::new();
         //let mut d = ancestor_path.descendents();
-        let mut d = ancestor_path.children();
+        
         for e in entities.iter() {
-            TreePredicate::args(e, &mut d, &mut args).map_err(ToqlError::from)?;
+            let  d = ancestor_path.children();
+            TreePredicate::args(e, d, &mut args).map_err(ToqlError::from)?;
         }
         let rows= if args.is_empty() {
                 Vec::new()
@@ -206,15 +207,15 @@ where
         let row_offset = 0; // key must be first columns in row
         let ancestor2_path = FieldPath::trim_basename(ancestor_path.as_str());
         
-        let mut d = ancestor2_path.children();
-        <T as TreeIndex<R, E>>::index(&mut d, &rows, row_offset, &mut index)?;
+        let  d = ancestor2_path.children();
+        <T as TreeIndex<R, E>>::index(d, &rows, row_offset, &mut index)?;
     
         // Merge into entities
         for e in entities.iter_mut() {
-            let mut d = ancestor_path.children();
+            let  d = ancestor_path.children();
             <T as TreeMerge<_, E>>::merge(
                 e,
-                &mut d,
+                 d,
                 field,
                 &rows,
                 row_offset,

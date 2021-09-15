@@ -6,11 +6,11 @@ use std::{collections::HashMap, result::Result};
 pub trait TreeIndex<R, E>
 {
     fn index<'a, I>(
-        descendents: &mut I,
+        descendents: I,
         rows: &[R],
         row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
     ) -> Result<(), E>
     where
-        I: Iterator<Item = FieldPath<'a>>;
+        I: Iterator<Item = FieldPath<'a>> + Clone;
 }

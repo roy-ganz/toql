@@ -127,7 +127,7 @@ impl<'a> CodegenUpdate<'a> {
                                             #role_assert
 
                                             <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                            update(#refer  self. #rust_field_ident ,&mut descendents, fields, roles, exprs)?
+                                            update(#refer  self. #rust_field_ident , descendents, fields, roles, exprs)?
                                         }
                                 )
 
@@ -139,7 +139,7 @@ impl<'a> CodegenUpdate<'a> {
                                             #role_assert
                                             if let Some(f) = self. #rust_field_ident .as_ref() {
                                             <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                            update( f ,&mut descendents, fields, roles, exprs)?
+                                            update( f , descendents, fields, roles, exprs)?
                                             }
                                         }
                                 )
@@ -151,7 +151,7 @@ impl<'a> CodegenUpdate<'a> {
                                             if let Some(f1) = self. #rust_field_ident .as_ref() {
                                                 if let Some(f2) = f1 {
                                                     <#rust_type_ident as toql::tree::tree_update::TreeUpdate>::
-                                                    update(f2 ,&mut descendents, fields, roles, exprs)?
+                                                    update(f2 , descendents, fields, roles, exprs)?
                                                     }
                                             }
                                         }
@@ -248,7 +248,7 @@ impl<'a> CodegenUpdate<'a> {
                                     #toql_field_name => {
                                         #role_assert
                                         for f in &self. #rust_field_ident{
-                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents,fields,  roles, exprs)?
+                                            <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f,  descendents.clone() ,fields,  roles, exprs)?
                                         }
                                     }
                                 )
@@ -258,7 +258,7 @@ impl<'a> CodegenUpdate<'a> {
                                         #role_assert
                                         if let Some (fs) = self. #rust_field_ident .as_ref(){
                                             for f in fs {
-                                                <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f, &mut descendents, fields, roles, exprs)?
+                                                <#rust_base_type_ident as toql::tree::tree_update::TreeUpdate>::update(f,  descendents.clone(), fields, roles, exprs)?
                                             }
                                         }
                                     }
@@ -298,10 +298,10 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                 impl toql::tree::tree_update::TreeUpdate for #struct_ident {
 
                     #[allow(unused_mut, unused_variables, unused_parens)]
-                    fn update<'a, I>(&self, mut descendents: &mut  I,
+                    fn update<'a, I>(&self, mut descendents: I,
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>,
                     exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
-                    where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                     {
 
                                 match descendents.next() {
@@ -354,10 +354,10 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                   impl toql::tree::tree_update::TreeUpdate for &mut #struct_ident {
 
                     #[allow(unused_mut)]
-                    fn update<'a, I>(&self, mut descendents: &mut I,
+                    fn update<'a, I>(&self, mut descendents:  I,
                     fields: &std::collections::HashSet<String>, roles: &std::collections::HashSet<String>,
                     exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
-                    where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                    where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                     {
                         <#struct_ident as toql::tree::tree_update::TreeUpdate>::update(self, descendents, fields, roles, exprs)
                        }

@@ -12,7 +12,7 @@ where
 {
     fn merge<'a, I>(
         &mut self,
-        descendents: &mut I,
+        mut descendents: I,
         field: &str,
         rows: &[R],
         row_offset: usize,
@@ -20,7 +20,7 @@ where
         selection_stream: &SelectStream,
     ) -> Result<(), E>
     where
-        I: Iterator<Item = FieldPath<'a>>,
+        I: Iterator<Item = FieldPath<'a>> + Clone,
     {
         match self {
             Join::Key(_) => Err(ToqlError::ValueMissing(

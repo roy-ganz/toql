@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub trait TreeMerge<R, E> {
     fn merge<'a, I>(
         &mut self,
-        descendents: &mut I,
+        descendents: I,
         field: &str,
         rows: &[R],
         row_offset: usize,
@@ -14,5 +14,5 @@ pub trait TreeMerge<R, E> {
         selection_stream: &SelectStream,
     ) -> Result<(), E>
     where
-        I: Iterator<Item = FieldPath<'a>>;
+        I: Iterator<Item = FieldPath<'a>> + Clone;
 }

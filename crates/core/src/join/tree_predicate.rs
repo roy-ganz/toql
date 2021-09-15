@@ -10,15 +10,15 @@ where
     <T as Keyed>::Key: Clone,
     T: TreePredicate,
 {
-    fn columns<'a, I>(descendents: &mut I) -> Result<Vec<String>, ToqlError>
+    fn columns<'a, I>(descendents: I) -> Result<Vec<String>, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>,
     {
         <T as TreePredicate>::columns(descendents)
     }
-    fn args<'a, I>(&self, descendents: &mut I, args: &mut Vec<SqlArg>) -> Result<(), ToqlError>
+    fn args<'a, I>(&self, mut descendents: I, args: &mut Vec<SqlArg>) -> Result<(), ToqlError>
     where
-        I: Iterator<Item = FieldPath<'a>>,
+        I: Iterator<Item = FieldPath<'a>> + Clone,
     {
         match self {
             Join::Key(k) => match descendents.next() {

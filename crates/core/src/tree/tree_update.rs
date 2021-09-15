@@ -4,11 +4,11 @@ use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr, s
 pub trait TreeUpdate {
     fn update<'a, I>(
         &self,
-        descendents: &mut I,
+        descendents: I,
         fields: &std::collections::HashSet<String>, // if empty, all fields can be updated (*)
         roles: &std::collections::HashSet<String>,
         exprs: &mut Vec<SqlExpr>,
     ) -> Result<(), ToqlError>
     where
-        I: Iterator<Item = FieldPath<'a>>;
+        I: Iterator<Item = FieldPath<'a>> + Clone;
 }

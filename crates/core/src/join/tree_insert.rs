@@ -10,7 +10,7 @@ where
     T: Keyed + TreeInsert + Mapped,
     <T as Keyed>::Key: Key + Clone,
 {
-    fn columns<'a, I>(descendents: &mut I) -> Result<SqlExpr, ToqlError>
+    fn columns<'a, I>(descendents: I) -> Result<SqlExpr, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>,
     {
@@ -18,14 +18,14 @@ where
     }
     fn values<'a,'b, I, J>(
         &self,
-        descendents: &mut I,
+        mut descendents: I,
         roles: &HashSet<String>,
         should_insert:  &mut J,
         values: &mut SqlExpr,
     ) -> Result<(), ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>> + Clone,
-        J: Iterator<Item = &'b bool>,
+        J: Iterator<Item = &'b bool> ,
     {
         match self {
             Join::Key(k) => match descendents.next() {

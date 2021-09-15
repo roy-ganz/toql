@@ -11,13 +11,13 @@ where
     E: std::convert::From<ToqlError>,
 {
     fn index<'a, I>(
-        descendents: &mut I,
+        descendents: I,
         rows: &[R],
         row_offset: usize,
         index: &mut HashMap<u64, Vec<usize>>,
     ) -> Result<(), E>
     where
-        I: Iterator<Item = FieldPath<'a>>,
+        I: Iterator<Item = FieldPath<'a>> + Clone,
     {
         T::index(descendents, rows, row_offset, index)
     }

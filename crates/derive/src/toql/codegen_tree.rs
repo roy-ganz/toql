@@ -135,7 +135,7 @@ impl<'a> CodegenTree<'a> {
                                 )?;
                                 if let Some(val) = value {
                                         <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                                        args(val ,&mut descendents, args)?
+                                        args(val , descendents, args)?
                                     }
                                 }
                             )
@@ -145,7 +145,7 @@ impl<'a> CodegenTree<'a> {
                                 #toql_field_name => {
                                     if let Some(val) = self. #rust_field_ident .as_ref() {
                                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                                            args(val   ,&mut descendents, args)?
+                                            args(val   , descendents, args)?
                                         }
                                     }
                             )
@@ -154,7 +154,7 @@ impl<'a> CodegenTree<'a> {
                             quote!(
                             #toql_field_name => {
                                     <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                                    args(#refer  self. #rust_field_ident # unwrap ,&mut descendents, args)?
+                                    args(#refer  self. #rust_field_ident # unwrap , descendents, args)?
                                 }
                             )
                         }
@@ -164,14 +164,14 @@ impl<'a> CodegenTree<'a> {
                 self.dispatch_predicate_columns_code.push(quote!(
                       #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            columns(&mut descendents)?
+                            columns(descendents)?
                         }
                 ));
 
                 self.dispatch_index_code.push(quote!(
                         #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
-                            index(&mut descendents, rows, row_offset, index)?
+                            index(descendents, rows, row_offset, index)?
                         }
                 ));
                 self.index_type_bounds.push(quote!(
@@ -189,7 +189,7 @@ impl<'a> CodegenTree<'a> {
                                     )?;
                                     if let Some(val) =  value.as_mut() {
                                     <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
-                                        merge( val, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                                        merge( val,  descendents, &field, rows, row_offset, index, selection_stream)?
                                     }
                                 }
                             )
@@ -199,7 +199,7 @@ impl<'a> CodegenTree<'a> {
                                 #toql_field_name => {
                                     if let Some(val) =  self. # rust_field_ident.as_mut() {
                                     <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
-                                        merge( val, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                                        merge( val, descendents, &field, rows, row_offset, index, selection_stream)?
                                     }
                                 }
                             )
@@ -209,7 +209,7 @@ impl<'a> CodegenTree<'a> {
                             #toql_field_name => {
 
                                     <#rust_type_ident as toql::tree::tree_merge::TreeMerge<R, E>>::
-                                    merge(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                                    merge(#refer_mut self. #rust_field_ident #unwrap_mut, descendents, &field, rows, row_offset, index, selection_stream)?
 
                             }
                         )
@@ -226,14 +226,14 @@ impl<'a> CodegenTree<'a> {
                    quote!(
                        #toql_field_name => {
                             <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::
-                            set_id(#refer_mut self. #rust_field_ident #unwrap_mut, &mut descendents, action)?
+                            set_id(#refer_mut self. #rust_field_ident #unwrap_mut, descendents, action)?
                         }
                 )
                );
                 self.dispatch_auto_id_code.push(
                    quote!(
                        #toql_field_name => {
-                            Ok(<#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::auto_id(&mut descendents)?)
+                            Ok(<#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::auto_id(descendents)?)
                         }
                 )
                );
@@ -281,7 +281,7 @@ impl<'a> CodegenTree<'a> {
                             
 
                         let action = toql::tree::tree_identity::IdentityAction::Set(std::cell::RefCell::new(args));
-                        <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::set_id(f, &mut std::iter::empty(), &action)?;
+                        <#rust_type_ident as toql::tree::tree_identity::TreeIdentity>::set_id(f, std::iter::empty(), &action)?;
                              }
                         )
                     ); 
@@ -297,7 +297,7 @@ impl<'a> CodegenTree<'a> {
                 self.dispatch_index_code.push(quote!(
                        #toql_field_name => {
                              <#rust_base_type_ident as toql::tree::tree_index::TreeIndex<R,E>>::
-                            index(&mut descendents, rows, row_offset, index)?
+                            index(descendents, rows, row_offset, index)?
                        }
                 ));
                 self.dispatch_merge_code.push(
@@ -305,7 +305,7 @@ impl<'a> CodegenTree<'a> {
                        #toql_field_name => {
                         for f in #refer_mut self. #rust_field_ident #unwrap_mut {
                             <#rust_base_type_ident as toql::tree::tree_merge::TreeMerge<R,E>>::
-                            merge(f, &mut descendents, &field, rows, row_offset, index, selection_stream)?
+                            merge(f, descendents.clone(), &field, rows, row_offset, index, selection_stream)?
                         }
                        }
                 )
@@ -318,7 +318,7 @@ impl<'a> CodegenTree<'a> {
                            if let Some(ref fs) = self. #rust_field_ident {
                             for f in fs {
                                 <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                                args(f, &mut descendents, args)?
+                                args(f, descendents.clone(), args)?
                             }
                          }
                        }
@@ -328,7 +328,7 @@ impl<'a> CodegenTree<'a> {
                             #toql_field_name => {
                                 for f in & self. #rust_field_ident {
                                     <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                                    args(f, &mut descendents, args)?
+                                    args(f, descendents.clone(), args)?
                                 }
                             }
                         )
@@ -339,7 +339,7 @@ impl<'a> CodegenTree<'a> {
                        #toql_field_name => {
                        
                             <#rust_base_type_ident as toql::tree::tree_predicate::TreePredicate>::
-                            columns(&mut descendents)?
+                            columns(descendents)?
 
 
                        }
@@ -359,14 +359,14 @@ impl<'a> CodegenTree<'a> {
                 self.dispatch_auto_id_code.push(quote!(
                        #toql_field_name => {
                                 Ok(<#rust_base_type_ident as toql::tree::tree_identity::TreeIdentity>::
-                                auto_id(&mut descendents)?)
+                                auto_id(descendents)?)
                         }
                 ));
                 self.dispatch_identity_code.push(quote!(
                        #toql_field_name => {
                             for f in #refer_mut self. #rust_field_ident #unwrap_mut {
                                 <#rust_base_type_ident as toql::tree::tree_identity::TreeIdentity>::
-                                set_id(f, &mut descendents,  action.clone())?
+                                set_id(f, descendents.clone(),  action.clone())?
                             }
                         }
                 ));
@@ -719,7 +719,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                 impl toql::tree::tree_identity::TreeIdentity for #struct_ident {
                 #[allow(unused_mut)]
-                 fn auto_id< 'a, I >(mut descendents : & mut I) -> std :: result :: Result < bool, toql::error::ToqlError >
+                 fn auto_id< 'a, I >(mut descendents : I) -> std :: result :: Result < bool, toql::error::ToqlError >
                  where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> {
                       match descendents.next() {
                                Some(d) => match d.as_str() {
@@ -739,9 +739,9 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                  }
 
                  #[allow(unused_variables, unused_mut)]
-                 fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
+                 fn set_id < 'a, 'b, I >(&mut self, mut descendents : I, action: &'b toql::tree::tree_identity::IdentityAction)
                             -> std :: result :: Result < (), toql::error::ToqlError >
-                            where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                            where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                 {
                          match descendents.next() {
                                Some(d) => match d.as_str() {
@@ -762,15 +762,15 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                }
                 impl toql::tree::tree_identity::TreeIdentity for &mut #struct_ident {
                  #[allow(unused_mut)]
-                 fn auto_id< 'a, I >( mut descendents : & mut I) -> std :: result :: Result < bool, toql::error::ToqlError > 
+                 fn auto_id< 'a, I >( mut descendents : I) -> std :: result :: Result < bool, toql::error::ToqlError > 
                  where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                  {
                      <#struct_ident as toql::tree::tree_identity::TreeIdentity>::auto_id(descendents)
                  }
                   #[allow(unused_mut)]
-                 fn set_id < 'a, 'b, I >(&mut self, mut descendents : & mut I, action: &'b toql::tree::tree_identity::IdentityAction)
+                 fn set_id < 'a, 'b, I >(&mut self, mut descendents : I, action: &'b toql::tree::tree_identity::IdentityAction)
                             -> std::result::Result<(),toql::error::ToqlError>
-                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                 {
                      <#struct_ident as toql::tree::tree_identity::TreeIdentity>::set_id(self, descendents, action)
                 }
@@ -803,7 +803,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 impl toql::tree::tree_predicate::TreePredicate for #struct_ident {
 
                      #[allow(unused_mut)]
-                    fn columns<'a, I>(mut descendents: &mut I )
+                    fn columns<'a, I>(mut descendents: I )
                         -> std::result::Result<Vec<String>, toql::error::ToqlError>
                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                         {
@@ -825,10 +825,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                      #[allow(unused_mut)]
                     fn args<'a, I>(
                         &self,
-                        mut descendents: &mut I,
+                        mut descendents: I,
                         args: &mut Vec<toql::sql_arg::SqlArg>
                     ) -> std::result::Result<(), toql::error::ToqlError>
-                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                     {
                             match descendents.next() {
                                 Some(d) => match d.as_str() {
@@ -851,7 +851,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 impl toql::tree::tree_predicate::TreePredicate for &#struct_ident {
 
                      #[allow(unused_mut)]
-                    fn columns<'a, I>( mut descendents: &mut I )
+                    fn columns<'a, I>( mut descendents:  I )
                         -> std::result::Result<Vec<String>, toql::error::ToqlError>
                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                         {
@@ -861,10 +861,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                      #[allow(unused_mut)]
                      fn args<'a, I>(
                         &self,
-                        mut descendents: &mut I,
+                        mut descendents: I,
                         args: &mut Vec<toql::sql_arg::SqlArg>
                     ) -> std::result::Result<(), toql::error::ToqlError>
-                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                     {
                         <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
                     }
@@ -872,7 +872,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                 impl toql::tree::tree_predicate::TreePredicate for &mut #struct_ident {
 
                     #[allow(unused_mut)]
-                    fn columns<'a, I>( mut descendents: &mut I )
+                    fn columns<'a, I>( mut descendents: I )
                         -> std::result::Result<Vec<String>, toql::error::ToqlError>
                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
                         {
@@ -882,10 +882,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                      #[allow(unused_mut)]
                      fn args<'a, I>(
                         &self,
-                        mut descendents: &mut I,
+                        mut descendents: I,
                         args: &mut Vec<toql::sql_arg::SqlArg>
                     ) -> std::result::Result<(), toql::error::ToqlError>
-                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                     where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                     {
                         <#struct_ident as toql::tree::tree_predicate::TreePredicate>::args(self, descendents, args)
                     }
@@ -906,10 +906,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                 {
                      #[allow(unused_variables, unused_mut)]
-                    fn index<'a, I>( mut descendents: &mut I,
+                    fn index<'a, I>( mut descendents:  I,
                                 rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
                         -> std::result::Result<(), E>
-                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                          {
 
                         use toql::from_row::FromRow;
@@ -979,10 +979,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                   #(#tree_index_dispatch_bounds_ref)*
                {
                     #[allow(unused_mut)]
-                    fn index<'a, I>( mut descendents: &mut I,
+                    fn index<'a, I>( mut descendents: I,
                                 rows: &[R], row_offset: usize, index: &mut std::collections::HashMap<u64,Vec<usize>>)
                         -> std::result::Result<(), E>
-                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                          {
                              <#struct_ident as  toql::tree::tree_index::TreeIndex<R,E>>::index(descendents,  rows, row_offset, index)
                          }
@@ -998,10 +998,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                 {
                     #[allow(unreachable_code, unused_variables, unused_mut)]
-                    fn merge<'a, I>(  &mut self, mut descendents: &mut I, field: &str,
+                    fn merge<'a, I>(  &mut self, mut descendents: I, field: &str,
                                 rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
                         -> std::result::Result<(), E>
-                        where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                        where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                          {
                         use toql::keyed::Keyed;
                         use toql::from_row::FromRow;
@@ -1061,10 +1061,10 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                  #(#tree_merge_dispatch_bounds_ref)*
                 {
                      #[allow(unused_mut)]
-                     fn merge<'a, I>(  &mut self, mut descendents: &mut I, field: &str,
+                     fn merge<'a, I>(  &mut self, mut descendents: I, field: &str,
                                 rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
                         -> std::result::Result<(), E>
-                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>
+                         where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                          {
                              <#struct_ident as toql::tree::tree_merge::TreeMerge<R,E>>::merge(self, descendents, field, rows, row_offset, index, selection_stream)
                          }

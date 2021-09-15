@@ -66,7 +66,7 @@ where
             for e in entities.iter_mut() {
                 <T as TreeIdentity>::set_id(
                     e.borrow_mut(),
-                    &mut path.children(),
+                    path.children(),
                     &IdentityAction::RefreshValid,
                 )?;
             }
@@ -87,7 +87,7 @@ where
             let mut args = Vec::new();
             let qp = FieldPath::from(query_merge_path);
 
-            <T as TreePredicate>::args(e.borrow(), &mut qp.children(), &mut args)?;
+            <T as TreePredicate>::args(e.borrow(),  qp.children(), &mut args)?;
             for arg in args.chunks(cols.len()) {
                 query_path_should_insert_map
                     .entry(query_merge_path)
@@ -104,7 +104,7 @@ where
             for e in entities.iter_mut() {
                 <T as TreeIdentity>::set_id(
                     e.borrow_mut(),
-                    &mut query_path.children(),
+                    query_path.children(),
                     &IdentityAction::RefreshInvalid,
                 )?;
             }
@@ -115,9 +115,9 @@ where
             .get(query_field.as_str())
             .unwrap(); // Is always none
 
-        let mut should_insert = should_insert_vec.iter();
+        let should_insert = should_insert_vec.iter();
 
-        delete_removed_merges(backend, entities, &query_field, &mut should_insert).await?;
+        delete_removed_merges(backend, entities, &query_field, should_insert).await?;
 
         let mut should_insert = should_insert_vec.iter();
         insert_new_merges(backend, entities, &query_field, &mut should_insert).await?;
@@ -154,7 +154,7 @@ async fn insert_new_merges<'b, T, B, R, E, Q, J>(
     backend: &mut B,
     entities: &mut [Q],
     query_path: &str,
-    inserts: &mut J,
+    should_insert: &mut J,
 ) -> std::result::Result<(), E>
 where
     T: Update,
@@ -162,25 +162,25 @@ where
     B: Backend<R, E>,
     E: From<ToqlError>,
     SqlArg: FromRow<R, E>,
-    J: Iterator<Item = &'b bool>,
+    J: Iterator<Item = &'b bool> + Clone,
 {
     use std::cell::RefCell;
     let merge_path = FieldPath::from(&query_path);
 
     // Insert
-    let sql = build_insert_sql2(backend, entities, &merge_path, inserts, "", "")?;
+    let sql = build_insert_sql2(backend, entities, &merge_path, &mut should_insert.clone(), "", "")?;
     if let Some(sql) = sql {
         println!("SQL {:?}", &sql);
         // Insert and refresh generated id
-        let mut descendents = merge_path.children();
-        if <T as TreeIdentity>::auto_id(&mut descendents)? {
+        let  descendents = merge_path.children();
+        if <T as TreeIdentity>::auto_id( descendents)? {
             let ids = backend.insert_sql(sql).await?;
 
-            let mut descendents = merge_path.children();
+            let  descendents = merge_path.children();
             crate::backend::insert::set_tree_identity3(
                 IdentityAction::SetInvalid(RefCell::new(ids)),
                 &mut entities.borrow_mut(),
-                &mut descendents,
+                 descendents,
             )?;
         } else {
             backend.execute_sql(sql).await?;
@@ -192,8 +192,7 @@ where
     add_partial_tables::<T>(&*backend.registry()?, &merge_path, &mut partial_merge_paths)?;
        
     for partial_merge_path in partial_merge_paths {
-        let mut should_insert = std::iter::repeat(&true);
-        let sql = build_insert_sql2(backend, entities, &FieldPath::from(&partial_merge_path), &mut should_insert, "", "")?;
+        let sql = build_insert_sql2(backend, entities, &FieldPath::from(&partial_merge_path), &mut should_insert.clone(), "", "")?;
         if let Some(sql) = sql {
             backend.execute_sql(sql).await?;
         }
@@ -221,10 +220,10 @@ where
     let mut key_predicate: SqlExpr = SqlExpr::new();
 
     // Fetch parent key
-    let columns = <T as TreePredicate>::columns(&mut parent_path.children())?;
+    let columns = <T as TreePredicate>::columns( parent_path.children())?;
     let mut args = Vec::new();
     for e in entities.iter() {
-        <T as TreePredicate>::args(e.borrow(), &mut parent_path.children(), &mut args)?;
+        <T as TreePredicate>::args(e.borrow(), parent_path.children(), &mut args)?;
     }
     let columns = columns
         .into_iter()
@@ -234,10 +233,10 @@ where
 
     // Fetch merge keys
     // to prevent added entities from being deleted
-    let columns = <T as TreePredicate>::columns(&mut merge_path.children())?;
+    let columns = <T as TreePredicate>::columns( merge_path.children())?;
     let mut unfiltered_args = Vec::new();
     for e in entities.iter() {
-        <T as TreePredicate>::args(e.borrow(), &mut merge_path.children(), &mut unfiltered_args)?;
+        <T as TreePredicate>::args(e.borrow(),  merge_path.children(), &mut unfiltered_args)?;
     }
     let mut args: Vec<SqlArg> = Vec::with_capacity(unfiltered_args.len());
 
@@ -420,10 +419,10 @@ where
     let mut exprs = Vec::new();
     for e in entities.iter() {
         //let mut descendents = path.descendents();
-        let mut descendents = path.children();
+        let  descendents = path.children();
         TreeUpdate::update(
             e.borrow(),
-            &mut descendents,
+             descendents,
             fields,
             backend.roles(),
             &mut exprs,

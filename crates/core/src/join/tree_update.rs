@@ -12,13 +12,13 @@ where
 {
     fn update<'a, I>(
         &self,
-        descendents: &mut I,
+        mut descendents: I,
         fields: &std::collections::HashSet<String>, // if empty, all fields can be updated (*)
         roles: &std::collections::HashSet<String>,
         exprs: &mut Vec<crate::sql_expr::SqlExpr>,
     ) -> Result<(), crate::error::ToqlError>
     where
-        I: Iterator<Item = FieldPath<'a>>,
+        I: Iterator<Item = FieldPath<'a>> + Clone,
     {
         match self {
             Join::Key(k) => match descendents.next() {
