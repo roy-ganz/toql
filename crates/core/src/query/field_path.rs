@@ -305,6 +305,7 @@ impl<'a> Iterator for Parents<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct Children<'a> {
     pos: usize,
     path: &'a str,

@@ -3,6 +3,7 @@ use std::{cell::RefCell, result::Result};
 
 pub enum IdentityAction {
     Set(RefCell<Vec<SqlArg>>), // Needs interior mutability, because keys are taken from vec
+    SetInvalid(RefCell<Vec<SqlArg>>), // Needs interior mutability, because keys are taken from vec
     Refresh,
     RefreshInvalid,
     RefreshValid,
@@ -21,3 +22,5 @@ pub trait TreeIdentity {
     where
         I: Iterator<Item = FieldPath<'a>>;
 }
+
+ 

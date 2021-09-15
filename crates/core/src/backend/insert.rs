@@ -8,7 +8,7 @@ use crate::{
     sql_builder::{sql_builder_error::SqlBuilderError, SqlBuilder},
     sql_expr::resolver::Resolver,
     table_mapper::{mapped::Mapped, TableMapper},
-    tree::{tree_identity::TreeIdentity, tree_insert::TreeInsert, tree_predicate::TreePredicate},
+    tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_insert::TreeInsert, tree_predicate::TreePredicate},
 };
 use std::{borrow::BorrowMut, collections::HashMap};
 
@@ -203,6 +203,31 @@ where
     //   let home_path = FieldPath::default();
     //    let mut descendents= home_path.descendents();
     let action = IdentityAction::Set(RefCell::new(ids));
+    for e in entities.iter_mut() {
+        {
+            let e_mut = e.borrow_mut();
+            <T as TreeIdentity>::set_id(e_mut, &mut descendents, &action)?;
+        }
+    }
+
+    Ok(())
+}
+pub fn set_tree_identity3<'a, T, Q, I>(
+    action: IdentityAction,
+    entities: &mut [Q],
+    mut descendents: &mut I,
+) -> Result<()>
+where
+    T: TreeIdentity,
+    Q: BorrowMut<T>,
+    I: Iterator<Item = FieldPath<'a>>,
+{
+    use crate::tree::tree_identity::IdentityAction;
+    use std::cell::RefCell;
+
+    //   let home_path = FieldPath::default();
+    //    let mut descendents= home_path.descendents();
+    
     for e in entities.iter_mut() {
         {
             let e_mut = e.borrow_mut();

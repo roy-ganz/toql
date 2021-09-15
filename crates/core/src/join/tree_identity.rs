@@ -41,6 +41,19 @@ where
                         *k = key;
                         Ok(())
                     }
+                    IdentityAction::SetInvalid(ids) => {
+                        let params = <<T as Keyed>::Key as Key>::params(k);
+                        if crate::sql_arg::valid_key(&params) {
+                            return Ok(());
+                        }
+                        let n = <<T as Keyed>::Key as Key>::columns().len();
+                        let end = ids.borrow().len();
+                        let args: Vec<SqlArg> =
+                            ids.borrow_mut().drain(end - n..).collect::<Vec<_>>();
+                        let key = TryFrom::try_from(args)?;
+                        *k = key;
+                        Ok(())
+                    }
                     IdentityAction::Refresh => Ok(()),
                     IdentityAction::RefreshValid => Ok(()),
                     IdentityAction::RefreshInvalid => Ok(()),

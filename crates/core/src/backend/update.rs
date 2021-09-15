@@ -164,6 +164,7 @@ where
     SqlArg: FromRow<R, E>,
     J: Iterator<Item = &'b bool>,
 {
+    use std::cell::RefCell;
     let merge_path = FieldPath::from(&query_path);
 
     // Insert
@@ -176,8 +177,8 @@ where
             let ids = backend.insert_sql(sql).await?;
 
             let mut descendents = merge_path.children();
-            crate::backend::insert::set_tree_identity2(
-                ids,
+            crate::backend::insert::set_tree_identity3(
+                IdentityAction::SetInvalid(RefCell::new(ids)),
                 &mut entities.borrow_mut(),
                 &mut descendents,
             )?;

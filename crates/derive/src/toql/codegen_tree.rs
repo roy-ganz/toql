@@ -638,8 +638,35 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
             &format!("{}Key", &self.rust_struct.rust_struct_ident),
             Span::call_site(),
         );
+        let rust_struct_ident = &self.rust_struct.rust_struct_ident;
 
         let identity_set_self_key_code = quote!(
+           fn set_self_key(entity: &mut #rust_struct_ident, args: &mut Vec<toql::sql_arg::SqlArg>, invalid_only: bool) -> std::result::Result<(), toql::error::ToqlError> {
+                    if invalid_only {
+                         let self_key = toql::keyed::Keyed::key(&entity);
+                         let self_key_params = toql::key::Key::params(&self_key);
+                         if toql::sql_arg::valid_key(&self_key_params) {
+                             return Ok(());
+                         }
+                    }
+
+                     let n = << #rust_struct_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().len();
+                    let end = args.len();
+                    let args: Vec<toql::sql_arg::SqlArg> =
+                        args.drain(end - n..).collect::<Vec<_>>();
+                       
+                     let key = std::convert::TryFrom::try_from(args)?;
+                    toql::keyed::KeyedMut::set_key(entity, key);
+                     Ok(())
+                }
+                if let toql::tree::tree_identity::IdentityAction::SetInvalid(args) = action {
+                    set_self_key(self, &mut args.borrow_mut(), true)?;
+                }
+                if let toql::tree::tree_identity::IdentityAction::Set(args) = action {
+                   set_self_key(self, &mut args.borrow_mut(), false)?;
+                }
+        );
+       /*  let identity_set_self_key_code = quote!(
             if let toql::tree::tree_identity::IdentityAction::Set(args) = action {
                 let n = <<Self as toql::keyed::Keyed>::Key as toql::key::Key>::columns().len();
                 let end = args.borrow().len();
@@ -649,7 +676,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
 
                 <Self as toql::keyed::KeyedMut>::set_key(self, key);
             }
-        );
+        ); */
 
         let identity_set_key = //if !self.rust_struct.auto_key {
             quote!( #identity_set_self_key_code

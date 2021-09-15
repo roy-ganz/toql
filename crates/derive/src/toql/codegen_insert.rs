@@ -366,7 +366,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                          should_insert:  &mut J,
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
-                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone,
                                  J: Iterator<Item =&'b bool >
                                 {
 
@@ -412,7 +412,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                          should_insert:  &mut J,
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
-                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone,
                                  J: Iterator<Item =&'b bool >
                                 {
                                     <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, should_insert, values)
@@ -428,12 +428,12 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                             }
                     #[allow(unused_mut)]
                      fn values<'a,'b, I, J>(&self,
-                                        mut descendents: &mut  I,
+                                        mut descendents: &mut  I ,
                                         roles: &std::collections::HashSet<String>,
                                          should_insert:  &mut J,
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
-                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,
+                                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone,
                                  J: Iterator<Item =&'b bool >
                                 {
                                     <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, should_insert, values)

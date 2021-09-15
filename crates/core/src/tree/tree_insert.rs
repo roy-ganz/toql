@@ -13,6 +13,6 @@ pub trait TreeInsert {
         values: &mut crate::sql_expr::SqlExpr,
     ) -> Result<(), ToqlError>
     where
-        I: Iterator<Item = FieldPath<'a>>,
+        I: Iterator<Item = FieldPath<'a>> + Clone,
         J: Iterator<Item = &'b bool>;
 }
