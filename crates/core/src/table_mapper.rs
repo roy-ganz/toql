@@ -203,9 +203,13 @@ where {
     pub fn joined_mapper(&self, name: &str) -> Option<String> {
         self.join(name).map(|j| j.joined_mapper.to_owned())
     }
+      pub fn is_partial_join(&self, name: &str) -> bool {
+          self.join(name).filter(|j| j.options.partial_table).is_some()
+      }
     pub fn merged_mapper(&self, name: &str) -> Option<String> {
         self.merge(name).map(|m| m.merged_mapper.to_owned())
     }
+    
 
     pub(crate) fn join(&self, name: &str) -> Option<&Join> {
         self.joins.get(name)
