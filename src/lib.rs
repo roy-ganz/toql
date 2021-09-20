@@ -79,7 +79,6 @@ pub use toql_core::query_path;
 pub use toql_core::sql_builder;
 pub use toql_core::table_mapper;
 pub use toql_core::table_mapper_registry;
-pub use toql_core::to_query;
 pub use toql_core::tree;
 //pub use toql_core::update_field;
 //pub use toql_core::insert_path;

@@ -54,6 +54,8 @@ impl<'a> Resolver<'a> {
             if let SqlExprToken::AuxParam(ref name) = token {
                 if let Some(expr) = aux_params_exprs.get(name) {
                     tokens.extend_from_slice(&expr.tokens);
+                } else {
+                    tokens.push(token);
                 }
             } else {
                 tokens.push(token);

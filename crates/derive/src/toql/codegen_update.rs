@@ -327,12 +327,10 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         let mut expr = toql::sql_expr::SqlExpr::new();
                                         expr.push_literal("UPDATE ");
                                         expr.push_literal(#sql_table_name);
-                                        expr.push_literal(" ");
-                                  //      expr.push_alias(#sql_table_alias);
                                         expr.push_literal(" SET ");
                                         let tokens = expr.tokens().len();
                                         #(#update_set_code)*
-                                       // expr.pop_literals(2);
+
                                        expr.pop(); // remove ', '
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");

@@ -51,10 +51,10 @@ where
     let mut refreshed_paths = HashSet::new();
 
     for query_path in &field_order {
-        let empty = HashSet::new();
+        
         let fields = match fields_map.get(query_path) {
             Some(f) => f,
-            None => &empty,
+            None => continue,
         };
 
         let parent_path = FieldPath::trim_basename(query_path);
@@ -323,8 +323,8 @@ fn plan_update_order<T, S: AsRef<str>>(
 where
     T: Update,
 {
-    let mut field_order = Vec::new();
-    let mut merge_order = Vec::new();
+    let mut field_path_order :Vec<String>= Vec::new();
+    let mut merge_path_order = Vec::new();
     let mut fields: HashMap<String, HashSet<String>> = HashMap::new(); // paths that refer to fields
 
     let ty = <T as Mapped>::type_name();
@@ -337,15 +337,26 @@ where
 
         let merge = mapper.merged_mapper(fieldname).is_some();
         if !merge {
+            
             fields
                 .entry(query_path.to_string())
                 .or_insert_with(HashSet::new)
                 .insert(fieldname.to_string());
-            field_order.push(query_path.to_string());
+
+            // TODO Use better container like ordered HashSet
+            let k = query_path.to_string();
+            if !field_path_order.contains(&k) {
+                field_path_order.push(k);
+            }
+            
+            
         } else {
-            merge_order.push(trimmed_query_field.to_string());
+            let k = trimmed_query_field.to_string();
+            if !merge_path_order.contains(&k) {
+                merge_path_order.push(k);
+            }
         }
     }
 
-    Ok((field_order, merge_order, fields))
+    Ok((field_path_order, merge_path_order, fields))
 }

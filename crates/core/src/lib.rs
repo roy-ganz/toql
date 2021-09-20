@@ -22,7 +22,6 @@ pub mod result;
 pub mod map_query;
 pub mod sql;
 pub mod sql_arg;
-pub mod to_query;
 pub mod toql_api;
 
 #[macro_use]

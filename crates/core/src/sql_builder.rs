@@ -831,6 +831,10 @@ impl<'a> SqlBuilder<'a> {
                                     SqlBuilderError::PredicateMissing(basename.to_string())
                                 })?;
 
+                            if count_selection_only && !mapped_predicate.options.count_filter {
+                                continue;
+                            }
+
                             if let Some(role) = &mapped_predicate.options.load_role_expr {
                                 if !RoleValidator::is_valid(&self.roles, role) {
                                     return Err(

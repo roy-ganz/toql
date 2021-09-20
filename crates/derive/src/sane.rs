@@ -26,7 +26,6 @@ pub struct Struct {
     pub mapped_selections: Vec<SelectionArg>,
     pub roles: StructRoles,
     pub wildcard: Option<HashSet<String>>,
-    //  pub count_filter: Option<HashSet<String>>,
     pub auto_key: bool,
     pub skip_mut: bool
 }

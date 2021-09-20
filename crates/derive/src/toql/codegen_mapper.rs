@@ -47,7 +47,7 @@ impl<'a> CodegenMapper<'a> {
             let countfilter_ident = if mapping.count_filter {
                 quote!( .count_filter(true))
             } else {
-                quote!()
+                quote!(.count_filter(false))
             };
 
             match &mapping.handler {
@@ -491,6 +491,7 @@ impl<'a> quote::ToTokens for CodegenMapper<'a> {
                 fn table_alias() -> String {
                     String::from(#sql_table_alias)
                 }
+                #[allow(redundant_semicolons)]
                 fn map(mapper: &mut toql::table_mapper::TableMapper) -> toql::result::Result<()>{
                   /*   if toql_path.is_empty() {
                         mapper.aliased_table = mapper.translate_aliased_table(#sql_table_name, canonical_sql_alias);

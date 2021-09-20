@@ -303,7 +303,7 @@ where
     let page_count = if let Some(count_result)= count_result  {
         
                 let count_sql = Sql::new(); // TODO for postgres
-                let max_page_size = backend.select_max_page_size_sql(count_sql).await?;
+                let filtered_page_size = backend.select_max_page_size_sql(count_sql).await?;
 
                 let unfiltered_page_size_sql = {
                     let aux_params = [backend.aux_params()];
@@ -311,7 +311,7 @@ where
                     count_result.to_sql(&aux_params, &mut alias_translator).map_err(|e|e.into())?
                 };
                 let unfiltered_page_size =  backend.select_count_sql(unfiltered_page_size_sql).await?;
-                Some((unfiltered_page_size, max_page_size))
+                Some((filtered_page_size, unfiltered_page_size))
         } else  {None};
 
 
