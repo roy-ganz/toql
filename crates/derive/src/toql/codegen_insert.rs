@@ -19,7 +19,6 @@ pub(crate) struct CodegenInsert<'a> {
     insert_columns_code: Vec<TokenStream>,
     insert_values_code: Vec<TokenStream>,
     struct_ins_roles: &'a Option<String>,
-    key_columns: Vec<String>
 }
 
 impl<'a> CodegenInsert<'a> {
@@ -35,7 +34,6 @@ impl<'a> CodegenInsert<'a> {
             insert_columns_code: Vec::new(),
             insert_values_code: Vec::new(),
             struct_ins_roles: &toql.roles.insert,
-            key_columns : Vec::new()
         }
     }
 

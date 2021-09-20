@@ -16,13 +16,13 @@ With this simple code
  ```rust
 	#[derive(Toql)]
 	struct User {
-		#[toql(delup_key)]
+		#[toql(key)]
 		id: u32,
 		name: Option<String>
 }
 ```
 
-we can now do the following
+We can now do the following
 
 ```rust
 use toql::mysql::load_one; // Load function from derive
