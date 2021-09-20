@@ -1,4 +1,4 @@
-use super::{concatenation::Concatenation, QueryToken};
+use super::concatenation::Concatenation;
 
 #[derive(Clone, Debug)]
 pub struct Selection {
@@ -27,11 +27,6 @@ impl Selection {
     }
 }
 
-impl Into<QueryToken> for Selection {
-    fn into(self) -> QueryToken {
-        QueryToken::Selection(self)
-    }
-}
 
 impl ToString for Selection {
     fn to_string(&self) -> String {

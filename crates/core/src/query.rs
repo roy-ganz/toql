@@ -29,6 +29,7 @@ pub mod predicate;
 pub mod query_with;
 pub mod selection;
 pub mod wildcard;
+pub mod from_key_fields;
 
 use crate::query::selection::Selection;
 use std::collections::HashMap;
@@ -60,6 +61,28 @@ impl From<&str> for QueryToken {
         }
     }
 }
+
+
+impl From<Field> for QueryToken {
+    fn from(field: Field) -> QueryToken {
+        QueryToken::Field(field)
+    }
+}
+
+
+impl From<Predicate> for QueryToken {
+    fn from(predicate: Predicate) -> QueryToken {
+        QueryToken::Predicate(predicate)
+    }
+}
+
+
+impl From<Selection> for QueryToken {
+    fn from(selection: Selection) -> QueryToken {
+        QueryToken::Selection(selection)
+    }
+}
+
 
 impl ToString for QueryToken {
     fn to_string(&self) -> String {
