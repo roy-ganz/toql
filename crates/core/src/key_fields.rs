@@ -8,7 +8,7 @@
 use crate::sql_arg::SqlArg;
 
 mod join;
-mod to_query;
+mod into_query;
 
 /// Trait to provide the entity type for a key. This is only used
 /// for ergonomics of the api.
