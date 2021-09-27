@@ -8,7 +8,7 @@ use std::borrow::{Borrow, BorrowMut};
  use crate::keyed::Keyed;
  use crate::key::Key;
  use crate::page::Page;
- use crate::query::Query;
+ use crate::{page_counts::PageCounts, query::Query};
  //use crate::to_query::ToQuery;
 
 
@@ -70,7 +70,7 @@ pub trait ToqlApi {
     where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
    <Self as ToqlApi>::Error: From<ToqlError> ;
     
-    async fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<(u64, u64)>), Self::Error>
+    async fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<PageCounts>), Self::Error>
     where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
      <Self as ToqlApi>::Error: From<ToqlError>;
 

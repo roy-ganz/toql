@@ -358,7 +358,7 @@ where
                     .ok_or_else(|| ToqlError::MapperMissing(m.to_owned()))?;
                 insert_partial_tables_order(mappers, &m, level, &d, partials)?;
             } else {
-                return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned()).into());
+                return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned(), mapper.table_name.to_string()) .into());
             }
         }
     }

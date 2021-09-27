@@ -10,6 +10,7 @@ use syn::Ident;
 
 pub(crate) struct CodegenInsert<'a> {
     struct_ident: &'a Ident,
+    struct_name: &'a String,
     auto_key: bool,
 
     duplicate: bool,
@@ -25,6 +26,7 @@ impl<'a> CodegenInsert<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenInsert {
         CodegenInsert {
             struct_ident: &toql.rust_struct_ident,
+            struct_name: &toql.rust_struct_name,
             auto_key: toql.auto_key.to_owned(),
 
             duplicate: false,
@@ -314,6 +316,7 @@ impl<'a> CodegenInsert<'a> {
 impl<'a> quote::ToTokens for CodegenInsert<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
+        let struct_name = self.struct_name;
         let dispatch_columns_code = &self.dispatch_columns_code;
         let dispatch_values_code = &self.dispatch_values_code;
         let insert_columns_code = &self.insert_columns_code;
@@ -324,7 +327,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
             Some(role_expr_string) => {
                 quote!(
                     if !toql::role_validator::RoleValidator::is_valid(roles, &&toql::role_expr_macro::role_expr!(#role_expr_string))  {
-                        return Err( toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string()).into())
+                        return Err( toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string(), #struct_name .to_string() ).into())
                     }
                 )
             }

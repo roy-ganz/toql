@@ -7,14 +7,14 @@ pub enum SqlBuilderError {
     FieldMissing(String),
     /// The field is not mapped to a column or SQL expression. Contains the field name.
     PredicateMissing(String),
-    /// The join is not mapped to a column or SQL expression. Contains the field name.
-    JoinMissing(String),
+    /// The join is not mapped to a column or SQL expression. Contains the join name and the table name.
+    JoinMissing(String, String),
     /// The merge is not mapped. Contains the field name.
     MergeMissing(String),
     /// The selection is not known to the mapper. Contains the field name.
     SelectionMissing(String),
-    /// The field requires a role that the query does not have. Contains the role.
-    RoleRequired(String),
+    /// The field requires a role that the query does not have. Contains the role and the query_path.
+    RoleRequired(String, String),
     /// The filter expects other arguments. Typically raised by custom functions (FN) if the number of arguments is wrong.
     FilterInvalid(String),
     /// A query expression requires a query parameter, that is not provided. Contains the parameter.
@@ -40,9 +40,9 @@ impl fmt::Display for SqlBuilderError {
             }
             SqlBuilderError::SelectionMissing(ref s) => write!(f, "selection `{}` is missing", s),
             SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
-            SqlBuilderError::JoinMissing(ref s) => write!(f, "join `{}` is missing", s),
+            SqlBuilderError::JoinMissing(ref s, ref t) => write!(f, "join `{}` is missing on mapper for table `{}`", s, t),
             SqlBuilderError::MergeMissing(ref s) => write!(f, "merge `{}` is missing", s),
-            SqlBuilderError::RoleRequired(ref s) => write!(f, "role `{}` is required", s),
+            SqlBuilderError::RoleRequired(ref s, ref p) => write!(f, "role `{}` is required for `{}`", s, p),
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
             SqlBuilderError::KeyMismatch(ref t, ref s) => {
                 write!(f, "Key with value `{}` does not match key of `{}` ", t, s)

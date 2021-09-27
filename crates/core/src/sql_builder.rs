@@ -153,7 +153,7 @@ impl<'a> SqlBuilder<'a> {
                 DeserializeType::Join(name) => {
                     let join = mapper
                         .join(&name)
-                        .ok_or_else(|| SqlBuilderError::JoinMissing(name.to_string()))?;
+                        .ok_or_else(|| SqlBuilderError::JoinMissing(name.to_string(), mapper.table_name.to_string()))?;
                     if !join.options.key {
                         return Ok(());
                     }
@@ -228,7 +228,8 @@ impl<'a> SqlBuilder<'a> {
 
         if let Some(role_expr) = &root_mapper.delete_role_expr {
             if !RoleValidator::is_valid(&self.roles, role_expr) {
-                return Err(SqlBuilderError::RoleRequired(role_expr.to_string()).into());
+                return Err(SqlBuilderError::RoleRequired(role_expr.to_string(),
+                self.home_mapper.to_string()).into());
             }
         }
 
@@ -469,7 +470,7 @@ impl<'a> SqlBuilder<'a> {
                         .get(&join.joined_mapper)
                         .ok_or_else(|| ToqlError::MapperMissing(join.joined_mapper.to_string()))?;
                 } else {
-                    return Err(SqlBuilderError::JoinMissing(p.to_string()).into());
+                    return Err(SqlBuilderError::JoinMissing(p.to_string(), current_mapper.table_name.to_string()).into());
                 }
             }
         }
@@ -614,7 +615,7 @@ impl<'a> SqlBuilder<'a> {
             let local_mapper = self.joined_mapper_for_local_path(&local_path)?;
             let join = local_mapper
                 .join(join_name)
-                .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string()))?;
+                .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string(), local_mapper.table_name.to_string()))?;
 
             let canonical_self_alias = self.canonical_alias(&local_path)?.to_string();
             let canonical_other_alias = self
@@ -762,6 +763,7 @@ impl<'a> SqlBuilder<'a> {
                                 ) {
                                     return Err(SqlBuilderError::RoleRequired(
                                         role_expr.to_string(),
+                                        FieldPath::from( &build_context.query_home_path).append(field_name).to_string()
                                     )
                                     .into());
                                 }
@@ -838,7 +840,7 @@ impl<'a> SqlBuilder<'a> {
                             if let Some(role) = &mapped_predicate.options.load_role_expr {
                                 if !RoleValidator::is_valid(&self.roles, role) {
                                     return Err(
-                                        SqlBuilderError::RoleRequired(role.to_string()).into()
+                                        SqlBuilderError::RoleRequired(role.to_string(), query_path.to_string()).into()
                                     );
                                 }
                             }
@@ -1005,40 +1007,43 @@ impl<'a> SqlBuilder<'a> {
                 for (ord, local_path_with_basename) in orderings {
                     let (local_path, field_name) =
                         FieldPath::split_basename(local_path_with_basename);
-                    let mapper = self.joined_mapper_for_local_path(&local_path)?;
-                    let field_info = mapper
-                        .field(field_name)
-                        .ok_or_else(|| SqlBuilderError::FieldMissing(field_name.to_string()))?;
+                    // Skip merge fields
+                    if let Ok(mapper) = self.joined_mapper_for_local_path(&local_path){
+                        let field_info = mapper
+                            .field(field_name)
+                            .ok_or_else(|| SqlBuilderError::FieldMissing(field_name.to_string()))?;
 
-                    let role_valid =
-                        if let Some(load_role_expr) = &field_info.options.load_role_expr {
-                            !RoleValidator::is_valid(&self.roles, load_role_expr)
-                        } else {
-                            true
-                        };
-                    if !role_valid {
-                        let role_string = if let Some(e) = &field_info.options.load_role_expr {
-                            e.to_string()
-                        } else {
-                            String::from("")
-                        };
-                        return Err(SqlBuilderError::RoleRequired(role_string).into());
-                    }
-                    let p = [&self.aux_params, &field_info.options.aux_params];
-                    let aux_params = ParameterMap::new(&p);
+                        let role_valid =
+                            if let Some(load_role_expr) = &field_info.options.load_role_expr {
+                                RoleValidator::is_valid(&self.roles, load_role_expr)
+                            } else {
+                                true
+                            };
+                        if !role_valid {
+                            let role_string = if let Some(e) = &field_info.options.load_role_expr {
+                                e.to_string()
+                            } else {
+                                String::from("")
+                            };
+                            return Err(SqlBuilderError::RoleRequired(role_string, 
+                                FieldPath::from(&build_context.query_home_path).append(local_path_with_basename).to_string()).into());
+                        }
+                        let p = [&self.aux_params, &field_info.options.aux_params];
+                        let aux_params = ParameterMap::new(&p);
 
-                    let select_expr = field_info
-                        .handler
-                        .build_select(field_info.expression.clone(), &aux_params)?;
-                    let canonical_alias = self.canonical_alias(&local_path)?;
-                    if let Some(expr) = select_expr {
-                        let resolver = Resolver::new().with_self_alias(&canonical_alias);
-                        let expr = resolver.resolve(&expr)?;
-                        result.order_expr.extend(expr);
-                        result.order_expr.push_literal(match ord {
-                            FieldOrder::Asc(_) => " ASC, ",
-                            FieldOrder::Desc(_) => " DESC, ",
-                        });
+                        let select_expr = field_info
+                            .handler
+                            .build_select(field_info.expression.clone(), &aux_params)?;
+                        let canonical_alias = self.canonical_alias(&local_path)?;
+                        if let Some(expr) = select_expr {
+                            let resolver = Resolver::new().with_self_alias(&canonical_alias);
+                            let expr = resolver.resolve(&expr)?;
+                            result.order_expr.extend(expr);
+                            result.order_expr.push_literal(match ord {
+                                FieldOrder::Asc(_) => " ASC, ",
+                                FieldOrder::Desc(_) => " DESC, ",
+                            });
+                        }
                     }
                 }
             }
@@ -1114,7 +1119,7 @@ impl<'a> SqlBuilder<'a> {
 
                     let role_valid =
                         if let Some(load_role_expr) = &field_info.options.load_role_expr {
-                            !RoleValidator::is_valid(&self.roles, load_role_expr)
+                            RoleValidator::is_valid(&self.roles, load_role_expr)
                         } else {
                             true
                         };
@@ -1128,7 +1133,9 @@ impl<'a> SqlBuilder<'a> {
                             } else {
                                 String::from("")
                             };
-                            return Err(SqlBuilderError::RoleRequired(role_string).into());
+                            return Err(SqlBuilderError::RoleRequired(role_string,
+                            FieldPath::from(&build_context.query_home_path).append(&local_field).to_string() 
+                            ).into());
                         }
 
                         let select_expr = field_info
@@ -1172,7 +1179,8 @@ impl<'a> SqlBuilder<'a> {
                             } else {
                                 String::from("")
                             };
-                            return Err(SqlBuilderError::RoleRequired(role_string).into());
+                            return Err(SqlBuilderError::RoleRequired(role_string,
+                            FieldPath::from(&build_context.query_home_path).append(&local_field).to_string()).into());
                         }
 
                         // let alias = self.alias_translator.translate(&canonical_alias);
@@ -1208,15 +1216,16 @@ impl<'a> SqlBuilder<'a> {
                 DeserializeType::Join(join_name) => {
                     let join_info = mapper
                         .join(join_name)
-                        .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string()))?;
+                        .ok_or_else(|| SqlBuilderError::JoinMissing(join_name.to_string(), mapper.table_name.to_string()))?;
+
+                    let local_join_path = local_path.append(join_name);
 
                     if let Some(load_role_expr) = &join_info.options.load_role_expr {
                         return Err(
-                            SqlBuilderError::RoleRequired(load_role_expr.to_string()).into()
+                            SqlBuilderError::RoleRequired(load_role_expr.to_string(),
+                            FieldPath::from(&build_context.query_home_path).append(&local_join_path).to_string()).into()
                         );
                     };
-
-                    let local_join_path = local_path.append(join_name);
                     if build_context
                         .local_joined_paths
                         .contains(&local_join_path.to_string())
@@ -1247,15 +1256,16 @@ impl<'a> SqlBuilder<'a> {
                         .merge(merge_name)
                         .ok_or_else(|| SqlBuilderError::MergeMissing(merge_name.to_string()))?;
 
-                    if merge_info.options.preselect {
-                        if let Some(load_role_expr) = &merge_info.options.load_role_expr {
-                            return Err(
-                                SqlBuilderError::RoleRequired(load_role_expr.to_string()).into()
-                            );
-                        };
                         let merge_field = FieldPath::from(build_context.query_home_path.as_str())
                             .append(local_path.as_str())
                             .append(merge_name.as_str());
+                    if merge_info.options.preselect {
+                        if let Some(load_role_expr) = &merge_info.options.load_role_expr {
+                            return Err(
+                                SqlBuilderError::RoleRequired(load_role_expr.to_string(),
+                                merge_field.to_string()).into()
+                            );
+                        };
                         result.unmerged_home_paths.insert(merge_field.to_string());
                     }
                 }
@@ -1530,6 +1540,7 @@ impl<'a> SqlBuilder<'a> {
                                                     || {
                                                         SqlBuilderError::JoinMissing(
                                                             join_name.to_string(),
+                                                            mapper.table_name.to_string()
                                                         )
                                                     },
                                                 )?;
@@ -1618,6 +1629,20 @@ impl<'a> SqlBuilder<'a> {
                             }
                         }
                     }
+                },
+                QueryToken::Predicate(predicate) => {
+                    
+                   
+                    let query_path = FieldPath::trim_basename(&predicate.name);
+                    if let Some(local_path) = query_path.localize_path(&build_context.query_home_path)
+                    {
+                         // Skip local path if it contains a merged field
+                        if self.joined_mapper_for_query_path(&local_path).is_ok() {
+                            for partial_local_path in FieldPath::from(&local_path).step_up() { // Skip predicate name
+                                build_context.local_joined_paths.insert(partial_local_path.to_string());
+                            }
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -1651,7 +1676,7 @@ impl<'a> SqlBuilder<'a> {
                 }
                 DeserializeType::Join(query_join_name) => {
                     let join = joined_mapper.join(query_join_name).ok_or_else(|| {
-                        SqlBuilderError::JoinMissing(joined_mapper_name.to_string())
+                        SqlBuilderError::JoinMissing(query_join_name.to_string(), joined_mapper.table_name.to_string())
                     })?;
                     if join.options.key {
                         let local_path = local_path.append(query_join_name);

@@ -61,7 +61,7 @@ To serve a webpage, you may also want to include count informations.
 ```
 
 The code is almost the same, but the altered page argument will issue two more select statements
-to return the *filtered* page length and the *unfiltered* page length. Let's see what those are:
+to return the *filtered* page length and the *total* page length. Let's see what those are:
 
 Suppose you have a table with books. The books have an id, a title and an author_id.
 
@@ -78,11 +78,12 @@ The author wants to see all books that contain the word 'world'. What will he ge
  - The first two rows (id 1, id 2).
  - The filtered page count of 3, because 3 rows match the filter criteria. 
    The pager can now calculate the number of pages: ceil(3 / 2) = 2
- - The unfiltered page count of 4. The author knows now that with a different filter query, he could
+ - The total page count of 4. The author knows now that with a different filter query, he could
    get at most 4 rows back.
  
- In practice the unfiltered page count is not so straight forward to select: 
+ In practice the total page count is not so straight forward to select: 
  Toql needs to decide, which filters to ignore and which to consider, 
  when building the count sql statement.
- Toql considers only filters on fields tht are listed in the special count selection. See XXX.
+ Toql considers only filters on fields tht are listed in the special count selection and predicates that are turned on. See XXX. 
+ 
  

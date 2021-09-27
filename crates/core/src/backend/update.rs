@@ -338,21 +338,18 @@ where
         let merge = mapper.merged_mapper(fieldname).is_some();
         if !merge {
             
+            let k = query_path.to_string();
+            if !fields.contains_key(&k) { // Faster lookup than Vec
+                field_path_order.push(k);
+            }
+
             fields
                 .entry(query_path.to_string())
                 .or_insert_with(HashSet::new)
                 .insert(fieldname.to_string());
-
-            // TODO Use better container like ordered HashSet
-            let k = query_path.to_string();
-            if !field_path_order.contains(&k) {
-                field_path_order.push(k);
-            }
-            
-            
         } else {
             let k = trimmed_query_field.to_string();
-            if !merge_path_order.contains(&k) {
+            if !merge_path_order.contains(&k) { // TODO maybe unordered Hashset works too
                 merge_path_order.push(k);
             }
         }

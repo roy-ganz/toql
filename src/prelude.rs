@@ -4,6 +4,7 @@ pub use toql_core::error::ToqlError;
 pub use toql_core::field_handler::{FieldHandler, BasicFieldHandler};
 pub use toql_core::join_handler::JoinHandler;
 pub use toql_core::page::Page;
+pub use toql_core::page_counts::PageCounts;
 pub use toql_core::predicate_handler::PredicateHandler;
 pub use toql_core::result::Result;
 pub use toql_core::sql_arg::SqlArg;

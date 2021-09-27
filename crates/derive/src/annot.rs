@@ -130,9 +130,6 @@ pub enum RenameCase {
     MixedCase,
 }
 
-fn get_true() -> bool {
-    true
-}
 #[derive(FromMeta, Clone, Debug)]
 pub struct PredicateArg {
     pub name: String,
@@ -144,7 +141,7 @@ pub struct PredicateArg {
     #[darling(multiple)]
     pub on_param: Vec<PredicateOnParamArg>,
 
-    #[darling(default = "get_true" )] 
+    #[darling(default)] 
     pub count_filter: bool,
 }
 #[derive(FromMeta, Clone, Debug)]

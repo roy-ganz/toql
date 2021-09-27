@@ -62,10 +62,17 @@ where
 {
     fn from_iter<I: IntoIterator<Item = K>>(iter: I) -> Query<T> {
         let mut q: Query<T> = Query::new();
+        let mut count = 0;
         for k in iter {
+            if count < 2 {
+                count += 1}
             q = q.or(k.into());
         }
-        q
+        // Only parenthesize if there is more than one key
+        if count > 1 {
+            q = q.parenthesize();
+        }
+        q 
     }
 }
 /* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T>

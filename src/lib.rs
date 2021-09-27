@@ -95,6 +95,7 @@ pub use toql_sql_expr_macro as sql_expr_macro;
 pub use toql_core::cache;
 pub use toql_core::deserialize;
 pub use toql_core::page;
+pub use toql_core::page_counts;
 pub use toql_core::parameter_map;
 pub use toql_core::role_expr;
 pub use toql_core::role_expr_parser;

@@ -7,20 +7,20 @@ use crate::{
     tree::{
         tree_index::TreeIndex, 
         tree_merge::TreeMerge, tree_predicate::TreePredicate,
-      
     }, sql::Sql, query::{Query, field_path::FieldPath}, sql_expr::{SqlExpr, PredicateColumn, resolver::Resolver}, sql_builder::{SqlBuilder}, alias_translator::AliasTranslator, parameter_map::ParameterMap, page::Page,
 };
 use std::{borrow::{Borrow}, collections::{HashMap, HashSet},};
 use super::{map, Backend};
 
 use crate::toql_api::load::Load;
+use crate::page_counts::PageCounts;
 
  
 pub async fn load<B, Q, T, R, E>(
     backend: &mut B,
     query: Q,
     page: Option<Page>
-) -> std::result::Result<(Vec<T>, Option<(u64, u64)>), E>
+) -> std::result::Result<(Vec<T>, Option<PageCounts>), E>
 where
     B: Backend<R, E>, 
     E: From<ToqlError>,
@@ -232,7 +232,7 @@ async fn load_top<B, Q, T, R, E>(
     backend: &mut B,
     query: &Q,
     page: Option<Page>,
-) -> std::result::Result<(Vec<T>, HashSet<String>, Option<(u64, u64)>), E>
+) -> std::result::Result<(Vec<T>, HashSet<String>, Option<PageCounts>), E>
 where
     B: Backend<R, E>, 
     T: Load<R, E> + Send + FromRow<R, E>,
@@ -300,20 +300,20 @@ where
     
     
     
-    let page_count = if let Some(count_result)= count_result  {
+    let page_counts = if let Some(count_result)= count_result  {
         
                 let count_sql = Sql::new(); // TODO for postgres
-                let filtered_page_size = backend.select_max_page_size_sql(count_sql).await?;
+                let filtered = backend.select_max_page_size_sql(count_sql).await?;
 
-                let unfiltered_page_size_sql = {
+                let total_page_size_sql = {
                     let aux_params = [backend.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
                     count_result.to_sql(&aux_params, &mut alias_translator).map_err(|e|e.into())?
                 };
-                let unfiltered_page_size =  backend.select_count_sql(unfiltered_page_size_sql).await?;
-                Some((filtered_page_size, unfiltered_page_size))
+                let total =  backend.select_count_sql(total_page_size_sql).await?;
+                Some(PageCounts{filtered, total})
         } else  {None};
 
 
-    Ok((entities, unmerged, page_count))
+    Ok((entities, unmerged, page_counts))
 }

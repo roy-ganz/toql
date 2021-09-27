@@ -1,7 +1,7 @@
 pub mod error;
 pub mod from;
-pub mod try_into;
 pub mod from_row;
+pub mod try_into;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SqlArg {
@@ -86,15 +86,14 @@ impl ToString for SqlArg {
     }
 }
 
-
 pub fn valid_key(args: &[SqlArg]) -> bool {
-
-    args.iter().any(|a| match a {
-     SqlArg::U64(x) => x != &0,
-     SqlArg::Str(x) => !x.is_empty(),
-    _ => true    
-    }
-    )
+    let contains_zero_key = args.iter().any(|a| match a {
+        SqlArg::U64(x) => x == &0,
+        SqlArg::Str(x) => x.is_empty(),
+        SqlArg::Null => true,
+        _ => false,
+    });
+    !contains_zero_key
 }
 
 /*
