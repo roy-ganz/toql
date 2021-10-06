@@ -3,7 +3,7 @@ use crate::key::Key;
 use crate::keyed::Keyed;
 use crate::tree::tree_update::TreeUpdate;
 use crate::{error::ToqlError, table_mapper::mapped::Mapped};
-use crate::{query::field_path::FieldPath, sql_expr::resolver::Resolver};
+use crate::query::field_path::FieldPath;
 
 impl<T> TreeUpdate for Join<T>
 where
@@ -21,14 +21,10 @@ where
         I: Iterator<Item = FieldPath<'a>> + Clone,
     {
         match self {
-            Join::Key(k) => match descendents.next() {
+            Join::Key(_k) => 
+            match descendents.next() {
                 Some(p) => Err(ToqlError::ValueMissing(p.as_str().to_string())),
-                None => {
-                    let table_alias = <T as Mapped>::table_alias();
-                    let resolver = Resolver::new().with_self_alias(&table_alias);
-                    exprs.push(resolver.resolve(&k.predicate_expr(false))?);
-                    Ok(())
-                }
+                None => Ok(()), // Key has no columns to be updated
             },
             Join::Entity(e) => e.update(descendents, fields, roles, exprs),
         }

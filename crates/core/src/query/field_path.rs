@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FieldPath<'a>(Cow<'a, str>);
 
 impl<'a> Default for FieldPath<'a> {

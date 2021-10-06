@@ -12,7 +12,6 @@
 use super::concatenation::Concatenation;
 use super::field_filter::FieldFilter;
 use super::field_order::FieldOrder;
-use super::QueryToken;
 use crate::sql_arg::SqlArg;
 use heck::MixedCase;
 
@@ -236,9 +235,4 @@ impl From<&str> for Field {
         Field::from(s)
     }
 }
-
-impl Into<QueryToken> for Field {
-    fn into(self) -> QueryToken {
-        QueryToken::Field(self)
-    }
-}
+ 

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::key::Key;
 use crate::query::Query;
-use crate::to_query::ToQuery;
+//use crate::to_query::ToQuery;
 
 pub struct MapQueryIter<I, T> {
     orig: I,
@@ -12,13 +12,13 @@ pub struct MapQueryIter<I, T> {
 impl<I, T> Iterator for MapQueryIter<I, T>
 where
     I: Iterator,
-    I::Item: ToQuery<T>,
+    I::Item: Into<Query<T>>,
 {
     type Item = Query<T>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.orig.next().map(|v| v.to_query())
+        self.orig.next().map(|v| v.into())
     }
 
     #[inline]
@@ -58,14 +58,22 @@ impl<'a, T> std::iter::FromIterator<Query<T>> for Query<T> {
 // Allows to collect different keys in a query (concatenation is or)
 impl<T, K> std::iter::FromIterator<K> for Query<T>
 where
-    K: Key<Entity = T> + ToQuery<T>,
+    K: Key<Entity = T> + Into<Query<T>>,
 {
     fn from_iter<I: IntoIterator<Item = K>>(iter: I) -> Query<T> {
         let mut q: Query<T> = Query::new();
+        let mut count = 0;
         for k in iter {
-            q = q.or(ToQuery::to_query(&k));
+            if count < 2 {
+                count += 1}
+            q = q.or(k.into());
         }
-        q
+        // Only parenthesize if there is more than one key
+        if count > 1 {
+            q.parenthesize()
+        } else {
+            q
+        }
     }
 }
 /* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T>

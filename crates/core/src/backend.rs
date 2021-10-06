@@ -57,9 +57,9 @@ where  E: From<ToqlError>
 
    // Execute a select statement and return nothing
    async fn execute_sql(&mut self, sql:Sql) -> Result<(), E>;
-
+   
    // Execute an insert statement and return new keys
-   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>, E>; 
+   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>, E>; // New ids in descending order
         
  }
 

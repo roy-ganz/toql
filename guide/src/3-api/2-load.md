@@ -78,10 +78,10 @@ The author wants to see all books that contain the word 'world'. What will he ge
  - The first two rows (id 1, id 2).
  - The filtered page count of 3, because 3 rows match the filter criteria. 
    The pager can now calculate the number of pages: ceil(3 / 2) = 2
- - The unfiltered page count of 4. The author knows now that with a different filter query, he could
+ - The total page count of 4. The author knows now that with a different filter query, he could
    get at most 4 rows back.
  
- In practice the unfiltered page count is not so straight forward to select: 
+ In practice the total page count is not so straight forward to select: 
  Toql needs to decide, which filters to ignore and which to consider, 
  when building the count sql statement.
  Toql considers only filters on fields tht are listed in the special count selection and predicates that are marked as count filters. See XXX.

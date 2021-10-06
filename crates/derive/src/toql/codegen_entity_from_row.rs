@@ -356,7 +356,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                         Some(role) => {
                             quote!(
                                 if !toql::role_validator::RoleValidator::is_valid(toql::role_expr_parser::RoleExprParser(#role)?) {
-                                    SqlBuilderError::RoleRequired(#role)
+                                    SqlBuilderError::RoleRequired(#role, #toql_field_name .to_string())
                                 }
 
                             )

@@ -4,7 +4,7 @@
 ///
 /// In Toql there are 2 types of counts: A filtered count and a total count. Lets take a datagrid where the user searches his contacts with a name starting with 'Alice'.
 /// The datagrid would show the following:
-///  - Total number of contacts (Total count)
+///  - Total number of contacts (Unfiltered count)
 ///  - Number of found contacts with the name 'Alice' (Filtered count)
 ///
 /// While the filtered count is almost for free and returned for every query,

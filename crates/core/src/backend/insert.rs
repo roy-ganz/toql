@@ -1,5 +1,4 @@
 use crate::{
-    alias_format::AliasFormat,
     alias_translator::AliasTranslator,
     error::ToqlError,
     parameter_map::ParameterMap,
@@ -15,7 +14,7 @@ use std::{borrow::BorrowMut, collections::HashMap};
 
 use super::{map, Backend};
 use crate::toql_api::paths::Paths;
-use crate::{result::Result, sql_arg::SqlArg};
+use crate::result::Result;
 use std::collections::HashSet;
 
 use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert};
@@ -359,7 +358,7 @@ where
                     .ok_or_else(|| ToqlError::MapperMissing(m.to_owned()))?;
                 insert_partial_tables_order(mappers, &m, level, &d, partials)?;
             } else {
-                return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned()).into());
+                return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned(), mapper.table_name.to_string()) .into());
             }
         }
     }

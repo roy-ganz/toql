@@ -13,7 +13,7 @@ impl CacheBuilder {
     pub fn new() -> Self {
         CacheBuilder { capacity: 50 }
     }
-
+    
     pub fn with_capacity(mut self, capacity: usize) -> Self {
         self.capacity = capacity;
         self

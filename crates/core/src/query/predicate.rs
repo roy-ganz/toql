@@ -10,7 +10,6 @@
 ///  let f = User::predicates().search(&["what"]);
 /// ```
 use super::concatenation::Concatenation;
-use super::QueryToken;
 use crate::sql_arg::SqlArg;
 
 #[derive(Clone, Debug)]
@@ -85,8 +84,3 @@ impl From<&str> for Predicate {
     }
 }
 
-impl Into<QueryToken> for Predicate {
-    fn into(self) -> QueryToken {
-        QueryToken::Predicate(self)
-    }
-}

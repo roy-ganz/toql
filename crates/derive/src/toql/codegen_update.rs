@@ -9,6 +9,7 @@ use syn::Ident;
 
 pub(crate) struct CodegenUpdate<'a> {
     struct_ident: &'a Ident,
+    struct_name: &'a String,
     sql_table_name: String,
     update_set_code: Vec<TokenStream>,
     struct_upd_roles: &'a Option<String>,
@@ -19,6 +20,7 @@ impl<'a> CodegenUpdate<'a> {
     pub(crate) fn from_toql(toql: &crate::sane::Struct) -> CodegenUpdate {
         CodegenUpdate {
             struct_ident: &toql.rust_struct_ident,
+            struct_name: &toql.rust_struct_name,
             sql_table_name: toql.sql_table_name.to_owned(),
             update_set_code: Vec::new(),
             struct_upd_roles: &toql.roles.update,
@@ -53,7 +55,8 @@ impl<'a> CodegenUpdate<'a> {
                 quote!(
                    if !toql::role_validator::RoleValidator::is_valid(roles,
                    &toql::role_expr_macro::role_expr!(#role_expr_string)) {
-                         return Err(toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string())));
+                         return Err(toql::error::ToqlError::SqlBuilderError(
+                             toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string(), #toql_field_name .to_string() )));
                    }
                 )
             }
@@ -81,7 +84,10 @@ impl<'a> CodegenUpdate<'a> {
                 }
 
                 let value = if field.number_of_options > 0 {
-                    quote!( self. #rust_field_ident .as_ref().map(|f|toql::sql_arg::SqlArg::from(f)).unwrap_or(toql::sql_arg::SqlArg::Null))
+                    quote!( self. #rust_field_ident .as_ref()
+                        .map(|f|toql::sql_arg::SqlArg::from(f.to_owned()))
+                        .unwrap_or(toql::sql_arg::SqlArg::Null)
+                    )
                 } else {
                     quote!( toql::sql_arg::SqlArg::from(&self . #rust_field_ident))
                 };
@@ -273,6 +279,7 @@ impl<'a> CodegenUpdate<'a> {
 impl<'a> quote::ToTokens for CodegenUpdate<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let struct_ident = self.struct_ident;
+        let struct_name = self.struct_name;
 
         let update_set_code = &self.update_set_code;
 
@@ -285,7 +292,8 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                 Some(role_expr_string) => {
                     quote!(
                         if !toql::role_validator::RoleValidator::is_valid(roles, &&toql::role_expr_macro::role_expr!(#role_expr_string))  {
-                            return Err(toql::error::ToqlError::SqlBuilderError(toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string())));
+                            return Err(toql::error::ToqlError::SqlBuilderError(
+                                toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string(), #struct_name .to_string())));
                         }
                     )
                 }
@@ -327,12 +335,10 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         let mut expr = toql::sql_expr::SqlExpr::new();
                                         expr.push_literal("UPDATE ");
                                         expr.push_literal(#sql_table_name);
-                                        expr.push_literal(" ");
-                                  //      expr.push_alias(#sql_table_alias);
                                         expr.push_literal(" SET ");
                                         let tokens = expr.tokens().len();
                                         #(#update_set_code)*
-                                       // expr.pop_literals(2);
+
                                        expr.pop(); // remove ', '
                                         if expr.tokens().len() > tokens {
                                             expr.push_literal(" WHERE ");

@@ -7,20 +7,20 @@ use crate::{
     tree::{
         tree_index::TreeIndex, 
         tree_merge::TreeMerge, tree_predicate::TreePredicate,
-      
     }, sql::Sql, query::{Query, field_path::FieldPath}, sql_expr::{SqlExpr, PredicateColumn, resolver::Resolver}, sql_builder::{SqlBuilder}, alias_translator::AliasTranslator, parameter_map::ParameterMap, page::Page,
 };
 use std::{borrow::{Borrow}, collections::{HashMap, HashSet},};
 use super::{map, Backend};
 
 use crate::toql_api::load::Load;
+use crate::page_counts::PageCounts;
 
  
 pub async fn load<B, Q, T, R, E>(
     backend: &mut B,
     query: Q,
     page: Option<Page>
-) -> std::result::Result<(Vec<T>, Option<(u64, u64)>), E>
+) -> std::result::Result<(Vec<T>, Option<PageCounts>), E>
 where
     B: Backend<R, E>, 
     E: From<ToqlError>,
@@ -197,25 +197,24 @@ where
             };
               
         // Build index
-        let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); //hashed key, array positions
+        let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); // Hashed key, row array positions 
 
         let (ancestor_path, field) = FieldPath::split_basename(home_path.as_str());
 
         // TODO Batch process rows
         // TODO Introduce traits that do not need to copy into vec
   
-        let row_offset = 0; // key must be first columns in row
-        let ancestor2_path = FieldPath::trim_basename(ancestor_path.as_str());
+        let row_offset = 0; // Key must be first column(s) in row
+       
         
-        let  d = ancestor2_path.children();
-        <T as TreeIndex<R, E>>::index(d, &rows, row_offset, &mut index)?;
+        // Build up index to provide fast lookup for the merge function
+        <T as TreeIndex<R, E>>::index(ancestor_path.children(), &rows, row_offset, &mut index)?;
     
         // Merge into entities
         for e in entities.iter_mut() {
-            let  d = ancestor_path.children();
             <T as TreeMerge<_, E>>::merge(
                 e,
-                 d,
+                ancestor_path.children(),
                 field,
                 &rows,
                 row_offset,
@@ -232,7 +231,7 @@ async fn load_top<B, Q, T, R, E>(
     backend: &mut B,
     query: &Q,
     page: Option<Page>,
-) -> std::result::Result<(Vec<T>, HashSet<String>, Option<(u64, u64)>), E>
+) -> std::result::Result<(Vec<T>, HashSet<String>, Option<PageCounts>), E>
 where
     B: Backend<R, E>, 
     T: Load<R, E> + Send + FromRow<R, E>,
@@ -300,20 +299,20 @@ where
     
     
     
-    let page_count = if let Some(count_result)= count_result  {
+    let page_counts = if let Some(count_result)= count_result  {
         
                 let count_sql = Sql::new(); // TODO for postgres
-                let max_page_size = backend.select_max_page_size_sql(count_sql).await?;
+                let filtered = backend.select_max_page_size_sql(count_sql).await?;
 
-                let unfiltered_page_size_sql = {
+                let total_page_size_sql = {
                     let aux_params = [backend.aux_params()];
                     let aux_params = ParameterMap::new(&aux_params);
                     count_result.to_sql(&aux_params, &mut alias_translator).map_err(|e|e.into())?
                 };
-                let unfiltered_page_size =  backend.select_count_sql(unfiltered_page_size_sql).await?;
-                Some((unfiltered_page_size, max_page_size))
+                let total =  backend.select_count_sql(total_page_size_sql).await?;
+                Some(PageCounts{filtered, total})
         } else  {None};
 
 
-    Ok((entities, unmerged, page_count))
+    Ok((entities, unmerged, page_counts))
 }

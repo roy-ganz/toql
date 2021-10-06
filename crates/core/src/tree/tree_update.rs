@@ -1,4 +1,4 @@
-use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr, sql_arg::SqlArg};
+use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr};
 
 // Trait is implemented for structs that can update
 pub trait TreeUpdate {

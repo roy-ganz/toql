@@ -129,6 +129,7 @@ pub enum RenameCase {
     #[darling(rename = "mixedCase")]
     MixedCase,
 }
+
 #[derive(FromMeta, Clone, Debug)]
 pub struct PredicateArg {
     pub name: String,
@@ -140,7 +141,7 @@ pub struct PredicateArg {
     #[darling(multiple)]
     pub on_param: Vec<PredicateOnParamArg>,
 
-    #[darling(default)]
+    #[darling(default)] 
     pub count_filter: bool,
 }
 #[derive(FromMeta, Clone, Debug)]

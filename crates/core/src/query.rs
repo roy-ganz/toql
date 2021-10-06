@@ -33,6 +33,7 @@ pub mod predicate;
 pub mod query_with;
 pub mod selection;
 pub mod wildcard;
+pub mod from_key_fields;
 
 use crate::query::selection::Selection;
 use std::collections::HashMap;
@@ -64,6 +65,28 @@ impl From<&str> for QueryToken {
         }
     }
 }
+
+
+impl From<Field> for QueryToken {
+    fn from(field: Field) -> QueryToken {
+        QueryToken::Field(field)
+    }
+}
+
+
+impl From<Predicate> for QueryToken {
+    fn from(predicate: Predicate) -> QueryToken {
+        QueryToken::Predicate(predicate)
+    }
+}
+
+
+impl From<Selection> for QueryToken {
+    fn from(selection: Selection) -> QueryToken {
+        QueryToken::Selection(selection)
+    }
+}
+
 
 impl ToString for QueryToken {
     fn to_string(&self) -> String {
@@ -277,6 +300,7 @@ impl<M> Query<M> {
     where
         T: Into<Query<M>>,
     {
+        
         // All tokens are by default concatenated with AND
         self.tokens.append(&mut query.into().tokens);
         self
@@ -300,24 +324,18 @@ impl<M> Query<M> {
     {
         // Change first token of query to concatenate with OR
         let mut query = query.into();
-        match query.tokens.get_mut(0) {
-            Some(QueryToken::LeftBracket(c)) => *c = Concatenation::Or,
-            Some(QueryToken::RightBracket) => {}
-            Some(QueryToken::Field(f)) => f.concatenation = Concatenation::Or,
-            Some(QueryToken::Wildcard(w)) => w.concatenation = Concatenation::Or,
-            Some(QueryToken::Predicate(p)) => p.concatenation = Concatenation::Or,
-            Some(QueryToken::Selection(p)) => p.concatenation = Concatenation::Or,
-            None => {}
+        if !self.tokens.is_empty() {
+            match query.tokens.get_mut(0) {
+                Some(QueryToken::LeftBracket(c)) => *c = Concatenation::Or,
+                Some(QueryToken::RightBracket) => {}
+                Some(QueryToken::Field(f)) => f.concatenation = Concatenation::Or,
+                Some(QueryToken::Wildcard(w)) => w.concatenation = Concatenation::Or,
+                Some(QueryToken::Predicate(p)) => p.concatenation = Concatenation::Or,
+                Some(QueryToken::Selection(p)) => p.concatenation = Concatenation::Or,
+                None => {}
+            }
         }
-        /*         if let QueryToken::LeftBracket(c) = query.tokens.get_mut(0).unwrap() {
-                   *c = Concatenation::Or;
-               } else if let QueryToken::Field(field) = query.tokens.get_mut(0).unwrap() {
-                   field.concatenation = Concatenation::Or;
-               } else if let QueryToken::Wildcard(wildcard) = query.tokens.get_mut(0).unwrap() {
-                   wildcard.concatenation = Concatenation::Or;
-               }
-        */
-
+      
         self.tokens.append(&mut query.tokens);
 
         self
