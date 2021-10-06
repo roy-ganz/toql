@@ -40,7 +40,7 @@ where  E: From<ToqlError>
    async fn select_count_sql(&mut self, sql:Sql) -> Result<u64, E>; // Load single value
 
    async fn execute_sql(&mut self, sql:Sql) -> Result<(), E>;
-   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>, E>; // New keys
+   async fn insert_sql(&mut self, sql:Sql) -> Result<Vec<SqlArg>, E>; // New ids in descending order
         
  }
 

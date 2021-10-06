@@ -99,7 +99,7 @@ trait MapperFilter {
 #[derive(Debug)]
 pub struct TableMapper {
     pub table_name: String,
-    pub canonical_table_alias: String, // Calculated form table_name
+    pub canonical_table_alias: String, // Calculated from table_name
 
     /* pub aliased_table: String,
     pub alias_format: AliasFormat,       // */

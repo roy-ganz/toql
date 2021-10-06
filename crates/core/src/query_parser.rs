@@ -258,6 +258,13 @@ impl QueryParser {
                     token_info.name = span.as_str().trim_start_matches('@').to_string();
                 }
                 Rule::rpar => {
+                    // Right bracket finishes token, if not warping inner bracket
+                    // E.g ..((+name eq 'fd)),... -> Inner brackets finish token
+                    if let Some(token) = token_info.build_token()?
+                    {
+                        query.tokens.push(token);
+                        token_info = TokenInfo::new(); // Restart token builder
+                    }
                     query.tokens.push(QueryToken::RightBracket);
                 }
                 Rule::lpar => {
@@ -268,13 +275,9 @@ impl QueryParser {
                 Rule::separator => {
                     let concat_type = span.as_str().chars().next();
                     if let Some(token) = token_info.build_token()?
-                    /*  .map_err(|e| ToqlError::QueryParserError(Error::new_from_span (
-                    CustomError {    message:e      }, span)))?  */
                     {
                         query.tokens.push(token);
                         token_info = TokenInfo::new(); // Restart token builder
-
-                        // println!("{:?}", query);
                     }
 
                     token_info.concatenation = if let Some(',') = concat_type {
@@ -292,7 +295,6 @@ impl QueryParser {
         {
             query.tokens.push(token);
         }
-        //  println!("{:?}", query);
         Ok(query)
     }
 }

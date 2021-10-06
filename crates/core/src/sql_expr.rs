@@ -141,6 +141,7 @@ impl SqlExpr {
             false
         }
     }
+    
     pub fn pop(&mut self) -> &mut Self {
         self.tokens.pop();
         self

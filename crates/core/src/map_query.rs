@@ -70,9 +70,10 @@ where
         }
         // Only parenthesize if there is more than one key
         if count > 1 {
-            q = q.parenthesize();
+            q.parenthesize()
+        } else {
+            q
         }
-        q 
     }
 }
 /* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T>

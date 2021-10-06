@@ -44,6 +44,8 @@ impl<'a> Resolver<'a> {
         self
     }
 
+    /// Replace aux params with SQL expressions
+    /// Unreplaced aux params will be returned
     pub fn replace_aux_params(
         sql_expr: SqlExpr,
         aux_params_exprs: &HashMap<String, SqlExpr>,
@@ -64,7 +66,9 @@ impl<'a> Resolver<'a> {
         SqlExpr::from(tokens)
     }
 
-    // Convenience function, that cannot fail
+    /// Resolve aux params. 
+    /// Repalce  aux params with SqlArg if value is in parameter map
+    /// Otherwise return unresolved aux param
     pub fn resolve_aux_params(
         sql_expr: SqlExpr,
         aux_params: &ParameterMap,
@@ -73,14 +77,16 @@ impl<'a> Resolver<'a> {
 
         for token in sql_expr.tokens {
             if let SqlExprToken::AuxParam(ref name) = token {
-                if let Some(arg) = aux_params.get(name) {
+                if let Some(arg) = aux_params.get(name) { // Resolve if possible, copy SQL argument
                     tokens.push(SqlExprToken::Arg(arg.clone()));
+                } else {
+                   tokens.push(token); // Copy unresolved aux param
                 }
             } else {
-                tokens.push(token);
+                tokens.push(token); // Copy any not aux params
             }
         }
-        SqlExpr::from(tokens)
+        SqlExpr::from(tokens) // Return resolved string
     }
     
 

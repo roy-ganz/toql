@@ -197,25 +197,24 @@ where
             };
               
         // Build index
-        let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); //hashed key, array positions
+        let mut index: HashMap<u64, Vec<usize>> = HashMap::new(); // Hashed key, row array positions 
 
         let (ancestor_path, field) = FieldPath::split_basename(home_path.as_str());
 
         // TODO Batch process rows
         // TODO Introduce traits that do not need to copy into vec
   
-        let row_offset = 0; // key must be first columns in row
-        let ancestor2_path = FieldPath::trim_basename(ancestor_path.as_str());
+        let row_offset = 0; // Key must be first column(s) in row
+       
         
-        let  d = ancestor2_path.children();
-        <T as TreeIndex<R, E>>::index(d, &rows, row_offset, &mut index)?;
+        // Build up index to provide fast lookup for the merge function
+        <T as TreeIndex<R, E>>::index(ancestor_path.children(), &rows, row_offset, &mut index)?;
     
         // Merge into entities
         for e in entities.iter_mut() {
-            let  d = ancestor_path.children();
             <T as TreeMerge<_, E>>::merge(
                 e,
-                 d,
+                ancestor_path.children(),
                 field,
                 &rows,
                 row_offset,
