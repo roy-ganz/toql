@@ -1,6 +1,6 @@
 
 # Mapping names
-Struct fields are mapped to Toql and database by default in a predictable way:
+Struct fields are mapped to Toql query fields and databases by default in a predictable way:
 1. Table names are UpperCamelCase.
 2. Column names are snake_case.
 3. Toql fields are lowerCamelCase.
@@ -27,11 +27,10 @@ struct UserRef {
 ```
 is translated into 
 
-`SELECT UserId, FullName FROM USER_REF`
+`SELECT t0.UserId, t0.FullName FROM USER_REF t0`
 
 #### Explicit naming example:
-Use `table` an the struct and `column` on the fields.
-
+Use `table` an the struct and `column` on the fields to set a name.
 
 ```rust
 #[derive(Toql)]
@@ -44,7 +43,7 @@ struct UserRef {
 ```
 is translated into 
 
-`SELECT id, full_name FROM User`
+`SELECT t0.id, t0.full_name FROM User t0`
 
 ## Toql fields
 
@@ -57,7 +56,7 @@ struct UserRef {
 	#[toql(column="id")]
 	id: u32
 	full_name: String,
-	#[toql(self="counry_id", other="id")]
+	#[toql(join())]
 	county: Country
 }
 ```

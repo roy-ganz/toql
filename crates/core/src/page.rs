@@ -1,4 +1,5 @@
-/// [Page](enum.Page.html) is used as an argument in load functions. It tells Toql to build and run an additional query
+//! [Page](enum.Page.html) is used as an argument in load functions. 
+/// It tells Toql to build and run an additional query
 /// to count the total number of records.
 ///
 /// In Toql there are 2 types of counts: A filtered count and a total count. Lets take a datagrid where the user searches his contacts with a name starting with 'Alice'.

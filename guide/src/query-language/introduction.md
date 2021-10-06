@@ -10,16 +10,15 @@ They are separated either by comma or semicolon. If a filter is applied a comma 
     id, +name, age gt 18
  is translated into 
 
-    SELECT id, name, age WHERE age > 18 ORDER BY name ASC
+    SELECT t0.id, t0.name, t0.age FROM ... WHERE t0.age > 18 ORDER BY t0.name ASC
  
 #### Example 2:
     id, .age eq 12; .age eq 15
  is translated into
  
-    SELECT id WHERE age = 12 OR age = 15
+    SELECT t0.id From ... WHERE t0.age = 12 OR t0.age = 15
 
 
-The actual SQL depends not only of the query but also of the mapper setup. 
  
  
  

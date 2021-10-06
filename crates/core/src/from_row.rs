@@ -1,8 +1,9 @@
+//! Trait to convert result row into structs.
 use crate::sql_builder::select_stream::Select;
 use std::result::Result;
 
-/// Trait to convert result row into structs.
-/// This is implements by Toql Derive for all dervied structs with gerenic row and error.
+
+/// This is implemented by Toql Derive for all dervied structs with generic row and error.
 /// The implementation of primitive types with concrete row and error type must be done by the database crate.
 pub trait FromRow<R, E> {
     /// Returns the number of selects

@@ -1,3 +1,36 @@
+//! Keep a boolean role expression that can be evaluated to true or false for a given set of roles
+/// The RoleExpr can also be used to build a role expression programmatically.
+/// 
+/// Here an example for the expression 'roles admin or power_user'
+/// ```ignore
+/// use toql::role_expr::RoleExpr;
+/// let e = RoleExpr::Role("admin".to_string())
+///                .and(RoleExpr::Role("power_user".to_string()));
+/// assert_eq!("admin;power_user", e.to_string());
+/// ```
+/// To build a Role expr form a string, there is a [RoleExprParser](role_expr_parser/struct.RoleExprParser.html) to turn a string into a role expression.
+/// Check there for the string notation of role expressions. 
+///
+/// To evaluate a role expression use the [RoleValidator](role_validator/struct.RoleValidator.html).
+///
+/// Note that this functionality should not be interesting for Toql *users*.
+/// Role expressions are handled internally when requested through the struct mapping.
+///
+/// ## Example
+/// Restricting the field's selection to the roles 'admin' or 'power_user' 
+/// ```ignore
+/// #[derive[Toql]]
+/// struct FooBar {
+///   #[toql(key)]
+///   id: u64,
+///   #[toql(roles(load="admin;power_user"))]
+///   name: Option<String>
+/// } 
+/// ```
+
+
+
+
 #[derive(Debug, Clone)]
 pub enum RoleExpr {
     And(Box<RoleExpr>, Box<RoleExpr>),

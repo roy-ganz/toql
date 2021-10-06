@@ -1,3 +1,6 @@
+//! Create a cache to hold table schema and queries.
+/// The capacity for the query cache can be chosen.
+/// A query cache caüacity of 0 disables the query cache.
 use crate::{cache::Cache, table_mapper_registry::TableMapperRegistry};
 use lru::LruCache;
 use std::{collections::HashSet, sync::RwLock};

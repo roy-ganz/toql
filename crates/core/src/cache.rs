@@ -22,9 +22,9 @@ impl Cache {
             _query_cache: RwLock::new(LruCache::new(capacity)),
         }
     }
-    /// Creates a new `Cache` with 50 cache entries.
+    /// Creates a new `Cache` with 200 cache entries.
     pub fn new() -> Self {
-        Self::with_capacity(50)
+        Self::with_capacity(200)
     }
 }
 

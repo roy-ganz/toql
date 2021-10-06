@@ -16,7 +16,7 @@ struct Phone {
 }
 ```
 
-Selecting all fields from above with `**` will run 2 SELECT statements and merge the resulting `Vec<Phone>` into `Vec<User>` by the common value of `user.id` and `phone.user_id`.
+Selecting all fields from above with `*, mobilePhones_*` will run 2 SELECT statements and merge the resulting `Vec<Phone>` into `Vec<User>` by the common value of `user.id` and `phone.user_id`.
 
 ## Merge attribute
 Because merging is done by Rust, the merge fields must refer to the struct fields.

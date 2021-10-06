@@ -1,6 +1,6 @@
 
 # Insert, update, diff, delete
-Structs for toql queries include typically a lot of `Option<>` fields. The meaning of optional fields depends on field attributes 
+Structs for toql queries include typically a lot of `Option` fields. The meaning of optional fields depends on field attributes 
 and the Toql derive provides proper insert, update, diff and delete functions to reflect that.
 
 

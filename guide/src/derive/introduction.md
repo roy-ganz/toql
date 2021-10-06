@@ -16,7 +16,7 @@ With this simple code
  ```rust
 	#[derive(Toql)]
 	struct User {
-		#[toql(delup_key)]
+		#[toql(key)]
 		id: u32,
 		name: Option<String>
 }
@@ -28,13 +28,12 @@ we can now do the following
 use toql::mysql::load_one; // Load function from derive
 use toql::mysql::update_one; // Update function from derive
 
-let conn = --snip--
-let cache = TableMapperRegistry::new();
-TableMapper::insert_new_mapper::<User>(&mut cache); // Mapper function from derive
+let toql = --snip--
+let cache = 
 
-let q = Query::wildcard().and(User::fields.id().eq(5)); // Builder fields from derive
-let user = load_one<User>(&q, &cache, &mut conn); 
+let q = query!(User, "id eq 5"); 
+let mut user = toql.load_one(&q); 
 
 user.age = Some(16);
-update_one(&user); 
+toql.update_one(&mut user); 
 ```

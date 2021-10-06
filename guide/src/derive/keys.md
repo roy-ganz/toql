@@ -3,12 +3,13 @@ Toql requires you to add the attribute the `key` to field(s) that correspond to 
 
 For composite keys mark multiple fields with the `key` attribute.
 
-Auto generated database columns (auto increment values) should be attributed with `skip_mut` to avoid insert or update operations on them. 
+For internal reasons keys must always be the first fields in a struct and the must always be selected: Optional primary keys are not allowed.
 
 #### Example:
 ```struct
+#[derive(Toql)]
 struct User {
-  #[toql(key, skip_skip)] // Key for delete / update, never insert / update
+  #[toql(key)]
 	id: u64
 	name: Option<String>
 }
@@ -22,6 +23,7 @@ For a join used as a key the SQL builder takes the primary key(s) of the joined 
 
 #### Example:
 ```struct
+#[derive(Toql)]
 struct UserLanguage {
   #[toql(key)] 
   user_id: u64
@@ -33,20 +35,20 @@ struct UserLanguage {
 For the example above Toql assumes that the database table `UserLanguage`  has a composite key made up of the two columns `user_id` and `language_code`.
 
 ## Generated key struct
-The delete and select functions require a key instead of a struct to work.
-The Toql derive creates for every `Toql` attributed struct a corresponding key struct. 
+The delete_one function from the ToqlApi requires a key instead of a struct to work.
 
-A struct can be converted into its key struct. This conversion however fails, if optional key fields are `None`.
+The Toql derive creates for every `Toql` attributed struct a corresponding key struct. 
+See query XX or join XX how you can benefit from this
+
+
 
 #### Example
 ```
 use crate::user::{User, UserKey};
 
-let key = UserKey(10);
-let user = toql.select::<User>(key);
-toql.delete::<User>(user.try_into()?); // Convert struct into key, may fail
+let key = UserKey::from(10);
+toql.delete_one(key.into()).await?; // Convert 
 ```
 
-
 ## Unkeyable fields
-Merged fields (`Vec<T>`) and fields that map to an SQL expression (`#[toql(sql="..")`) cannot be used as keys.
+Only columns and inner joins can be used as keys. Merged fields (`Vec<T>`) and fields that map to an Sql expression (`#[toql(sql="..")`) cannot be used as keys.

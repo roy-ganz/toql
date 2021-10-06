@@ -11,10 +11,10 @@ use crate::sql_arg::SqlArg;
 /// for ergonomics of the api.
 pub trait Identity {
     
-    /// Return primary key columns for a given entity.
+    /// Returns primary key columns for a given entity.
     fn columns() -> Vec<String>;
 
-    /// Set the value for an identity column
+    /// Sets the value for an identity column
     fn set_column(&mut self, column: &str, value: &SqlArg) -> crate::result::Result <()>;
     
 }

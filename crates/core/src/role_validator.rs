@@ -1,3 +1,5 @@
+//! Check if a role expression is valid.
+//
 use crate::role_expr::RoleExpr;
 use std::collections::HashSet;
 

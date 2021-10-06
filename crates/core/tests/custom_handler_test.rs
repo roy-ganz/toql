@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use toql_core::query::FieldFilter;
+use toql_core::field_filter::FieldFilter;
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::sql_builder::SqlBuilderError;
 use toql_core::table_mapper::BasicFieldHandler;
-use toql_core::table_mapper::FieldHandler;
+use toql_core::field_handler::FieldHandler;
 use toql_core::table_mapper::FieldOptions;
 use toql_core::table_mapper::TableMapper;
 

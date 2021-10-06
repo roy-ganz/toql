@@ -1,5 +1,4 @@
-use crate::parameter_map::ParameterMap;
-/// A FieldHandler maps a Toql field onto an SQL.
+//! A FieldHandler may modify a mapped column or expression.
 /// Use it to
 /// - define your own custom function (through FN)
 /// - map the standart filters differently
@@ -23,6 +22,7 @@ use crate::parameter_map::ParameterMap;
 /// let my_handler = MyHandler {};
 /// let mapper = TableMapper::new_with_handler(my_handler);
 ///
+use crate::parameter_map::ParameterMap;
 use crate::query::field_filter::FieldFilter;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use crate::sql_expr::{SqlExpr, resolver::Resolver};

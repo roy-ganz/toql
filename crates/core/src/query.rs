@@ -1,24 +1,28 @@
-//!
-//! This module contains the query builder to build a Toql query programatically.
-//!
-//! ## Example
-//!
-//! ```ignore
-//! use toql::query::{Query, Field};
-//!
-//! let  q = Query::new()
-//!        .and(Field::from("foo").hide().eq(5).aggregate().asc(1))
-//!        .and(Field::from("bar").desc(2));
-//!    assert_eq!("+1.foo !EQ 5,-2bar", q.to_string());
-//! ```
-//!
-//! To avoid typing mistakes the Toql derive builds functions for all fields in a struct.
-//!
-//! In the example above it would be possible to write
-//! `.and(Foobar::fields().bar().desc(2)` for a derived struct `Foobar`.
-//!
-//! Read the guide for more information on the query syntax or see (Query)[struct.Query.html]
-//!
+//! The Query hold a Toql query but includes also a query builder.
+/// While it's perfectly possible to use the query builder directly
+/// it is recommended to use the query! macro. However sometimes
+/// mixed uses of the macro and the builder may make sense. 
+///
+/// ## Example 
+///
+/// ```ignore
+/// use toql::prelude::{Query, Field};
+///
+/// let  q = Query::<FooBar>::new()
+///        .and(Field::from("foo").hide().eq(5).asc(1))
+///        .and(Field::from("bar").desc(2));
+///    assert_eq!("+1.foo EQ 5,-2bar", q.to_string());
+/// ```
+/// The above code generated with the [query!](toql_query_macro/macro.query) macro
+/// ```ignore
+/// use toql::prelude::{Query, Field};
+///
+/// let q :Query<FooBar>= query!(FooBar, "+1.foo EQ 5, -2bar");
+/// assert_eq!("+1.foo EQ 5,-2bar", q.to_string());
+/// ```
+/// The query macro produces a [Query] type, so the result can 
+/// modified with builder functions. 
+
 
 pub mod concatenation;
 pub mod field;

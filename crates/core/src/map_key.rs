@@ -1,3 +1,5 @@
+//! An iterator that maps entities into keys
+/// This `struct` is created by the map_key method on Iterator. See its documentation for more.
 use crate::keyed::Keyed;
 
 pub struct MapKeyIter<I> {
@@ -21,7 +23,18 @@ where
         self.orig.size_hint()
     }
 }
-
+/// Takes an entity and turn it into a key.
+/// This can also be used to create key predicates.
+/// 
+/// ### Examples
+/// Basic usage (assume a TOQL derived User struct):
+///
+/// ```
+///  let users = vec![User{id:5}, User{id:7}];
+///  let keys = users.iter().map_key().collect::<Vec<_>>(); // Gives Vec<UserKey>
+///  let predicate = users.iter().map_key().collect::<Query>();
+///  assert(predicate.to_string, "(id eq 5;id eq 7)");
+/// ```
 pub fn map_key<I: Iterator>(xs: I) -> MapKeyIter<I> {
     MapKeyIter { orig: xs }
 }

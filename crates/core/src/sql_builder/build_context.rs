@@ -1,3 +1,6 @@
+//!
+//!  Aggregated data for function calls inside the SQL Builder.
+
 use crate::{sql_arg::SqlArg, query::{field_order::FieldOrder, field_path::FieldPath}};
 use std::collections::{HashMap, HashSet};
 

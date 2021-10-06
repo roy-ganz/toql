@@ -1,62 +1,76 @@
 # Concept
 
-Toql is a set of crates that aim to simplify web development:
+Toql is a ORM that aim to boost your developer comfort and speed when working with databases.
 
+To use it you must derive `Toql` for all structs that represent a table in your database:
+- The fields of those struct represent either columns, SQL expressions or 
+relationships to other tables.
+- The fields also determine the field name or in case of a relationship the path name in the Toql query.
+
+A derived struct can then be inserted, updated, deleted and loaded from your database. The functions will either take a full query string or just a list of field names or path names.
+
+Here the flow in a web environment:
 1. A web client sends a Toql query to the REST Server.
-2. The server uses Toql to parse the query and create SQL.
+2. The server uses Toql to parse the query and create SQL statements.
 3. SQL is send to the Database.
 4. Toql puts the resulting datasets into Rust structs.
 4. The structs are sent to the client.
 
-The Toql derive produces various high level functions, so that common operations can be done with a single function call.
-For edge cases all the low level functions are available for the programmer, too.
-
 ## Example
 
-Here is an excerpt of code that uses Rocket to serve users from a database. 
+Here is an full example that uses Rocket to serve users from a database. 
 Notice the two Toql derived structs at the beginning. The rest of the code is fairly boilerplate.
 
 ```rust
 	#[derive(Toql)]
-	#[toql(skip_indelup)] // No insert / delete / update functionality
 	struct Country {
+		#[toql(key)]
 		id: String,
 		name: Option<String>
 	}
 
 	#[derive(Toql)]
-	#[toql(skip_indelup)]
+	#[toql(auto_keys=true)]
 	struct User {
+		#[toql(key)]
 		id: u32,
 		name: Option<String>,
-		#[toql(sql_join(self="country_id", other="id"))]
+		#[toql(join())]
 		country: Option<Country>
 	}
     
 	#[query("/?<toql..>")]
-	fn query(toql: Form<ToqlQuery>,  conn: ExampleDbConnection, 
-		mappers: State<TableMapperRegistry>) -> Result<Counted<Json<User>>> {
-		let ExampleDbConnection(mut c) = conn;
+	fn query(query: Form<ToqlQuery>,  conn: Connection<ExampleDb>, 
+		cache: State<Cache> {
+		
+		let toql = MySqlAsync::from(&*conn, &cache);
 
-		let r = toql::rocket::load_many(toql, mappers, &mut c)?;
+		let r = toql.load_page(query, page)?;
 		Ok(Counted(Json(r.0), r.1))
 	}
 
 	#[database("example_db")]
-	pub struct ExampleDbConnection(mysql::Conn);
+	pub struct ExampleDb(mysql::Conn);
 
 	fn main() {
-		let mut mappers = TableMapperRegistry::new();
-		TableMapper::insert_new_mapper::<User>(&mut mappers);
-
+		
 		rocket::ignite().mount("/query", routes![query]).launch();
 	}
+```
+
+with `Cargo.toml`
+```
+toql = v0.3
+toql_rocket = "0.3"
+toql_mysql_async = "0.3"
+rocker = "0.5"
+mysql_async = "0.20"
 ```
 
 If you have a MySQL Server running, try the full CRUD example.
 
 ```bash
-ROCKET_DATABASES={example_db={url=mysql://USER:PASSWORD@localhost:3306/example_db}} cargo +nightly run --example crud_rocket_mysql
+ROCKET_DATABASES={example_db={url=mysql://USER:PASSWORD@localhost:3306/example_db}} cargo run --example crud_rocket_mysql
 
 ```
 
