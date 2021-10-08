@@ -67,7 +67,7 @@ pub trait ToqlApi {
     <Self as ToqlApi>::Error: From<ToqlError>;
         
     async fn load_many<T, B>(&mut self, query: B) -> Result<Vec<T>, Self::Error>
-    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
+    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync,
    <Self as ToqlApi>::Error: From<ToqlError> ;
     
     async fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<PageCounts>), Self::Error>

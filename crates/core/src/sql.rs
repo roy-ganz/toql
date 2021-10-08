@@ -5,22 +5,58 @@ pub struct Sql(pub String, pub Vec<SqlArg>);
 
 impl Sql {
     pub fn to_unsafe_string(&self) -> String {
+        let mut quoted = false;
         // Replace every ? with param
+        // Replace every $1 with param 1
+        // Respect quoting incl. quoted quotes
+        // If params are missing they are not replaced
         let mut params = self.1.iter();
+        let mut position_parsing = false;
+        let mut position = String::with_capacity(8);
+        let mut unsafe_string: String = String::new();
 
-        self.0
-            .chars()
-            .map(|c| {
-                if c == '?' {
-                    match params.next() {
-                        Some(p) => p.to_sql_string(),
-                        None => String::from("?"),
-                    }
-                } else {
-                    c.to_string()
+        for c in self.0.chars() {
+            match c {
+                '\'' => {
+                    quoted = !quoted;
                 }
-            })
-            .collect::<String>()
+                '?' if !quoted => {
+                    match params.next() {
+                        Some(p) => unsafe_string.push_str(&p.to_sql_string()),
+                        None => unsafe_string.push('?'),
+                    };
+                }
+                '$' if !quoted => {
+                    position_parsing = true;
+                }
+                ' ' if position_parsing => {
+                    let pos: Result<usize, _> = position.parse();
+                    match pos {
+                        Ok(pos) => {
+                            let arg: Option<&SqlArg> = self.1.get(pos);
+                            match arg {
+                                Some(v) => unsafe_string.push_str(&v.to_sql_string()),
+                                None => {
+                                    unsafe_string.push('$');
+                                    unsafe_string.push_str(&position);
+                                    unsafe_string.push(' ');
+                                }
+                            }
+                        }
+                        _ => {
+                            unsafe_string.push('$');
+                            unsafe_string.push_str(&position);
+                            unsafe_string.push(' ');
+                        }
+                    }
+                    position.clear();
+                    position_parsing = false;
+                }
+                _ if position_parsing => position.push(c),
+                _ => unsafe_string.push(c),
+            }
+        }
+        unsafe_string
     }
     pub fn append(&mut self, sql: &Sql) {
         self.0.push_str(&sql.0);

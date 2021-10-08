@@ -1,21 +1,21 @@
 
 ## The query argument
-All load functions need a query argument, but how is this build?
+All load functions need a query, but how is this build?
 
 The recommended way is to use the `query!` macro.
 
 Alternatives are 
-- to use the query builder, see XXX
-- or to parse a string and deal with errors at runtime, see XX
+- to create a new `Query<T>` object and use its builder methods
+- or to parse a string
 
-This chapter does not explain the Toql query language itself, see chapter XXX to learn about that.
+This chapter does not explain the Toql query language itself, see [here](../5-query-language/introduction.md) to learn about that.
 
 
 ### The query! macro 
 The `query!` macro will compile the provided string into Rust code. Any syntax mistakes, wrong path or field names show up 
 as compiler errors! 
 
-Queries are typesafe, so `query!` takes a type and a query expression. See here:
+Queries are typesafe, so `query!` takes a type and a query expression. See here (This assumes a Toql derived User struct):
 
 ```
 use toql::prelude::query;
@@ -26,7 +26,7 @@ let q = query!(User, "*, id eq ?",  user_id);
 To include query parameters just insert a question mark in the query string and provide the parameter after the string. 
 
 In the example above it would also be possible to put the number 5 directly into the query string, since it's a constant. 
-The resulting SQL would be the same, as Toql extracts the parameter in either case to prevent Sql injections.
+The resulting SQL would be the same as Toql extracts the parameter in either case to prevent SQL injections.
 
 The Toql query only works with numbers and strings, see `SqlArg`. 
 However this is not be a problem: Since database columns have a type, the database is able convert a string or number into its column type.
@@ -43,8 +43,8 @@ Here we include the query `q1` into `q`. Since queries are typesafe, so you can 
 
 ### Working with keys
 
-There are situations with entities that may have composite keys when it's easier to work with keys.
-(Keys are automatically derived from the `Toql` derive and are located where the struct is.)
+When entities composite keys it's easier to work directly with those keys.
+(Key structs are automatically derived from the `Toql` derive and are located where the struct is.)
 
 With a single key, this is possible
 ```
@@ -56,7 +56,7 @@ let q2 = query!(User, "*, {}", Query::from(k));
 let q3 = query!(User, "*, {}", k);
 ```
 
-With multiple keys, you can do this:
+With multiple keys you can do this:
 ```
 use toql::prelude::{query, Query};
 
@@ -68,9 +68,9 @@ let qk = ks.iter().collect::<Query<_>>();
 let q5 = query!(User, "*, {}", qk);
 ```
 
-The query `q4` only works for simple key, not composite keys, where as `qk` works for any type of key.
+The query `q4` only works for simple key, not a composite key, whereas `qk` works for any type of key.
 
-If you deal with entities you can get their keys from them. See here
+If you deal with entities you can get their keys from them (notice the `Keyed` trait). See here
 
 ```
 use toql::prelude::{query, Keyed, Query};
@@ -97,7 +97,7 @@ let q7 = query!(User, "*, {}", qk);
 Do you like the `collect` style? There is a nifty implementation detail:
 If you collect keys, they will always be concatenated with *OR*, queries however will be concatenated with *AND*.
 
-Compare q8 and q 10 here:
+Compare `q8` and `q10` here:
 ```
 let ks = Vec[UserKey{id:5}, UserKey{id:6}];
 let q8 = ks.iter().collect::<Query<_>>(); // -> query!(User, "(id eq5; id eq 6)")
@@ -113,8 +113,10 @@ let q10 = [q8, q9].iter().collect<Query<_>>(); // -> query!(User, "username, (id
 In the example above the query `q3` is build with a `UserKey`. This is possible because `UserKey` implements `Into<Query<User>>`.
 You can also implement this trait for you own types. Let's assume a book category.
 
-#### Usecase 1: Adding an enum filter to the query
+#### Example 1: Adding an enum filter to the query
 ```
+use toql::prelude::Query;
+
 enum BookCategory {
     Novel,
     Cartoon
@@ -136,7 +138,7 @@ Now use it like this
 let q = query!(Book, "*, {}", BookCategory::Novel);
 ```
 
-#### Usecase 2: Adding an authorisation filter to the query
+#### Example 2: Adding an authorization filter to the query
 
 
 ```
@@ -181,7 +183,7 @@ The `query!` macro produces a `Query` type and can further be altered using all 
 One interesting method is `with`. It takes a `QueryWith` trait that can be implemented for any custom type to enhance the query. 
 This is more powerful than `Into<Query>` because you can also access auxiliary parameters.
 
-Aux params can be used in SQL expressions. See the chapter on mapping XX for more information.
+Aux params can be used in SQL expressions. See [here](TODOD) more information.
 
 ```
 struct Config {

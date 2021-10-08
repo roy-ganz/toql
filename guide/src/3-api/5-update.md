@@ -20,10 +20,10 @@ In the example above all three statements do the same.
 
 
 ### The fields! macro
-The `fields!` macro compiles a fiels list. Any invalid paths and field names show up at compile time.
+The `fields!` macro compiles a list of fields. Any invalid path or field name shows up at compile time.
 
-The update function will consider all fields form the field list to update. Optional fields will only 
-be updated if they contain some value. See Mapping XXX for details
+The update function will consider all fields from the field list to update. Optional fields will only 
+be updated if they contain some value. See [the mapping]() for details
 
 #### Joins
 You can update only the foreign key of a join or field from the join. Consider this field list:
@@ -38,7 +38,9 @@ With `*` we consider all simple fields from User for updating,
 and finally `address_id` has no effect, since keys cannot be updated.
 
 #### Merges
-Updates can delete and insert struct to update merges.
+Updates can either 
+- update existing structs in a `Vec` 
+- or insert new structs in the `Vec` and delete removed structs. 
 
 Consider this field list:
 
@@ -46,10 +48,10 @@ Consider this field list:
 let f = fields!(User, "*, books, books_*")
 ```
 
-With `*` we consider all simple fields from User for updating, 
-`books` will delete all books that are linked to the user but are not found in the books vector. 
+- With `*` we consider all simple fields from User for updating, 
+- `books` will delete all books that are linked to the user but are not found in the books vector. 
 It will also insert new book (and possible partial joins)
-`books_*` will update all simple fields in the existing books.
+- `books_*` will update all simple fields in the existing books.
 
 Here a full working example.
 
@@ -94,12 +96,14 @@ Here a full working example.
     
 ```
 
-To mark new books, add them with an invalid key. A value of 0 or '' is considered invalid.
+To mark new books, add them with an invalid key. A value of `0` or an empty string `''` is considered invalid.
 Normally databases start counting indexes from 1 and some databases consider an empty string like null, which is 
-also forbidden. So this idea of invalid key should normally work, however check with you database.
+also forbidden as primary key. So this idea of invalid key should normally work, however check with you database.
 
- As book has a composite key (id, user_id). For an invalid key here we set the user_id to 0. 
- Toql will notice that and insert a new book (with the corrected user_id of 27) and consider all simple fields form the second book with id 200.
+In rare cases where this does not work. Insert and delete your structs manually, using the `ToqlApi` functions.
+
+In the example above the first book has an invalid composite key (`id`, `user_id`), because user_id is `0`. 
+Toql will notice that and insert a new book (with the correct `user_id` of `27`). From the second book with `id 200` the field `title` will be updated.
 
 
 

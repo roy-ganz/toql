@@ -1,6 +1,6 @@
 # Toql (_Transfer Object Query Language_)
 
-Toql (pronounced *Toe-cue-ell*) is an ORM for async databases that features
+Toql (pronounced *To-cue-ell*) is an ORM for async databases that features
 - Translation between Rust structs and database tables.
 - Can load and modify nested structs.
 - Has a unique dead simple query language.
@@ -20,11 +20,10 @@ Toql is free and open source software, distributed under a dual license of MIT a
 
 ## Available Sections
 
-This book is split into several sections, with this introduction being the first. The others are:
+This guide is split into several sections, with this introduction being the first. The others are:
 
-* [Concept](concept.md) - The overall concept of Toql.
-* [Toql Api](api/introduction.md) - How to use the library.
-* [The Toql query Language](query-language/introduction.md) - How to build queries.
-* [Toql Derive](derive/introduction.md) - Map Rust structs to database tables and query fields.
-* [Customization]()  - Deal with edge cases through own handlers.
-* [Appendix]()  - Different tipps and tricks
+* [Concept](2-concept.md) - The overall concept of Toql.
+* [Toql Api](3-api/1-toql-api.md) - How to use the library.
+* [Toql Derive](4-derive/1-introduction.md) - Map Rust structs to database tables and query fields.
+* [The Toql query Language](5-query-language/1-introduction.md) - How to build queries.
+* [Appendix](6-appendix/1-overview)  - Different tipps and tricks

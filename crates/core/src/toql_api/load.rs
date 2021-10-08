@@ -19,7 +19,6 @@ pub trait Load<R, E>:
     + TreePredicate
     + TreeIndex<R, E>
     + TreeMerge<R, E>
-   // + std::fmt::Debug
     + Send
 {
 }

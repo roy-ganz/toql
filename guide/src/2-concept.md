@@ -3,18 +3,18 @@
 Toql is a ORM that aim to boost your developer comfort and speed when working with databases.
 
 To use it you must derive `Toql` for all structs that represent a table in your database:
-- The fields of those struct represent either columns, SQL expressions or 
+- The fields of those structs represent either columns, SQL expressions or 
 relationships to other tables.
-- The fields also determine the field name or in case of a relationship the path name in the Toql query.
+- The fields also determine the field name or in case of a relationship the path name in the [Toql query](5-query-language/1-introduction.md)
 
-A derived struct can then be inserted, updated, deleted and loaded from your database. The functions will either take a full query string or just a list of field names or path names.
+A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the [Toql API functions](3-api/1-toql-api.md) with a query string or just a list of fields or paths, because Toql allows nested operations.
 
-Here the flow in a web environment:
+Here the typical flow in a web environment:
 1. A web client sends a Toql query to the REST Server.
 2. The server uses Toql to parse the query and create SQL statements.
-3. SQL is send to the Database.
-4. Toql puts the resulting datasets into Rust structs.
-4. The structs are sent to the client.
+3. Toql sends the SQL to the Database.
+4. Toql deserializes the resulting rows into Rust structs.
+4. These structs are sent to the client.
 
 ## Example
 
@@ -40,10 +40,10 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
 	}
     
 	#[query("/?<toql..>")]
-	fn query(query: Form<ToqlQuery>,  conn: Connection<ExampleDb>, 
+	fn query(query: Form<ToqlQuery>, mut conn: Connection<ExampleDb>, 
 		cache: State<Cache> {
 		
-		let toql = MySqlAsync::from(&*conn, &cache);
+		let toql = MySqlAsync::from(&mut *conn, &cache);
 
 		let r = toql.load_page(query, page)?;
 		Ok(Counted(Json(r.0), r.1))
