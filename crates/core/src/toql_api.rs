@@ -46,7 +46,9 @@ use paths::Paths;
 ///  }
 /// ```
 #[async_trait]
-pub trait ToqlApi {
+pub trait ToqlApi 
+    where  Self::Error: From<ToqlError>
+{
     type Row;
     type Error;
 
@@ -63,16 +65,16 @@ pub trait ToqlApi {
     where T: Update + Keyed, Q: BorrowMut<T> + Send + Sync;
 
     async fn load_one<T, B>(&mut self, query: B) -> Result<T, Self::Error>
-    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
-    <Self as ToqlApi>::Error: From<ToqlError>;
+    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>;
+   
         
     async fn load_many<T, B>(&mut self, query: B) -> Result<Vec<T>, Self::Error>
-    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync,
-   <Self as ToqlApi>::Error: From<ToqlError> ;
+    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>;
+   
     
     async fn load_page<T, B>(&mut self, query: B, page: Page) -> Result<(Vec<T>, Option<PageCounts>), Self::Error>
-    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>,
-     <Self as ToqlApi>::Error: From<ToqlError>;
+    where T: Load<Self::Row, Self::Error>, B: Borrow<Query<T>> + Send + Sync, <T as Keyed>::Key: FromRow<Self::Row, Self::Error>;
+   
 
     async fn count<T, B>(&mut self, query: B) -> Result<u64, Self::Error>
     where T: Count, B: Borrow<Query<T>> + Send + Sync;

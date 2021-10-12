@@ -20,6 +20,8 @@ pub trait Load<R, E>:
     + TreeIndex<R, E>
     + TreeMerge<R, E>
     + Send
+    
 {
+   
 }
 

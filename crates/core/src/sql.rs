@@ -19,6 +19,7 @@ impl Sql {
             match c {
                 '\'' => {
                     quoted = !quoted;
+                    unsafe_string.push('\'');
                 }
                 '?' if !quoted => {
                     match params.next() {
