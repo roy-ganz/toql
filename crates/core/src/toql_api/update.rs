@@ -1,7 +1,12 @@
 use crate::{
-    tree::{tree_identity::TreeIdentity, tree_update::TreeUpdate, 
-    tree_predicate::TreePredicate, tree_insert::TreeInsert, tree_map::TreeMap}, 
-    table_mapper::mapped::Mapped
+    table_mapper::mapped::Mapped,
+    tree::{
+        tree_identity::TreeIdentity, tree_insert::TreeInsert, tree_map::TreeMap,
+        tree_predicate::TreePredicate, tree_update::TreeUpdate,
+    },
 };
 
-pub trait Update: TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert + TreeMap + Send + Sync{}
+pub trait Update:
+    TreeUpdate + Mapped + TreeIdentity + TreePredicate + TreeInsert + TreeMap + Send + Sync
+{
+}

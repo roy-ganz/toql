@@ -2,7 +2,6 @@
 use crate::sql_builder::select_stream::Select;
 use std::result::Result;
 
-
 /// This is implemented by Toql Derive for all dervied structs with generic row and error.
 /// The implementation of primitive types with concrete row and error type must be done by the database crate.
 pub trait FromRow<R, E> {

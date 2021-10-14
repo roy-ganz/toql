@@ -66,21 +66,19 @@ impl<'a> Resolver<'a> {
         SqlExpr::from(tokens)
     }
 
-    /// Resolve aux params. 
+    /// Resolve aux params.
     /// Repalce  aux params with SqlArg if value is in parameter map
     /// Otherwise return unresolved aux param
-    pub fn resolve_aux_params(
-        sql_expr: SqlExpr,
-        aux_params: &ParameterMap,
-    ) -> SqlExpr {
+    pub fn resolve_aux_params(sql_expr: SqlExpr, aux_params: &ParameterMap) -> SqlExpr {
         let mut tokens = Vec::new();
 
         for token in sql_expr.tokens {
             if let SqlExprToken::AuxParam(ref name) = token {
-                if let Some(arg) = aux_params.get(name) { // Resolve if possible, copy SQL argument
+                if let Some(arg) = aux_params.get(name) {
+                    // Resolve if possible, copy SQL argument
                     tokens.push(SqlExprToken::Arg(arg.clone()));
                 } else {
-                   tokens.push(token); // Copy unresolved aux param
+                    tokens.push(token); // Copy unresolved aux param
                 }
             } else {
                 tokens.push(token); // Copy any not aux params
@@ -88,7 +86,6 @@ impl<'a> Resolver<'a> {
         }
         SqlExpr::from(tokens) // Return resolved string
     }
-    
 
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
         let mut tokens = Vec::new();
@@ -100,7 +97,10 @@ impl<'a> Resolver<'a> {
         Ok(SqlExpr::from(tokens))
     }
 
-    pub fn alias_to_literals(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
+    pub fn alias_to_literals(
+        &self,
+        sql_expr: &'a SqlExpr,
+    ) -> std::result::Result<SqlExpr, ResolverError> {
         let mut tokens = Vec::new();
 
         for token in sql_expr.tokens() {
@@ -130,8 +130,6 @@ impl<'a> Resolver<'a> {
         &self,
         token: &'a SqlExprToken,
     ) -> Result<Cow<'a, SqlExprToken>, ResolverError> {
-      
-
         match token {
             SqlExprToken::SelfAlias if self.self_alias.is_some() => Ok(Cow::Owned(
                 SqlExprToken::Literal(self.self_alias.unwrap().to_string()),
@@ -139,9 +137,8 @@ impl<'a> Resolver<'a> {
             SqlExprToken::OtherAlias if self.other_alias.is_some() => Ok(Cow::Owned(
                 SqlExprToken::Literal(self.other_alias.unwrap().to_string()),
             )),
-              tok => Ok(Cow::Borrowed(tok)),
+            tok => Ok(Cow::Borrowed(tok)),
         }
-        
     }
 
     fn resolve_token(
@@ -169,7 +166,7 @@ impl<'a> Resolver<'a> {
                     .ok_or_else(|| ResolverError::AuxParamMissing(name.to_string()))?
                     .to_owned();
                 Ok(Cow::Owned(SqlExprToken::Arg(arg)))
-            },
+            }
             SqlExprToken::UnresolvedArg if arg_iter.is_some() => {
                 let arg = arg_iter
                     .unwrap()
@@ -298,37 +295,36 @@ impl<'a> Resolver<'a> {
                     }
                 }
                 _ => {
-                        let mut nc = 1;
-                        for (ar, c) in a.iter().zip(columns.iter().cycle())  {
-                            match c {
-                                PredicateColumn::SelfAliased(_) => {
-                                    return Err(ResolverError::UnresolvedSelfAlias)
-                                }
-                                PredicateColumn::OtherAliased(_) => {
-                                    return Err(ResolverError::UnresolvedOtherAlias)
-                                }
-                                PredicateColumn::Literal(lit) => stmt.push_str(lit),
-                                PredicateColumn::Aliased(canonical_alias, col) => {
-                                    let alias = alias_translator.translate(canonical_alias);
-                                    stmt.push_str(&alias);
-                                    stmt.push('.');
-                                    stmt.push_str(col);
-                                }
-                            };
-
-                            stmt.push_str(" = ?");
-                            args.push(ar.to_owned());
-                            if nc < columns.len() {
-                                 nc += 1;
-                                 stmt.push_str(" AND ");
-                            } else {
-                                 nc = 1;
-                                 stmt.push_str(" OR ");
+                    let mut nc = 1;
+                    for (ar, c) in a.iter().zip(columns.iter().cycle()) {
+                        match c {
+                            PredicateColumn::SelfAliased(_) => {
+                                return Err(ResolverError::UnresolvedSelfAlias)
                             }
-                             
+                            PredicateColumn::OtherAliased(_) => {
+                                return Err(ResolverError::UnresolvedOtherAlias)
+                            }
+                            PredicateColumn::Literal(lit) => stmt.push_str(lit),
+                            PredicateColumn::Aliased(canonical_alias, col) => {
+                                let alias = alias_translator.translate(canonical_alias);
+                                stmt.push_str(&alias);
+                                stmt.push('.');
+                                stmt.push_str(col);
+                            }
+                        };
+
+                        stmt.push_str(" = ?");
+                        args.push(ar.to_owned());
+                        if nc < columns.len() {
+                            nc += 1;
+                            stmt.push_str(" AND ");
+                        } else {
+                            nc = 1;
+                            stmt.push_str(" OR ");
+                        }
                     }
-                    
-                    if nc == 1 { 
+
+                    if nc == 1 {
                         // Remove ' OR '
                         stmt.pop();
                         stmt.pop();

@@ -64,9 +64,8 @@ pub struct JoinArg {
     pub join_sql: Option<String>,
 
     #[darling(default)]
-    pub partial_table: bool
-    //#[darling(default)]
-    //pub discr_sql: Option<String>,
+    pub partial_table: bool, //#[darling(default)]
+                             //pub discr_sql: Option<String>
 }
 
 // Attribute on struct field
@@ -84,12 +83,12 @@ pub struct ToqlField {
     pub skip: bool,
     #[darling(default)]
     pub skip_mut: bool,
-  /*   #[darling(default)]
-    pub skip_query: bool, */
-    /*  #[darling(default)]
-    pub count_filter: bool, */
-  /*   #[darling(default)]
-    pub count_select: bool, */
+    /*   #[darling(default)]
+      pub skip_query: bool, */
+      /*  #[darling(default)]
+      pub count_filter: bool, */
+    /*   #[darling(default)]
+      pub count_select: bool, */
     #[darling(default)]
     pub preselect: bool,
     #[darling(default)]
@@ -114,7 +113,7 @@ pub struct ToqlField {
     pub aux_param: Vec<ParamArg>,
     #[darling(default)]
     pub roles: FieldRoles,
-   /*  #[darling(multiple)]
+    /*  #[darling(multiple)]
     pub on_aux_param: Vec<OnAuxParamArg>, */
 }
 
@@ -141,7 +140,7 @@ pub struct PredicateArg {
     #[darling(multiple)]
     pub on_aux_param: Vec<PredicateOnAuxParamArg>,
 
-    #[darling(default)] 
+    #[darling(default)]
     pub count_filter: bool,
 }
 #[derive(FromMeta, Clone, Debug)]
@@ -183,7 +182,7 @@ pub struct Toql {
     pub alias: Option<String>,
     #[darling(default)]
     pub skip_mut: bool,
- /*    #[darling(default)]
+    /*    #[darling(default)]
     pub skip_load: bool, */
     #[darling(default)]
     pub auto_key: bool,
@@ -191,7 +190,6 @@ pub struct Toql {
     pub skip_select: bool,
     #[darling(default)]
     pub skip_query_builder: bool, */
-
     #[darling(multiple)]
     pub predicate: Vec<PredicateArg>,
     #[darling(multiple)]
@@ -235,9 +233,9 @@ impl quote::ToTokens for Toql {
             columns: _,
             alias: _,
             skip_mut,
-         //   skip_load,
+            //   skip_load,
             auto_key: _,
-         /*    skip_select: _,
+            /*    skip_select: _,
             skip_query_builder, */
             predicate: _,
             selection: _,
@@ -260,39 +258,39 @@ impl quote::ToTokens for Toql {
                 toql_key.add_key_field(&f)?;
 
                 // Generate query functionality
-              //  if !skip_load {
-                    if field.skip {
-                        toql_entity_from_row.add_deserialize_skip_field(&f);
-                        continue;
-                    }
-                    toql_mapper.add_field_mapping(&f)?;
+                //  if !skip_load {
+                if field.skip {
+                    toql_entity_from_row.add_deserialize_skip_field(&f);
+                    continue;
+                }
+                toql_mapper.add_field_mapping(&f)?;
 
-                    // Don't build further code for invalid field, process next field
-                    /*  if result.is_err() {
-                        continue;
-                    } */
+                // Don't build further code for invalid field, process next field
+                /*  if result.is_err() {
+                    continue;
+                } */
 
-                    toql_query_fields.add_field_for_builder(&f);
+                toql_query_fields.add_field_for_builder(&f);
 
-                    toql_tree.add_tree_traits(&f);
+                toql_tree.add_tree_traits(&f);
 
-                    toql_key_from_row.add_key_deserialize(&f)?;
+                toql_key_from_row.add_key_deserialize(&f)?;
 
-                    if field.merge.is_some() {
-                        toql_mapper.add_merge_function(&f);
+                if field.merge.is_some() {
+                    toql_mapper.add_merge_function(&f);
 
-                        toql_entity_from_row.add_ignored_path(&f);
+                    toql_entity_from_row.add_ignored_path(&f);
 
-                        toql_entity_from_row.add_path_loader(&f);
-                    }
+                    toql_entity_from_row.add_path_loader(&f);
+                }
 
-                    toql_entity_from_row.add_deserialize(&f);
+                toql_entity_from_row.add_deserialize(&f);
 
-                    /*  if result.is_err() {
-                        // tokens.extend(result.err());
-                        continue;
-                    } */
-             //   }
+                /*  if result.is_err() {
+                    // tokens.extend(result.err());
+                    continue;
+                } */
+                //   }
 
                 // Generate insert/delete/update functionality
                 // Select is considered part of mutation functionality (Copy)
@@ -330,13 +328,13 @@ impl quote::ToTokens for Toql {
                 tokens.extend(quote!(#toql_key_from_row));
                 tokens.extend(quote!(#toql_entity_from_row));
 
-               // if !skip_query_builder {
-                    tokens.extend(quote!(#toql_query_fields));
+                // if !skip_query_builder {
+                tokens.extend(quote!(#toql_query_fields));
                 //}
 
-             //   if !skip_load {
-                    tokens.extend(quote!(#toql_mapper));
-               // }
+                //   if !skip_load {
+                tokens.extend(quote!(#toql_mapper));
+                // }
 
                 if !skip_mut {
                     tokens.extend(quote!(#toql_insert));

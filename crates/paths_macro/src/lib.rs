@@ -46,7 +46,7 @@ mod paths_macro;
 pub fn paths(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
                                     // eprintln!("{:?}", input);
-    tracing::debug!("Source code for `{:?}`: ", &input);                             
+    tracing::debug!("Source code for `{:?}`: ", &input);
 
     let ast = parse_macro_input!(input as paths_macro::PathsMacro);
 
@@ -59,9 +59,9 @@ pub fn paths(input: TokenStream) -> TokenStream {
         ]))),
     };
 
-   /*  let source = proc_macro::Span::call_site()
-        .source_text()
-        .unwrap_or("".to_string()); */
+    /*  let source = proc_macro::Span::call_site()
+    .source_text()
+    .unwrap_or("".to_string()); */
 
     match gen {
         Ok(o) => {
@@ -69,7 +69,7 @@ pub fn paths(input: TokenStream) -> TokenStream {
             TokenStream::from(o)
         }
         Err(e) => {
-            tracing::debug!("{}",  e.to_string());
+            tracing::debug!("{}", e.to_string());
             TokenStream::from(e)
         }
     }

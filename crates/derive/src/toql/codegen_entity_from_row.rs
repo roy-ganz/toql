@@ -59,7 +59,7 @@ impl<'a> CodegenEntityFromRow<'a> {
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
                 let rust_field_ident = &field.rust_field_ident;
-             
+
                 self.impl_types
                     .insert(field.rust_base_type_ident.to_owned());
                 self.forwards.push(quote!(  <#rust_base_type_ident as toql::from_row::FromRow::<_,E>> :: forward (  &mut iter )?));
@@ -197,7 +197,7 @@ impl<'a> CodegenEntityFromRow<'a> {
                                             return Err(
                                                 toql::error::ToqlError::DeserializeError(toql::deserialize::error::DeserializeError::SelectionExpected(#error_field.to_string())).into());
                                         }
-                                        let mut it2 = iter . clone() ; 
+                                        let mut it2 = iter . clone();
                                       let n = i . clone();
                                        match <#rust_type_ident>::from_row(row, i, iter)? {
                                                 Some(f) => Some(f),

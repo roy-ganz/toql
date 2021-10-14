@@ -191,26 +191,6 @@ impl<'a> SqlBuilder<'a> {
     pub fn merge_expr(&self, query_field_path: &str) -> Result<(SqlExpr, SqlExpr)> {
         let (query_path, basename) = FieldPath::split_basename(query_field_path);
         let mapper = self.mapper_for_query_path(&query_path)?;
-        /* let mut current_mapper = self
-            .table_mapper_registry
-            .get(&self.root_mapper)
-            .ok_or(ToqlError::MapperMissing(self.root_mapper.to_string()))?; // set root ty
-
-        self.mapper_or_merge_for_path(local_path)
-        if !query_path.is_empty() {
-            for d in query_path.children() {
-                dbg!(&d);
-
-                if let Some(j) = current_mapper.merge(d.as_str()) {
-                    current_mapper = self
-                        .table_mapper_registry
-                        .get(&j.merged_mapper)
-                        .ok_or(ToqlError::MapperMissing(j.merged_mapper.to_string()))?;
-                } else {
-                    return Err(ToqlError::MapperMissing(d.as_str().to_string()));
-                }
-            }
-        } */
 
         // Get merge join statement and on predicate
         let merge = mapper.merge(basename).ok_or(ToqlError::NotFound)?;
@@ -267,15 +247,8 @@ impl<'a> SqlBuilder<'a> {
         let (query_path, merge_field) = FieldPath::split_basename(&merge_path);
 
         let base_mapper = self.joined_mapper_for_local_path(&query_path)?;
-
         let root_path = FieldPath::from(&root_mapper.canonical_table_alias);
-        /*  let root_path = if query_path.is_empty() {
-            root_path
-        } else {
-            query_path
-        }; */
         let canonical_path = root_path.append(&query_path);
-        // let self_field = FieldPath::trim_basename(path.as_str());
 
         let merge = base_mapper
             .merge(merge_field)
@@ -426,28 +399,6 @@ impl<'a> SqlBuilder<'a> {
             &mut result,
         )?;
 
-        /* let _unmerged_home_paths = self.selection_from_query(query, &mut build_context)?;
-
-        if count_selection_only {
-            // Strip path and fields that are not in count selection
-            let mut default_count_selection = Vec::new();
-            default_count_selection.push("*".to_string());
-            let root_mapper = self.root_mapper()?;
-
-            for s in root_mapper
-                .selections
-                .get("cnt")
-                .unwrap_or(&default_count_selection)
-            {
-                if s.ends_with("_*") {
-                    build_context
-                        .local_selected_paths
-                        .remove(s.trim_end_matches("_*"));
-                }
-            }
-
-        } */
-
         self.preparse_filter_joins(&query, &mut build_context, count_selection_only)?;
 
         self.build_join_clause(&mut build_context, &mut result, true)?;
@@ -469,7 +420,6 @@ impl<'a> SqlBuilder<'a> {
 
         if !path.is_empty() {
             for p in path.children() {
-                //   println!("Getting join for name {}", p.as_str());
                 if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
                         .table_mapper_registry
@@ -496,7 +446,6 @@ impl<'a> SqlBuilder<'a> {
 
         if !query_path.is_empty() {
             for p in query_path.children() {
-                //   println!("Getting join for name {}", p.as_str());
                 if let Some(join) = current_mapper.joins.get(p.as_str()) {
                     current_mapper = self
                         .table_mapper_registry
@@ -587,16 +536,12 @@ impl<'a> SqlBuilder<'a> {
         // [user address] =[]
 
         let mut join_tree = PathTree::new();
-        /* let home_path = self.home_mapper.to_mixed_case(); */
 
         for local_path in &build_context.local_joined_paths {
-            // let query_path = FieldPath::from(&local_path).prepend(&build_context.query_home_path);
-            // join_tree.insert(&query_path);
             join_tree.insert(&FieldPath::from(&local_path));
         }
 
         // Build join
-
         let expr: SqlExpr = self.resolve_join(
             FieldPath::default(),
             &join_tree,
@@ -693,21 +638,7 @@ impl<'a> SqlBuilder<'a> {
                 _ => on_expr,
             };
 
-            /* let on_expr = match &join.options.join_handler {
-                Some(handler) => {
-                     // Skip Join, if join is optional (LEFT Join) and aux param is missing
-                       match handler.build_on_predicate(on_expr, &aux_params) {
-                           Err(SqlBuilderError::QueryParamMissing(_)) if join.join_type == JoinType::Left => SqlExpr::literal("false"),
-                           Ok(e) => e,
-                           Err(e) => return Err(e.into())
-                       }
-                        },
-                None => on_expr,
-            };
-            */
-            //   println!("{:?}", &on_expr);
             join_expr.extend(on_expr);
-
             join_expr.push_literal(") ");
         }
 
@@ -724,7 +655,6 @@ impl<'a> SqlBuilder<'a> {
         let p = [&self.aux_params, &query.aux_params];
         let aux_params = ParameterMap::new(&p);
 
-        // println!("token: {:?}", &query.tokens);
         for token in &query.tokens {
             match token {
                 QueryToken::Field(field) => {
@@ -906,7 +836,7 @@ impl<'a> SqlBuilder<'a> {
                 }
                 QueryToken::LeftBracket(concatenation) => {
                     // Omit concatenation if where expression is empty or left bracket follows an outer left bracket
-                    if !result.where_expr.is_empty() && !result.where_expr.ends_with_literal("("){
+                    if !result.where_expr.is_empty() && !result.where_expr.ends_with_literal("(") {
                         result
                             .where_expr
                             .push_literal(if concatenation == &Concatenation::And {
@@ -925,8 +855,10 @@ impl<'a> SqlBuilder<'a> {
                         // Remove ' AND ' or 'OR ' token if bracket is not inner bracket
                         // 'AND (' -> removed
                         // 'AND ((' -> reduced to 'AND ('
-                        if  result.where_expr.ends_with_literal(" AND ") || result.where_expr.ends_with_literal(" OR ") {
-                            result.where_expr.pop(); 
+                        if result.where_expr.ends_with_literal(" AND ")
+                            || result.where_expr.ends_with_literal(" OR ")
+                        {
+                            result.where_expr.pop();
                         }
                     } else {
                         result.where_expr.push_literal(")");
@@ -935,10 +867,6 @@ impl<'a> SqlBuilder<'a> {
                 _ => {}
             }
         }
-
-        /*  if !result.where_expr.is_empty() {
-            result.where_expr.pop_literals(if last_concatenation == Concatenation::And {5} else {4}); // Remove trailing ' AND ' resp ' OR '
-        } */
         Ok(())
     }
 
@@ -1002,8 +930,6 @@ impl<'a> SqlBuilder<'a> {
             // Otherwise skip to avoid circular dependency
             if !unmerged_home_paths.contains(query_merge_path.as_str()) {
                 unmerged_home_paths.insert(query_merge_path.to_string());
-                //  println!("Adding `{}` to merge paths", query_merge_path.as_str());
-
                 self.add_all_joins_as_selected_paths(
                     jm.0,
                     local_merge_path.to_string(),
@@ -1155,11 +1081,12 @@ impl<'a> SqlBuilder<'a> {
                             true
                         };
 
-                    // Field is selected 
+                    // Field is selected
                     if query_selection {
                         // If role is invalid raise error for explicit field and skip for path
                         if !role_valid && build_context.local_selected_fields.contains(field_name) {
-                            let role_string = if let Some(e) = &mapped_field.options.load_role_expr {
+                            let role_string = if let Some(e) = &mapped_field.options.load_role_expr
+                            {
                                 e.to_string()
                             } else {
                                 String::from("")
@@ -1209,7 +1136,8 @@ impl<'a> SqlBuilder<'a> {
                     // Field may be preselected (implicit selection)
                     else if mapped_field.options.preselect {
                         if !role_valid {
-                            let role_string = if let Some(e) = &mapped_field.options.load_role_expr {
+                            let role_string = if let Some(e) = &mapped_field.options.load_role_expr
+                            {
                                 e.to_string()
                             } else {
                                 String::from("")
@@ -1327,7 +1255,6 @@ impl<'a> SqlBuilder<'a> {
         query_field: &str,
         build_context: &mut BuildContext,
         unmerged_home_paths: &mut HashSet<String>,
-        /*local_selected_fields: &mut HashSet<String>, */
     ) -> Result<()> {
         let query_path = FieldPath::trim_basename(query_field);
         if !Self::home_contains(&build_context.query_home_path, &query_path) {
@@ -1337,8 +1264,7 @@ impl<'a> SqlBuilder<'a> {
             Some(l) => l,
             None => return Ok(()),
         };
-        //  if !local_path.is_empty() {
-        //local_selected_paths.insert(local_path.to_string());
+
         if let Some(local_merge_path) = self.next_merge_path(&local_path)? {
             unmerged_home_paths.insert(
                 FieldPath::from(&build_context.query_home_path)
@@ -1477,7 +1403,7 @@ impl<'a> SqlBuilder<'a> {
                     self.add_query_field(
                         &field.name,
                         &mut build_context,
-                        &mut unmerged_home_paths, /*&mut local_selected_fields, */
+                        &mut unmerged_home_paths,
                     )?;
                     if let Some(o) = &field.order {
                         let order = match o {
@@ -1646,11 +1572,6 @@ impl<'a> SqlBuilder<'a> {
                         // Let's say selection is  `$users_all` and query_home_path is `users_memberships`
                         // A local selection had to start with `$users_memberships_all`, however we still have to
                         // evaluate `$users_all` because the selection goes down
-                        /*  println!(
-                            "Path `{}` is not local to `{}`",
-                            query_path.as_str(),
-                            &build_context.query_home_path
-                        ); */
                         if build_context
                             .query_home_path
                             .starts_with(query_path.as_str())
@@ -1658,7 +1579,7 @@ impl<'a> SqlBuilder<'a> {
                             if selection_name == "all" {
                                 let mapper =
                                     self.joined_mapper_for_local_path(&FieldPath::default())?;
-                                // println!("Resolving all");
+
                                 build_context.local_selected_paths.insert("".to_string());
                                 self.add_all_joins_as_selected_paths(
                                     &mapper.table_name,
@@ -1667,7 +1588,6 @@ impl<'a> SqlBuilder<'a> {
                                     &mut unmerged_home_paths,
                                 )?;
                             } else if selection_name != "cnt" && selection_name != "mut" {
-                                //println!("Resolving `{}`", selection_name);
 
                                 self.resolve_custom_selection(
                                     &selection.name,
@@ -1772,18 +1692,12 @@ impl<'a> SqlBuilder<'a> {
     }
 
     fn home_contains(home_path: &str, query_path: &FieldPath) -> bool {
-        /*   println!(
-            "Test if query path  {:?} has home {:?}",
-            &query_path, &home_path
-        ); */
-
         let r = match (home_path.is_empty(), query_path.is_empty()) {
             (true, true) => true,
             (false, true) => false,
             (true, false) => true,
             (false, false) => query_path.as_str().starts_with(home_path),
         };
-        //  println!("Result {:?}", r);
 
         r
     }

@@ -1,4 +1,4 @@
-//! [Page](enum.Page.html) is used as an argument in load functions. 
+//! [Page](enum.Page.html) is used as an argument in load functions.
 /// It tells Toql to build and run an additional query
 /// to count the total number of records.
 ///

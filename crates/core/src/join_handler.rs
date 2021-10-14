@@ -5,14 +5,14 @@
 /// TODO proper example
 /// Notice that aux_params may not only come from context or a query,
 /// but also from that mapped join. This is to give additional building context
-/// 
+///
 /// ## Example (see full working example in tests)
 /// ``` ignore
 /// use toql::query::FieldFilter;
 /// use toql::join_handler::JoinHandler;
 /// use toql::sql_builder::SqlBuilderError;
 /// struct MyHandler {};
-/// 
+///
 /// impl JoinHandler for MyHandler {
 ///     fn build_on_predicate(&self, on_predicate: SqlExpr, aux_params: &ParameterMap,)
 ///     ->Result<Option<SqlExpr>, SqlBuilderError> {
@@ -29,9 +29,12 @@
 /// }
 ///
 use crate::parameter_map::ParameterMap;
-use crate::sql_expr::{resolver::Resolver, SqlExpr};
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use std::{fmt, marker::{Sync, Send}};
+use crate::sql_expr::{resolver::Resolver, SqlExpr};
+use std::{
+    fmt,
+    marker::{Send, Sync},
+};
 
 pub trait JoinHandler {
     /// Returns customized SQL on predicate
@@ -40,8 +43,8 @@ pub trait JoinHandler {
         on_predicate: SqlExpr,
         aux_params: &ParameterMap,
     ) -> Result<SqlExpr, SqlBuilderError> {
-         let expr = Resolver::resolve_aux_params(on_predicate, aux_params);
-         Ok(expr)
+        let expr = Resolver::resolve_aux_params(on_predicate, aux_params);
+        Ok(expr)
     }
 }
 

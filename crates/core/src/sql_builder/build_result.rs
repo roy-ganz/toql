@@ -15,8 +15,6 @@ use std::collections::HashSet;
 
 /// The SQL Builder Result is created by the [SQL Builder](../sql_builder/struct.SqlBuilder.html).
 pub struct BuildResult {
-    /*  pub(crate) table: String,
-    pub(crate) canonical_table_alias: String, */
     pub(crate) any_selected: bool,
     pub(crate) distinct: bool,
     pub(crate) table_alias: String,
@@ -37,8 +35,6 @@ pub struct BuildResult {
 impl BuildResult {
     pub fn new(verb: SqlExpr) -> Self {
         BuildResult {
-            /* table,
-            canonical_table_alias, */
             table_alias: String::new(),
             any_selected: false,
             distinct: false,
@@ -58,7 +54,6 @@ impl BuildResult {
     }
     /// Returns true if no field is neither selected nor filtered.
     pub fn is_empty(&self) -> bool {
-        //!self.any_selected && self.where_expr.is_empty()
         !self.select_expr.is_empty() && self.where_expr.is_empty()
     }
     pub fn any_selected(&self) -> bool {
@@ -91,13 +86,6 @@ impl BuildResult {
         self.from_expr.push_alias(canonical_alias);
     }
 
-    /*   pub fn push_join(&mut self, s: &str) {
-           if !self.join_sql.0.ends_with(' ') {
-               self.join_sql.0.push(' ');
-           }
-           self.join_sql.0.push_str(s);
-       }
-    */
     pub fn push_join(&mut self, j: SqlExpr) {
         if !self.join_expr.is_empty() && !self.join_expr.ends_with_literal(" ") {
             self.join_expr.push_literal(" ");
@@ -105,7 +93,6 @@ impl BuildResult {
         self.join_expr.extend(j);
     }
 
-    //pub fn to_sql_with_modifier_and_extra(
     pub fn to_sql(
         &self,
         aux_params: &ParameterMap,
@@ -124,8 +111,6 @@ impl BuildResult {
         let n = preselect_sql.1.len() + select_sql.1.len() + join_sql.1.len() + where_sql.1.len();
         let mut args = Vec::with_capacity(n);
 
-        
-
         let mut stmt = verb_sql.0;
         stmt.push(' ');
 
@@ -135,7 +120,6 @@ impl BuildResult {
             stmt.push(' ');
         }
 
-        
         if !preselect_sql.is_empty() {
             stmt.push_str(&preselect_sql.0);
             stmt.push_str(", ");
@@ -174,13 +158,12 @@ impl BuildResult {
             stmt.push_str(&self.extra);
         }
 
-
         Ok(Sql(stmt, args))
     }
 
     /// Returns count SQL statement.
     pub fn set_count_select(&mut self) {
-         if self.distinct {
+        if self.distinct {
             self.select_expr = SqlExpr::literal("COUNT(DISTINCT *)");
         } else {
             self.select_expr = SqlExpr::literal("COUNT(*)");

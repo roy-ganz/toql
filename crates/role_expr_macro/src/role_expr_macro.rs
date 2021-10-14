@@ -33,7 +33,6 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
 
         match pair.as_rule() {
             Rule::role => {
-                
                 let role = span.as_str();
                 Some(quote!(toql::role_expr::RoleExpr::role(#role . to_string())))
             }
@@ -74,7 +73,6 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
                 expr
             }
             Rule::or_clause => {
-                
                 let mut negate = false;
                 let mut expr: Option<TokenStream> = None;
                 for p in pair.into_inner() {
@@ -110,7 +108,7 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
                     }
                 }
                 expr
-            },
+            }
             _ => None,
         }
     }
@@ -119,7 +117,8 @@ pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, Toke
     match PestRoleExprParser::parse(Rule::query, &role_expr_string.value()) {
         Ok(mut query_pairs) => {
             let mut expr: Option<TokenStream> = None;
-            if let Some(query_pair) = query_pairs.next(){ // there can be at most one query pair
+            if let Some(query_pair) = query_pairs.next() {
+                // there can be at most one query pair
                 let pairs = query_pair.into_inner();
                 for p in pairs {
                     let e = evaluate_pair(p);

@@ -5,7 +5,8 @@
 //!
 
 use crate::{
-    field_handler::FieldHandler, result::Result, table_mapper::mapped::Mapped, table_mapper::TableMapper,
+    field_handler::FieldHandler, result::Result, table_mapper::mapped::Mapped,
+    table_mapper::TableMapper,
 };
 use heck::MixedCase;
 use std::collections::HashMap;
@@ -25,12 +26,6 @@ impl TableMapperRegistry {
         self.mappers.get(name)
     }
 
-    /* pub fn with_alias_format(alias_format: AliasFormat) -> TableMapperRegistry {
-        TableMapperRegistry {
-            mappers: HashMap::new(),
-      //      alias_format,
-        }
-    }  */
     pub fn insert(&mut self, mapper: TableMapper) {
         // Mixed case corresponds to toql path
         self.mappers

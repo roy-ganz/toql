@@ -11,13 +11,10 @@ impl Select {
     }
 }
 
-/*
-SelectStream memorizes which columns and joins are selected and is needed for the deserialization trait FromRow.
-The selections can either come from the query or the preselections from the mapping.
-The number of selections does not correspond with the number of selected columns / expressions, because
-each join gets an additional selection. For the number of columns take `column_counter` from  `BuildResult`.
-
-*/
+/// SelectStream memorizes which columns and joins are selected and is needed for the deserialization trait FromRow.
+/// The selections can either come from the query or the preselections from the mapping.
+/// The number of selections does not correspond with the number of selected columns / expressions, because
+/// each join gets an additional selection. For the number of columns take `column_counter` from  `BuildResult`.
 #[derive(Debug)]
 pub struct SelectStream {
     stream: Vec<Select>,
@@ -27,11 +24,6 @@ impl SelectStream {
     pub fn new() -> Self {
         Self { stream: Vec::new() }
     }
-
-    /*   pub fn count_selected(&self) -> usize {
-        self.stream.iter().filter(|s| s!= &&Select::None).count()
-    } */
-
     pub fn change(&mut self, pos: usize, select: Select) {
         if let Some(p) = self.stream.get_mut(pos) {
             *p = select;

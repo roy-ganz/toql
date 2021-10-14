@@ -57,7 +57,7 @@ pub enum ToqlError {
     /// Access to shared registry, typically inside cache, failed
     RegistryPoisenError(String),
 
-    /// Expected a value in Option<T>, but found none. Includes position. 
+    /// Expected a value in Option<T>, but found none. Includes position.
     /// TODO:: Check to replace with std::option::NoneError + Backtrace
     NoneError(String),
 }

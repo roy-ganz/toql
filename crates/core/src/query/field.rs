@@ -178,20 +178,6 @@ impl Field {
     pub fn into_name(self) -> String {
         self.name
     }
-
-    /*  pub fn basename(&self) -> &str {
-        match self.name.rfind('_'){
-            Some(i) => &self.name[i+1..],
-            None => &self.name
-        }
-    } */
-    /*  pub fn path(&self) -> FieldPath {
-        //let i = self.name.rfind('_').unwrap_or(0);
-
-        //FieldPath::from(&self.name[0..i])
-        FieldPath::from(&self.name)
-
-    } */
 }
 
 impl ToString for Field {
@@ -235,4 +221,3 @@ impl From<&str> for Field {
         Field::from(s)
     }
 }
- 

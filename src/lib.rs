@@ -48,13 +48,11 @@
 
 pub use toql_core::alias_format;
 pub use toql_core::alias_translator;
-pub use toql_core::toql_api::fields;
-pub use toql_core::toql_api::paths;
 pub use toql_core::error;
 pub use toql_core::from_row;
+pub use toql_core::identity;
 pub use toql_core::key;
 pub use toql_core::key_fields;
-pub use toql_core::identity;
 pub use toql_core::keyed;
 pub use toql_core::map_key;
 pub use toql_core::merge;
@@ -64,10 +62,12 @@ pub use toql_core::sql;
 pub use toql_core::sql_arg;
 pub use toql_core::sql_expr;
 pub use toql_core::sql_expr_parser;
+pub use toql_core::toql_api::fields;
+pub use toql_core::toql_api::paths;
 
 pub use toql_core::log_sql; // Export macro for derives
-pub use toql_core::ok_or_fail; // Export macro (TODO: check for removal)
-pub use toql_core::none_error; // Export macro for macros
+pub use toql_core::none_error;
+pub use toql_core::ok_or_fail; // Export macro (TODO: check for removal) // Export macro for macros
 
 pub use toql_core::backend;
 pub use toql_core::field_handler;
@@ -102,8 +102,6 @@ pub use toql_core::role_expr_parser;
 pub use toql_core::role_validator;
 
 pub use toql_core::toql_api; // export for derives
-
-
 
 pub use toql_core::tracing; // Reexport for derive
 

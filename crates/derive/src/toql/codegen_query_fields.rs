@@ -9,7 +9,6 @@ pub(crate) struct CodegenQueryFields<'a> {
     rust_struct: &'a Struct,
     rust_struct_visibility: &'a syn::Visibility,
     builder_fields_struct: Ident,
-    //build_wildcard: bool,
     builder_fields: Vec<TokenStream>,
     key_composite_predicates: Vec<TokenStream>,
 }
@@ -51,10 +50,6 @@ impl<'a> CodegenQueryFields<'a> {
 
         let rust_struct_visibility = &self.rust_struct_visibility;
 
-        // Omit wildcard function, if there is already a field called `wildcard`
-        /*  if rust_field_name == "wildcard" {
-            self.build_wildcard = false;
-        } */
         let key_index = syn::Index::from(self.key_composite_predicates.len());
         match &field.kind {
             FieldKind::Regular(ref regular_attrs) => {
@@ -108,89 +103,30 @@ impl<'a> quote::ToTokens for CodegenQueryFields<'a> {
         let builder_fields = &self.builder_fields;
         let struct_ident = &self.rust_struct.rust_struct_ident;
 
-        // let key_predicates = &self.key_predicates;
-
-        /*
-               let wildcard = if self.build_wildcard {
-                   quote!(
-                       pub fn wildcard( self) -> toql::query::wildcard::Wildcard {
-                           toql::query::wildcard::Wildcard::from(self.0)
-                       }
-                   )
-               } else {
-                   quote!()
-               };
-        */
-
-        /*  let key_predicate_code = quote!(
-            let query = toql::query::Query::new() #(#key_composite_predicates)*;
-            query
-        ); */
-
         let builder = quote!(
 
-                        /* impl toql::query::QueryPredicate<#struct_ident> for &#struct_key_ident {
-                            fn predicate(self, path :&str) -> toql::query::Query<#struct_ident> {
-                                toql::query::Query::new()
-                                  #(#key_composite_predicates)*
-                            }
-                        }
+            impl toql::query_fields::QueryFields for #struct_ident {
+                type FieldsType = #builder_fields_struct ;
+                fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
+                fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
+            }
 
-                        impl Into<toql::query::Query<#struct_ident>> for #struct_key_ident {
-                            fn into(self) -> toql::query::Query<#struct_ident> {
-                                    toql::query::QueryPredicate::predicate(&self, "")
-                            }
-                        }
-                         impl Into<toql::query::Query<#struct_ident>> for &#struct_key_ident {
-                            fn into(self) -> toql::query::Query<#struct_ident> {
-                                toql::query::QueryPredicate::predicate(self, "")
-                            }
-                        } */
-        /*
-                    impl toql::update_field::UpdateField for #builder_fields_struct {
-                        fn into_field<'a>(mut self) -> String {
-                            if self.0.ends_with("_") {
-                                self.0.pop();
-                            }
-                            self.0
-                        }
+            #rust_struct_visibility struct #builder_fields_struct ( String ) ;
 
-                    }
+            impl toql::query_path::QueryPath for #builder_fields_struct {
+                fn into_path(self) -> String {
+                self.0
+                }
+            }
 
-                    impl toql::insert_path::InsertPath for #builder_fields_struct {
-                        fn into_path<'a>(mut self) -> String {
-                            if self.0.ends_with("_") {
-                                self.0.pop();
-                            }
-                            self.0
-                        }
+            impl #builder_fields_struct {
+                #rust_struct_visibility fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
+                #rust_struct_visibility fn from_path ( path : String ) -> Self { Self ( path ) }
+                #rust_struct_visibility fn into_name ( self) -> String { self.0}
+                #(#builder_fields)*
 
-                    }*/
-
-                    impl toql::query_fields::QueryFields for #struct_ident {
-                        type FieldsType = #builder_fields_struct ;
-
-                        //fn predicates ( ) -> #builder_predicates_struct { #builder_predicates_struct :: new ( ) }
-                        fn fields ( ) -> #builder_fields_struct { #builder_fields_struct :: new ( ) }
-                        fn fields_from_path ( path : String ) -> #builder_fields_struct { #builder_fields_struct :: from_path ( path ) }
-                    }
-
-                    #rust_struct_visibility struct #builder_fields_struct ( String ) ;
-
-                    impl toql::query_path::QueryPath for #builder_fields_struct {
-                        fn into_path(self) -> String {
-                        self.0
-                        }
-                    }
-
-                    impl #builder_fields_struct {
-                        #rust_struct_visibility fn new ( ) -> Self { Self :: from_path ( String :: from ( "" ) ) }
-                        #rust_struct_visibility fn from_path ( path : String ) -> Self { Self ( path ) }
-                        #rust_struct_visibility fn into_name ( self) -> String { self.0}
-                        #(#builder_fields)*
-
-                    }
-                );
+            }
+        );
 
         log::debug!(
             "Source code for `{}`:\n{}",

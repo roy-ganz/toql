@@ -5,7 +5,7 @@ pub trait TreeInsert {
     fn columns<'a, I>(descendents: I) -> Result<SqlExpr, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>;
-    fn values<'a,'b, I, J>(
+    fn values<'a, 'b, I, J>(
         &self,
         descendents: I,
         roles: &std::collections::HashSet<String>,

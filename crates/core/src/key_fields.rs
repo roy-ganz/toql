@@ -9,7 +9,6 @@ use crate::sql_arg::SqlArg;
 
 mod join;
 
-
 /// Trait to provide the entity type for a key. This is only used
 /// for ergonomics of the api.
 pub trait KeyFields {

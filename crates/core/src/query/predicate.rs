@@ -83,4 +83,3 @@ impl From<&str> for Predicate {
         Predicate::from(s)
     }
 }
-

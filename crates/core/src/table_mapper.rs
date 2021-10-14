@@ -29,10 +29,10 @@
 //!  - to all fields with [new_with_handler()](struct.TableMapper.html#method.new_with_handler).
 //!
 pub mod field_options;
-pub mod merge_options;
 pub mod join_options;
 pub mod join_type;
 pub mod mapped;
+pub mod merge_options;
 pub mod predicate_options;
 
 pub(crate) mod field;
@@ -98,17 +98,19 @@ trait MapperFilter {
 /// Translates Toql fields into columns or SQL expressions.
 #[derive(Debug)]
 pub struct TableMapper {
+    /// Database table name
     pub table_name: String,
-    pub canonical_table_alias: String, // Calculated from table_name
 
-    /* pub aliased_table: String,
-    pub alias_format: AliasFormat,       // */
-    pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>, // Default field handler
-    pub(crate) predicate_handler: Arc<dyn PredicateHandler + Send + Sync>, // Default predicate handler
+    /// Calculated alias from table_name
+    pub canonical_table_alias: String,
 
-    // pub(crate) field_order: Vec<String>,
+    /// Default field handler
+    pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>,
 
-    // Deserialization order for selects statements
+    /// Default predicate handler
+    pub(crate) predicate_handler: Arc<dyn PredicateHandler + Send + Sync>,
+
+    /// Deserialization order for selects statements
     pub(crate) deserialize_order: Vec<DeserializeType>,
 
     /// Joined mappers
@@ -153,16 +155,7 @@ where {
         let f = DefaultFieldHandler {};
         Self::new_with_handler(sql_table_name, f)
     }
-    /// Create new mapper for _table_ or _table alias_.
-    /// The alias format defines how aliases are look like, if
-    /// the Sql Mapper is called to build them.
-    /*  pub fn with_alias_format<T>(table: T, alias_format: AliasFormat) -> Self
-    where
-        T: Into<String>,
-    {
-        let f = BasicFieldHandler {};
-        Self::new_with_handler(table, alias_format, f)
-    } */
+
     /// Creates new mapper with a custom handler.
     /// Use this to provide custom filter functions for all fields.
     pub fn new_with_handler<H>(sql_table_name: &str, handler: H) -> Self
@@ -203,13 +196,14 @@ where {
     pub fn joined_mapper(&self, name: &str) -> Option<String> {
         self.join(name).map(|j| j.joined_mapper.to_owned())
     }
-      pub fn is_partial_join(&self, name: &str) -> bool {
-          self.join(name).filter(|j| j.options.partial_table).is_some()
-      }
+    pub fn is_partial_join(&self, name: &str) -> bool {
+        self.join(name)
+            .filter(|j| j.options.partial_table)
+            .is_some()
+    }
     pub fn merged_mapper(&self, name: &str) -> Option<String> {
         self.merge(name).map(|m| m.merged_mapper.to_owned())
     }
-    
 
     pub(crate) fn join(&self, name: &str) -> Option<&Join> {
         self.joins.get(name)
@@ -221,25 +215,18 @@ where {
         self.fields.get(name)
     }
 
-    pub(crate) fn joined_partial_mappers(&self) -> Vec<(String,String)> {
-        self.joins.iter().filter_map(|(n, j)| if j.options.partial_table{ Some((n.to_string(), j.joined_mapper.to_string()))} else {None}).collect()
+    pub(crate) fn joined_partial_mappers(&self) -> Vec<(String, String)> {
+        self.joins
+            .iter()
+            .filter_map(|(n, j)| {
+                if j.options.partial_table {
+                    Some((n.to_string(), j.joined_mapper.to_string()))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
-
-
-
-    
-
-    /* /// Maps all fields from a struct as a joined dependency.
-       /// Example: To map for a user an `Address` struct that implements `Mapped`
-       /// ``` ignore
-       /// user_mapper.map_join<Address>("address", "a");
-       /// ```
-       pub fn map_join<'a, T: Mapped>(&'a mut self, toql_path: &str, sql_alias: &str) -> &'a mut Self {
-           //T::map(self, toql_path, sql_alias);
-
-           self
-       }
-    */
 
     /// Maps a Toql field to a field handler.
     /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
@@ -268,91 +255,16 @@ where {
     where
         H: 'static + FieldHandler + Send + Sync,
     {
-        // TODO put into function
-        /*  let query_param_regex = regex::Regex::new(r"<([\w_]+)>").unwrap();
-        let sql_expression = sql_expression;
-        let mut sql_aux_param_names = Vec::new();
-        let sql_expression = query_param_regex.replace(&sql_expression, |e: &regex::Captures| {
-            let name = &e[1];
-            sql_aux_param_names.push(name.to_string());
-            "?"
-        }); */
-
         let t = Field {
             options,
             handler: Arc::new(handler),
             expression,
-            // sql_aux_param_names: sql_aux_param_names,
         };
         self.deserialize_order
             .push(DeserializeType::Field(toql_field.to_string()));
         self.fields.insert(toql_field.to_string(), t);
         self
     }
-    /// Changes the handler of a field.
-    /// This will panic if the field does not exist
-    /// Use it to make changes, it prevents typing errors of field names.
-    /*  pub fn alter_handler<H>(&mut self, toql_field: &str, handler: H) -> &mut Self
-    where
-        H: 'static + FieldHandler + Send + Sync,
-    {
-        let sql_target = self.fields.get_mut(toql_field).expect(&format!(
-            "Cannot alter \"{}\": Field is not mapped.",
-            toql_field
-        ));
-
-        sql_target.handler = Arc::new(handler);
-        self
-    } */
-    /// Changes the handler and options of a field.
-    /// This will panic if the field does not exist
-    /// Use it to make changes, it prevents typing errors of field names.
-    /* pub fn alter_handler_with_options(
-        &mut self,
-        toql_field: &str,
-        handler: Arc<dyn FieldHandler + Sync + Send>,
-        options: FieldOptions,
-    ) -> &mut Self {
-        let sql_target = self.fields.get_mut(toql_field).expect(&format!(
-            "Cannot alter \"{}\": Field is not mapped.",
-            toql_field
-        ));
-        sql_target.options = options;
-        sql_target.handler = handler;
-        self
-    } */
-    /// Changes the database column or SQL expression of a field.
-    /// This will panic if the field does not exist
-    /// Use it to make changes, it prevents typing errors of field names.
-    /* pub fn alter_field(
-        &mut self,
-        toql_field: &str,
-        sql_expression: SqlExpr,
-        options: FieldOptions,
-    ) -> &mut Self {
-        let sql_target = self.fields.get_mut(toql_field).expect(&format!(
-            "Cannot alter \"{}\": Field is not mapped.",
-            toql_field
-        ));
-        sql_target.expression = sql_expression;
-        sql_target.options = options;
-        self
-    }
-
-     pub fn get_options(&self, toql_field: &str) -> Option<FieldOptions> {
-        match self.fields.get(toql_field) {
-            Some(f) => Some(f.options.clone()),
-            None => None
-        }
-    }
-
-    pub fn set_options(&mut self, toql_field: &str, options: FieldOptions )  {
-        let f =  self.fields.get_mut(toql_field).expect(&format!(
-            "Cannot alter \"{}\": Field is not mapped.",
-            toql_field
-        ));
-        f.options = options;
-    }  */
 
     /// Adds a new field - or updates an existing field - to the mapper.
     pub fn map_column<'a, T>(&'a mut self, toql_field: &str, column_name: T) -> &'a mut Self
@@ -479,7 +391,13 @@ where {
     where
         S: Into<String> + Clone,
     {
-       self.map_merge_with_options(toql_path, merged_mapper, merge_join, merge_predicate, MergeOptions::new())
+        self.map_merge_with_options(
+            toql_path,
+            merged_mapper,
+            merge_join,
+            merge_predicate,
+            MergeOptions::new(),
+        )
     }
     pub fn map_merge_with_options<S>(
         &mut self,
@@ -487,7 +405,7 @@ where {
         merged_mapper: &str,
         merge_join: SqlExpr,
         merge_predicate: SqlExpr,
-        options: MergeOptions
+        options: MergeOptions,
     ) -> &mut Self
     where
         S: Into<String> + Clone,
@@ -500,7 +418,7 @@ where {
                 merged_mapper: merged_mapper.to_camel_case(),
                 merge_join,
                 merge_predicate,
-                options
+                options,
             },
         );
         self

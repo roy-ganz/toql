@@ -1,10 +1,9 @@
-use crate::{query::field_path::FieldPath};
+use crate::query::field_path::FieldPath;
 use std::{collections::HashMap, result::Result};
 
 // R is database specific row, E the desired output error
 // Trait is implemented for structs that can deserialize from rows
-pub trait TreeIndex<R, E>
-{
+pub trait TreeIndex<R, E> {
     fn index<'a, I>(
         descendents: I,
         rows: &[R],

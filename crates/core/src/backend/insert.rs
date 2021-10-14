@@ -7,14 +7,18 @@ use crate::{
     sql_builder::{sql_builder_error::SqlBuilderError, SqlBuilder},
     sql_expr::resolver::Resolver,
     table_mapper::{mapped::Mapped, TableMapper},
-    tree::{tree_identity::{IdentityAction, TreeIdentity}, tree_insert::TreeInsert, tree_predicate::TreePredicate},
+    tree::{
+        tree_identity::{IdentityAction, TreeIdentity},
+        tree_insert::TreeInsert,
+        tree_predicate::TreePredicate,
+    },
 };
 use std::cell::RefCell;
 use std::{borrow::BorrowMut, collections::HashMap};
 
 use super::{map, Backend};
-use crate::toql_api::paths::Paths;
 use crate::result::Result;
+use crate::toql_api::paths::Paths;
 use std::collections::HashSet;
 
 use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert};
@@ -43,7 +47,7 @@ where
     // [p0] = [a, c, e]
     // [p1] = [a_b, c_d]
     // Then execution order is [j1], [j0], [m], [p0], [p1]
-    
+
     let mut joins: Vec<HashSet<String>> = Vec::new();
     let mut partials: Vec<HashSet<String>> = Vec::new();
     let mut merges: HashSet<String> = HashSet::new();
@@ -58,34 +62,31 @@ where
 
     // Insert root
     let home_path = FieldPath::default();
-    let sql =
-        build_insert_sql(
-            backend,
-            entities,
-            &home_path,
-            &mut std::iter::repeat(&true),
-            "",
-            "",
-        )?;
-   
+    let sql = build_insert_sql(
+        backend,
+        entities,
+        &home_path,
+        &mut std::iter::repeat(&true),
+        "",
+        "",
+    )?;
+
     insert_sql(backend, home_path, sql, entities).await?;
-    
-   
+
     // Insert joins from bottom to top
     for l in (0..joins.len()).rev() {
         // TEST not rev
         for p in joins.get(l).unwrap() {
             let mut path = FieldPath::from(&p);
 
-            let sql = 
-                build_insert_sql(
-                    backend,
-                    entities,
-                    &mut path,
-                    &mut std::iter::repeat(&true),
-                    "",
-                    "",
-                )?;
+            let sql = build_insert_sql(
+                backend,
+                entities,
+                &mut path,
+                &mut std::iter::repeat(&true),
+                "",
+                "",
+            )?;
             insert_sql(backend, path, sql, entities).await?;
         }
     }
@@ -94,46 +95,39 @@ where
     for p in &merges {
         let path = FieldPath::from(&p);
 
-        let sql = 
-            build_insert_sql(
+        let sql = build_insert_sql(
+            backend,
+            entities,
+            &path,
+            &mut std::iter::repeat(&true),
+            "",
+            "",
+        )?;
+
+        insert_sql(backend, path, sql, entities).await?;
+    }
+
+    // Insert partials from top to bottom
+    for l in 0..partials.len() {
+        for p in partials.get(l).unwrap() {
+            // Ensure not already inserted (unsure if needed)
+            if merges.contains(p) {
+                continue;
+            }
+
+            let mut path = FieldPath::from(&p);
+
+            let sql = build_insert_sql(
                 backend,
                 entities,
-                &path,
+                &mut path,
                 &mut std::iter::repeat(&true),
                 "",
                 "",
             )?;
-        
-        insert_sql(backend, path, sql, entities).await?;
-    }
-   
 
-    // Insert partials from top to bottom
-    for l in 0..partials.len() {
-        
-        for p in partials.get(l).unwrap() {
-            
-           
-            // Ensure not already inserted (unsure if needed)
-            if merges.contains(p) {
-                    continue;
-            }
-
-            let mut path = FieldPath::from(&p);
-           
-            let sql = 
-                build_insert_sql(
-                    backend,
-                    entities,
-                    &mut path,
-                    &mut std::iter::repeat(&true),
-                    "",
-                    "",
-                )?;
-            
             insert_sql(backend, path, sql, entities).await?;
         }
-        
     }
     Ok(())
 }
@@ -155,10 +149,14 @@ where
     }
     let sql = sql.unwrap();
 
-    let  descendents = path.children();
-    if <T as TreeIdentity>::auto_id( descendents)? {
+    let descendents = path.children();
+    if <T as TreeIdentity>::auto_id(descendents)? {
         let ids = backend.insert_sql(sql).await?;
-        set_tree_identity(IdentityAction::Set(RefCell::new(ids)), entities,  path.children())?;
+        set_tree_identity(
+            IdentityAction::Set(RefCell::new(ids)),
+            entities,
+            path.children(),
+        )?;
     } else {
         backend.execute_sql(sql).await?;
     }
@@ -192,22 +190,20 @@ where
 pub fn set_tree_identity<'a, T, Q, I>(
     action: IdentityAction,
     entities: &mut [Q],
-    descendents:  I,
+    descendents: I,
 ) -> Result<()>
 where
     T: TreeIdentity,
     Q: BorrowMut<T>,
     I: Iterator<Item = FieldPath<'a>> + Clone,
 {
-   
     for e in entities.iter_mut() {
-            let e_mut = e.borrow_mut();
-            <T as TreeIdentity>::set_id(e_mut,  descendents.clone(), &action)?;
+        let e_mut = e.borrow_mut();
+        <T as TreeIdentity>::set_id(e_mut, descendents.clone(), &action)?;
     }
 
     Ok(())
 }
-
 
 pub fn build_insert_sql<'a, T, Q, B, R, E, J>(
     backend: &mut B,
@@ -222,7 +218,7 @@ where
     T: Mapped + TreeInsert,
     Q: BorrowMut<T>,
     E: From<ToqlError>,
-    J: Iterator<Item = &'a bool> ,
+    J: Iterator<Item = &'a bool>,
 {
     use crate::sql_expr::SqlExpr;
 
@@ -312,7 +308,7 @@ where
 {
     let ty = <T as Mapped>::type_name();
     // Add partials for root
-    insert_partial_tables_order(mappers, &ty, 0, &FieldPath::default(), partials)?;   
+    insert_partial_tables_order(mappers, &ty, 0, &FieldPath::default(), partials)?;
 
     for path in paths {
         let field_path = FieldPath::from(path.as_ref().trim_end_matches("_"));
@@ -323,33 +319,28 @@ where
             .get(&ty)
             .ok_or_else(|| ToqlError::MapperMissing(ty.to_owned()))?;
 
-        
-
         for (d, c) in steps.zip(children) {
             if let Some(j) = mapper.joined_mapper(c.as_str()) {
-                
-                
-
-               
-
                 if !mapper.is_partial_join(c.as_str()) {
-                     if joins.len() <= level {
+                    if joins.len() <= level {
                         joins.push(HashSet::new());
                     }
                     joins.get_mut(level).unwrap().insert(d.as_str().to_string());
                 } else {
-                        if partials.len() <= level {
+                    if partials.len() <= level {
                         partials.push(HashSet::new());
                     }
-                    partials.get_mut(level).unwrap().insert(d.as_str().to_string());
+                    partials
+                        .get_mut(level)
+                        .unwrap()
+                        .insert(d.as_str().to_string());
                     insert_partial_tables_order(mappers, &j, level + 1, &d, partials)?;
                 }
-                
+
                 level += 1;
                 mapper = mappers
                     .get(&j)
                     .ok_or_else(|| ToqlError::MapperMissing(j.to_owned()))?;
-               
             } else if let Some(m) = mapper.merged_mapper(c.as_str()) {
                 level = 0;
                 merges.insert(d.as_str().to_string());
@@ -358,60 +349,18 @@ where
                     .ok_or_else(|| ToqlError::MapperMissing(m.to_owned()))?;
                 insert_partial_tables_order(mappers, &m, level, &d, partials)?;
             } else {
-                return Err(SqlBuilderError::JoinMissing(c.as_str().to_owned(), mapper.table_name.to_string()) .into());
+                return Err(SqlBuilderError::JoinMissing(
+                    c.as_str().to_owned(),
+                    mapper.table_name.to_string(),
+                )
+                .into());
             }
         }
     }
 
     Ok(())
 }
-/*
-pub fn plan_insert_partial_tables_order<T, S: AsRef<str>>(
-    registry: &TableMapperRegistry,
-    paths: &[S],
-    joins: &mut Vec<HashSet<String>>,
-) -> Result<()>
-where
-    T: Mapped,
-{
-    let ty = <T as Mapped>::type_name();
-    let sql_builder = SqlBuilder::new(&ty, registry);
-    let level = 0;
-    for path in paths {
-        let path = FieldPath::from(path.as_ref());
-        plan_partial_tables_order(&sql_builder, level, &path, joins)?
-    }
-    Ok(())
-}
- */
 
-/* fn plan_partial_tables_order(
-    sql_builder: &SqlBuilder,
-    level: usize,
-    query_path: &FieldPath,
-    joins: &mut Vec<HashSet<String>>) -> Result<()>{
-
-    /* let ty = <T as Mapped>::type_name();
-
-    let sql_builder = SqlBuilder::new(&ty, registry);*/
-    let (query_path, fieldname) = FieldPath::split_basename(query_path.trim_end_matches("_"));
-    if let Ok(mapper) = sql_builder.mapper_for_query_path(&query_path){
-
-        if let Some(mapper) = mapper.joined_mapper(fieldname) {
-
-        let partial_joins : Vec<String> = mapper.joined_partial_mappers();
-
-        for p in &partial_joins {
-            let qp = query_path.append(p);
-            plan_partial_tables_order(&sql_builder, level + 1, &qp, joins)?;
-            if joins.len() <= level {
-                joins.push(HashSet::new())
-            }
-            joins.get_mut(level).unwrap().insert(qp.as_str().to_string());
-        }
-    }
-    Ok(())
-}  */
 fn insert_partial_tables_order(
     mappers: &HashMap<String, TableMapper>,
     mapper_name: &str,
@@ -419,10 +368,6 @@ fn insert_partial_tables_order(
     query_path: &FieldPath,
     joins_or_merges: &mut Vec<HashSet<String>>,
 ) -> Result<()> {
-    /* let ty = <T as Mapped>::type_name();
-
-    let sql_builder = SqlBuilder::new(&ty, registry);*/
-
     let mapper = mappers
         .get(mapper_name)
         .ok_or_else(|| ToqlError::MapperMissing(mapper_name.to_owned()))?;

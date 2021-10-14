@@ -20,7 +20,7 @@ impl JoinOptions {
         JoinOptions {
             key: false,
             preselect: false,
-            partial_table : false,
+            partial_table: false,
             skip_wildcard: false,
             skip_mut: false,
             load_role_expr: None,

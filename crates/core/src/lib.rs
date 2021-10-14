@@ -10,9 +10,9 @@ pub extern crate serde; // For generated keys and Join<T>
 pub mod error;
 pub mod alias_format;
 pub mod deserialize;
+pub mod identity;
 pub mod key;
 pub mod key_fields;
-pub mod identity;
 pub mod keyed;
 pub mod map_key;
 pub mod page;
@@ -34,10 +34,11 @@ pub mod val_macro;
 #[macro_use]
 pub mod none_error_macro;
 
-
 extern crate lazy_static;
 
+pub mod alias_translator;
 pub mod merge;
+pub mod parameter_map;
 pub mod query;
 pub mod query_fields;
 pub mod query_parser;
@@ -45,8 +46,6 @@ pub mod query_path;
 pub mod sql_builder;
 pub mod sql_expr;
 pub mod sql_expr_parser;
-pub mod alias_translator;
-pub mod parameter_map;
 
 pub mod field_handler;
 pub mod from_row;

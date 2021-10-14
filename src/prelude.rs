@@ -1,7 +1,7 @@
 pub use toql_core::cache::Cache;
 pub use toql_core::cache_builder::CacheBuilder;
 pub use toql_core::error::ToqlError;
-pub use toql_core::field_handler::{FieldHandler, DefaultFieldHandler};
+pub use toql_core::field_handler::{DefaultFieldHandler, FieldHandler};
 pub use toql_core::join_handler::JoinHandler;
 pub use toql_core::page::Page;
 pub use toql_core::page_counts::PageCounts;
@@ -13,7 +13,7 @@ pub use toql_core::sql_expr::SqlExpr;
 pub use toql_core::join::Join;
 //pub use toql_core::try_join::TryJoin;
 
-pub use toql_core::query::{query_with::QueryWith, Query, field::Field, field_filter::FieldFilter};
+pub use toql_core::query::{field::Field, field_filter::FieldFilter, query_with::QueryWith, Query};
 pub use toql_core::sql_builder::sql_builder_error::SqlBuilderError;
 pub use toql_fields_macro::fields;
 pub use toql_paths_macro::paths;
@@ -31,14 +31,19 @@ pub use toql_sql_expr_macro::sql_expr;
 
 pub use toql_derive::{Toql, ToqlEnum};
 
- // Export macros
-pub use toql_core::{log_literal_sql, log_mut_literal_sql, log_mut_sql, log_sql, val, rval, join, rval_join,  none_error};
+// Export macros
+pub use toql_core::{
+    join, log_literal_sql, log_mut_literal_sql, log_mut_sql, log_sql, none_error, rval, rval_join,
+    val,
+};
 
-pub use toql_core::backend::{context::Context,context_builder::ContextBuilder};
+pub use toql_core::backend::{context::Context, context_builder::ContextBuilder};
 pub use toql_core::from_row::FromRow;
 
 pub use toql_core::alias_format::AliasFormat;
 //pub use toql_core::to_query::ToQuery;
 pub use toql_core::sql::Sql;
-pub use toql_core::toql_api::{ToqlApi, count::Count, insert::Insert, update::Update, delete::Delete, load::Load, fields::Fields, paths::Paths};
-
+pub use toql_core::toql_api::{
+    count::Count, delete::Delete, fields::Fields, insert::Insert, load::Load, paths::Paths,
+    update::Update, ToqlApi,
+};

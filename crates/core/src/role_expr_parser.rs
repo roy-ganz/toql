@@ -20,12 +20,7 @@ impl RoleExprParser {
     /// can be used to examine to problem in detail.
     pub fn parse(role_expr: &str) -> Result<RoleExpr, ToqlError> {
         fn evaluate_pair(pair: Pair<Rule>) -> Option<RoleExpr> {
-            /*  println!("Rule:    {:?}", pair.as_rule());
-            println!("Span:    {:?}", pair.as_span());
-            println!("Text:    {}", pair.as_str()); */
-
             let span = pair.clone().as_span();
-
             match pair.as_rule() {
                 Rule::role => Some(RoleExpr::role(span.as_str().to_string())),
 
@@ -103,7 +98,6 @@ impl RoleExprParser {
                 }
             }
         }
-        //  println!("{:?}", query);
         Ok(expr.unwrap_or_else(RoleExpr::invalid))
     }
 }

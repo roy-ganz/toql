@@ -1514,7 +1514,7 @@ impl toql::tree::tree_identity::TreeIdentity for Beta {
     }
 }
 impl toql::tree::tree_identity::TreeIdentity for &mut Beta {
-     #[allow(unused_mut)]
+    #[allow(unused_mut)]
     fn auto_id<'a, I>(mut descendents: &mut I) -> std::result::Result<bool, toql::error::ToqlError>
     where
         I: Iterator<Item = toql::query::field_path::FieldPath<'a>>,

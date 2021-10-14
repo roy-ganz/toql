@@ -1,14 +1,14 @@
 //! Join struct to simplify update handling of joins
 /// A join struct can contain either the full entity or just it's key.
-/// This allows to load the full entity. For updates however, 
+/// This allows to load the full entity. For updates however,
 /// you are not forced to set a full entity if you only want to  
-/// updating a foreign key. 
-/// 
-/// ### Compare both 
+/// updating a foreign key.
+///
+/// ### Compare both
 ///
 /// ``` ignore
 /// use toql::prelude::Join;
-/// 
+///
 /// #[derive(Toql)]
 /// struct User {
 ///    #[toql(key)]
@@ -19,8 +19,8 @@
 ///     country: Country
 ///  }
 ///
-/// For loading both `language` and `country` behave the same. 
-/// The difference comes on updating: Lets assume a web interface 
+/// For loading both `language` and `country` behave the same.
+/// The difference comes on updating: Lets assume a web interface
 /// that can change both `language` and `country`.
 /// For `language`, the web can only send back the key. It will deserialize into the join.
 /// To change `country` however the client needs to send back a full valid country,
@@ -41,7 +41,6 @@ use crate::error::ToqlError;
 
 use std::boxed::Box;
 
-
 // The Join struct that hold either an entity or it's key.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -51,7 +50,7 @@ use std::boxed::Box;
 #[cfg_attr(feature = "serde_feature", serde(untagged))]
 pub enum Join<E: crate::keyed::Keyed> {
     /// Full entity is held. The entity is wrapped inside a `Box`. That does allow
-    /// circular dependencies, in theory. In practice the compiler goes wild :( 
+    /// circular dependencies, in theory. In practice the compiler goes wild :(
     Entity(Box<E>),
     /// The entities key
     Key(E::Key),
@@ -93,20 +92,19 @@ where
     }
 }
 
-
 impl<T> Join<T>
 where
     T: crate::keyed::Keyed,
 {
     /// Constructs join for entity
-    pub fn with_entity(entity: T) -> Self{
-       Join::Entity(Box::new(entity))
-    } 
+    pub fn with_entity(entity: T) -> Self {
+        Join::Entity(Box::new(entity))
+    }
 
     /// Constructs join for key
-    pub fn with_key(key: impl Into<<T as crate::keyed::Keyed>::Key>) -> Self{
-       Join::Key(key.into())
-    } 
+    pub fn with_key(key: impl Into<<T as crate::keyed::Keyed>::Key>) -> Self {
+        Join::Key(key.into())
+    }
 
     /// Returns entity or `None`, if key is held.
     pub fn entity(&self) -> Option<&T> {

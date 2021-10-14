@@ -27,7 +27,6 @@ impl Selection {
     }
 }
 
-
 impl ToString for Selection {
     fn to_string(&self) -> String {
         let mut s = String::new();

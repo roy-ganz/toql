@@ -52,10 +52,7 @@ pub fn parse(
 
     match PestFieldListParser::parse(Rule::query, &field_list_string.value()) {
         Ok(pairs) => {
-            output_stream.extend(evaluate_pair(
-                &mut pairs.flatten(),
-                &struct_type,
-            ));
+            output_stream.extend(evaluate_pair(&mut pairs.flatten(), &struct_type));
         }
         Err(e) => {
             let msg = e.to_string();
@@ -83,12 +80,11 @@ fn evaluate_pair(
                     .filter(|p| !p.is_empty())
                     .filter(|p| *p != "*")
                     .map(|p| {
-                        let name =
-                            Ident::new(&p.to_snake_case(), Span::call_site());
+                        let name = Ident::new(&p.to_snake_case(), Span::call_site());
                         quote!( .#name ())
                     })
                     .collect::<Vec<_>>();
-               
+
                 methods.push( quote!(toql::query_path::QueryPath::wildcard(<#struct_type as toql::query_fields::QueryFields>::fields() #(#method_names)*).into_string()) )
             }
             Rule::field_path => {

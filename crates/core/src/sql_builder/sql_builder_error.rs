@@ -40,9 +40,13 @@ impl fmt::Display for SqlBuilderError {
             }
             SqlBuilderError::SelectionMissing(ref s) => write!(f, "selection `{}` is missing", s),
             SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
-            SqlBuilderError::JoinMissing(ref s, ref t) => write!(f, "join `{}` is missing on mapper for table `{}`", s, t),
+            SqlBuilderError::JoinMissing(ref s, ref t) => {
+                write!(f, "join `{}` is missing on mapper for table `{}`", s, t)
+            }
             SqlBuilderError::MergeMissing(ref s) => write!(f, "merge `{}` is missing", s),
-            SqlBuilderError::RoleRequired(ref s, ref p) => write!(f, "role `{}` is required for `{}`", s, p),
+            SqlBuilderError::RoleRequired(ref s, ref p) => {
+                write!(f, "role `{}` is required for `{}`", s, p)
+            }
             SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
             SqlBuilderError::KeyMismatch(ref t, ref s) => {
                 write!(f, "Key with value `{}` does not match key of `{}` ", t, s)

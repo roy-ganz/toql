@@ -69,8 +69,8 @@ pub fn fields(input: TokenStream) -> TokenStream {
     );
      */
     /* let source = proc_macro::Span::call_site()
-        .source_text()
-        .unwrap_or("".to_string()); */
+    .source_text()
+    .unwrap_or("".to_string()); */
 
     match gen {
         Ok(o) => {
@@ -82,5 +82,4 @@ pub fn fields(input: TokenStream) -> TokenStream {
             TokenStream::from(e)
         }
     }
-    
 }

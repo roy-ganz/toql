@@ -177,9 +177,6 @@ impl QueryParser {
 
         for pair in pairs.flatten().into_iter() {
             let span = pair.clone().as_span();
-            //   println!("Rule:    {:?}", pair.as_rule());
-            //   println!("Span:    {:?}", span);
-            //   println!("Text:    {}", span.as_str());
             match pair.as_rule() {
                 Rule::field_clause => {
                     token_info.token_type = TokenType::Field;
@@ -207,9 +204,6 @@ impl QueryParser {
                         .to_string();
                     token_info.token_type = TokenType::Wildcard;
                 }
-                /* Rule::wildcard_path => {
-                      token_info.name = span.as_str().to_string(); // Somehow not working
-                } */
                 Rule::filter0_name => {
                     token_info.filter = Some(span.as_str().to_string());
                 }
@@ -260,8 +254,7 @@ impl QueryParser {
                 Rule::rpar => {
                     // Right bracket finishes token, if not warping inner bracket
                     // E.g ..((+name eq 'fd)),... -> Inner brackets finish token
-                    if let Some(token) = token_info.build_token()?
-                    {
+                    if let Some(token) = token_info.build_token()? {
                         query.tokens.push(token);
                         token_info = TokenInfo::new(); // Restart token builder
                     }
@@ -274,8 +267,7 @@ impl QueryParser {
                 }
                 Rule::separator => {
                     let concat_type = span.as_str().chars().next();
-                    if let Some(token) = token_info.build_token()?
-                    {
+                    if let Some(token) = token_info.build_token()? {
                         query.tokens.push(token);
                         token_info = TokenInfo::new(); // Restart token builder
                     }

@@ -1,12 +1,13 @@
-
 use crate::{
+    key_fields::KeyFields,
     query::{field::Field, Query},
-    key_fields::KeyFields
 };
 
-impl<T> From<T> for Query<T::Entity> where T: KeyFields{
-
-    fn from(fields:T) -> Query<T::Entity> {
+impl<T> From<T> for Query<T::Entity>
+where
+    T: KeyFields,
+{
+    fn from(fields: T) -> Query<T::Entity> {
         let mut query = Query::new();
         let params = fields.params();
         let fs = T::fields();
@@ -23,7 +24,5 @@ impl<T> From<T> for Query<T::Entity> where T: KeyFields{
             }
         }
         query
-
     }
-
 }

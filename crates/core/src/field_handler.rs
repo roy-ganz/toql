@@ -25,8 +25,7 @@
 use crate::parameter_map::ParameterMap;
 use crate::query::field_filter::FieldFilter;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
-use crate::sql_expr::{SqlExpr, resolver::Resolver};
-
+use crate::sql_expr::{resolver::Resolver, SqlExpr};
 
 pub trait FieldHandler {
     /// Context parameters allow to share information between different handlers
@@ -57,13 +56,6 @@ impl std::fmt::Debug for (dyn FieldHandler + std::marker::Send + std::marker::Sy
         write!(f, "FieldHandler()")
     }
 }
-/*
-pub fn sql_param(s: String) -> String {
-    if s.chars().next().unwrap_or(' ') == '\'' {
-        return unquote(&s).expect("Argument invalid"); // Must be valid, because Pest rule
-    }
-    s
-} */
 
 impl FieldHandler for DefaultFieldHandler {
     fn build_filter(

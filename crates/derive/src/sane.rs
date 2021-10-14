@@ -27,7 +27,7 @@ pub struct Struct {
     pub roles: StructRoles,
     pub wildcard: Option<HashSet<String>>,
     pub auto_key: bool,
-    pub skip_mut: bool
+    pub skip_mut: bool,
 }
 
 impl Struct {
@@ -74,7 +74,7 @@ impl Struct {
             wildcard: toql.wildcard.as_ref().map(|e| e.0.to_owned()), //.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned(),
             //  count_filter: toql.count_filter.as_ref().map(|e|e.0.to_owned()), //Some(toql.count_filter.0); //toql.count_filter.as_ref().map(|v| v.split(",").map(|s| s.trim().to_string()).collect::<HashSet<String>>()).to_owned()
             auto_key: toql.auto_key,
-            skip_mut: toql.skip_mut
+            skip_mut: toql.skip_mut,
         }
     }
 }
@@ -95,7 +95,7 @@ pub struct RegularField {
     pub default_inverse_column: Option<String>,
     pub aux_params: Vec<ParamArg>,
     //pub on_aux_params: Vec<OnAuxParamArg>,
-    pub foreign_key :bool   // Column of this field is used as foreign key
+    pub foreign_key: bool, // Column of this field is used as foreign key
 }
 #[derive(Clone)]
 pub struct JoinField {
@@ -111,7 +111,7 @@ pub struct JoinField {
     pub aux_params: Vec<ParamArg>,
     pub columns: Vec<Pair>,
     pub partial_table: bool,
-    pub foreign_key :bool // Column(s) of this join key is used as foreign key
+    pub foreign_key: bool, // Column(s) of this join key is used as foreign key
 }
 
 #[derive(Clone)]
@@ -168,7 +168,7 @@ pub struct Field {
     pub preselect: bool,
     pub kind: FieldKind,
     pub skip_mut: bool,
- //   pub skip_query: bool,
+    //   pub skip_query: bool,
 }
 
 #[derive(Clone)]
@@ -221,9 +221,10 @@ impl Field {
                 .with_span(&field.ident));
             }
 
-              if field.key &&  field.join.as_ref().unwrap().partial_table {
+            if field.key && field.join.as_ref().unwrap().partial_table {
                 return Err(darling::Error::custom(
-                    "`partial table` not allowed for key fields. Remove from `#[toql(..)]`.".to_string(),
+                    "`partial table` not allowed for key fields. Remove from `#[toql(..)]`."
+                        .to_string(),
                 )
                 .with_span(&field.ident));
             }
@@ -336,7 +337,7 @@ impl Field {
                 aux_params: field.aux_param.clone(),
                 columns: field.join.as_ref().unwrap().columns.clone(),
                 partial_table: field.join.as_ref().unwrap().partial_table,
-                foreign_key : field.foreign_key
+                foreign_key: field.foreign_key,
             })
         } else if field.merge.is_some() {
             if field.key {
@@ -458,8 +459,8 @@ impl Field {
                 //count_filter: field.count_filter,
                 handler: field.handler.to_owned(),
                 aux_params: field.aux_param.clone(),
-              //  on_aux_params: field.on_aux_param.clone(),
-                foreign_key : field.foreign_key
+                //  on_aux_params: field.on_aux_param.clone(),
+                foreign_key: field.foreign_key,
             })
         };
 
@@ -472,7 +473,7 @@ impl Field {
             toql_field_name,
             number_of_options,
             skip_mut: field.skip_mut,
-          //  skip_query: field.skip_query,
+            //  skip_query: field.skip_query,
             skip_wildcard: field.skip_wildcard,
             roles: field.roles.clone(),
             preselect: field.preselect,

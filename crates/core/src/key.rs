@@ -60,7 +60,7 @@ pub trait Key {
             if !expr.is_empty() {
                 expr.push_literal(" AND ".to_string());
             }
-            if aliased{
+            if aliased {
                 expr.push_self_alias();
                 expr.push_literal(".");
             }
@@ -70,5 +70,4 @@ pub trait Key {
         }
         expr
     }
-    
 }

@@ -95,19 +95,3 @@ pub fn valid_key(args: &[SqlArg]) -> bool {
     });
     !contains_zero_key
 }
-
-/*
-impl TryInto<Option<u32>> for &SqlArg {
-    type Error = TryFromSqlArgError;
-    fn try_into(self) -> Result<Option<u32>, Self::Error> {
-
-       if self.is_null() {
-           Ok(None)
-       } else {
-        let v =  self. get_u64().ok_or(TryFromSqlArgError(self.to_owned()))?;
-        <u32 as std::convert::TryFrom<_>>::try_from(v)
-        .map(|v| Some(v))
-        .map_err(|_|TryFromSqlArgError(self.to_owned()))
-       }
-    }
-}  */

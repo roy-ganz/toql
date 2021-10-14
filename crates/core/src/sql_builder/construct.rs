@@ -160,9 +160,8 @@ pub fn aux_param_values(
                     .trim_end_matches('_');
                 // For selected fields there exists target data
                 // For always selected fields, check if path is used by query
-                let selected = (/*join_selected
-                ||*/sql_target.options.preselect
-                        //&& (path.is_empty() || used_paths.contains(&path)))
+                let selected = (
+                        sql_target.options.preselect
                         && (path.is_empty() || selected_paths.contains(path)))
                     || sql_target_data
                         .get(toql_field.as_str())
@@ -183,15 +182,6 @@ pub fn aux_param_values(
                     {
                         result.select_clause.push_str(&sql_field.0);
                         result.select_params.extend_from_slice(&sql_field.1);
-
-                        /*  // Replace query params with actual values
-                        for p in &sql_target.sql_query_params {
-                            let qp = query_params
-                                .get(p)
-                                .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
-                            result.select_params.push(qp.to_string());
-                        } */
-
                         any_selected = true;
                     } else {
                         result.select_clause.push_str("null");
@@ -223,12 +213,6 @@ pub fn aux_param_values(
             result.push_str(&join.aliased_table);
             result
         }
-        /* fn build_join_end(join: &Join) -> String {
-            let mut result = String::from(") ON (");
-            result.push_str(&join.on_predicate);
-            result.push_str(") ");
-            result
-        } */
         pub(crate) fn build_joins(
             joins: &Vec<String>,
             selected_paths: &mut HashSet<String>,
@@ -267,9 +251,6 @@ pub fn aux_param_values(
 
                            result.join_clause.push_str(") ON (");
                             
-            
-                          
-                            
                              // Combine aux params from query and local join params
                              let mut combined_aux_params: HashMap<String, SqlArg> =
                                         HashMap::new();
@@ -293,9 +274,6 @@ pub fn aux_param_values(
                                     result.join_params.extend_from_slice(&params);
                                 }
                             }; 
-                                
-                            
-                            
                         }
                     }
                 }
@@ -317,25 +295,8 @@ pub fn aux_param_values(
             Ok(())
         }
 
-        //println!("Selected joins {:?}", selected_paths);
         // Process top level joins
         build_joins(join_root, selected_paths, sql_joins, aux_params, result, join_tree)?;
-
-        // Process all fields with subpaths from the query
-        /*for (k, v) in sql_join_data  {
-            // If not yet joined, check if subpath should be optionally joined
-            if !v.joined {
-                // For every subpath, check if there is JOIN data available
-                if let Some(t) = sql_joins.get(*k) {
-                    // If there is JOIN data available, use it to construct join
-                    // Join data can be missing for directly typed join
-
-                    result.join_clause.push_str(&t.join_clause);
-                    result.join_clause.push(' ');
-                }
-                v.joined = true; // Mark join as processed
-            }
-        } */
 
         // Remove last whitespace
         if result

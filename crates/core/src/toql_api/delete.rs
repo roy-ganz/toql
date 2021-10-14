@@ -1,4 +1,3 @@
+use crate::{table_mapper::mapped::Mapped, tree::tree_map::TreeMap};
 
-use crate::{tree::tree_map::TreeMap, table_mapper::mapped::Mapped};
-      
 pub trait Delete: Mapped + TreeMap {}

@@ -1,22 +1,21 @@
 //! Alias format for table aliases.
 
-
 /// This determines how the [AliasTranslator](crate::alias_translator::AliasTranslator) formats table aliases in SQL code.
-/// Toql uses table aliases for every column. 
+/// Toql uses table aliases for every column.
 /// E.g. in  `user_address_country.id` the table alias is `user_address_country` and `id` is the column.
 ///
 /// There are 4 different formats to cater for development and production environments:
-///  - [Canonical](AliasFormat::Canonical), this is the internal and default alias. 
+///  - [Canonical](AliasFormat::Canonical), this is the internal and default alias.
 ///    It is the most verbose and useful for debugging, it can however heavily blow up SQL statements. Example: `user_address_country`.
 ///  - [MediumIndex](AliasFormat::MediumIndex), last part of the canonical alias plus number: `country1`
 ///  - [ShortIndex](AliasFormat::ShortIndex), first 2 characters of the last part of the canonical alias plus number: `co1`
-///  - [TinyIndex](AliasFormat::TinyIndex) the shortest possible alias, not human friendly, but useful for production as it's fast for databases to parse. 
+///  - [TinyIndex](AliasFormat::TinyIndex) the shortest possible alias, not human friendly, but useful for production as it's fast for databases to parse.
 ///    Its made up of the letter t plus a number:`t1`
 #[derive(Clone, Debug)]
 pub enum AliasFormat {
     /// Letter _t_ plus number
     TinyIndex,
-    /// First 2 characters of last canonical path node plus number 
+    /// First 2 characters of last canonical path node plus number
     ShortIndex,
     /// Last canonical path node plus number
     MediumIndex,

@@ -1,7 +1,10 @@
 //!
 //!  Aggregated data for function calls inside the SQL Builder.
 
-use crate::{sql_arg::SqlArg, query::{field_order::FieldOrder, field_path::FieldPath}};
+use crate::{
+    query::{field_order::FieldOrder, field_path::FieldPath},
+    sql_arg::SqlArg,
+};
 use std::collections::{HashMap, HashSet};
 
 pub(crate) struct BuildContext {

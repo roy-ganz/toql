@@ -7,25 +7,25 @@ pub struct Alpha {
     text: String,
 
     #[toql(join())]
-    beta1: Beta,  // Preselected inner join
+    beta1: Beta, // Preselected inner join
 
     #[toql(join())]
     beta2: Join<Beta>, // Preselected inner join with Join wrapper
 
     #[toql(join())]
-    beta3: Option<Beta>,  // Selectable inner join
+    beta3: Option<Beta>, // Selectable inner join
 
     #[toql(join())]
     beta4: Option<Join<Beta>>, // Selectable inner join with Join wrapper
 
     #[toql(join())]
-    beta5: Option<Option<Beta>>,  // Selectable left join
+    beta5: Option<Option<Beta>>, // Selectable left join
 
     #[toql(join())]
     beta6: Option<Option<Join<Beta>>>, // Selectable left join with Join wrapper
 
-     #[toql(preselect, join())]
-    beta7: Option<Beta>,  // Preselected left join
+    #[toql(preselect, join())]
+    beta7: Option<Beta>, // Preselected left join
 
     #[toql(preselect, join())]
     beta8: Option<Join<Beta>>, // Preselected left join with Join wrapper
@@ -91,7 +91,7 @@ pub struct Beta {
     id: u64,
     text: String,
 }*/
-/* 
+/*
 impl<R, E> toql::backend::Load<R, E> for Alpha1
 where
     Self: toql::keyed::Keyed

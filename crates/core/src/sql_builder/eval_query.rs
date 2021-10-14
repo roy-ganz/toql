@@ -68,16 +68,13 @@ pub(crate) fn eval_query<M>(
                     }
 
                     QueryToken::Wildcard(wildcard) => {
-                        // Skip wildcard for count queries
-                      /*   if self.count_query {
-                            continue;
-                        } */
-                        // Wildcard is only evaluated for nomral queries
+                                          
+                        // Wildcard is only evaluated for normal queries
                         if mode != &BuildMode::SelectQuery {
                             continue;
                         }
-                        // Skip field from other path
 
+                        // Skip field from other path
                         if !(wildcard.path.starts_with(subpath)
                             || subpath.starts_with(&wildcard.path))
                         {
@@ -159,16 +156,12 @@ pub(crate) fn eval_query<M>(
                                         temp_scope.push_str(field_name);
                                         temp_scope.as_str()
                                     };
-                                    //println!("Test {} in {:?}", field_for_scope_test, self.wildcard_scope);
                                     wildcard_scope.contains_field(&field_for_scope_test)
                                 }
                             };
 
                             if !wildcard_in_scope {
-                               //    println!("Skipped {:?}", field_name);
                                 continue;
-                            } else {
-                               // println!("Included {:?}", field_name);
                             }
 
                             // Skip field if it doesn't belong to wildcard path
@@ -211,7 +204,6 @@ pub(crate) fn eval_query<M>(
                                             }
                                         }
 
-                                        //println!("PATH={}", path);
                                         // Next path
                                         path = path
                                             .trim_end_matches(|c| c != '_')
@@ -221,28 +213,13 @@ pub(crate) fn eval_query<M>(
 
                                 // Skip any field on path with failed validation
                                 if last_validated_path.1 != true {
-                                    // println!("Path {} is invalid!", last_validated_path.0);
                                     continue;
                                 }
-                                /*  else {
-                                    //println!("Path {} is valid!", last_validated_path.0);
-                                } */
+                              
                             }
 
                             // Select all fields on wildcard path
                             // including joins with preselected fields only
-
-                            //let select = (field_path == wildcard_path) || field_path.starts_with(wildcard_path) && sql_target.options.preselect;
-
-                            // let select = field_path.starts_with(wildcard_path);
-                            //println!( "field {}: field_path={}, wildcard_path ={}, select={}",&field_name, field_path, &wildcard.path, select);
-
-                            /* if (wildcard.path.is_empty())  && ! sql_target.subfields
-                            || (field_name.starts_with(&wildcard.path)
-                                && field_name.rfind("_").unwrap_or(field_name.len())
-                                    < wildcard.path.len()) */
-                            /*   if select
-                            { */
                             let f = sql_target_data.entry(field_name.to_string()).or_default();
 
                             f.selected = true; // Select field
@@ -261,13 +238,7 @@ pub(crate) fn eval_query<M>(
                                     path =
                                         path.trim_end_matches(|c| c != '_').trim_end_matches('_');
                                 }
-
-                                /* for subfield in field_name.split('_').rev().skip(1) {
-                                     let exists= selected_paths.insert(subfield);
-                                if exists { break;}
-                                } */
                             }
-                            // }
                         }
                     }
                     QueryToken::Field(query_field) => {
@@ -309,31 +280,13 @@ pub(crate) fn eval_query<M>(
                                     continue;
                                 }
 
-                                /* if self.count_query == true && !sql_target.options.count_filter {
-                                    continue;
-                                } */
-
                                 // Select sql target if field is not hidden
                                 let data = sql_target_data.entry(field_name.to_string()).or_default();
 
                                 // Add parent Joins
                                 if sql_target.subfields {
                                     insert_paths(field_name, &mut selected_paths);
-                                    /* let mut path = field_name
-                                        .trim_end_matches(|c| c != '_')
-                                        .trim_end_matches('_');
-                                    while !path.is_empty() {
-                                        let exists = !selected_paths.insert(path.to_owned());
-                                        if exists {
-                                            break;
-                                        }
-                                        path = path
-                                            .trim_end_matches(|c| c != '_')
-                                            .trim_end_matches('_');
-                                    } */
                                 }
-                                //println!("{:?}", selected_paths);
-
                                 data.selected = match mode {
                                     BuildMode::CountFiltered => sql_target.options.count_select,
                                     BuildMode::DeleteQuery => false,
@@ -341,31 +294,9 @@ pub(crate) fn eval_query<M>(
                                     BuildMode::SelectMut => sql_target.options.mut_select,
                                     BuildMode::SelectQuery => !query_field.hidden
                                 };
-                              /*   if self.count_query {
-                                    sql_target.options.count_select
-                                } else {
-                                    !query_field.hidden
-                                }; */
 
                                 // Target is used if it's selected
                                 data.used = data.selected;  
-
-                               // data.used = !query_field.hidden;
-
-                                // TODO fix bug
-                                // Resolve query params in sql expression
-                                /* for p in &sql_target.sql_query_params {
-                                    let qp = query
-                                        .params
-                                        .get(p)
-                                        .ok_or(SqlBuilderError::QueryParamMissing(p.to_string()))?;
-
-                                    if query_field.aggregation == true {
-                                        result.having_params.push(qp.to_string());
-                                    } else {
-                                        result.where_params.push(qp.to_string());
-                                    }
-                                } */
 
                                 if let Some(f) = &query_field.filter {
                                     // Combine aux params from query and target
@@ -467,16 +398,6 @@ pub(crate) fn eval_query<M>(
                                         on_aux_params.insert(n.to_string(), a.to_owned());
                                     }
                                 }
-                                
-                                    // TODO Test correct aux_params provided
-                                   // Sql Target aux params, join aux params?
-                                   /*  if let Some((j, p)) =
-                                        sql_target.handler.build_join(aux_params)?
-                                    {
-                                        result.join_clause.push_str(&j);
-                                        result.join_clause.push_str(" ");
-                                        result.join_params.extend_from_slice(&p);
-                                    }  */
                                 }
                                 if let Some(o) = &query_field.order {
                                     let num = match o {

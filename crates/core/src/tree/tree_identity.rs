@@ -9,10 +9,9 @@ pub enum IdentityAction {
     RefreshValid,
 }
 pub trait TreeIdentity {
-    fn auto_id<'a, I>( descendents: I) -> Result<bool, ToqlError>
-      where
-        I: Iterator<Item = FieldPath<'a>>
-    ;
+    fn auto_id<'a, I>(descendents: I) -> Result<bool, ToqlError>
+    where
+        I: Iterator<Item = FieldPath<'a>>;
 
     fn set_id<'a, 'b, I>(
         &mut self,
@@ -22,5 +21,3 @@ pub trait TreeIdentity {
     where
         I: Iterator<Item = FieldPath<'a>> + Clone;
 }
-
- 

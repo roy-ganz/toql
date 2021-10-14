@@ -5,7 +5,7 @@ use crate::alias_format::AliasFormat;
 use std::collections::HashMap;
 
 /// The translator keeps track of alias numbering and earlier translations to ensure that no collisions happen.
-/// That means all [SQL expressions](crate::sql_expr::SqlExpr) must be translated with the same instance, 
+/// That means all [SQL expressions](crate::sql_expr::SqlExpr) must be translated with the same instance,
 /// typically using [Resolver](crate::sql_expr::resolver::Resolver).
 pub struct AliasTranslator {
     format: AliasFormat,

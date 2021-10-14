@@ -17,9 +17,6 @@ impl SqlExprParser {
 
         for pair in pairs.flatten().into_iter() {
             let span = pair.clone().as_span();
-            //   println!("Rule:    {:?}", pair.as_rule());
-            //   println!("Span:    {:?}", span);
-            //   println!("Text:    {}", span.as_str());
             match pair.as_rule() {
                 Rule::literal => {
                     // If last token is literal append to that
@@ -44,7 +41,6 @@ impl SqlExprParser {
             }
         }
 
-        //  println!("{:?}", query);
         Ok(SqlExpr::from(tokens))
     }
 }

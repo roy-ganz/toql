@@ -32,17 +32,6 @@ impl<'a> CodegenUpdate<'a> {
         let rust_field_ident = &field.rust_field_ident;
         let rust_type_ident = &field.rust_type_ident;
         let toql_field_name = &field.toql_field_name;
-       
-/* 
-        let unwrap = match field.number_of_options {
-            1 => {
-                quote!(.as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?)
-            }
-            0 => quote!(),
-            _ => {
-                quote!(.as_ref().unwrap().as_ref().ok_or(toql::error::ToqlError::ValueMissing(#rust_field_name.to_string()))?)
-            }
-        }; */
 
         let refer = match field.number_of_options {
             0 => quote!(&),
@@ -95,8 +84,6 @@ impl<'a> CodegenUpdate<'a> {
                 let column_set =
                     if let SqlTarget::Column(ref sql_column) = &regular_attrs.sql_target {
                         quote!(
-                        // expr.push_alias(#sql_table_alias);
-                            //    expr.push_literal(".");
                                 expr.push_literal(#sql_column);
                                 expr.push_literal(" = ");
                                 expr.push_arg( #value);
@@ -138,7 +125,6 @@ impl<'a> CodegenUpdate<'a> {
                                 )
 
                             },
-                           
                             1 => {
                                  quote!(
                                     #toql_field_name => {
@@ -196,20 +182,21 @@ impl<'a> CodegenUpdate<'a> {
                             .push(quote!( #other_column => String::from(#untranslated_column),));
                     }
 
-                    let columns_code = if !join_attrs.columns.is_empty() { 
+                    let columns_code = if !join_attrs.columns.is_empty() {
                         // column translation code
                         quote!(
-                       let default_inverse_columns= <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::default_inverse_columns();
-                       let inverse_columns = <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
-                            let inverse_column = match c.as_str() {
-                                    #(#inverse_column_translation)*
-                                _ => {
-                                        default_inverse_columns.get(i).unwrap().to_owned()
-                                    }
-                            };
-                            inverse_column
-                        }).collect::<Vec<String>>();
-                    ) } else {
+                           let default_inverse_columns= <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::default_inverse_columns();
+                           let inverse_columns = <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns().iter().enumerate().map(|(i, c)| {
+                                let inverse_column = match c.as_str() {
+                                        #(#inverse_column_translation)*
+                                    _ => {
+                                            default_inverse_columns.get(i).unwrap().to_owned()
+                                        }
+                                };
+                                inverse_column
+                            }).collect::<Vec<String>>();
+                        )
+                    } else {
                         // default column naming code
                         let column_format = format!("{}_{{}}", rust_field_ident);
                         quote!(
@@ -220,7 +207,7 @@ impl<'a> CodegenUpdate<'a> {
                             .map(|(i, c)| {
                                 format!(#column_format, c)
                             })
-                            .collect::<Vec<String>>(); 
+                            .collect::<Vec<String>>();
                         )
                     };
 
@@ -328,7 +315,7 @@ impl<'a> quote::ToTokens for CodegenUpdate<'a> {
                                         if !toql::sql_arg::valid_key(&toql::key::Key::params(&key)) {
                                             return Ok(())
                                         }
-                                        
+
                                         let path_selected = fields.contains("*");
                                         #struct_upd_role_assert
 

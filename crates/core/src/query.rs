@@ -1,9 +1,9 @@
 //! The Query hold a Toql query but includes also a query builder.
 /// While it's perfectly possible to use the query builder directly
 /// it is recommended to use the query! macro. However sometimes
-/// mixed uses of the macro and the builder may make sense. 
+/// mixed uses of the macro and the builder may make sense.
 ///
-/// ## Example 
+/// ## Example
 ///
 /// ```ignore
 /// use toql::prelude::{Query, Field};
@@ -20,20 +20,18 @@
 /// let q :Query<FooBar>= query!(FooBar, "+1.foo EQ 5, -2bar");
 /// assert_eq!("+1.foo EQ 5,-2bar", q.to_string());
 /// ```
-/// The query macro produces a [Query] type, so the result can 
-/// modified with builder functions. 
-
-
+/// The query macro produces a [Query] type, so the result can
+/// modified with builder functions.
 pub mod concatenation;
 pub mod field;
 pub mod field_filter;
 pub mod field_order;
 pub mod field_path;
+pub mod from_key_fields;
 pub mod predicate;
 pub mod query_with;
 pub mod selection;
 pub mod wildcard;
-pub mod from_key_fields;
 
 use crate::query::selection::Selection;
 use std::collections::HashMap;
@@ -66,13 +64,11 @@ impl From<&str> for QueryToken {
     }
 }
 
-
 impl From<Field> for QueryToken {
     fn from(field: Field) -> QueryToken {
         QueryToken::Field(field)
     }
 }
-
 
 impl From<Predicate> for QueryToken {
     fn from(predicate: Predicate) -> QueryToken {
@@ -80,13 +76,11 @@ impl From<Predicate> for QueryToken {
     }
 }
 
-
 impl From<Selection> for QueryToken {
     fn from(selection: Selection) -> QueryToken {
         QueryToken::Selection(selection)
     }
 }
-
 
 impl ToString for QueryToken {
     fn to_string(&self) -> String {
@@ -152,18 +146,26 @@ pub struct Query<M> {
     pub(crate) tokens: Vec<QueryToken>,
     /// Select DISTINCT
     pub distinct: bool,
-    /* /// Roles a query has to access fields.
-    /// See [MapperOption](../table_mapper/struct.MapperOptions.html#method.restrict_roles) for explanation.
-    pub roles: HashSet<String>, */
+
+    /// Aux params used with query
     pub aux_params: HashMap<String, SqlArg>, // generic build params
 
-    pub where_predicates: Vec<String>, // Additional where clause
-    pub where_predicate_params: Vec<SqlArg>, // Query params for additional sql restriction
-    pub select_columns: Vec<String>,   // Additional select columns
+    /// Additional where clause
+    pub where_predicates: Vec<String>,
 
-    pub join_stmts: Vec<String>,       // Additional joins statements
-    pub join_stmt_params: Vec<SqlArg>, // Join params for additional sql restriction
-    // pub wildcard_scope: Option<HashSet<String>> // Restrict wildcard to certain fields
+    /// Query params for additional sql restriction
+    pub where_predicate_params: Vec<SqlArg>,
+
+    /// Additional select columns
+    pub select_columns: Vec<String>,
+
+    /// Additional joins statements
+    pub join_stmts: Vec<String>,
+
+    // Join params for additional sql restriction
+    pub join_stmt_params: Vec<SqlArg>,
+
+    /// Type marker
     pub type_marker: std::marker::PhantomData<M>,
 }
 
@@ -173,7 +175,6 @@ impl<M> Query<M> {
         Query::<M> {
             tokens: vec![],
             distinct: false,
-            // roles: HashSet::new(),
             aux_params: HashMap::new(),
             where_predicates: Vec::new(),
             where_predicate_params: Vec::new(),
@@ -270,7 +271,7 @@ impl<M> Query<M> {
             type_marker: std::marker::PhantomData, //  wildcard_scope: None
         }
     }
-    pub fn selection(name: impl Into<String>) -> Self{
+    pub fn selection(name: impl Into<String>) -> Self {
         Query::<M> {
             tokens: vec![QueryToken::Selection(Selection::from(name.into()))],
             distinct: false,
@@ -300,7 +301,6 @@ impl<M> Query<M> {
     where
         T: Into<Query<M>>,
     {
-        
         // All tokens are by default concatenated with AND
         self.tokens.append(&mut query.into().tokens);
         self
@@ -335,7 +335,7 @@ impl<M> Query<M> {
                 None => {}
             }
         }
-      
+
         self.tokens.append(&mut query.tokens);
 
         self
@@ -437,7 +437,9 @@ impl<M> fmt::Display for Query<M> {
                     }
                     QueryToken::Field(field) => s.push(get_concatenation(&field.concatenation)),
                     QueryToken::Predicate(field) => s.push(get_concatenation(&field.concatenation)),
-                    QueryToken::Selection(selection) => s.push(get_concatenation(&selection.concatenation)),
+                    QueryToken::Selection(selection) => {
+                        s.push(get_concatenation(&selection.concatenation))
+                    }
                     _ => {}
                 }
             }

@@ -1,7 +1,7 @@
 use super::Join;
 use crate::{
     error::ToqlError, key::Key, keyed::Keyed, query::field_path::FieldPath, sql_expr::SqlExpr,
-    table_mapper::mapped::Mapped, tree::tree_insert::TreeInsert
+    table_mapper::mapped::Mapped, tree::tree_insert::TreeInsert,
 };
 use std::collections::HashSet;
 
@@ -16,16 +16,16 @@ where
     {
         <T as TreeInsert>::columns(descendents)
     }
-    fn values<'a,'b, I, J>(
+    fn values<'a, 'b, I, J>(
         &self,
         mut descendents: I,
         roles: &HashSet<String>,
-        should_insert:  &mut J,
+        should_insert: &mut J,
         values: &mut SqlExpr,
     ) -> Result<(), ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>> + Clone,
-        J: Iterator<Item = &'b bool> ,
+        J: Iterator<Item = &'b bool>,
     {
         match self {
             Join::Key(k) => match descendents.next() {
@@ -41,8 +41,7 @@ where
                     Ok(())
                 }
             },
-            Join::Entity(e) => {
-                e.values(descendents, roles, should_insert, values)},
+            Join::Entity(e) => e.values(descendents, roles, should_insert, values),
         }
     }
 }

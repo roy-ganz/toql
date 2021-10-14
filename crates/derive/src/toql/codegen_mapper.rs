@@ -74,21 +74,6 @@ impl<'a> CodegenMapper<'a> {
 
         let count_filter_code = quote!();
 
-        /*   if let Some(count_filter) = &rust_struct.count_filter {
-              // Only map count filter on top entity
-              quote!(
-                  if toql_path.is_empty() {
-                    for field in &[ #(#count_filter),*] {
-                            let options = mapper.get_options(field).expect(&format!("Field {} not mapped. Skipped count filter.", &field));
-                            mapper.set_options(field, options.count_filter(true));
-                        }
-                  }
-              )
-              quote!()
-        } else {
-            quote!( )
-        };  */
-
         CodegenMapper {
             rust_struct,
             field_mappings,
@@ -129,7 +114,6 @@ impl<'a> CodegenMapper<'a> {
                         .with_span(&field.rust_field_ident));
                     }
                 } else {
-                     
                     self.key_fields = false;
                 }
 
@@ -175,8 +159,6 @@ impl<'a> CodegenMapper<'a> {
                     quote!(toql::table_mapper::join_type::JoinType::Left)
                 };
 
-                //let join_statement = format!("{} ", &sql_join_table_name);
-
                 let preselect_ident = if field.preselect || (field.number_of_options == 0) {
                     quote!( .preselect(true))
                 } else {
@@ -188,22 +170,19 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 };
-                
+
                 let skip_mut_ident = if field.skip_mut {
                     quote!( .skip_mut(true))
                 } else {
                     quote!()
                 };
-              /*   let skip_load_ident = if field.skip_query {
-                    quote!( .skip_load(true))
-                } else {
-                    quote!()
-                }; */
+
                 let key_ident = if join_attrs.key {
                     quote!( .key(true))
                 } else {
                     quote!()
                 };
+
                 let skip_wc_ident = if field.skip_wildcard {
                     quote!( .skip_wildcard(true))
                 } else {
@@ -220,7 +199,7 @@ impl<'a> CodegenMapper<'a> {
                     })
                     .collect::<Vec<TokenStream>>();
 
-                // todo map handler, see regular field
+                // TODO map handler, see regular field
                 let sql_join_table_name_ident =
                     syn::Ident::new(&sql_join_table_name, proc_macro2::Span::call_site());
 
@@ -263,7 +242,7 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 };
-             /*    let skip_load_ident = if field.skip_query {
+                /*    let skip_load_ident = if field.skip_query {
                     quote!( .skip_load(true))
                 } else {
                     quote!()

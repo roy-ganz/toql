@@ -63,14 +63,6 @@ impl Sql {
         self.0.push_str(&sql.0);
         self.1.extend_from_slice(&sql.1);
     }
-    /*  pub fn insert(&mut self, pos:SqlSplicePos, sql: Sql) {
-        self.0.insert_str(pos.literal,&sql.0);
-        let mut j = pos.literal;
-        for s in sql.1 {
-            self.1.insert(j,s);
-            j += 1;
-        }
-    } */
 
     pub fn push_literal(&mut self, sql_lit: &str) {
         self.0.push_str(&sql_lit);

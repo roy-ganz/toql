@@ -25,7 +25,7 @@ where
 }
 /// Takes an entity and turn it into a key.
 /// This can also be used to create key predicates.
-/// 
+///
 /// ### Examples
 /// Basic usage (assume a TOQL derived User struct):
 ///

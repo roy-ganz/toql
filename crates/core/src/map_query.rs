@@ -65,7 +65,8 @@ where
         let mut count = 0;
         for k in iter {
             if count < 2 {
-                count += 1}
+                count += 1
+            }
             q = q.or(k.into());
         }
         // Only parenthesize if there is more than one key
@@ -76,26 +77,3 @@ where
         }
     }
 }
-/* impl<'a, T, K> std::iter::FromIterator<&'a K> for Query<T>
-where K: Key<Entity=T> + ToQuery<T> + 'a
-{
- fn from_iter<I: IntoIterator<Item =&'a K>>(iter: I) -> Query<T> {
-      let mut q :Query<T> = Query::new();
-        for k in iter {
-            q = q.or(ToQuery::to_query(k) );
-        }
-        q
-    }
-} */
-/*impl<'a, T, K> std::iter::FromIterator<K> for Query<T>
-where K: std::borrow::Borrow<K>,
-K: Key<Entity=T> + ToQuery<T> + 'a
-{
- fn from_iter<I: IntoIterator<Item =K>>(iter: I) -> Query<T> {
-      let mut q :Query<T> = Query::new();
-        for k in iter {
-            q = q.or(ToQuery::to_query(k.borrow()) );
-        }
-        q
-    }
-} */

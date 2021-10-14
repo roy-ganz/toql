@@ -52,10 +52,7 @@ pub fn parse(
 
     match PestFieldListParser::parse(Rule::query, &field_list_string.value()) {
         Ok(pairs) => {
-            output_stream.extend(evaluate_pair(
-                &mut pairs.flatten(),
-                &struct_type,
-            )?);
+            output_stream.extend(evaluate_pair(&mut pairs.flatten(), &struct_type)?);
         }
         Err(e) => {
             let msg = e.to_string();

@@ -12,9 +12,7 @@ pub(crate) struct CodegenInsert<'a> {
     struct_ident: &'a Ident,
     struct_name: &'a String,
     auto_key: bool,
-
     duplicate: bool,
-
     dispatch_columns_code: Vec<TokenStream>,
     dispatch_values_code: Vec<TokenStream>,
     insert_columns_code: Vec<TokenStream>,
@@ -181,8 +179,7 @@ impl<'a> CodegenInsert<'a> {
                 let default_self_column_code = &join_attrs.default_self_column_code;
 
                 // Add if columns should not be skipped
-                 
-                                    
+
                 if !join_attrs.partial_table {
                     self.insert_columns_code.push(quote!(
                         for other_column in <<#rust_type_ident as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
@@ -368,7 +365,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
                                  where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone,
-                                 J: Iterator<Item =&'b bool > 
+                                 J: Iterator<Item =&'b bool >
                                 {
 
                                     match descendents.next() {
@@ -386,7 +383,7 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
 
                                             #role_assert
 
-                                          
+
 
                                             values.push_literal("(");
                                             #(#insert_values_code)*
@@ -435,13 +432,13 @@ impl<'a> quote::ToTokens for CodegenInsert<'a> {
                                          values:  &mut toql::sql_expr::SqlExpr
                                 ) -> std::result::Result<(),  toql::error::ToqlError>
                                  where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone,
-                                 J: Iterator<Item =&'b bool > 
+                                 J: Iterator<Item =&'b bool >
                                 {
                                     <#struct_ident as toql::tree::tree_insert::TreeInsert>::values(self, descendents, roles, should_insert, values)
                                 }
                   }
 
-                 
+
         };
 
         log::debug!(
