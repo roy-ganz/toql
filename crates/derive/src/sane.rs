@@ -1,5 +1,5 @@
 use crate::annot::FieldRoles;
-use crate::annot::OnParamArg;
+use crate::annot::OnAuxParamArg;
 use crate::annot::Pair;
 use crate::annot::RenameCase;
 use crate::annot::Toql;
@@ -41,7 +41,7 @@ impl Struct {
                 name: a.name.to_mixed_case(),
                 sql: a.sql.clone(),
                 handler: a.handler.clone(),
-                on_param: a.on_param.clone(),
+                on_aux_param: a.on_aux_param.clone(),
                 count_filter: a.count_filter,
             })
             .collect::<Vec<_>>();
@@ -94,7 +94,7 @@ pub struct RegularField {
     pub handler: Option<Path>,
     pub default_inverse_column: Option<String>,
     pub aux_params: Vec<ParamArg>,
-    pub on_params: Vec<OnParamArg>,
+    //pub on_aux_params: Vec<OnAuxParamArg>,
     pub foreign_key :bool   // Column of this field is used as foreign key
 }
 #[derive(Clone)]
@@ -168,7 +168,7 @@ pub struct Field {
     pub preselect: bool,
     pub kind: FieldKind,
     pub skip_mut: bool,
-    pub skip_query: bool,
+ //   pub skip_query: bool,
 }
 
 #[derive(Clone)]
@@ -333,7 +333,7 @@ impl Field {
                 translated_columns_map_code,
                 on_sql: field.join.as_ref().unwrap().on_sql.clone(),
                 key: field.key,
-                aux_params: field.param.clone(),
+                aux_params: field.aux_param.clone(),
                 columns: field.join.as_ref().unwrap().columns.clone(),
                 partial_table: field.join.as_ref().unwrap().partial_table,
                 foreign_key : field.foreign_key
@@ -457,8 +457,8 @@ impl Field {
                 //   count_select: field.count_select,
                 //count_filter: field.count_filter,
                 handler: field.handler.to_owned(),
-                aux_params: field.param.clone(),
-                on_params: field.on_param.clone(),
+                aux_params: field.aux_param.clone(),
+              //  on_aux_params: field.on_aux_param.clone(),
                 foreign_key : field.foreign_key
             })
         };
@@ -472,7 +472,7 @@ impl Field {
             toql_field_name,
             number_of_options,
             skip_mut: field.skip_mut,
-            skip_query: field.skip_query,
+          //  skip_query: field.skip_query,
             skip_wildcard: field.skip_wildcard,
             roles: field.roles.clone(),
             preselect: field.preselect,

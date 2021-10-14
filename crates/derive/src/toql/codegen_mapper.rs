@@ -34,13 +34,13 @@ impl<'a> CodegenMapper<'a> {
             let toql_field_name = &mapping.name;
             let sql_mapping = &mapping.sql;
 
-            let on_params: Vec<TokenStream> = mapping
-                .on_param
+            let on_aux_params: Vec<TokenStream> = mapping
+                .on_aux_param
                 .iter()
                 .map(|p| {
                     let index = &p.index;
                     let name = &p.name;
-                    quote!(.on_param( #index, String::from(#name)))
+                    quote!(.on_aux_param( #index, String::from(#name)))
                 })
                 .collect::<Vec<_>>();
 
@@ -57,7 +57,7 @@ impl<'a> CodegenMapper<'a> {
                                     #toql_field_name,
                                     toql::sql_expr_macro::sql_expr!(#sql_mapping),
                                     #handler (),
-                                    toql::table_mapper::predicate_options::PredicateOptions::new()  #(#on_params)* #countfilter_ident );
+                                    toql::table_mapper::predicate_options::PredicateOptions::new()  #(#on_aux_params)* #countfilter_ident );
                             });
                 }
                 None => {
@@ -65,7 +65,7 @@ impl<'a> CodegenMapper<'a> {
                                 mapper.map_predicate_with_options(
                                 #toql_field_name,
                                 toql::sql_expr_macro::sql_expr!(#sql_mapping),
-                                toql::table_mapper::predicate_options::PredicateOptions::new() #(#on_params)* #countfilter_ident
+                                toql::table_mapper::predicate_options::PredicateOptions::new() #(#on_aux_params)* #countfilter_ident
                               );
                             });
                 }
@@ -194,11 +194,11 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 };
-                let skip_load_ident = if field.skip_query {
+              /*   let skip_load_ident = if field.skip_query {
                     quote!( .skip_load(true))
                 } else {
                     quote!()
-                };
+                }; */
                 let key_ident = if join_attrs.key {
                     quote!( .key(true))
                 } else {
@@ -230,7 +230,7 @@ impl<'a> CodegenMapper<'a> {
                     {let mut t = toql::sql_expr::SqlExpr::literal(< #sql_join_table_name_ident as toql::table_mapper::mapped::Mapped>::table_name()); t.push_literal(" "); t.push_other_alias(); t }, 
                     { let mut t = toql::sql_expr::SqlExpr::new(); #join_predicate; t },
                      toql::table_mapper::join_options::JoinOptions::new() #(#aux_params)*
-                     #preselect_ident #key_ident #skip_load_ident #skip_mut_ident #skip_wc_ident #roles_ident #partial_table_ident
+                     #preselect_ident #key_ident #skip_mut_ident #skip_wc_ident #roles_ident #partial_table_ident
                     );
                 });
 
@@ -263,11 +263,11 @@ impl<'a> CodegenMapper<'a> {
                 } else {
                     quote!()
                 };
-                let skip_load_ident = if field.skip_query {
+             /*    let skip_load_ident = if field.skip_query {
                     quote!( .skip_load(true))
                 } else {
                     quote!()
-                };
+                }; */
 
                 let skip_mut_ident = if field.skip_mut {
                     quote!(.skip_mut(false))
@@ -312,7 +312,7 @@ impl<'a> CodegenMapper<'a> {
                         self.field_mappings.push(quote! {
                                 #sql_mapping
                                 mapper.map_handler_with_options( #toql_field_name, #sql_expr, #handler (), toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*
-                                 #key_ident #preselect_ident  #skip_wc_ident #roles_ident #skip_mut_ident #skip_load_ident);
+                                 #key_ident #preselect_ident  #skip_wc_ident #roles_ident #skip_mut_ident);
                             });
                     }
                     None => {
@@ -321,14 +321,14 @@ impl<'a> CodegenMapper<'a> {
                                 quote! {
                                     mapper.map_expr_with_options( #toql_field_name,  toql::sql_expr_macro::sql_expr!( #expression),
                                 toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*
-                                 #preselect_ident #skip_wc_ident #roles_ident #skip_mut_ident #skip_load_ident);
+                                 #preselect_ident #skip_wc_ident #roles_ident #skip_mut_ident);
                                 }
                             }
                             SqlTarget::Column(ref column) => {
                                 quote! {
                                     mapper.map_column_with_options( #toql_field_name, #column,
                                     toql::table_mapper::field_options::FieldOptions::new() #(#aux_params)*
-                                    #key_ident #preselect_ident #skip_wc_ident #roles_ident #skip_mut_ident #skip_load_ident);
+                                    #key_ident #preselect_ident #skip_wc_ident #roles_ident #skip_mut_ident);
                                  }
                             }
                         });

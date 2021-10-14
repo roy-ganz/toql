@@ -100,7 +100,7 @@ However for `ON` there is a third source : Aux params may also come from [query 
 
 This allows some nifty joining, see here:
 
-### Example with on_param
+### Example with on_aux_param
 ```rust
 
 #[derive(Toql)]
@@ -109,7 +109,7 @@ This allows some nifty joining, see here:
 			name ="language", 
 			sql="EXISTS(SELECT 1 FROM Country c \
 				JOIN Language l ON (c.id= l.id)) WHERE l.id= ?)", 
-			on_param="language_id"
+			on_aux_param="language_id"
 		))]
 struct Country {
 
@@ -137,7 +137,7 @@ pub struct Language {
 Above we add a predicate that allows to filter all countries by a language.
 There can be multiple countries that speak the same language.
 
-The predicate takes the one argument (`?`) and adds it to the aux_params for custom joins (`on_param`). 
+The predicate takes the one argument (`?`) and adds it to the aux_params for custom joins (`on_aux_param`). 
 
 When the predicate is used in a Toql query, lets say  `*, @language 'fr'` the SQL will return  countries that speak french.
 In addition it will add `fr` to the aux_params when doing the custom join.  

@@ -9,10 +9,10 @@ pub struct FieldOptions {
     pub(crate) count_select: bool, // Select field on count query
     pub(crate) skip_mut: bool,  // Select field on mut select
     pub(crate) skip_wildcard: bool, // Skip field for wildcard selection
-    pub(crate) skip_load: bool, // Select field for query builder
+    //pub(crate) skip_load: bool, // Select field for query builder
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Auxiliary params
-    pub(crate) on_params: Vec<String>, // Identity params for on clauses
+    pub(crate) on_aux_params: Vec<String>, // Identity params for on clauses
     pub(crate) key: bool,       // Field is part of key
 }
 
@@ -25,10 +25,10 @@ impl FieldOptions {
             count_select: false,
             skip_mut: false,
             skip_wildcard: false,
-            skip_load: false,
+         //   skip_load: false,
             load_role_expr: None,
             aux_params: HashMap::new(),
-            on_params: Vec::new(),
+            on_aux_params: Vec::new(),
             key: false,
         }
     }
@@ -67,10 +67,10 @@ impl FieldOptions {
         self
     }
     /// Field is used for the normal query.
-    pub fn skip_load(mut self, skip: bool) -> Self {
+   /*  pub fn skip_load(mut self, skip: bool) -> Self {
         self.skip_load = skip;
         self
-    }
+    } */
     /// Field is ignored by the wildcard.
     pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
         self.skip_wildcard = skip_wildcard;

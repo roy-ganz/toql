@@ -92,7 +92,7 @@ Use it in a Toql query with `@names 'Peter' 'Sandy' 'Bob'`
 ## Reference
 
 The full predicate syntax is
-`predicate(name="..", sql="..", handler="..", on_param="..", count_filter=true|false)` 
+`predicate(name="..", sql="..", handler="..", on_aux_param="..", count_filter=true|false)` 
 where 
 - _name_ is the name of the predicate. It can be called with this name `@name ..`. 
   If a predicate is defined on a joined struct, that predicate can be called with a path
@@ -101,7 +101,7 @@ where
   `..` for the table alias, `<aux_param>` for aux params
 - _handler_ allows a custom predicate handler (build SQL with a function). 
   Provide a function name without parenthesis that return a struct that implement `toql::prelude::PredicateHandler`
-- *on_param* set the name of an aux_param that can be used when building custom joins. See [example](4-join.md).
+- *on_aux_param* set the name of an aux_param that can be used when building custom joins. See [example](4-join.md).
   Can only be used when the predicate takes exactly one argument.
 - *count_filter* determines if a predicate used in Toql query should also be included in [count queries](3-api/2-load.md). 
   Default is `false`

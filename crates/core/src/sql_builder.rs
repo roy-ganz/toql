@@ -887,8 +887,8 @@ impl<'a> SqlBuilder<'a> {
                                     );
                                 }
                                 result.where_expr.extend(expr);
-                                if !mapped_predicate.options.on_params.is_empty() {
-                                    for (i, a) in &mapped_predicate.options.on_params {
+                                if !mapped_predicate.options.on_aux_params.is_empty() {
+                                    for (i, a) in &mapped_predicate.options.on_aux_params {
                                         if let Some(v) = predicate.args.get(*i as usize) {
                                             // tracing::info!("Setting on param `{}` = `{}`.", &a, v.to_string());
                                             build_context

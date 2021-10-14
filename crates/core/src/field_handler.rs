@@ -65,7 +65,7 @@ pub fn sql_param(s: String) -> String {
     s
 } */
 
-impl FieldHandler for BasicFieldHandler {
+impl FieldHandler for DefaultFieldHandler {
     fn build_filter(
         &self,
         mut select: SqlExpr,
@@ -156,15 +156,15 @@ impl FieldHandler for BasicFieldHandler {
 /// Handles the standart filters as documented in the guide.
 /// Returns [FilterInvalid](../sql_builder/enum.SqlBuilderError.html) for any attempt to use FN filters.
 #[derive(Debug, Clone)]
-pub struct BasicFieldHandler {}
+pub struct DefaultFieldHandler {}
 
-impl BasicFieldHandler {
+impl DefaultFieldHandler {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl Default for BasicFieldHandler {
+impl Default for DefaultFieldHandler {
     fn default() -> Self {
         Self::new()
     }

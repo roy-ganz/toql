@@ -20,7 +20,7 @@ use crate::query::assert_roles;
 
 pub(crate) fn eval_query<M>( 
     build_aux_params: &HashMap<String, SqlArg>,
-    on_params: &mut HashMap<std::string::String,SqlArg>,
+    on_aux_params: &mut HashMap<std::string::String,SqlArg>,
     roles: &HashSet<String>, 
     wildcard_scope: &WildcardScope,
     table_mapper: &TableMapper, 
@@ -463,8 +463,8 @@ pub(crate) fn eval_query<M>(
 
                                 // Add Parameters for on clauses
                                 if let FieldFilter::Eq(a) | FieldFilter::Ne(a) = f {
-                                    for n in &sql_target.options.on_params {
-                                        on_params.insert(n.to_string(), a.to_owned());
+                                    for n in &sql_target.options.on_aux_params {
+                                        on_aux_params.insert(n.to_string(), a.to_owned());
                                     }
                                 }
                                 
@@ -576,9 +576,9 @@ pub(crate) fn eval_query<M>(
                                 }
 
                                 // Add On Parameters for on clauses 
-                                for (i,n) in &predicate.options.on_params {
+                                for (i,n) in &predicate.options.on_aux_params {
                                     let a = query_predicate.args.get(*i as usize).ok_or(SqlBuilderError::PredicateArgumentMissing(query_predicate.name.to_string()))?;
-                                    on_params.insert(n.to_string(), a.to_owned());
+                                    on_aux_params.insert(n.to_string(), a.to_owned());
                                 }
 
                                 

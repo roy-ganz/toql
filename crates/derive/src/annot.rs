@@ -84,12 +84,12 @@ pub struct ToqlField {
     pub skip: bool,
     #[darling(default)]
     pub skip_mut: bool,
-    #[darling(default)]
-    pub skip_query: bool,
+  /*   #[darling(default)]
+    pub skip_query: bool, */
     /*  #[darling(default)]
     pub count_filter: bool, */
-    #[darling(default)]
-    pub count_select: bool,
+  /*   #[darling(default)]
+    pub count_select: bool, */
     #[darling(default)]
     pub preselect: bool,
     #[darling(default)]
@@ -111,11 +111,11 @@ pub struct ToqlField {
     #[darling(default)]
     pub handler: Option<Path>,
     #[darling(multiple)]
-    pub param: Vec<ParamArg>,
+    pub aux_param: Vec<ParamArg>,
     #[darling(default)]
     pub roles: FieldRoles,
-    #[darling(multiple)]
-    pub on_param: Vec<OnParamArg>,
+   /*  #[darling(multiple)]
+    pub on_aux_param: Vec<OnAuxParamArg>, */
 }
 
 #[derive(FromMeta, PartialEq, Eq, Clone, Debug)]
@@ -139,7 +139,7 @@ pub struct PredicateArg {
     pub handler: Option<Path>,
 
     #[darling(multiple)]
-    pub on_param: Vec<PredicateOnParamArg>,
+    pub on_aux_param: Vec<PredicateOnAuxParamArg>,
 
     #[darling(default)] 
     pub count_filter: bool,
@@ -151,11 +151,11 @@ pub struct SelectionArg {
 }
 
 #[derive(FromMeta, Clone, Debug)]
-pub struct OnParamArg {
+pub struct OnAuxParamArg {
     pub name: String,
 }
 #[derive(FromMeta, Clone, Debug)]
-pub struct PredicateOnParamArg {
+pub struct PredicateOnAuxParamArg {
     pub name: String,
     #[darling(default)]
     pub index: u8,
@@ -183,8 +183,8 @@ pub struct Toql {
     pub alias: Option<String>,
     #[darling(default)]
     pub skip_mut: bool,
-    #[darling(default)]
-    pub skip_load: bool,
+ /*    #[darling(default)]
+    pub skip_load: bool, */
     #[darling(default)]
     pub auto_key: bool,
     /* #[darling(default)]
@@ -235,7 +235,7 @@ impl quote::ToTokens for Toql {
             columns: _,
             alias: _,
             skip_mut,
-            skip_load,
+         //   skip_load,
             auto_key: _,
          /*    skip_select: _,
             skip_query_builder, */
@@ -260,7 +260,7 @@ impl quote::ToTokens for Toql {
                 toql_key.add_key_field(&f)?;
 
                 // Generate query functionality
-                if !skip_load {
+              //  if !skip_load {
                     if field.skip {
                         toql_entity_from_row.add_deserialize_skip_field(&f);
                         continue;
@@ -292,7 +292,7 @@ impl quote::ToTokens for Toql {
                         // tokens.extend(result.err());
                         continue;
                     } */
-                }
+             //   }
 
                 // Generate insert/delete/update functionality
                 // Select is considered part of mutation functionality (Copy)
@@ -334,9 +334,9 @@ impl quote::ToTokens for Toql {
                     tokens.extend(quote!(#toql_query_fields));
                 //}
 
-                if !skip_load {
+             //   if !skip_load {
                     tokens.extend(quote!(#toql_mapper));
-                }
+               // }
 
                 if !skip_mut {
                     tokens.extend(quote!(#toql_insert));

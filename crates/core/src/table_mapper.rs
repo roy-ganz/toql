@@ -57,7 +57,7 @@ use crate::table_mapper::predicate::Predicate;
 
 use std::collections::HashMap;
 
-use crate::field_handler::{BasicFieldHandler, FieldHandler};
+use crate::field_handler::{DefaultFieldHandler, FieldHandler};
 use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
 use join_type::JoinType;
 use std::fmt;
@@ -150,7 +150,7 @@ impl TableMapper {
     /// SQL columns with the alias too.
     pub fn new<T>(sql_table_name: &str) -> Self
 where {
-        let f = BasicFieldHandler {};
+        let f = DefaultFieldHandler {};
         Self::new_with_handler(sql_table_name, f)
     }
     /// Create new mapper for _table_ or _table alias_.
@@ -188,7 +188,7 @@ where {
     /// Create a new mapper from a struct that implements the Mapped trait.
     /// The Toql derive does that for every attributed struct.
     pub fn from_mapped<M: Mapped>() -> Result<TableMapper> {
-        Self::from_mapped_with_handler::<M, _>(BasicFieldHandler::new())
+        Self::from_mapped_with_handler::<M, _>(DefaultFieldHandler::new())
     }
 
     pub fn from_mapped_with_handler<M: Mapped, H>(handler: H) -> Result<TableMapper>
