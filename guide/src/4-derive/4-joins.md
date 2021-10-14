@@ -2,126 +2,209 @@
 # Joins
 A struct can refer to another struct. This is done with a SQL join. 
 
-Joins are automatically added to the SQL statement in these situations:
--  Fields in the Toql query refer to another struct through a path: `user_phoneId`.
--  Fields on a joined struct are always selected: `#[toql(preselect)`. 
--  Fields on a joined struct are not `Option<>`: `id: u64`.
--  A related struct is an inner join.
+Joins are added to the SQL statement when
+- requested in the query, like so: `phone1_id`
+- or joins are preselected.
 
-#### Example:
 
-The Toql query `id` translates this
+#### Mapping Example
 
 ```rust
+#[derive(Toql)]
 struct User {
-	 id: u32,	
-	 name: Option<String>
-	 #[toql(sql_join(self="mobile_id" other="id"))]  
-	 mobile_phone : Option<Phone> // Selectable inner join
 
-	 #[toql(sql_join(self="country_id" other="id"))]  
-	 country : Country // Inner Join
+	#[toql(key)]
+	 id: u32,	
+
+	 name: Option<String>
+
+	 #[toql(join())]  
+	 phone1 : Phone // Always selected inner join
+
+	 #[toql(join())]  
+	 phone2 : Option<Phone> // Selectable inner join
+
+	 #[toql(join())]  
+	 phone3 : Option<Option<Phone>> // Selectable left join
+
+	 #[toql(join(), preselect)]  
+	 phone4 : Option<Phone> // Always selected left join
+}
+```
+Notice how `Option` makes the difference between an inner join and a left join.
+
+## Renaming joined columns
+By default foreign keys are calulated by the primary columns of the join and the field name of the join.
+For the above it would be *phone1_id*, *phone2_id*, *phone3_id* and *phone4_id*.
+
+
+If your naming scheme differs from that default behaviour, use the `columns` attribute:
+```rust
+#[toql(join(columns(self="mobile1_id", other="id")))]  
+phone1 : Phone 
+```
+
+For a composite key use `columns` multiple times.
+
+
+## Custom ON predicate
+
+It's possible to restrict the join with a `ON` SQL predicate. 
+
+Here an example of a translated country name. 
+
+```rust
+#[derive(Toql)]
+struct User {
+
+	#[toql(key)]
+	 id: u32,	
+
+	 country: Option<Country>
 }
 
+#[derive(Toql)]
+#[toql(auto_key = false))]
 struct Country {
-	id: String // Always selected
-}
 
-struct Phone {
-	id : Option<u64>, // Can be null
-}
-```
-into
-
-```sql 
-SELECT user.id, -snip-, country.id FROM User user 
-INNER JOIN Country country ON (user.country_id = country.id)
-```
-
-While the Toql query `id, mobilePhone_id` for the same structs translates into
-
-```sql 
-SELECT user.id, -snip-, mobile_phone.id, country.id FROM User user 
-LEFT JOIN Phone mobile_phone ON (user.mobile_id = mobile_phone.id)
-INNER JOIN Country country ON (user.country_id = country.id)
-```
-
-## Naming and aliasing
-The default table names can be changed with `table`, the alias with `alias`. 
-
-The Toql query `id` for this struct
-
-```rust
-#[toql table="Users", alias="u"]
-struct User {
+	#[toql(key)]
 	 id: u32,	
-	 name: Option<String>
-	 #[toql(preselect, sql_join(self="mobil_id", other="id"), table="Phones", alias="p")]  
-	 mobile_phone : Option<Phone>
+
+	#[toql(join(columns(self = "id", other = "id"), 
+			on_sql = "...language_id=<interface_language_id>"
+        ),
+    )]
+    pub translation: Option<CountryTranslation>
+}
+#[derive(Toql)]
+#[toql(auto_key = false))]
+pub struct CountryTranslation {
+
+    #[toql(key)]
+    pub id: String,
+    
+    pub title: String,
+}
+```
+You can use any raw SQL in the `ON` predicate. Did you spot the `...` alias? 
+This will resolve to the alias of the joined struct (CountryTranslation). 
+
+Apart from `ON` predicates the `...` alias can also be used in custom merge predicates.
+
+It is also possible to use the regular `..` alias to refer to the joining struct (Country), but we don't need it here.
+
+You can use auxiliary parameters (here *<interface_language_id>*) in `ON` expression. 
+Aux params usually come from a context, query.
+
+However for `ON` there is a third source : Aux params may also come from [query predicates](10-predicates.md).
+
+This allows some nifty joining, see here:
+
+### Example with on_param
+```rust
+
+#[derive(Toql)]
+#[toql(auto_key = false, 
+		predicate(
+			name ="language", 
+			sql="EXISTS(SELECT 1 FROM Country c \
+				JOIN Language l ON (c.id= l.id)) WHERE l.id= ?)", 
+			on_param="language_id"
+		))]
+struct Country {
+
+	#[toql(key)]
+	 id: u32,	
+
+	#[toql(join(columns(self = "id", other = "country_id"), 
+			on_sql = "...id=<language_id>"
+        ),
+    )]
+    pub language: Option<Language>
+}
+
+#[derive(Toql)]
+#[toql(auto_key = false))]
+pub struct Language {
+
+    #[toql(key)]
+    pub id: String,
+    
+    pub title: String,
 }
 ```
 
-now translates into
-```sql 
-SELECT u.id, null, p.id FROM Users u LEFT JOIN Phones p ON (u.mobile_id = p.id)
-```
+Above we add a predicate that allows to filter all countries by a language.
+There can be multiple countries that speak the same language.
 
-## Join Attributes
-SQL joins can be defined with
-- *self*, the column on the referencing table. If omitted the struct field's name is taken.
-- *other*, the column of the joined tabled.
-- *on*, an additional SQL predicate. Must include the table alias.
+The predicate takes the one argument (`?`) and adds it to the aux_params for custom joins (`on_param`). 
 
-For composite keys use multiple `sql_join` attributes.
+When the predicate is used in a Toql query, lets say  `*, @language 'fr'` the SQL will return  countries that speak french.
+In addition it will add `fr` to the aux_params when doing the custom join.  
 
-#### Example
+So each country will contain the `language` field with information about french.
+
+It's somehow hacky, but it works and is useful in 1-n situations when you want 1-1 .
+
+
+## Insert / update implications
+
+Toql can insert joins with renamed columns and no custom `ON` expression, 
+because key propagation is done internally through common column names.
+Joins with custom `ON` expressions can't be inserted or updated, they are read only.
+
+
+
+
+## The Join struct
+Joining directly another struct is not ergonomic when you want to update the struct. 
+Thats why the `Join` enum exists. It can either take a struct value or just its key.
+
+Consider this
+
 ```rust
- 	#[toql(preselect, sql_join(self="country_id", other="id"), sql_join(self="language_id", other="language_id", on="country.language_id = 'en'") ]  
-	country : Option<Country>
+#[derive(Toql)]
+struct User {
+
+	#[toql(key)]
+	 id: u32,	
+
+	#[toql(join())]
+	 phone: Phone
+}
 ```
 
+Here when we want to set a new `Phone` for the user, we need to provide a full `Phone` struct
+even tough we only want to set a new value for the foreign key `phone_id` in `User`.
+This feels unnesseary and `toql::prelude::Join` comes to our rescue:
 
-## Left joins and inner joins
-There are four different join situations in a Rust struct. Depending on the situation a LEFT JOIN or INNER JOIN is added to the generated SQL.
+```rust
+#[derive(Toql)]
+struct User {
 
-Notice that inner joins are **always** added to the generated SQL, because inner joins filter the resulting dataset and this behaviour must usually be preserved.
-(Table rows that have no valid inner join to another table row do not appear in the output result).
+	#[toql(key)]
+	 id: u32,	
 
-Left joins however are only added, if the query string refers to the related table. Left joins cannot  reduce output rows.
+	#[toql(join())]
+	 phone: Join<Phone>
 
-### `Option<Option<T>>`  
-A selectable optional relation. A LEFT JOIN is invoked if the query requests it.
+	 #[toql(join())]
+	 phone2: Option<Option<Join<Phone>>>
+}
+```
 
-Possible results are:
-- `None`, Field is not selected by query or mapper.
--  `Some(None)`, Field is selected, but no related table exists (Foreign key is NULL).
--  `Some(Some(T))`, Field is selected and related table exists.
-
-### `#[toql(preselect)] Option<T>>`  
-An always selected optional relation. A LEFT JOIN is invoked if the query requests it.
-
-Possible results are:
-- `None`, The related table does not exist  (Foreign key is NULL).
-- `Some(T)`, The value of the related table. 
-
-### `Option<T>>`  
-A selectable relation that must not be null. An INNER JOIN is always invoked.
-
-Possible results are:
-- `None`, Field is not selected by query or mapper.
-- `Some(T)`, The value of the related table. 
-
-### `T`  
-An always selected relation, that must not be null. An INNER JOIN is always invoked.
+This has the following advantages:
+ - Loads as normal, `Join` will always hold a full value.
+ - Updating the `phone_id` column in User requires only a `PhoneKey`.
+   This key can be always be taken out from `Join`.
+ - Web clients can send in keys or full entities. `Join` will deserialize into whatever is possible.
+  
+For working with joins in your code checkout the `toql::prelude::join!` or `toql::prelude::rval_join!` macros.
 
 
 ## Sidenote for SQL generation
-Toql can select individual fields. This is done for simple columns by selecting `null` instead of the table column and checking if the resulting column type is accordingly. 
 
-For left joins this is not possible because the database uses the same technique to indicate missing left joins. Therefore Toql generates for left joins
-a extra discriminator expression to distinguish a missing left join from an unselected left join.
-
-If you watch the generated SQL output, you will notice that JOIN statements look slightly more complicated from Toql than from some other frameworks (hello eclipse link). 
+If you watch the generated SQL joins, you will notice that JOIN statements look slightly more complicated from Toql than you may expect.
 
 This is because Toql builds correctly nested JOIN statements that reflect the dependencies among the joined structs. Any SQL builder that simply concatenates inner joins and left joins may accidentally turn left joins into inner joins. This database behaviour is not well known and usually surprises users - Toql avoids this.
 

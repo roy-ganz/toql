@@ -71,7 +71,7 @@ Type| Toql Example |Remark|
 bool| admin eq 1| 0, 1|
 integer| limit  bw -12 5| |
 float | price le 0.5e2| |
-string| name in 'peter'| With ticks|
+string| name in 'peter'| Single quotes|
 date |subscribeUntil le '2050-12-31'|SQL format|
 time |start ge '08:30:00'| SQL format|
 date time |finishedAt ge '2005-12-31 08:30:00'| SQL format|

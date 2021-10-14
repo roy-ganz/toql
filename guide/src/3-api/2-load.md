@@ -75,12 +75,12 @@ Suppose you have a table with books. The books have an id, a title and an author
 Let's assume we have a webpage that contains a pager with page size _**2**_ and a pager filter. 
 The author wants to see all books that contain the word _**world**_. What will he get?
  - The first two rows (id 1, id 2).
- - The filtered page count of 3, because 3 rows match the filter criteria. 
+ - The *filtered page count* of 3, because 3 rows match the filter criteria. 
    The pager can now calculate the number of pages: ceil(3 / 2) = 2
- - The total page count of 4. The author knows now that with a different filter query, he could
+ - The *total page count* of 4. The author knows now that with a different filter query, he could
    get at most 4 rows back.
  
- In practice the total page count is not so straight forward to select: 
- Toql needs to decide, which filters from the query to consider or ignore when building the count SQL statement:
- Toql considers only filters on fields that are listed in the special [count selection](../4-derive/9-selections.md) and [predicates](../4-derive/10-predicates.md) that are marked as count filters.
+ In practice the *total page count* is not so straight forward to select: 
+ Toql needs to decide, which filters from the query to consider or ignore when building the count SQL statement.
+ For the *total page count* only filters are used on fields that are listed in the special [count selection](../4-derive/9-selections.md) and [predicates](../4-derive/10-predicates.md) that are marked as count filters.
  

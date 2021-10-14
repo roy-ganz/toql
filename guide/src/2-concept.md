@@ -7,21 +7,22 @@ To use it you must derive `Toql` for all structs that represent a table in your 
 relationships to other tables.
 - The fields also determine the field name or in case of a relationship the path name in the [Toql query](5-query-language/1-introduction.md)
 
-A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the [Toql API functions](3-api/1-toql-api.md) with a query string or just a list of fields or paths, because Toql allows nested operations.
+A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the [Toql API functions](3-api/1-introduction.md) with a query string or just a list of fields or paths, because Toql allows nested operations.
 
 Here the typical flow in a web environment:
 1. A web client sends a Toql query to the REST Server.
 2. The server uses Toql to parse the query and create SQL statements.
-3. Toql sends the SQL to the Database.
+3. Toql sends the SQL to the database.
 4. Toql deserializes the resulting rows into Rust structs.
 4. These structs are sent to the client.
 
 ## Example
 
-Here is an full example that uses Rocket to serve users from a database. 
+below a full example that uses Rocket to serve users from a database. 
 Notice the two Toql derived structs at the beginning. The rest of the code is fairly boilerplate.
 
 ```rust
+	// Toql derived structs
 	#[derive(Toql)]
 	struct Country {
 		#[toql(key)]
@@ -30,7 +31,7 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
 	}
 
 	#[derive(Toql)]
-	#[toql(auto_keys=true)]
+	#[toql(auto_keys = true)]
 	struct User {
 		#[toql(key)]
 		id: u32,
@@ -39,6 +40,7 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
 		country: Option<Country>
 	}
     
+	// Here Rocket with some Toql integration (ToqlQuery and Counted)
 	#[query("/?<toql..>")]
 	fn query(query: Form<ToqlQuery>, mut conn: Connection<ExampleDb>, 
 		cache: State<Cache> {
@@ -53,7 +55,6 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
 	pub struct ExampleDb(mysql::Conn);
 
 	fn main() {
-		
 		rocket::ignite().mount("/query", routes![query]).launch();
 	}
 ```
@@ -63,7 +64,7 @@ with `Cargo.toml`
 toql = v0.3
 toql_rocket = "0.3"
 toql_mysql_async = "0.3"
-rocker = "0.5"
+rocket = "0.5"
 mysql_async = "0.20"
 ```
 

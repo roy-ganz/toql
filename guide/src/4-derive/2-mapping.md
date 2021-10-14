@@ -20,7 +20,8 @@ Supported renaming schemes are
 ```rust
 #[derive(Toql)]
 #[toql(tables="SHOUTY_SNAKE_CASE", columns="UpperCase")]
-struct UserRef {
+struct User {
+	#[toql(key)]
   	user_id: u32
 	full_name: String,
 }
@@ -36,8 +37,10 @@ Use `table` an the struct and `column` on the fields to set a name.
 #[derive(Toql)]
 #[toql(table="User")]
 struct UserRef {
-	#[toql(column="id")]
-	user_id: u32
+
+	#[toql(key, column="id")]
+	user_id: u32,
+
 	full_name: String,
 }
 ```
@@ -53,9 +56,12 @@ Toql fields on a struct are always mixed case, while dependencies are separated 
 #[derive(Toql)]
 #[toql(table="User")]
 struct UserRef {
-	#[toql(column="id")]
+
+	#[toql(key, column="id")]
 	id: u32
+
 	full_name: String,
+
 	#[toql(join())]
 	county: Country
 }
@@ -67,6 +73,26 @@ is referred to as
 
 
 ## Exclusion
-To exclude fields from mapping attribute them with `skip`.
+Field can be excluded in several ways
+- `skip` excludes a field completely from the table, use for non-db fields.
+- `skip_mut` ensures a field is never updated, automatically added for keys and SQL expressions.
+- `skip_wildcard` removes a field from default [wildcard selection](../5-query-language/2-select.md), use for expensive SQL expressions or soft hiding.
 
 
+```rust
+#[derive(Toql)]
+#[toql(table="User")]
+struct UserRef {
+	
+	#[toql(key, column="id")]
+	id: u32
+
+	full_name: String,
+
+	#[toql(skip)]
+	value: String,
+
+	#[toql(skip_mut, skip_wildcard)]
+	county: Country
+}
+```

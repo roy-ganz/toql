@@ -1,134 +1,107 @@
 
-# Insert, update, diff, delete
-Structs for toql queries include typically a lot of `Option` fields. The meaning of optional fields depends on field attributes 
-and the Toql derive provides proper insert, update, diff and delete functions to reflect that.
+# Predicates
+All normal filtering is based on fields, [see here](../5-query-language/4-filter.md). 
+However sometimes you may have a completely different filter criteria, that cannot be mapped on fields. 
 
-
-## No nested operation
-Unlike loading that can pull in a full tree of structs all mutation functions only operate on a single database table.
-
-This is on purpose to provide clarity and safety to the programmer. 
-
-To do mutations on joined and merged structs additional function calls are needed. 
-
-
-## Collection mutation
-Toql provides a powerfull `diff_collection` function that compares an outdated collection with an updated collection 
-and generates insert/diff/delete statements to persist the changes in the database.
-
-#### Example
-
-```rust
-fn main() {
-	let outdated = [Color{id:5, name:"blue"}, Color{id:7, name:"green"}, Country{id:9, name:"black"}]
-	let updated = [Color{id:7, name:"lightgreen"}, Color{id:10, name:"purple"}]
-
-	toql.diff_collection(&outdated, &updated); // insert color #10,  diff color #7, delete color #5, # 9
-
-}
-```
-
-
-
-
-
-
-
-## Keys and skipping
-To make this work you need to provide additional information about keys.
-
-```rust
-struct User {
-  #[toql(delup_key, skip_inup)] // Key for delete / update, never insert / update
-	id: u64
-
-	name: Option<String>
-}
-```
-
-For composite keys mark multiple columns with the `delup_key`.
-
-Join, merge and SQL fields are excluded. To skip other fields from insert or update functions use the `skip_inup` annotation. Useful for auto incremented primary keys or trigger generated values. 
-
-### Example 
+An example is the MySql full text search. Let's do it:
 
 ```rust
 #[derive(Toql)]
+#[toql(predicate(name="search", 
+		sql="MATCH (..firstname, ..lastname) AGAINST (?  IN BOOLEAN MODE)"))]
+
+#[toql(predicate(name="street", 
+		sql="EXISTS( SELECT 1 FROM User u JOIN Address a ON (u.address_id = a.id) \
+		 	WHERE a.street = ? AND u.id = ..id)"))]
 struct User {
-	#[toql(delup_key, skip_inup)]
-	 id: u32,
-	 name: Option<String>
-}
 
---snip--
-use toql::mysql::insert_one;
-use toql::mysql::udate_one;
-use toql::mysql::delete_one;
+ #[toql(key)]
+ id: u64,
 
-let mut conn = --snip--
-
-let u = User{id:0, name: Some("Susane")};
-let x = insert_one(&u, &mut conn); // returns key
-u.id = x;
-u.name= Some("Peter");
-update_one(&u, &mut conn);
-
-delete_one(&u, &mut conn);
-```
-
-
-## Update behaviour
-The update function will update fields only if they contains some value. Look at this struct:
-
-```rust
-struct User {
-	id: u64
-	username: String,			// Always updated
-	realname: Option<String>, 		// Updated conditionally
-	address: Option<Option<<String>>, 	// Optional nullable column, updated conditionally
-	#[toql(preselect)]
-	info: Option<String> 		// Nullable column, always updated
-
-
+ firstname: String,
+ lastname: String,
 }
 ```
 
+With the two predicates above you can seach for users that have a certain name with `@search 'peter'` 
+and retrieve all users from a certain street with `@street 'elmstreet'`.
 
-# Collections
-Collections or dependend structs are **not** affected by insert, delete or update. You must do this manually (for safety reasons).
+The question marks in the predicate are replaced by the arguments provided. 
+If there is only one argument, it can also be used to build an `ON` predicate in a join. See [on param](4-joins.md).
 
-However functions for collections are provided.
+## Custom predicate handler
+
+It's also possible to write an own predicate handler. 
+Let's write a handler that concatenates all argument passed to the predicate and puts those arguments into the SQL predicate.
 
 
 ```rust
 #[derive(Toql)]
+#[toql(predicate(name="names", 
+				 sql="EXISTS (Select 1 FROM User u JOIN Todo t ON (u.id = t.user_id) \
+				AND u.name IN <args>)", handler="my_handler"))]
+struct Todo {
 
-struct Phone {
-	#[toql(delup_key, skip_inup)]
-	id: u64
+ #[toql(key)]
+ id: u64,
+
+ what: String,
 }
 
-struct User {
-	#[toql(delup_key, skip_inup)]
-	 id: u32,
-	 phones: vec<Phone>
+
+use toql::prelude::{PredicateHandler, SqlExpr, SqlArg, ParameterMap, SqlBuilderError};
+
+pub fn my_handler() -> impl PredicateHandler {
+    MyPredicateHandler {}
 }
+pub(crate) struct MyPredicateHandler;
+impl PredicateHandler for MyPredicateHandler {
+    fn build_predicate(
+        &self,
+        predicate: SqlExpr, 		// SQL from predicate
+        predicate_args: &[SqlArg],	// Arguments from the query
+        aux_params: &ParameterMap,	// Aux params
+    ) -> Result<Option<SqlExpr>, SqlBuilderError>  // Return None if no filtering should take place
+	{
+		if predicate_args.is_empty() {
+            return Err(SqlBuilderError::FilterInvalid(
+                "at least 1 argument expected".to_string(),
+            ));
+        }
+        let mut args_expr = SqlExpr::new();
+        predicate_args.iter().for_each(|a| { 
+            args_expr.push_arg(a.to_owned());
+            args_expr.push_literal(", ");
+        });
+        args_expr.pop(); // remove trailing ', '
 
---snip--
-use toql::mysql::insert_one;
-use toql::mysql::insert_many;
-
-use toql::mysql::delete_one;
-use toql::mysql::delete_many;
-
-// TODO
-
-
+        let mut replace = HashMap::new();
+        replace.insert("args".to_string(), args_expr);
+        let predicate = Resolver::replace_aux_params(predicate, &replace); // Replace  aux params with SQL expressions
+        
+        Ok(Some(predicate))
+    }
+}
 
 ```
 
 
+Use it in a Toql query with `@names 'Peter' 'Sandy' 'Bob'`
 
 
+## Reference
 
-
+The full predicate syntax is
+`predicate(name="..", sql="..", handler="..", on_param="..", count_filter=true|false)` 
+where 
+- _name_ is the name of the predicate. It can be called with this name `@name ..`. 
+  If a predicate is defined on a joined struct, that predicate can be called with a path
+  `@path_name ..`. See [predicate](5-query-language/5-predictes.md) for more details.
+- _sql_ is a raw QL expression. Use `?` to insert a predicate param in the SQL, 
+  `..` for the table alias, `<aux_param>` for aux params
+- _handler_ allows a custom predicate handler (build SQL with a function). 
+  Provide a function name without parenthesis that return a struct that implement `toql::prelude::PredicateHandler`
+- *on_param* set the name of an aux_param that can be used when building custom joins. See [example](4-join.md).
+  Can only be used when the predicate takes exactly one argument.
+- *count_filter* determines if a predicate used in Toql query should also be included in [count queries](3-api/2-load.md). 
+  Default is `false`

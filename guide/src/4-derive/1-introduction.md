@@ -1,12 +1,12 @@
 # The Toql Derive
-The recommended way to map Toql fields onto Rust structs is to use the Toql derive.
+A struct must derive `Toql`. Only on a derived struct any function from the [ToqlApi](3-api/1-introduction.md) can be called.
 
-The derive builds a lot of code. This includes
+This derive builds _a lot_ of code. This includes
 
 - Mapping of Toql fields to struct fields and database columns or expressions.
 - Creating field methods for the query builder.
 - Handling relationships through joins and merges.
-- Creating high level functions to load, insert, update and delete structs.
+- Creating Key structs.
 
 
 ## Example

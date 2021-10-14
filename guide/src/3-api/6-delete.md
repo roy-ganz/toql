@@ -1,12 +1,12 @@
 ## Deletes
 
-There are two update functions: `delete_one`, and `delete_many`. 
+There are two delete functions: `delete_one`, and `delete_many`. 
 
-Bothe delete functions take a predicate and delete all rows that match the predicate. 
+Both functions take a predicate and delete all rows that match that predicate. 
 
-`delete_one` takes a key or entity. It will build a filter predicate from that and delete the row that matches the predicate.
+`delete_one` takes a key or entity. It will build a filter predicate from that and delete the row that coresponds to the key.
 
-`delete_many` builds a predicate from the filters of the `Query` argument. All selections in the query are ignored.
+`delete_many` builds a predicate from the filters of the `Query` argument. (Selections in the query are ignored).
 
 ```
 use toql::prelude::ToqlApi;
@@ -20,7 +20,7 @@ toql.delete_many(query!(User, "id eq 5")).await?;
 ```
 
 ### Cascading
-`delete` does not do any cascading by itself. It just deletes rows from a single table. 
+`delete` does not do any cascading by itself. It just deletes rows from a _single_ table. 
 To cascade your deletes you must configure your database relations 
 and tell the database what to do with your joined rows: Delete them too or just set the foreign key to NULL.
 

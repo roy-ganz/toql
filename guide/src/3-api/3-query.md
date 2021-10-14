@@ -8,7 +8,7 @@ Alternatives are
 - to create a new `Query<T>` object and use its builder methods
 - or to parse a string
 
-This chapter does not explain the Toql query language itself, see [here](../5-query-language/introduction.md) to learn about that.
+This chapter does not explain the Toql query language itself, see [here](../5-query-language/1-introduction.md) to learn about that.
 
 
 ### The query! macro 
@@ -43,7 +43,7 @@ Here we include the query `q1` into `q`. Since queries are typesafe, so you can 
 
 ### Working with keys
 
-When entities composite keys it's easier to work directly with those keys.
+When entities have composite keys it's easier to work directly with those keys.
 (Key structs are automatically derived from the `Toql` derive and are located where the struct is.)
 
 With a single key, this is possible
@@ -68,7 +68,7 @@ let qk = ks.iter().collect::<Query<_>>();
 let q5 = query!(User, "*, {}", qk);
 ```
 
-The query `q4` only works for simple key, not a composite key, whereas `qk` works for any type of key.
+The query `q4` only works for a simple key, not a composite key, whereas `qk` works for any type of key.
 
 If you deal with entities you can get their keys from them (notice the `Keyed` trait). See here
 
@@ -103,7 +103,7 @@ let ks = Vec[UserKey{id:5}, UserKey{id:6}];
 let q8 = ks.iter().collect::<Query<_>>(); // -> query!(User, "(id eq5; id eq 6)")
 
 let q9 = query!(User, "username");
-let q10 = [q8, q9].iter().collect<Query<_>>(); // -> query!(User, "username, (id eq 5; id eq 6)")
+let q10 = [q9, q8].iter().collect<Query<_>>(); // -> query!(User, "username, (id eq 5; id eq 6)")
 
 ```
 
@@ -148,7 +148,10 @@ struct Auth {
 }
 impl Into<Query<Book>> for Auth {
     pub fn into(self) -> Query<Book> {
-        query.and(Book::fields().author_id().eq(self.user_id))
+
+        // This time with the builder methods for educational reasons
+        // In production do this query!(User, "authorId eq ?", self.user_id)
+        Query::from(Book::fields().author_id().eq(self.user_id))
     }
 }
 ```
@@ -183,7 +186,7 @@ The `query!` macro produces a `Query` type and can further be altered using all 
 One interesting method is `with`. It takes a `QueryWith` trait that can be implemented for any custom type to enhance the query. 
 This is more powerful than `Into<Query>` because you can also access auxiliary parameters.
 
-Aux params can be used in SQL expressions. See [here](TODOD) more information.
+Aux params can be used in SQL expressions. See [here](4-derive/2-sql-expressions.md) more information.
 
 ```
 struct Config {

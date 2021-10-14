@@ -1,44 +1,6 @@
 # Insert
-Toql provides two sets of insert functions to handle duplicates properly .
-
-Use  `insert_one` / `insert_many` if inserts should not fail. This is typically the case with simple database tables that contain an auto value as primary key.
-
-If primary keys are not auto generated, then you must provide a strategy to handle duplicates with `insert_dup_one` / `insert_dup_many`. 
-
-Consider the example of an associated tables that is used to store a collection of other tables. How should the insert behave if the collection already contains the table? Possible stategies are:
-
-- Ignore the insert operation with `DuplicateStrategy::Ignore`
-- Updated the already existing database record with `DuplicateStrategy::Update`
-- Throw an error `DuplicateStrategy::Fail`
-
-####Example:
-
-```
-#[derive(Toql)]
-struct User {
-    #[toql(skip_mut)] // auto value
-    id: u64,
-    languages : Vec<UserLanguage>
-}
-#[derive(Toql, Clone)] // Clone needed for merge
-struct UserLanguage {
-    user_id: u64,
-    language: Language
-}
-
-fn main () {
-    use toql::
-    let toql =  --snip--
-    let user =  --snip--
-    let user_language = --snip--
-
-    toql.insert(user)?; // Should not fail
-    toql.insert_dup(user_language, DuplicateStrategy::Fail)?; // New user should speak this language, must not fail
-    toql.insert_dup(user_language, DuplicateStrategy::Ignore)?; // New user already speaks this language (Record exists), ignore insert
-}
-
-```
-
+When you insert a struct, all fields and joins the are provided with the path list will be inserted. Merges are inserted seperately.
+Check [here](../3-api/4-insert.md) for details.
 
 ### Default values
 For *selectable* fields in a struct that are `None` Toql will insert the default value for the corresponding table column.
@@ -46,20 +8,43 @@ If you have not defined a default value in your database you must ensure that th
 This can be done through prior validation.
 
 
-##### Example
+#### Insert Behaviour Example
 
 ```rust
+#[derive(Toql)]
 struct User {
-    #[toql(skip_mut)]
-	id: u64                     // No insert
-	username: String,			// Value
-	realname: Option<String>, 		// Default or value
-	address: Option<Option<<String>>, 	// Nullable column: Default, value or NULL
+	#[toql(key)]
+	id: u64                     // Keys are never inserted
+	
+	username: String,		// Value
+	realname: Option<String>,	// Default or value
+	address: Option<Option<<String>>,// Nullable column: Default, value or NULL
+
 	#[toql(preselect)]
-	info: Option<String> 		// Nullable column: Value or NULL
+	info: Option<String> 	// Nullable column: Value or NULL
+
+	#[toql(join)]
+	address1: Option<Address> 	// Selectable inner Join: Foreign key is inserted or default
+
+	#[toql(join)]
+	address2: Option<Option<Address>>// Selectable left join: Default, value or NULL
+
+	#[toql(join())]
+	address3: Address 		// Inner Join: Foreign key or default
+
+	#[toql(join(), preselect)]
+	address4: Option<Address>>	// Selectable inner join: Foreign key or default
+
+	#[toql(merge())]
+	phones1: Vec<Phone>>		// No change on table 'User'
+
+	#[toql(merge())]
+	phones2: Option<Vec<Phone>>> // No change on table 'User'
 }
 ```
 
+When the path list requires to insert a dependency too, 
+left joins and optional merges will only be inserted, if they contains a value.
 
  
 
