@@ -32,7 +32,7 @@ where
         let registry = &*backend.registry().map_err(ToqlError::from)?;
         let mapper = registry
             .get(&<T as Mapped>::type_name())
-            .ok_or(ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(<T as Mapped>::type_name()))?;
 
         result.push_select(SqlExpr::alias(mapper.canonical_table_alias.to_owned()));
     }

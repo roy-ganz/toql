@@ -232,7 +232,7 @@ where
     }
     let columns = columns
         .into_iter()
-        .map(|c| PredicateColumn::SelfAliased(c))
+        .map(PredicateColumn::SelfAliased)
         .collect::<Vec<_>>();
     key_predicate.push_predicate(columns, args);
 
@@ -254,7 +254,7 @@ where
     if !args.is_empty() {
         let columns = columns
             .into_iter()
-            .map(|c| PredicateColumn::OtherAliased(c))
+            .map(PredicateColumn::OtherAliased)
             .collect::<Vec<_>>();
         key_predicate.push_literal(" AND NOT (");
         key_predicate.push_predicate(columns, args);
@@ -270,7 +270,7 @@ where
             .with_roles(backend.roles().clone()); // todo ref
         let delete_expr = sql_builder.build_merge_delete(&merge_path, key_predicate.to_owned())?;
 
-        let mut alias_translator = AliasTranslator::new(backend.alias_format().clone());
+        let mut alias_translator = AliasTranslator::new(backend.alias_format());
         let resolver = Resolver::new();
         resolver
             .to_sql(&delete_expr, &mut alias_translator)
@@ -334,7 +334,7 @@ where
 
     let ty = <T as Mapped>::type_name();
     for query_field in query_fields {
-        let trimmed_query_field = query_field.as_ref().trim_end_matches("_");
+        let trimmed_query_field = query_field.as_ref().trim_end_matches('_');
         let (query_path, fieldname) = FieldPath::split_basename(trimmed_query_field);
 
         let sql_builder = SqlBuilder::new(&ty, registry);

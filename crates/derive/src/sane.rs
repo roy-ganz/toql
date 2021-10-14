@@ -1,12 +1,9 @@
 use crate::annot::FieldRoles;
-use crate::annot::OnAuxParamArg;
-use crate::annot::Pair;
-use crate::annot::RenameCase;
-use crate::annot::Toql;
-use crate::annot::ToqlField;
-use crate::annot::{ParamArg, PredicateArg, SelectionArg, StructRoles};
-use crate::heck::MixedCase;
-use crate::heck::SnakeCase;
+use crate::{
+    annot::{Pair, ParamArg, PredicateArg, RenameCase, SelectionArg, StructRoles, Toql, ToqlField},
+    heck::MixedCase,
+    heck::SnakeCase,
+};
 
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};

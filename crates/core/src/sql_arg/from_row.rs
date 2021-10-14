@@ -43,7 +43,7 @@ where
         {
             // First Option is None, if Index is out of bounds, second Option is Nullable column
             let val = u64::from_row(row, i, iter);
-            if !val.is_err() {
+            if val.is_ok() {
                 match val.or(Err(ToqlError::DeserializeError(
                     DeserializeError::StreamEnd,
                 )))? {
@@ -52,7 +52,7 @@ where
                 }
             }
             let val = String::from_row(row, i, iter);
-            if !val.is_err() {
+            if val.is_ok() {
                 match val.or(Err(ToqlError::DeserializeError(
                     DeserializeError::StreamEnd,
                 )))? {
@@ -61,7 +61,7 @@ where
                 }
             }
             let val = i64::from_row(row, i, iter);
-            if !val.is_err() {
+            if val.is_ok() {
                 let val = val.or(Err(ToqlError::DeserializeError(
                     DeserializeError::StreamEnd,
                 )))?;
@@ -71,7 +71,7 @@ where
                 }
             }
             let val = f64::from_row(row, i, iter);
-            if !val.is_err() {
+            if val.is_ok() {
                 let val = val.or(Err(ToqlError::DeserializeError(
                     DeserializeError::StreamEnd,
                 )))?;

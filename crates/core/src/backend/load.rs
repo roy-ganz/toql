@@ -78,7 +78,7 @@ where
         let mapper = registry
             .mappers
             .get(&ty)
-            .ok_or(ToqlError::MapperMissing(ty.clone()))?;
+            .ok_or_else(|| ToqlError::MapperMissing(ty.clone()))?;
         mapper.canonical_table_alias.clone()
     };
 
@@ -170,7 +170,7 @@ where
         } else {
             let predicate_columns = columns
                 .into_iter()
-                .map(|c| PredicateColumn::SelfAliased(c))
+                .map(PredicateColumn::SelfAliased)
                 .collect::<Vec<_>>();
             predicate_expr.push_predicate(predicate_columns, args);
 

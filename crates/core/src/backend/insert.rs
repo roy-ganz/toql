@@ -77,12 +77,12 @@ where
     for l in (0..joins.len()).rev() {
         // TEST not rev
         for p in joins.get(l).unwrap() {
-            let mut path = FieldPath::from(&p);
+            let path = FieldPath::from(&p);
 
             let sql = build_insert_sql(
                 backend,
                 entities,
-                &mut path,
+                &path,
                 &mut std::iter::repeat(&true),
                 "",
                 "",
@@ -115,12 +115,12 @@ where
                 continue;
             }
 
-            let mut path = FieldPath::from(&p);
+            let path = FieldPath::from(&p);
 
             let sql = build_insert_sql(
                 backend,
                 entities,
-                &mut path,
+                &path,
                 &mut std::iter::repeat(&true),
                 "",
                 "",
@@ -311,7 +311,7 @@ where
     insert_partial_tables_order(mappers, &ty, 0, &FieldPath::default(), partials)?;
 
     for path in paths {
-        let field_path = FieldPath::from(path.as_ref().trim_end_matches("_"));
+        let field_path = FieldPath::from(path.as_ref().trim_end_matches('_'));
         let steps = field_path.step_down();
         let children = field_path.children();
         let mut level = 0;

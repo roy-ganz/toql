@@ -1354,38 +1354,34 @@ impl<'a> SqlBuilder<'a> {
         count_selection_only: bool,
     ) -> Result<()> {
         for token in &query.tokens {
-            match token {
-                QueryToken::Field(field) => {
-                    if field.filter.is_some() {
-                        let query_path = FieldPath::from(&field.name);
-                        if count_selection_only {
-                            let root_mapper = self.root_mapper()?;
-                            match root_mapper.selections.get("cnt") {
-                                Some(selection) => {
-                                    let wildcard_path = format!("{}_*", field.name.as_str());
-                                    if !selection.contains(&field.name)
-                                        && !selection.contains(&wildcard_path)
-                                    {
-                                        continue;
-                                    }
+            if let QueryToken::Field(field) = token {
+                if field.filter.is_some() {
+                    let query_path = FieldPath::from(&field.name);
+                    if count_selection_only {
+                        let root_mapper = self.root_mapper()?;
+                        match root_mapper.selections.get("cnt") {
+                            Some(selection) => {
+                                let wildcard_path = format!("{}_*", field.name.as_str());
+                                if !selection.contains(&field.name)
+                                    && !selection.contains(&wildcard_path)
+                                {
+                                    continue;
                                 }
-                                None => continue,
                             }
+                            None => continue,
                         }
-                        if let Some(local_path_with_name) =
-                            query_path.localize_path(&build_context.query_home_path)
-                        {
-                            let field_path =
-                                FieldPath::trim_basename(local_path_with_name.as_str());
-                            if self.next_merge_path(&field_path)?.is_none() {
-                                for path in field_path.step_up() {
-                                    build_context.local_joined_paths.insert(path.to_string());
-                                }
+                    }
+                    if let Some(local_path_with_name) =
+                        query_path.localize_path(&build_context.query_home_path)
+                    {
+                        let field_path = FieldPath::trim_basename(local_path_with_name.as_str());
+                        if self.next_merge_path(&field_path)?.is_none() {
+                            for path in field_path.step_up() {
+                                build_context.local_joined_paths.insert(path.to_string());
                             }
                         }
                     }
                 }
-                _ => {}
             }
         }
         Ok(())
@@ -1424,7 +1420,7 @@ impl<'a> SqlBuilder<'a> {
                 }
                 QueryToken::Wildcard(wildcard) => {
                     // TODO: Wildcard path may have ending _, check why and to remove
-                    let query_path = FieldPath::from(&wildcard.path.trim_end_matches("_"));
+                    let query_path = FieldPath::from(&wildcard.path.trim_end_matches('_'));
 
                     if let Some(local_path) =
                         query_path.localize_path(&build_context.query_home_path)
@@ -1588,7 +1584,6 @@ impl<'a> SqlBuilder<'a> {
                                     &mut unmerged_home_paths,
                                 )?;
                             } else if selection_name != "cnt" && selection_name != "mut" {
-
                                 self.resolve_custom_selection(
                                     &selection.name,
                                     &mut build_context,
