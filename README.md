@@ -25,8 +25,8 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-toql = { version = "0.3" }
-toql_mysql_async = { version = "0.3" }
+toql = "0.3"
+toql_mysql_async = "0.3"
 ```
 
 ### Integration 
@@ -36,9 +36,8 @@ toql_mysql_async = { version = "0.3" }
 [dependencies]
 toql_rocket = { version = "0.1", features = ["mysql"] }
 ```
-Right now there is only support for `MySQL`. Add `features = ["mysql"]` to your `Cargo.toml` dependencies.
 
-## Look and feel
+### Look And Feel
 ```rust
 #[derive(Toql)]
 #[toql(auto_key = true)]
@@ -67,8 +66,7 @@ let user = toql.load_many(q).await?;
 ```
 
 ## Contribution
-My near term goal is to support for more web frameworks and databases. However I would like to stabilize the API first. So you are welcome to play around and test it (**don't use it in production yet**). Comments, bug fixes and quality improvements are welcome. For features please hold on.
-
+Comments, bug fixes and quality improvements are welcome. 
 
 ## License
 Toql is distributed under the terms of both the MIT license and the
