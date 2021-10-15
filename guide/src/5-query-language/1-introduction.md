@@ -1,4 +1,4 @@
-# The Query Language
+# The query language
 
 The Toql query language is a normal string that list all query fields, that should be retrieved from a database. 
 

@@ -123,12 +123,6 @@ impl Field {
         self.filter = Some(FieldFilter::Lk(criteria.into()));
         self
     }
-    /// Filter records with _regex_ predicate.
-    pub fn re(mut self, criteria: impl Into<SqlArg>) -> Self {
-        self.filter = Some(FieldFilter::Re(criteria.into()));
-        self
-    }
-
     /// Filter records with _inside_ predicate.
     pub fn ins<T, I>(mut self, criteria: I) -> Self
     where

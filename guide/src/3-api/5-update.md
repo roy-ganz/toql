@@ -1,8 +1,8 @@
 ## Updates
 
-There are two update functions: `update_one`, and `update_many`. 
+There are two update functions: `update_one` and `update_many`. 
 
-The are used like so:
+They are used like so:
 
 ```
 use toql::prelude::{ToqlApi, fields};
@@ -23,7 +23,7 @@ In the example above all three statements do the same.
 The `fields!` macro compiles a list of fields. Any invalid path or field name shows up at compile time.
 
 The update function will consider all fields from the field list to update. Optional fields will only 
-be updated if they contain some value. See [the mapping](4-derive/8-update.md) for details.
+be updated if they contain some value. See [the mapping](4-derive/12-update.md) for details.
 
 #### Joins
 You can update only the foreign key of a join or field from the join. Consider this field list:
@@ -38,7 +38,7 @@ With `*` we consider all fields from User for updating,
 and finally `address_id` is ignored, since keys cannot be updated.
 
 Notice in the example above `address` is actually a duplicate, because foreign keys are included in `*`.
-It's just mentioned explicitly for learning purposes.
+It's just mentioned explicitly for the purpose of learning.
 
 #### Merges
 Updates can either 
@@ -52,8 +52,8 @@ let f = fields!(User, "*, books, books_*")
 ```
 
 - With `*` we consider all simple fields from User for updating (this excludes merges), 
-- `books` will delete all books that are linked to the user but are not found in the `books` vector. 
-It will also insert new book (and possible partial joins).
+- `books` resizes the `Vec`: It deletes all books that are linked to the user but are not found in the `books` vector and 
+it inserts new book (toghether with possible [partial joins](../4-derive/8-partial-tables.md)).
 - `books_*` will update all simple fields in the existing `books`.
 
 ### Example: Updating a Vec with new items.
@@ -103,7 +103,7 @@ To mark new books, add them with an invalid key. A value of `0` or an empty stri
 Normally databases start counting indexes from 1 and some databases consider an empty string like null, which is 
 also forbidden as primary key. So this idea of invalid key should normally work, however check with you database.
 
-In rare cases where this does not work. Insert and delete your Vec manually, using the `ToqlApi` functions.
+In rare cases where this does not work. Insert and delete your `Vec` manually, using the `ToqlApi` functions.
 
 In the example above the first book has an invalid composite key (`id`, `user_id`), because `user_id` is `0`. 
 Toql will notice that and insert a new book (with the correct `user_id` of `27`). From the second book with `id 200` the field `title` will be updated.

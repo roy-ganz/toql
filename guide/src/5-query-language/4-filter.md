@@ -1,5 +1,5 @@
 
-# Filtering
+# Filtering fields
  
 Fields can be filtered by adding a filter to the field name. 
 
@@ -11,7 +11,7 @@ Fields can be filtered by adding a filter to the field name.
 
 ## Filter operations
 
-Toql| Operation | Example | SQL _MySQL_
+Toql| Operation | Example | SQL
 ---|---|---|---
 eq | _equal_	|	age eq 50  | age = 50 
 eqn| _equal null_	|age eqn	|	age IS NULL
@@ -24,7 +24,6 @@ le | _less than or equal_ | age le 16 | age <= 16
 bw | _between_ | age bw 16 20 | age BETWEEN 16 AND 20
 in | _includes_ | name in 'Peter' 'Susan' | name in ('Peter, 'Susan')
 out | _excludes_ | age out 1 2 3 | name not in (1, 2, 3)
-re | _matches regular expression_ | name re ".\*" | name REGEXP '.*'
 fn | _custom function_ | search fn ma 'arg1' | _depends on implementation_
 
 

@@ -25,7 +25,6 @@ impl FieldOptions {
             count_select: false,
             skip_mut: false,
             skip_wildcard: false,
-            //   skip_load: false,
             load_role_expr: None,
             aux_params: HashMap::new(),
             on_aux_params: Vec::new(),

@@ -105,16 +105,12 @@ pub struct ToqlField {
     pub merge: Option<MergeArg>,
     #[darling(default)]
     pub alias: Option<String>,
-    /*  #[darling(default)]
-    pub table: Option<String>, // Alternative sql table name */
     #[darling(default)]
     pub handler: Option<Path>,
     #[darling(multiple)]
     pub aux_param: Vec<ParamArg>,
     #[darling(default)]
     pub roles: FieldRoles,
-    /*  #[darling(multiple)]
-    pub on_aux_param: Vec<OnAuxParamArg>, */
 }
 
 #[derive(FromMeta, PartialEq, Eq, Clone, Debug)]

@@ -9,14 +9,14 @@ relationships to other tables.
 
 A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are merly 'views' to a table.
 
-A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the [Toql API functions](3-api/1-introduction.md) with a query string or just a list of fields or paths, because Toql allows nested operations.
+A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the [Toql API functions](3-api/1-introduction.md) with a query string or just a list of fields or paths.
 
 Here the typical flow in a web environment:
 1. A web client sends a Toql query to the REST Server.
 2. The server uses Toql to parse the query and create SQL statements.
-3. Toql sends the SQL to the database.
-4. Toql deserializes the resulting rows into Rust structs.
-4. These structs are sent to the client.
+3. Toql sends the SQL to the database
+4. and deserializes the resulting rows into Rust structs.
+4. The server sends these structs to the client.
 
 ## Example
 
@@ -43,7 +43,7 @@ Notice the two Toql derived structs at the beginning. The rest of the code is fa
 	}
     
 	// Here Rocket with some Toql integration (ToqlQuery and Counted)
-	#[query("/?<toql..>")]
+	#[query("/?<query..>")]
 	fn query(query: Form<ToqlQuery>, mut conn: Connection<ExampleDb>, 
 		cache: State<Cache> {
 		

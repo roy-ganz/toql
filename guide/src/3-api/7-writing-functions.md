@@ -1,36 +1,42 @@
 ## Writing functions
 
 In bigger projects you need to structure your code with functions. 
-This chapter explains how to do this database _dependend_.
 
-Let dive in with an example:
+There as two common ways, each with different tradeoffs
+- Pass the database driver to the function
+- Pass ToqlApi to the function
 
-```
-use std::result::Result;
-pub async load_std_selection<T, B,R,E>(toql: B) -> Result::(Vec<T>, E)
-where B: Backend<R,E>, T: Load<R,E> 
+### Passing the database
+
+If you decide to pass the database you give up on database independence, but less trait bounds are needed:
+
+For MySQL this looks like this:
+
+``rust
+use toql::prelude::ToqlApi;
+use toql_mysql_async::prelude::{MySqlAsync, Queryable};
+fn do_stuff<C>(toql: &mut MySqlAsync<'_,C>) 
+where C:Queryable -> Resulty
 {
-    toql.load_many("$").await?
+    let q = query!(...)
+    let users = toql.load_many(&q).await?;
+    toql.insert_many(users, paths!(top)).await?;
+    toql.update_many(users, fields!(top)).await?;
+    toql.delete_many(q).await?;
 }
 ```
+The `Queryable` trait makes the `MySqlAsync` work with a connection or a transaction.
 
-Lot of generics! The signature says, that the function takes a backend B that can deserialize from rows of type `R` and may produces errors `E`. 
-It returns a Vector of a type `T ` that can be loaded (deserialized) from a Row `R` and may produce an error `E`.
 
-Every database backend is implemented for its own row types and errors. Calling the function with a concrete backend, 
-such as `MySqlAsync` will allow rust to infere all generic parameters.
 
-Fortunately other traits are easier. Let's see how to write a generic insert function.
+## Database independed functions
 
-```
-pub async insert_simple<T, B,R,E>(toql: B, entity: &mut T) -> std::result::Result::((), E)
-where B: Backend<R,E>, T: Insert 
-{
-    toql.insert_one(entity).await?
-}
-```
+It's also possible to pass a struct that implements `ToqlApi`. 
+However this requires more trait bounds to satisfy the bounds on `ToqlApi`.
+Unfortunately rust Rust compiler has a problem with [associated type bounds](https://rust-lang.github.io/rfcs/2289-associated-type-bounds.html), so it looks more complicated than it had to be.
 
-Likewise for other operations use the traits `Update`, `Delete` and `Count`.
+
+
 
 
 

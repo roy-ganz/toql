@@ -1,5 +1,5 @@
-# The Toql Derive
-A struct must derive `Toql`. Only on a derived struct any function from the [ToqlApi](3-api/1-introduction.md) can be called.
+# The Toql derive
+A struct must derive `Toql`. Only on a derived struct any function from the [ToqlApi](../3-api/1-introduction.md) can be called.
 
 This derive builds _a lot_ of code. This includes
 

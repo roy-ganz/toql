@@ -16,8 +16,6 @@ pub enum FieldFilter {
     Bw(SqlArg, SqlArg), // Lower, upper limit
     In(Vec<SqlArg>),
     Out(Vec<SqlArg>),
-    Re(SqlArg),
-    //  Sc(String),
     Fn(String, Vec<SqlArg>), // Function name, args
 }
 
@@ -57,10 +55,6 @@ impl ToString for FieldFilter {
             }
             FieldFilter::Lk(ref arg) => {
                 s.push_str("LK ");
-                s.push_str(&arg.to_sql_string());
-            }
-            FieldFilter::Re(ref arg) => {
-                s.push_str("RE ");
                 s.push_str(&arg.to_sql_string());
             }
             FieldFilter::Bw(ref lower, ref upper) => {

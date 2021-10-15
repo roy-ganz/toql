@@ -1,13 +1,13 @@
 
 # Fields
-Struct fields are mapped to Toql query fields and databases by default in a predictable way:
+Struct fields are mapped to Toql query fields and database columns by default in a predictable way:
 1. Table names are UpperCamelCase.
 2. Column names are snake_case.
-3. Toql fields are lowerCamelCase.
-4. Toql paths are lowerCamelCase, separated with an underscore.
+3. Toql query fields are lowerCamelCase.
+4. Toql query paths are lowerCamelCase, separated with an underscore.
 
 
-## Database
+## Renaming tables and columns
 To adjust the default naming to an existing database scheme use the attributes `tables` and `columns` for a renaming scheme or `table` and `column` for explicit name.
 
 Supported renaming schemes are 
@@ -16,7 +16,7 @@ Supported renaming schemes are
 - SHOUTY\_SNAKE\_CASE
 - mixedCase
 
-#### Renaming scheme example:
+#### Renaming scheme example
 ```rust
 #[derive(Toql)]
 #[toql(tables="SHOUTY_SNAKE_CASE", columns="UpperCase")]
@@ -30,7 +30,7 @@ is translated into
 
 `SELECT t0.UserId, t0.FullName FROM USER_REF t0`
 
-#### Explicit naming example:
+#### Explicit naming example
 Use `table` an the struct and `column` on the fields to set a name.
 
 ```rust
@@ -54,9 +54,9 @@ Use `column` also when mapping a field, that is a SQL keyword. Notice the back t
 	order: u32,
 ```
 
-## Toql fields
+### Toql query fields
 
-Toql fields on a struct are always mixed case, while dependencies are separated with an unserscore.
+Toql query fields on a struct are always mixed case, while dependencies are separated with an unserscore.
 
 ```rust
 #[derive(Toql)]

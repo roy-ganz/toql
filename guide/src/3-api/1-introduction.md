@@ -1,4 +1,4 @@
-# The Toql Api
+# The Toql API
 
 Toql relies on backends to handle database differences. 
 These backends implement a common trait, the `ToqlApi`, 
@@ -19,9 +19,9 @@ Currently the following backends are available
 
 |Database | Backend Crate     | Driver Crate|
 |---------|----------------|-------------|
-| MySql   | toql_mysql_async| mysql_async |
+| MySQL   | toql_mysql_async| mysql_async |
 
-For MySql add this to your `cargo.toml`:
+For MySQL add this to your `cargo.toml`:
 
 ```
 [dependency]

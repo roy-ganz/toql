@@ -105,10 +105,10 @@ impl FieldHandler for DefaultFieldHandler {
                     .push_arg(upper.clone());
                 Ok(Some(select))
             }
-            FieldFilter::Re(criteria) => {
+           /*  FieldFilter::Re(criteria) => {
                 select.push_literal(" RLIKE ").push_arg(criteria.clone());
                 Ok(Some(select))
-            }
+            } */
             FieldFilter::In(args) => {
                 if args.is_empty() {
                     return Ok(None);

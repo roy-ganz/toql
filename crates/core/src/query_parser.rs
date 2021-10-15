@@ -142,10 +142,6 @@ impl TokenInfo {
                             SqlBuilderError::FilterInvalid(filtername.to_string())
                         })?,
                     ))),
-                    "RE" => Ok(Some(FieldFilter::Re(self.args.pop().ok_or_else(|| {
-                        SqlBuilderError::FilterInvalid(filtername.to_string())
-                    })?))),
-
                     _ => {
                         if upc.starts_with("FN ") {
                             let filtername = upc.trim_start_matches("FN ");

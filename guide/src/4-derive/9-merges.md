@@ -1,5 +1,6 @@
 
-# Merge
+# Merges
+
 A struct can contain a Vec of other structs. Because this can't be loaded done directly in SQL, Toql will execute multiple queries and merge the results. 
 
 ```rust
