@@ -1,17 +1,17 @@
 
 ![Bollard by the Sea by Gábor Szakács (Public Domain)](guide/src/bollard-at-the-port.gif)
 
-Toql - A friendly and productive ORM
-==========================================================
+# Toql - A friendly and productive ORM
+
 
 [Beginner Guide](https://roy-ganz.github.io/toql), [API documentation](https://docs.rs/toql/0.3/toql/)
 
-Toql (pronounced *to-cue-ell*) is an ORM for async databases that features
+Toql is an ORM for async databases that features
 - Translation between Rust structs and database tables.
 - Can load and modify nested structs.
 - A unique dead simple query language, suitable for web clients.
 - Different table aliases from long and readable to tiny and fast.
-- Prepared statements against SQL Injection.
+- Prepared statements against SQL injection.
 - Support for raw SQL for full database power.
 - Support for role based access.
 - Highly customizable through user defined parameters, query functions, field handlers, etc. 

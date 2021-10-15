@@ -5,7 +5,7 @@ There are three loading functions: `load_one`, `load_many` and `load_page`.
 
 All loading functions take a [Toql query](../5-query-language/1-introduction.md) and will translate it into SQL SELECT statement(s). The resulting rows will be deserialized and returned.
 
-If your Toql structs contain a `Vec` of other structs, the load functions will issue multiple SELECT statements and merge the results.
+If your Toql structs contain a `Vec` of other structs, the load functions issue multiple SELECT statements and merge the results.
 
 If you expect exactly one result, use `load_one`.
 

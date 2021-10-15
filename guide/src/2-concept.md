@@ -7,6 +7,8 @@ To use it you must derive `Toql` for all structs that represent a table in your 
 relationships to other tables.
 - The fields also determine the field name or in case of a relationship the path name in the [Toql query](5-query-language/1-introduction.md)
 
+A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are merly 'views' to a table.
+
 A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the [Toql API functions](3-api/1-introduction.md) with a query string or just a list of fields or paths, because Toql allows nested operations.
 
 Here the typical flow in a web environment:
