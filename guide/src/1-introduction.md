@@ -1,6 +1,6 @@
 # Toql (_Transfer Object Query Language_)
 
-Toql (pronounced *To-cue-ell*) is an ORM for async databases that features
+Toql is an ORM for async databases that features
 - Translation between Rust structs and database tables.
 - Can load and modify nested structs.
 - Has a unique dead simple query language.
