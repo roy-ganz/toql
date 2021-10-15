@@ -1,8 +1,8 @@
 # Selections
 
-A typical query selects a lot of fields. Instead of writing out a long list of fields, predefined field lists can be [mapped](../3-api/9-selections.md)
+A typical query selects a lot of fields. Instead of writing out a long list of fields, predefined field lists can be [mapped](../3-api/9-selections.md).
 
-The list can then be selected with a `$` and the selection name.
+The list can then be selected with a `$` followed by the selection name.
 
 ```toql 
 $mySelection, $otherSelection
@@ -12,13 +12,13 @@ There is a set of predefined selections:
 
 |Selection | Scope|
 |----------|------|
-| $std     | Standart selection, must be mapped|
+| $std     | Standart selection, must be  to be used|
 | $        | Alias for $std |
 | $cnt     | Fields that are considered for a count query, defaults to keys and preselects|
 | $all     | All fields on a struct, including dependencies|
 | $mut     | All mutable fields on a struct|
 
-Selections can also refer to a dependency, using a path. 
+Selections on a dependency can be used with a path. 
 
 To load the standart selection from a dependency `address` use
 

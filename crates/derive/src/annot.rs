@@ -76,19 +76,12 @@ pub struct ToqlField {
     pub ty: syn::Type,
     #[darling(default)]
     pub join: Option<JoinArg>,
-
     #[darling(default)]
     pub column: Option<String>,
     #[darling(default)]
     pub skip: bool,
     #[darling(default)]
     pub skip_mut: bool,
-    /*   #[darling(default)]
-      pub skip_query: bool, */
-      /*  #[darling(default)]
-      pub count_filter: bool, */
-    /*   #[darling(default)]
-      pub count_select: bool, */
     #[darling(default)]
     pub preselect: bool,
     #[darling(default)]
@@ -97,8 +90,6 @@ pub struct ToqlField {
     pub key: bool,
     #[darling(default)]
     pub foreign_key: bool,
-    #[darling(default)]
-    pub field: Option<String>,
     #[darling(default)]
     pub sql: Option<String>,
     #[darling(default)]

@@ -4,7 +4,7 @@
 - [Concept](2-concept.md)
 - [Api](3-api/1-introduction.md)
 	- [Load](3-api/2-load.md)
-	- [Query Type](3-api/3-query-type.md)
+	- [Query type](3-api/3-query-type.md)
 	- [Insert](3-api/4-insert.md)
 	- [Update](3-api/5-update.md)
 	- [Delete](3-api/6-delete.md)

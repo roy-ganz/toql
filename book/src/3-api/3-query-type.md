@@ -108,7 +108,7 @@ let q10 = [q9, q8].iter().collect<Query<_>>(); // -> query!(User, "username, (id
 ```
 
 
-### Into<Query>
+### The `Into<Query>` trait
 
 In the example above the query `q3` is build with a `UserKey`. This is possible because `UserKey` implements `Into<Query<User>>`.
 You can also implement this trait for you own types. Let's assume a book category.
@@ -180,7 +180,7 @@ let q = query!(Book, "*, {}", auth);
 ```
 
 
-### The QueryWith Trait
+### The `QueryWith` trait
 
 The `query!` macro produces a `Query` type and can further be altered using all methods from that type.
 One interesting method is `with`. It takes a `QueryWith` trait that can be implemented for any custom type to enhance the query. 

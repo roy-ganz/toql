@@ -8,6 +8,16 @@ Fields can be filtered by adding a filter to the field name.
 - Strings and enum arguments are enclosed with single quotes.
 - Boolean arguments are expressed with numbers 0 and 1.
 
+To use a field only for filtering, but not for selection, hide it with a dot: `.age gt 50, .book_reviewed eq 1`
+
+#### Example
+    id, book_published eq 1, .age gt 50
+ 
+ is typically translated into (using canonical aliases)
+ 
+    SELECT user.id, user_book.id, user_book.published FROM User user JOIN Book user_book ON (user.book_id = user_book.id) WHERE user_book.published = 1 AND  user.age > 50
+
+
 
 ## Filter operations
 
@@ -25,6 +35,7 @@ bw | _between_ | age bw 16 20 | age BETWEEN 16 AND 20
 in | _includes_ | name in 'Peter' 'Susan' | name in ('Peter, 'Susan')
 out | _excludes_ | age out 1 2 3 | name not in (1, 2, 3)
 fn | _custom function_ | search fn ma 'arg1' | _depends on implementation_
+
 
 
 

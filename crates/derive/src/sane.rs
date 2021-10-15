@@ -1,16 +1,9 @@
-use crate::annot::FieldRoles;
-use crate::{
-    annot::{Pair, ParamArg, PredicateArg, RenameCase, SelectionArg, StructRoles, Toql, ToqlField},
-    heck::MixedCase,
-    heck::SnakeCase,
+use crate::{annot::{Pair, ParamArg, PredicateArg, RenameCase, SelectionArg, StructRoles, Toql, ToqlField, FieldRoles},
+    heck::{SnakeCase, MixedCase},
 };
-
 use proc_macro2::{Span, TokenStream};
 use syn::{Ident, Path, Visibility};
-
 use std::collections::HashSet;
-
-//use crate::error::Result;
 use darling::Result;
 
 pub struct Struct {

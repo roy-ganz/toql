@@ -68,10 +68,27 @@ let mut conn = pool.get_conn().await?;
 let mut p = HashMap::new();
 p.insert("page_limit".into(), 200.into());
 
-let context = ContextBuilder::new().set_aux_params(p).build();
+let context = ContextBuilder::new().with_aux_params(p).build();
 let cache = Cache::new();
 let toql = MySqlAsync::with_context(&mut conn, &cache, context);
 ```
+
+Beside aux params `ContextBuilder` allows you 
+  - to choose an alias format (`user.id`, `us1.id`, `t0.id`, ...)
+  - set the roles for [access control](../4-derive/16-roles.md)
+
+
+ ```rust
+ use toql::prelude::{ContextBuilder, AliasFormat};
+ let mut roles = HashSet::new();
+ roles.insert("teacher", "admin");
+
+  let context = ContextBuilder::new()
+    .with_alias(AliasFormat::Tiny)
+    .with_roles(roles)
+    .build();
+ ```
+
 
 
 
