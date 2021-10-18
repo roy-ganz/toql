@@ -36,6 +36,6 @@
 	- [MySQL enums](6-appendix/2-mysql-enums.md)
 	- [Row access control](6-appendix/3-row-access-control.md)
 	- [Serde](6-appendix/4-serde.md)
-	- [Debugging Toql](6-appendix/5-debugging.md)
+	- [Debugging Toql](6-appendix/5-debugging-toql.md)
 
 

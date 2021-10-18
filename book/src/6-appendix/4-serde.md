@@ -2,7 +2,7 @@
 # Serde
 
 Toql structs usually have a lot of `Option` types to make fields selectable with a query.
-Let's look how to attribute them with serde for smotth interaction.
+Let's look how to attribute them with serde for smooth interaction.
 
 ## Serializing
 It's nice to omit unselected fields. This can easily achieved with `#[serde(skip_serializing_if = "Option::is_none")]`
@@ -30,20 +30,24 @@ Your server needs deserializing either
     #[toql(auto_key = true)]
     struct User {
     
-    #[serde(default)]  // 'default' allows missing field 'id' in Json, needed typically for insert
-    #[toql(key)]
-    id: u64
+        // 'default' allows missing field 'id' in Json
+        //  Needed typically for insert
+        #[serde(default)] 
+        #[toql(key)]
+        id: u64
+        
+        // No Serde attribute:
+        // Field must always be present in Json, but may be null -> None
+        name: Option<String>
+
+        // Never deserialize expressions
+        #[serde(skip_deserializing)]  
+        #[toql(sql = "(SELECT COUNT(*) From Book b WHERE b.author_id = ..id)")]
+        pub number_of_books: Option<u64>,
     
-    // No Serde attribute: Field must always be present in Json, but may be null -> None
-    name: Option<String>
-
-    #[serde(skip_deserializing)]  // Never deserialize expressions
-    #[toql(sql = "(SELECT COUNT(*) From Book b WHERE b.author_id = ..id)")]
-    pub number_of_books: Option<u64>,
-   
-
-    #[serde(default, deserialize_with="des_double_option")] // See below
-    address: Option<Option<Join<Address>>> 
+        // See comment below
+        #[serde(default, deserialize_with="des_double_option")]
+        address: Option<Option<Join<Address>>> 
     }
 ```
 

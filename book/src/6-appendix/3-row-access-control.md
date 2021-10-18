@@ -25,17 +25,16 @@ and a `Permission` table:
 |TODO | QUERY | true|
 |TODO | UPDATE | true|
 
-
-Roles can protect the column `done` in our `Todo` table so that only certain type of users see it.
 To ensure that a user with id 5 can only see his own rows 1 + 2 set up a permission field and
 build a custom field handler. Like so
 
 ```rust
 
-use toql::prelude::{FieldHandler, BasicFieldHandler, \
+use toql::prelude::{FieldHandler, DefaultFieldHandler, 
 	SqlExpr, ParameterMap, SqlBuilderError, SqlArg, sql_expr};
 
 #[derive(Toql)]
+#[toql(auto_key = true)]
 struct Todo {
 	#[toql(key)]
 	id: u64,
@@ -43,7 +42,7 @@ struct Todo {
 	what: String, 
 
 	#[toql(sql="", handler="permission_handler",  
-			param(name = "entity", value = "TODO"))]
+			aux_param(name = "entity", value = "TODO"))]
 	permission: String
 }
 
@@ -55,16 +54,9 @@ struct Todo {
 // Todos with any permissions -> `*, permission ne ''` 
 // Todos with UPDATE permission -> `*, permission fn sc 'UPDATE'` 
 struct PermissionFieldHandler{
-	 default_handler: BasicFieldHandler, // The default field handler gives us default filters, such as `ne`
+	 default_handler: defaultFieldHandler, // The default field handler gives us default filters, such as `ne`
 };
-
-	pub fn permission_handler() -> impl FieldHandler {
-    PermissionFieldHandler:{
-		 default_handler: BasicFieldHandler::new(), 
-	}
-}
-}
-
+	
 impl FieldHandler for PermissionFieldHandler
 {
     fn build_select(
@@ -73,7 +65,7 @@ impl FieldHandler for PermissionFieldHandler
         aux_params: &ParameterMap,
     ) -> Result<Option<SqlExpr>, SqlBuilderError> {
         
-		// Get user_id from aux params (would come from auth token)
+		// Get user_id from aux params (typically from web auth token)
 		let user_id = aux_params.get("user_id").unwrap_or(&SqlArg::Null);
 
 		// Get entity from aux params (locally provided with permission handler)
@@ -98,13 +90,12 @@ impl FieldHandler for PermissionFieldHandler
             FieldFilter::Fn(name, args) => match name.as_str() {
                 "SC" => {
                     filter_sc(name, select, args)
-                }
+                },
                 name @ _ => Err(SqlBuilderError::FilterInvalid(name.to_string())),
             },
             _ => self.default_handler.build_filter(select, filter, aux_params),
         }
     }
-
 }
 
 pub fn filter_sc(
@@ -120,6 +111,13 @@ pub fn filter_sc(
     }
 	        
     Ok(Some(sql_expr!("FIND_IN_SET (? , {})", args[0], select)))
+}
+
+// Getter fucntion for the mapper
+pub fn permission_handler() -> impl FieldHandler {
+    PermissionFieldHandler:{
+		 default_handler: DefaultFieldHandler::new(), 
+	}
 }
 
 ```
