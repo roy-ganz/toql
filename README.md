@@ -31,15 +31,9 @@ toql_mysql_async = "0.3"
 mysql_async = "0.27"
 ```
 
-## Integration 
-[Toql Rocket](https://crates.io/crates/toql_rocket) plays well with [Rocket](https://crates.io/crates/rocket): Add this to your `Cargo.toml`
-
-```toml
-[dependencies]
-toql_rocket = { version = "0.3", features = ["mysql"] }
-```
-
 ## Look And Feel
+
+Derive your structs:
 ```rust
 #[derive(Toql)]
 #[toql(auto_key = true)]
@@ -49,12 +43,16 @@ struct Todo {
     what: String,
 
     #[toql(join())]
-    user: User
+    user: Join<User> // Join type isn't required, but may improve experience
 }
+```
 
-// --snip--
+And do stuff with them:
+```rust
 let toql = ...
-let todo = ...
+let todo = Todo{ id:0, 
+                 what: "Water plants".to_string(), 
+                 user: Join::with_key(5.into())};
 
 // Insert todo and update its generated id
 toql.insert_one(&mut todo, paths!(top)).await?; 
@@ -64,8 +62,11 @@ let q = query!(Todo, "*, user_id eq ?", &todo.user.id);
 
 // Typesafe loading
 let user = toql.load_many(q).await?; 
-// --snip--
 ```
+
+
+## Quick start
+Toql has a [supporting crate](https://crates.io/crates/toql_rocket) to play well with [Rocket](https://crates.io/crates/rocket). Check out the [CRUD example](https://github.com/roy-ganz/todo_rotomy).
 
 ## Contribution
 Comments, bug fixes and quality improvements are welcome. 
