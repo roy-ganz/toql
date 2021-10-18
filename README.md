@@ -50,7 +50,7 @@ struct Todo {
 And do stuff with them:
 ```rust
 let toql = ...
-let todo = Todo{ id:0, ... };
+let todo = Todo{ ... };
 
 // Insert todo and update its generated id
 toql.insert_one(&mut todo, paths!(top)).await?; 
