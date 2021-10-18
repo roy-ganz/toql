@@ -43,16 +43,14 @@ struct Todo {
     what: String,
 
     #[toql(join())]
-    user: Join<User> // Join type isn't required, but may improve experience
+    user: User 
 }
 ```
 
 And do stuff with them:
 ```rust
 let toql = ...
-let todo = Todo{ id:0, 
-                 what: "Water plants".to_string(), 
-                 user: Join::with_key(5.into())};
+let todo = Todo{ id:0, ... };
 
 // Insert todo and update its generated id
 toql.insert_one(&mut todo, paths!(top)).await?; 
