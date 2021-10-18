@@ -1,5 +1,5 @@
 [book]
-authors = ["Artos <roy.ganz@glanis.biz>"]
+authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 multilingual = false
 src = "src"
 title = "Toql book"

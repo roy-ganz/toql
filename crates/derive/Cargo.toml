@@ -1,7 +1,7 @@
 [package]
 name = "toql_derive"
 version = "0.3.0"
-authors = ["Artos <roy.ganz@glanis.biz>"]
+authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with derive for toql"
 keywords = ["toql"]

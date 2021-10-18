@@ -102,13 +102,13 @@ where
         T: Count,
         B: Borrow<Query<T>> + Send + Sync;
 
-    async fn delete_one<K>(&mut self, key: K) -> Result<u64, Self::Error>
+    async fn delete_one<K>(&mut self, key: K) -> Result<(), Self::Error>
     where
         K: Key + Into<Query<<K as Key>::Entity>> + Send,
         <K as Key>::Entity: Send,
         <K as Key>::Entity: Delete;
 
-    async fn delete_many<T, B>(&mut self, query: B) -> Result<u64, Self::Error>
+    async fn delete_many<T, B>(&mut self, query: B) -> Result<(), Self::Error>
     where
         T: Delete,
         B: Borrow<Query<T>> + Send + Sync;
