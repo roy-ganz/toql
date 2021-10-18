@@ -18,7 +18,7 @@
 ///     #[toql(join())] {
 ///     country: Country
 ///  }
-///
+/// ```
 /// For loading both `language` and `country` behave the same.
 /// The difference comes on updating: Lets assume a web interface
 /// that can change both `language` and `country`.
@@ -41,7 +41,7 @@ use crate::error::ToqlError;
 
 use std::boxed::Box;
 
-// The Join struct that hold either an entity or it's key.
+/// The Join struct that hold either an entity or its key.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde_feature",

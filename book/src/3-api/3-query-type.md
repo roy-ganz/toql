@@ -43,21 +43,20 @@ Here we include the query `q1` into `q`. Since queries are typesafe, so you can 
 
 ### Working with keys
 
-When entities have composite keys it's easier to work directly with those keys.
-(Key structs are automatically derived from the `Toql` derive and are located where the struct is.)
+When entities have composite keys or you want to write generic code it's easier to work with keys. Key structs are automatically derived from the `Toql` derive and are located where the struct is. Keys contain all fields from the struct that are marked with `#[toql(key)]`.
 
-With a single key, this is possible
-```
+With a single key this is possible
+```rust
 use toql::prelude::query;
 
-let k = UserKey::from(5);
+let k = UserKey::from(5); // Easier than UserKey{id:5};
 let q1 = query!(User, "id eq ?", k);
 let q2 = query!(User, "*, {}", Query::from(k));
 let q3 = query!(User, "*, {}", k);
 ```
 
 With multiple keys you can do this:
-```
+```rust
 use toql::prelude::{query, Query};
 
 let ks = vec![UserKey::from(1), UserKey::from(2)];
@@ -72,7 +71,7 @@ The query `q4` only works for a simple key, not a composite key, whereas `qk` wo
 
 If you deal with entities you can get their keys from them (notice the `Keyed` trait). See here
 
-```
+```rust
 use toql::prelude::{query, Keyed, Query};
 
 let e = User{id:1};
@@ -85,7 +84,7 @@ Both `q5` and`q6` end up the same.
 
 Or with mutiple entities:
 
-```
+```rust
 use toql::prelude::{query, MapKey, Query};
 
 let es = vec![User{id:1}, User{id:2}];
@@ -98,7 +97,7 @@ Do you like the `collect` style? There is a nifty implementation detail:
 If you collect keys, they will always be concatenated with *OR*, queries however will be concatenated with *AND*.
 
 Compare `q8` and `q10` here:
-```
+```rust
 let ks = Vec[UserKey{id:5}, UserKey{id:6}];
 let q8 = ks.iter().collect::<Query<_>>(); // -> query!(User, "(id eq5; id eq 6)")
 
@@ -114,7 +113,7 @@ In the example above the query `q3` is build with a `UserKey`. This is possible 
 You can also implement this trait for you own types. Let's assume a book category.
 
 #### Example 1: Adding an enum filter to the query
-```
+```rust
 use toql::prelude::Query;
 
 enum BookCategory {
@@ -134,14 +133,14 @@ impl Into<Query<Book> for BookCategory {
 ```
 
 Now use it like this
-```
+```rust
 let q = query!(Book, "*, {}", BookCategory::Novel);
 ```
 
 #### Example 2: Adding an authorization filter to the query
 
 
-```
+```rust
 use toql::prelude::{QueryWith, Query, Field}
 struct Auth {
     user_id: u64
@@ -158,7 +157,7 @@ impl Into<Query<Book>> for Auth {
 
 You may want trade typesafety for more flexibility. See the example above again, this time with the `Field` type.
 
-```
+```rust
 use toql::prelude::{ Query, Field}
 struct Auth {
     author_id: u64
@@ -173,7 +172,7 @@ Wrong field names in `Field::from` do not show up at compile time, but at runtim
 
 You can use both examples like so
 
-```
+```rust
 use toql::prelude::query;
 let auth = Auth {author: 5};
 let q = query!(Book, "*, {}", auth);
@@ -188,7 +187,7 @@ This is more powerful than `Into<Query>` because you can also access auxiliary p
 
 Aux params can be used in SQL expressions. See [here](4-derive/2-sql-expressions.md) more information.
 
-```
+```rust
 struct Config {
     limit_pages: u64
 }
@@ -201,7 +200,7 @@ impl QueryWith for Config {
 
 This can now be used like so:
 
-```
+```rust
 use toql::prelude::query;
 let config = Config {limit_pages: 200};
 let k = UserKey::from(5);
@@ -214,7 +213,7 @@ Use the query parser to turn a string into a `Query` type.
 Only syntax errors will returns as errors, 
 wrong field names or paths will be rejected later when using the query.
 
-```
+```rust
 use toql::prelude::Parser;
 
 let s = "*, id eq 5";

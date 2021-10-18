@@ -1,6 +1,6 @@
 ![Bollard by the Sea by Gábor Szakács (Public Domain)](bollard-at-the-port.gif)
 
-# Toql
+# Toql - A friendly and productive ORM
 
 Toql is an ORM for async databases that features
 - Translation between Rust structs and database tables.
@@ -23,6 +23,6 @@ Toql is free and open source software, distributed under a dual license of MIT a
 
 - Toql is pronounced *to-cue-ell* with o as in object.
 - Toql stands for _Transfer Object Query Language_ and refers to the query language that is unique to this ORM. In a sense though it's a missleading name, because Toql together with Serde effectively avoid the need for data transfer objects (DTO): you pass your model directly.
-- The project's mascot is a bollard, because Toql pronounced in allemanic / swiss german sounds like `Toggel`: 
+- The project's mascot is a bollard, because Toql pronounced in allemanic / swiss german sounds like _Toggel_: 
 A funny word that can colloquially be used for bollards.
 
