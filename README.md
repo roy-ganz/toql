@@ -1,5 +1,5 @@
 
-![Bollard by the Sea by Gábor Szakács (Public Domain)](guide/src/bollard-at-the-port.gif)
+![Bollard by the Sea by Gábor Szakács (Public Domain)](book/src/bollard-at-the-port.gif)
 
 # Toql - A friendly and productive ORM
 
