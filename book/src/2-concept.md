@@ -15,66 +15,10 @@ Here the typical flow in a web environment:
 1. A web client sends a Toql query to the REST Server.
 2. The server uses Toql to parse the query and create SQL statements.
 3. Toql sends the SQL to the database
-4. and deserializes the resulting rows into Rust structs.
+4. then deserializes the resulting rows into Rust structs.
 4. The server sends these structs to the client.
 
-## Example
-
-below a full example that uses Rocket to serve users from a database. 
-Notice the two Toql derived structs at the beginning. The rest of the code is fairly boilerplate.
-
-```rust
-	// Toql derived structs
-	#[derive(Toql)]
-	struct Country {
-		#[toql(key)]
-		id: String,
-		name: Option<String>
-	}
-
-	#[derive(Toql)]
-	#[toql(auto_keys = true)]
-	struct User {
-		#[toql(key)]
-		id: u32,
-		name: Option<String>,
-		#[toql(join())]
-		country: Option<Country>
-	}
-    
-	// Here Rocket with some Toql integration (ToqlQuery and Counted)
-	#[query("/?<query..>")]
-	fn query(query: Form<ToqlQuery>, mut conn: Connection<ExampleDb>, 
-		cache: State<Cache> {
-		
-		let toql = MySqlAsync::from(&mut *conn, &cache);
-
-		let r = toql.load_page(query, page)?;
-		Ok(Counted(Json(r.0), r.1))
-	}
-
-	#[database("example_db")]
-	pub struct ExampleDb(mysql::Conn);
-
-	fn main() {
-		rocket::ignite().mount("/query", routes![query]).launch();
-	}
-```
-
-with `Cargo.toml`
-```
-toql = v0.3
-toql_rocket = "0.3"
-toql_mysql_async = "0.3"
-rocket = "0.5"
-mysql_async = "0.20"
-```
-
-If you have a MySQL Server running, try the full CRUD example.
-
-```bash
-ROCKET_DATABASES={example_db={url=mysql://USER:PASSWORD@localhost:3306/example_db}} cargo run --example crud_rocket_mysql
-
-```
+## Quickstart
+There is full featured [REST server](https://github.com/roy-ganz/todo_rotomy) based on Rocket, Toql and MySQL. It can be used as a playground or starting point for own projects.
 
 

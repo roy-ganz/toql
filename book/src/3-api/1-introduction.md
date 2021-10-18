@@ -1,7 +1,7 @@
 # The Toql API
 
 Toql relies on backends to handle database differences. 
-These backends implement a common trait, the `ToqlApi`, 
+These backends implement the `ToqlApi` trait 
 which serves as an entry point for any high level function.
 The backends internally then use the Toql library to do their job.
 
@@ -23,7 +23,7 @@ Currently the following backends are available
 
 For MySQL add this to your `cargo.toml`:
 
-```
+```toml
 [dependency]
 toql = "0.3"
 mysql_async = "0.20"
@@ -33,7 +33,7 @@ toql_mysql_async = "0.3"
 Then you can get the backend in your code. Notice that the backend takes 
 a database connection and a cache object to keep database schema information.
 
-```
+```rust
 use mysql_async::MySql;
 use toql_mysql_async::prelude::MySqlAsync;
 use toql::prelude::Cache;
@@ -56,10 +56,11 @@ There are two ways to feed in aux params:
 
 Here how to put them in the context:
 
-```
+```rust
 use mysql_async::MySql;
 use toql_mysql_async::prelude::MySqlAsync;
 use toql::prelude::{Cache, ContextBuilder};
+use std::collections::HashMap;
 
 
 let pool = mysql_async::Pool::new(database_url);
@@ -80,6 +81,8 @@ Beside aux params `ContextBuilder` allows you
 
  ```rust
  use toql::prelude::{ContextBuilder, AliasFormat};
+ use std::collections::HashSet;
+
  let mut roles = HashSet::new();
  roles.insert("teacher", "admin");
 

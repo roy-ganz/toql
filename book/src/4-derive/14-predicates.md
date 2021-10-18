@@ -3,7 +3,7 @@
 All normal filtering is based on fields, [see here](../5-query-language/4-filter.md). 
 However sometimes you may have a completely different filter criteria, that cannot be mapped on fields. 
 
-An example is the MySql full text search. Let's do it:
+An example is the MySQL full text search. Let's do it:
 
 ```rust
 #[derive(Toql)]

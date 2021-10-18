@@ -6,7 +6,7 @@ For a full security model you also need restricted access to rows.
 
 **Row access control should always be done in databases.** 
 
-Reality is however that many databases (MySql) provide little support for that.
+Reality is however that many databases (MySQL) provide little support for that.
 
 So if you really need to do it in Toql, here is a way to go:
 
