@@ -158,11 +158,13 @@ with the <code>ToqlApi</code>. See the <a href="../4-derive/1-introduction.html"
 <p>For MySQL add this to your <code>cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependency]
 toql = &quot;0.3&quot;
-mysql_async = &quot;0.20&quot;
 toql_mysql_async = &quot;0.3&quot;
 </code></pre>
-<p>Then you can get the backend in your code. Notice that the backend takes
-a database connection and a cache object to keep database schema information.</p>
+<p>You must add <code>toql</code> together with the backend crate. The backend crate then depends on a suitable version of the driver crate.
+Normally there is no need to access the driver crate. However I you really must, the backend crate re-exports the driver crate.
+For <code>toql_mysql_async</code> the driver crate can be accessed through <code>toql_mysql_async::mysql_async</code>.</p>
+<p>With these two dependencies you can get the backend in your code. Notice that the backend takes
+a database connection and a cache object to hold the database mapping.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -179,11 +181,12 @@ let toql = MySqlAsync::from(&amp;mut conn, &amp;cache);
 #}</code></pre></pre>
 <p>In a bigger project you may want to feed configuration or authentication values into your SQL.
 This is done through so called auxiliary parameters (aux params).</p>
-<p>There are two ways to feed in aux params:</p>
+<p>There are three ways to feed in aux params:</p>
 <ul>
 <li>You can put them in the context and they will be available as long as the
 backend object lives</li>
 <li>You can also ship them with a query and they will be available only for that query</li>
+<li>You can map aux params to a field. Used to configure <a href="../4-derive/5-field-handlers.html">field handlers</a>.</li>
 </ul>
 <p>Here how to put them in the context:</p>
 <pre><pre class="playpen"><code class="language-rust">

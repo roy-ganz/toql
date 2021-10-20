@@ -203,6 +203,17 @@ name: String
 <pre><code class="language-toql">*, name FN LLE 5
 </code></pre>
 <p>For a bigger example, check out our <a href="6-appendix/4-row-access-control.html">permission handler</a>.</p>
+<a class="header" href="#field-handlers-with-local-aux-params" id="field-handlers-with-local-aux-params"><h3>Field handlers with local aux params</h3></a>
+<p>If you want to use the same field handler in different places
+it mightly come handy to give the field handler some local context.</p>
+<p>This can be achieved with local aux_params:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+    #[toql(sql=&quot;&quot;, field_handler=&quot;smart_name_handler&quot;, aux_param(name=&quot;strategy&quot;, value=&quot;quick&quot;))]
+    smart_name: String
+#}</code></pre></pre>
+<p>The aux param <code>strategy</code> is only available in the <code>smart_name_handler</code>. Only strings values are supported.</p>
 
                     </main>
 

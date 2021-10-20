@@ -166,19 +166,19 @@
 A funny word that can colloquially be used for bollards.</li>
 </ul>
 <a class="header" href="#concept" id="concept"><h1>Concept</h1></a>
-<p>Toql is a ORM that aim to boost your developer comfort and speed when working with databases.</p>
+<p>Toql is a ORM that aims to boost your developer comfort and speed when working with databases.</p>
 <p>To use it you must derive <code>Toql</code> for all structs that represent a table in your database:</p>
 <ul>
-<li>The fields of those structs represent either columns, SQL expressions or
-relationships to other tables.</li>
-<li>The fields also determine the field name or in case of a relationship the path name in the <a href="5-query-language/1-introduction.html">Toql query</a></li>
+<li>A fields in those structs represents either a columns, a SQL expression or a
+relationship to a single or multiple tables.</li>
+<li>The field also determines the field name or in case of a relationship the path name in the <a href="5-query-language/1-introduction.html">Toql query</a></li>
 </ul>
-<p>A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are merly 'views' to a table.</p>
+<p>A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are rather 'views' to a table.</p>
 <p>A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the <a href="3-api/1-introduction.html">Toql API functions</a> with a query string or just a list of fields or paths.</p>
 <p>Here the typical flow in a web environment:</p>
 <ol>
 <li>A web client sends a Toql query to the REST Server.</li>
-<li>The server uses Toql to parse the query and create SQL statements.</li>
+<li>The server uses Toql to parse the query and to create SQL statements.</li>
 <li>Toql sends the SQL to the database</li>
 <li>then deserializes the resulting rows into Rust structs.</li>
 <li>The server sends these structs to the client.</li>
@@ -203,11 +203,13 @@ with the <code>ToqlApi</code>. See the <a href="3-api/../4-derive/1-introduction
 <p>For MySQL add this to your <code>cargo.toml</code>:</p>
 <pre><code class="language-toml">[dependency]
 toql = &quot;0.3&quot;
-mysql_async = &quot;0.20&quot;
 toql_mysql_async = &quot;0.3&quot;
 </code></pre>
-<p>Then you can get the backend in your code. Notice that the backend takes
-a database connection and a cache object to keep database schema information.</p>
+<p>You must add <code>toql</code> together with the backend crate. The backend crate then depends on a suitable version of the driver crate.
+Normally there is no need to access the driver crate. However I you really must, the backend crate re-exports the driver crate.
+For <code>toql_mysql_async</code> the driver crate can be accessed through <code>toql_mysql_async::mysql_async</code>.</p>
+<p>With these two dependencies you can get the backend in your code. Notice that the backend takes
+a database connection and a cache object to hold the database mapping.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -224,11 +226,12 @@ let toql = MySqlAsync::from(&amp;mut conn, &amp;cache);
 #}</code></pre></pre>
 <p>In a bigger project you may want to feed configuration or authentication values into your SQL.
 This is done through so called auxiliary parameters (aux params).</p>
-<p>There are two ways to feed in aux params:</p>
+<p>There are three ways to feed in aux params:</p>
 <ul>
 <li>You can put them in the context and they will be available as long as the
 backend object lives</li>
 <li>You can also ship them with a query and they will be available only for that query</li>
+<li>You can map aux params to a field. Used to configure <a href="3-api/../4-derive/5-field-handlers.html">field handlers</a>.</li>
 </ul>
 <p>Here how to put them in the context:</p>
 <pre><pre class="playpen"><code class="language-rust">
@@ -1043,6 +1046,17 @@ name: String
 <pre><code class="language-toql">*, name FN LLE 5
 </code></pre>
 <p>For a bigger example, check out our <a href="4-derive/6-appendix/4-row-access-control.html">permission handler</a>.</p>
+<a class="header" href="#field-handlers-with-local-aux-params" id="field-handlers-with-local-aux-params"><h3>Field handlers with local aux params</h3></a>
+<p>If you want to use the same field handler in different places
+it mightly come handy to give the field handler some local context.</p>
+<p>This can be achieved with local aux_params:</p>
+<pre><pre class="playpen"><code class="language-rust">
+# #![allow(unused_variables)]
+#fn main() {
+    #[toql(sql=&quot;&quot;, field_handler=&quot;smart_name_handler&quot;, aux_param(name=&quot;strategy&quot;, value=&quot;quick&quot;))]
+    smart_name: String
+#}</code></pre></pre>
+<p>The aux param <code>strategy</code> is only available in the <code>smart_name_handler</code>. Only strings values are supported.</p>
 <a class="header" href="#joins-1" id="joins-1"><h1>Joins</h1></a>
 <p>A struct can refer to another struct. This is done with a SQL join.</p>
 <p>Joins are added to the SQL statement when</p>
@@ -1628,7 +1642,7 @@ They can't be defined except <code>std</code> and <code>cnt</code>.</p>
 <p>The <code>cnt</code> selection is defined in a similar way.TODO</p>
 <a class="header" href="#predicates" id="predicates"><h1>Predicates</h1></a>
 <p>All normal filtering is based on fields, <a href="4-derive/../5-query-language/4-filter.html">see here</a>.
-However sometimes you may have a completely different filter criteria, that cannot be mapped on fields.</p>
+However sometimes you may have a completely different filter criteria that can't be mapped on fields.</p>
 <p>An example is the MySQL full text search. Let's do it:</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]

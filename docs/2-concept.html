@@ -141,19 +141,19 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#concept" id="concept"><h1>Concept</h1></a>
-<p>Toql is a ORM that aim to boost your developer comfort and speed when working with databases.</p>
+<p>Toql is a ORM that aims to boost your developer comfort and speed when working with databases.</p>
 <p>To use it you must derive <code>Toql</code> for all structs that represent a table in your database:</p>
 <ul>
-<li>The fields of those structs represent either columns, SQL expressions or
-relationships to other tables.</li>
-<li>The fields also determine the field name or in case of a relationship the path name in the <a href="5-query-language/1-introduction.html">Toql query</a></li>
+<li>A fields in those structs represents either a columns, a SQL expression or a
+relationship to a single or multiple tables.</li>
+<li>The field also determines the field name or in case of a relationship the path name in the <a href="5-query-language/1-introduction.html">Toql query</a></li>
 </ul>
-<p>A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are merly 'views' to a table.</p>
+<p>A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are rather 'views' to a table.</p>
 <p>A derived struct can then be inserted, updated, deleted and loaded from your database. To do that you must call the <a href="3-api/1-introduction.html">Toql API functions</a> with a query string or just a list of fields or paths.</p>
 <p>Here the typical flow in a web environment:</p>
 <ol>
 <li>A web client sends a Toql query to the REST Server.</li>
-<li>The server uses Toql to parse the query and create SQL statements.</li>
+<li>The server uses Toql to parse the query and to create SQL statements.</li>
 <li>Toql sends the SQL to the database</li>
 <li>then deserializes the resulting rows into Rust structs.</li>
 <li>The server sends these structs to the client.</li>

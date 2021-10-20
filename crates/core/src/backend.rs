@@ -34,9 +34,9 @@ where
     fn registry_mut(&mut self) -> Result<RwLockWriteGuard<'_, TableMapperRegistry>, ToqlError>;
     /// Return roles. These will be used for any role restrictions
     fn roles(&self) -> &HashSet<String>;
-    /// Return the active alias format. It is used to build all Sql aliases
+    /// Return the active alias format. It is used to build all SQL aliases
     fn alias_format(&self) -> AliasFormat;
-    /// Return the aux params. These will be used together with the query aux params to resolve aux params in Sql expressions and handlers
+    /// Return the aux params. These will be used together with the query aux params to resolve aux params in SQL expressions and handlers
     fn aux_params(&self) -> &HashMap<String, SqlArg>;
 
     /// Execute a select statement on the database and return a vector of rows

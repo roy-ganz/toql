@@ -246,7 +246,7 @@ where
 
     let (mut result, count_result) = {
         let registry = &*backend.registry()?;
-        tracing::event!(tracing::Level::INFO, query =  %query.borrow(), "Building Sql for Toql query.");
+        tracing::event!(tracing::Level::INFO, query =  %query.borrow(), "Building SQL for Toql query.");
 
         let mut builder = SqlBuilder::new(&ty, registry)
             .with_aux_params(backend.aux_params().clone()) // todo ref
