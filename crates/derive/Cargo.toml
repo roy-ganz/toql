@@ -13,20 +13,16 @@ repository = "https://github.com/roy-ganz/toql"
 proc-macro = true
 
 [dependencies]
-
 syn = "0.15"
 darling ="0.9"
-
 quote = "0.6"
 heck = "0.3"
-
 proc-macro2 = "0.4"
 log = "0.4"
 env_logger="0.6"
 regex="1"
 
 [features]
-
 serde = []
 
 [dev-dependencies]

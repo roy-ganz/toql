@@ -11,8 +11,6 @@ repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 pest = "2.0"
-
-#log= "0.4"
 tracing = "0.1"
 regex="1"
 lazy_static = "1.4"
@@ -22,11 +20,9 @@ heck ="0.3"
 lru = "0.6"
 serde  = {package="serde", version = "1", optional= true}
 async-trait ="0.1"
-
 toql_query_parser = { version = "0.3", path = "../query_parser" }
 toql_sql_expr_parser = { version = "0.3", path = "../sql_expr_parser" }
 toql_role_expr_parser = { version = "0.3", path = "../role_expr_parser" }
-
 
 [features]
 serde_feature = ["serde"]
