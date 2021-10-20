@@ -3,8 +3,8 @@
 Toql is a ORM that aims to boost your developer comfort and speed when working with databases.
 
 To use it you must derive `Toql` for all structs that represent a table in your database:
-- A fields in those structs represents either a columns, a SQL expression or a
-relationship to a single or multiple tables.
+- A field in those structs represents either a columns, an SQL expression or a
+relationship to one or many tables.
 - The field also determines the field name or in case of a relationship the path name in the [Toql query](5-query-language/1-introduction.md)
 
 A struct may map only some columns of a table and also multiple structs may refer to the same table. Structs are rather 'views' to a table.
