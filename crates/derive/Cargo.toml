@@ -24,4 +24,3 @@ regex="1"
 
 [features]
 serde = []
-
