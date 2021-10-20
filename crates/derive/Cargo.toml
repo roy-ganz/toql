@@ -5,7 +5,7 @@ authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with derive for toql"
 keywords = ["toql"]
-readme = "../README.md"
+readme = "../../README.md"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/roy-ganz/toql"
 
