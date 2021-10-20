@@ -25,5 +25,3 @@ regex="1"
 [features]
 serde = []
 
-[dev-dependencies]
-toql = {version = "0.3", path="../../../toql"}
