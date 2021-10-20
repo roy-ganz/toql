@@ -1,18 +1,7 @@
+//! The field list parser is used by the `fields!` macro to compile a list of Toql fields into programm code.
 //!
-//! The query parser can turn a string that follows the Toql query syntax into a [Query](../query/struct.Query.html).
-//!
-//! ## Example
-//!
-//! ``` ignore
-//! let  list = Field_ListParser::parse("*, username").unwrap();
-//! assert_eq!("*, username", list.to_string());
-//! ```
-//! Read the guide for more information on the query syntax.
-//!
-//! The parser is written with [Pest](https://pest.rs/) and is fast. It should be used to parse query request from users.
-//! To build a query within your program, build it programmatically with the provided methods.
-//! This avoids typing mistakes and - unlike parsing - cannot fail.
-//!
+//! The parser is written with [Pest](https://pest.rs/).
+
 
 extern crate pest;
 #[macro_use]

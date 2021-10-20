@@ -1,5 +1,5 @@
+//! Traits to do operations on nested structs.
 pub mod tree_index;
-//pub mod tree_keys;
 pub mod tree_identity;
 pub mod tree_insert;
 pub mod tree_map;

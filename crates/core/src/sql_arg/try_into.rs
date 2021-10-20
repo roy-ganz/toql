@@ -1,3 +1,5 @@
+//! Implementation of the [TryInto](std::convert::TryInto) for SqlArg.
+//! Used to convert SqlArg into basic datatypes.
 use super::error::TryFromSqlArgError;
 use super::SqlArg;
 use std::convert::TryInto;

@@ -1,4 +1,3 @@
-//!
 //!  Aggregated data for function calls inside the SQL Builder.
 
 use crate::{

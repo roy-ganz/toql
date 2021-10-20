@@ -1,4 +1,4 @@
-//! # Identity trait
+//! Identity trait.
 //!
 //! The identity trait is used to update foreign keys.
 //! The trait is used by the TreeIdentity trait and implemented for all Toql derived entities.

@@ -1,3 +1,5 @@
+//! A parser for role expressions.
+
 use crate::pest::Parser;
 use toql_role_expr_parser::{PestRoleExprParser, Rule};
 
@@ -5,19 +7,32 @@ use crate::error::ToqlError;
 use crate::role_expr::RoleExpr;
 use pest::iterators::Pair;
 
+/// Boolean role concatenation
 #[derive(Clone)]
 pub enum Concatenation {
+    /// Role is AND concatenated
     And,
+    /// Role is OR concatenated
     Or,
 }
-pub struct StackItem(Concatenation, RoleExpr);
 
+/// The role expression parser converts a string into a boolean role expression.
+///
+/// Role expressions are role names that can be
+/// - concatenated with logic AND (,) or OR (;).
+//   - negated with (!)
+///
+/// Use parens to express priority.
+///
+/// Example `(admin, !robot); super_user`
 pub struct RoleExprParser;
 
 impl RoleExprParser {
     /// Method to parse a string
     /// This fails if the syntax is wrong. The original PEST error is wrapped with the ToqlError and
     /// can be used to examine to problem in detail.
+    ///
+    /// This returns a [RoleExpr] that can be validated with a [RoleValidator](crate::role_validator::RoleValidator)
     pub fn parse(role_expr: &str) -> Result<RoleExpr, ToqlError> {
         fn evaluate_pair(pair: Pair<Rule>) -> Option<RoleExpr> {
             let span = pair.clone().as_span();

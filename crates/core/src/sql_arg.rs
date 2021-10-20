@@ -1,8 +1,11 @@
+//! An argument for SQL expressions.
+
 pub mod error;
 pub mod from;
 pub mod from_row;
 pub mod try_into;
 
+/// Enum to keep the different argument types.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SqlArg {
     U64(u64),
@@ -14,6 +17,7 @@ pub enum SqlArg {
 }
 
 impl SqlArg {
+    /// Build SQL string.
     pub fn to_sql_string(&self) -> String {
         match self {
             SqlArg::U64(t) => t.to_string(),
@@ -25,6 +29,7 @@ impl SqlArg {
         }
     }
 
+    /// Return i64 or None, if type mismatches.
     pub fn get_i64(&self) -> Option<i64> {
         if let Self::I64(v) = self {
             Some(v.to_owned())
@@ -32,6 +37,7 @@ impl SqlArg {
             None
         }
     }
+    /// Return f64 or None, if type mismatches.
     pub fn get_f64(&self) -> Option<f64> {
         if let Self::F64(v) = self {
             Some(v.to_owned())
@@ -39,6 +45,7 @@ impl SqlArg {
             None
         }
     }
+    /// Return bool or None, if type mismatches.
     pub fn get_bool(&self) -> Option<bool> {
         if let Self::Bool(v) = self {
             Some(v.to_owned())
@@ -46,6 +53,7 @@ impl SqlArg {
             None
         }
     }
+    /// Return u64 or None, if type mismatches.
     pub fn get_u64(&self) -> Option<u64> {
         if let Self::U64(v) = self {
             Some(v.to_owned())
@@ -53,6 +61,7 @@ impl SqlArg {
             None
         }
     }
+    /// Return str or None, if type mismatches.
     pub fn get_str(&self) -> Option<&str> {
         if let Self::Str(v) = self {
             Some(v)
@@ -61,9 +70,11 @@ impl SqlArg {
         }
     }
 
+    /// Returns true, if argument is null.
     pub fn is_null(&self) -> bool {
         matches!(self, Self::Null)
     }
+    /// Returns true, if argument is string and matches other string.
     pub fn cmp_str(&self, other: &str) -> bool {
         if let Self::Str(v) = self {
             v == other
@@ -86,6 +97,7 @@ impl ToString for SqlArg {
     }
 }
 
+/// Returns true, if list of arguments would be a valid key.
 pub fn valid_key(args: &[SqlArg]) -> bool {
     let contains_zero_key = args.iter().any(|a| match a {
         SqlArg::U64(x) => x == &0,

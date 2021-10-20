@@ -26,12 +26,15 @@ For MySQL add this to your `cargo.toml`:
 ```toml
 [dependency]
 toql = "0.3"
-mysql_async = "0.20"
 toql_mysql_async = "0.3"
 ```
 
-Then you can get the backend in your code. Notice that the backend takes 
-a database connection and a cache object to keep database schema information.
+You must add `toql ` together with the backend crate. The backend crate then depends on a suitable version of the driver crate.
+Normally there is no need to access the driver crate. However I you really must, the backend crate re-exports the driver crate. 
+For `toql_mysql_async` the driver crate can be accessed through `toql_mysql_async::mysql_async`.
+
+With these two dependencies you can get the backend in your code. Notice that the backend takes 
+a database connection and a cache object to hold the database mapping.
 
 ```rust
 use mysql_async::MySql;
@@ -49,10 +52,11 @@ let toql = MySqlAsync::from(&mut conn, &cache);
 In a bigger project you may want to feed configuration or authentication values into your SQL.
 This is done through so called auxiliary parameters (aux params).
 
-There are two ways to feed in aux params: 
+There are three ways to feed in aux params: 
 - You can put them in the context and they will be available as long as the
   backend object lives
 - You can also ship them with a query and they will be available only for that query
+- You can map aux params to a field. Used to configure [field handlers](../4-derive/5-field-handlers.md).
 
 Here how to put them in the context:
 

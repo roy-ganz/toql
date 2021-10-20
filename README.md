@@ -28,7 +28,6 @@ Add this to your `Cargo.toml`:
 [dependencies]
 toql = {version = "0.3", features = ["serde"]}
 toql_mysql_async = "0.3"
-mysql_async = "0.27"
 ```
 
 ## Look And Feel

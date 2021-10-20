@@ -1,9 +1,11 @@
-//! # Key trait
+//! Table mapping information for keys.
 //!
-//! The key trait is implemented for every Toql derived struct.
-//! The most useful functions for library consumers are [get_key] and [set_key] to access the primary key of a struct.
-//! Notice that these operations fail, if the fields that should hold the values are `None`.
+//! The key trait is implemented for every key struct the the Toql derive gernerates..
+//! It is used for internal purposes to build key predicates and for trait bounds.
 //!
+//! Library users may also use it for trait bounds.
+//!
+//! The trait cannot be used to get a key from an entity. This can be done with the [Keyed](crate::keyed::Keyed) trait.
 
 use crate::{sql_arg::SqlArg, sql_expr::SqlExpr};
 

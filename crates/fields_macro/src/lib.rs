@@ -1,33 +1,19 @@
+//! The `fields!` macro compiles a list of Toql field names into program code. 
+//! Any syntax errors or wrong field names will show up at compile time.
 //!
-//! The Toql Derive creates all the boilerplate functions to make the ✨ happen.
-//! Using the derive is the easiest way to deal with your structs and is therefore recommended.
-//! However beware that the generated code size can become large as it's about ~9K lines of code for a small struct.
-//! You may disable some functionality.
+//! Wrong field names are detected because the `field!` macro uses the 
+//! query builder functions that are genereated by the Toql derive.
 //!
-//! For a derived struct the following is generated:
-//!  - Trait [Mapped](../toql_core/table_mapper/trait.Mapped.html) to map struct to [TableMapper](../toql_core/table_mapper/struct.TableMapper.html).
-//!  - Methods for all fields to support building a [Query](../toql_core/query/struct.Query.html).
-//!  - Methods to load, insert, delete and update a struct. Requires database feature.
-//!
-//! ### Example:
+//! ### Example
+//! Assume a `struct User` with a joined `address`.
 //! ```rust
-//! use toql::derive::Toql;
-//!
-//! #[derive(Toql)]
-//! struct User {
-
-//!   #[toql(key)] // Use this field as key for delete and update
-//!   id : u64,
-//!
-//!   username : Option<String>
-//! }
+//! let f = fields!(User, "*, address_title");
 //! ```
 //!
-//! Check out the [guide](https://roy-ganz.github.io/toql/derive/reference.html) for list of available attributes.
-//!
+//! Notice that the `fields!` macro takes a type, however the resulting `Fields` is untyped. 
+//! This is a shortcoming and will be resolved in the future.
 
 #![recursion_limit = "512"]
-//#![feature(proc_macro_span)]
 
 extern crate proc_macro;
 
@@ -45,12 +31,9 @@ mod fields_macro;
 #[proc_macro]
 pub fn fields(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
-                                    // eprintln!("{:?}", input);
 
     tracing::debug!("Source code for `{}`:\n", &input);
     let ast = parse_macro_input!(input as fields_macro::FieldsMacro);
-
-    //  let gen = fields_macro::parse(&ast.query, ast.struct_type);
 
     let gen = match ast {
         fields_macro::FieldsMacro::FieldList { struct_type, query } => {
@@ -60,17 +43,6 @@ pub fn fields(input: TokenStream) -> TokenStream {
             "*".to_string()
         ]))),
     };
-
-    /* let gen = quote!(
-       pub fn hello()
-    {
-        println!("hello");
-    }
-    );
-     */
-    /* let source = proc_macro::Span::call_site()
-    .source_text()
-    .unwrap_or("".to_string()); */
 
     match gen {
         Ok(o) => {

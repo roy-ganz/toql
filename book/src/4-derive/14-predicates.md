@@ -1,7 +1,7 @@
 
 # Predicates
 All normal filtering is based on fields, [see here](../5-query-language/4-filter.md). 
-However sometimes you may have a completely different filter criteria, that cannot be mapped on fields. 
+However sometimes you may have a completely different filter criteria that can't be mapped on fields. 
 
 An example is the MySQL full text search. Let's do it:
 

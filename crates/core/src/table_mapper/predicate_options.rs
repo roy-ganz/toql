@@ -1,6 +1,7 @@
 use crate::{role_expr::RoleExpr, sql_arg::SqlArg};
 use std::collections::HashMap;
 
+/// Options for a mapped predicate.
 #[derive(Debug)]
 pub struct PredicateOptions {
     pub(crate) aux_params: HashMap<String, SqlArg>,
@@ -31,15 +32,15 @@ impl PredicateOptions {
         self
     }
 
-    /// Additional build param. This is used by the query builder together with
-    /// its build params. Build params can be used in SQL expressions (`SELECT <param_name>` )
-    /// and field handlers.
+    /// Additional aux build param. This is used by the query builder together with
+    /// the aux params from the [Query](crate::query::Query) or [Context](crate::backend::context::Context).
+    /// Aux params can be used in SQL expressions like `SELECT <param_name>` and field handlers.
     pub fn on_aux_param(mut self, index: u8, name: String) -> Self {
         self.on_aux_params.push((index, name));
         self
     }
-    /// By default predicates are considered when creating a count query.
-    /// However the predicate can be ignored by setting the count filter to false
+    /// By default predicates are _NOT_ considered when creating a count query.
+    /// However the predicate can be included by setting the count filter to `true`.
     pub fn count_filter(mut self, count_filter: bool) -> Self {
         self.count_filter = count_filter;
         self

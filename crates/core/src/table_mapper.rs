@@ -1,33 +1,4 @@
-//!
-//! The SQL Mapper translates Toql fields into database columns or SQL expressions.
-//!
-//! It's needed by the  [SQL Builder](../sql_builder/struct.SqlBuilder.html) to turn a [Query](../query/struct.Query.html)
-//! into a [SQL Builder Result](../sql_builder_result/SqlBuilderResult.html).
-//! The result holds the different parts of an SQL query. It can be turned into SQL that can be sent to the database.
-//!
-//! ## Example
-//! ``` ignore
-//! let mapper = TableMapper::new("Bar b")
-//!     .map_field("foo", "b.foo")
-//!     .map_field("fuu_id", "u.foo")
-//!     .map_field("faa", "(SELECT COUNT(*) FROM Faa WHERE Faa.bar_id = b.id)")
-//!     .join("fuu", "LEFT JOIN Fuu u ON (b.foo_id = u.id)");
-//! ```
-//!
-//! To map a full struct with [map()](struct.TableMapper.html#method.map), the struct must implement the [Mapped](trait.Mapped.html) trait.
-//! The [Toql derive](https://docs.rs/toql_derive/0.1/index.html) implements that trait for any derived struct.
-//!
-//! ### Options
-//! Field can have options. They can be hidden for example or require a certain role (permission).
-//! Use [map_with_options()](struct.TableMapper.html#method.map_with_options).
-//!
-//! ### Filter operations
-//! Beside fields and joins the SQL Mapper also registers all filter operations.
-//! To add a custom operation you must define a new [Fieldhandler](trait.FieldHandler.html)
-//! and add it either
-//!  - to a single field with [map_handler()](struct.TableMapper.html#method.map_handler).
-//!  - to all fields with [new_with_handler()](struct.TableMapper.html#method.new_with_handler).
-//!
+//! Translate Toql query fields to database columns, SQL expressions, joins and merges.
 pub mod field_options;
 pub mod join_options;
 pub mod join_type;
@@ -40,35 +11,33 @@ pub(crate) mod join;
 pub(crate) mod merge;
 pub(crate) mod predicate;
 
+use crate::{
+    field_handler::{DefaultFieldHandler, FieldHandler},
+    predicate_handler::{DefaultPredicateHandler, PredicateHandler},
+    result::Result,
+    role_expr::RoleExpr,
+    sql_expr::SqlExpr,
+    table_mapper::{
+        field::Field, field_options::FieldOptions, join::Join, join_options::JoinOptions,
+        mapped::Mapped, merge::Merge, merge_options::MergeOptions, predicate::Predicate,
+        predicate_options::PredicateOptions,
+    },
+};
 use heck::{CamelCase, MixedCase};
-
-use crate::table_mapper::join_options::JoinOptions;
-use crate::table_mapper::merge_options::MergeOptions;
-use crate::table_mapper::predicate_options::PredicateOptions;
-
-use crate::predicate_handler::{DefaultPredicateHandler, PredicateHandler};
-use crate::result::Result;
-use crate::table_mapper::field::Field;
-use crate::table_mapper::field_options::FieldOptions;
-use crate::table_mapper::join::Join;
-use crate::table_mapper::mapped::Mapped;
-use crate::table_mapper::merge::Merge;
-use crate::table_mapper::predicate::Predicate;
-
-use std::collections::HashMap;
-
-use crate::field_handler::{DefaultFieldHandler, FieldHandler};
-use crate::{role_expr::RoleExpr, sql_expr::SqlExpr};
 use join_type::JoinType;
-use std::fmt;
-use std::sync::Arc;
+use std::{collections::HashMap, fmt, sync::Arc};
 
+/// Enum to hold different types that can be deserialization types
+/// The mapper keeps an ordered list of all deserialization types of a Struct type.
+/// The details for each can then be looked up seperately.
 #[derive(Debug)]
 pub enum DeserializeType {
-    Field(String), // Toql fieldname
-    Join(String),  // Toql join path
-    Merge(String), // Toql merge path
-                   //Embedded
+    /// Field -or expression-, contains Toql query field name
+    Field(String),
+    /// Join, contains Toql query path name
+    Join(String),
+    /// Merge, contains Toql query path name
+    Merge(String),
 }
 
 #[derive(Debug)]
@@ -76,7 +45,8 @@ pub enum DeserializeType {
 pub enum TableMapperError {
     /// The requested canonical alias is not used. Contains the alias name.
     CanonicalAliasMissing(String),
-    ColumnMissing(String, String), // table column
+    // Table column is missing. Contains table and column name.
+    ColumnMissing(String, String),
 }
 impl fmt::Display for TableMapperError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -96,6 +66,15 @@ trait MapperFilter {
 }
 
 /// Translates Toql fields into columns or SQL expressions.
+///
+/// It's needed by the  [SQL Builder](crate::sql_builder::SqlBuilder) to turn a [Query](crate::query::Query)
+/// into a [SQL Builder Result](crate::sql_builder/build_result::BuildResult).
+///
+/// The Toql derive generates the TabeMapper instructions and puts them into the [Mapped](crate::table_mapper::mapped::Mapped) trait.
+/// Every [ToqlApi](crate::toql_api::ToqlApi) function quickly checks, 
+/// if [TableMapperRegistry](crate::table_mapper_registry::TableMapperRegistry)
+/// contains the `TableMapper`. If the mapper is missing it will call [TreeMap](crate::tree::tree_map::TreeMap) to map an entity and all its dependencies.
+/// TreeMap itself uses [from_mapped](TableMapper::from_mapped) to map an entity.
 #[derive(Debug)]
 pub struct TableMapper {
     /// Database table name
@@ -104,45 +83,39 @@ pub struct TableMapper {
     /// Calculated alias from table_name
     pub canonical_table_alias: String,
 
-    /// Default field handler
+    /// Default field handler for the mapped `struct`.
     pub(crate) field_handler: Arc<dyn FieldHandler + Send + Sync>,
 
-    /// Default predicate handler
+    /// Default predicate handler for the mapped `struct`.
     pub(crate) predicate_handler: Arc<dyn PredicateHandler + Send + Sync>,
 
-    /// Deserialization order for selects statements
+    /// Deserialization order for selects statements.
     pub(crate) deserialize_order: Vec<DeserializeType>,
 
-    /// Joined mappers
-    pub(crate) joined_mappers: HashMap<String, String>, // Toql path, Mapper name
-
-    /// Field information
+    /// Maps a Toql query field name to field details.
     pub(crate) fields: HashMap<String, Field>,
 
-    /// Predicate information
+    /// Maps a Toql query predicate name to predicate details.
     pub(crate) predicates: HashMap<String, Predicate>,
 
-    /// Join information
+    /// Maps a Toql query path name to a joined mapper.
     pub(crate) joins: HashMap<String, Join>,
 
-    /// Merge information
+    /// Maps a Toql query path name to a merged mapper.
     pub(crate) merges: HashMap<String, Merge>,
 
-    /// Load role
+    /// Load role expressions for the struct.
     pub(crate) load_role_expr: Option<RoleExpr>,
 
-    /// Delete role
+    /// Delete role expressions for the struct.
     pub(crate) delete_role_expr: Option<RoleExpr>,
 
-    /// Selections
+    /// Maps a selection name to Toql query pathed fields or paths with wildcard
     /// Automatic created selection are
-    /// #cnt - Fields for count query
-    /// #mut - Fields for insert
-    /// #all - All mapped fields
-    pub(crate) selections: HashMap<String, Vec<String>>, // name, toql fields or paths
-
-                                                         //    pub(crate) joins_root: Vec<String>, // Top joins
-                                                         //    pub(crate) joins_tree: HashMap<String, Vec<String>>, // Subjoins
+    /// $cnt - Fields for count query
+    /// $mut - Fields for insert
+    /// $all - All mapped fields
+    pub(crate) selections: HashMap<String, Vec<String>>,
 }
 
 impl TableMapper {
@@ -156,7 +129,7 @@ where {
         Self::new_with_handler(sql_table_name, f)
     }
 
-    /// Creates new mapper with a custom handler.
+    /// Create a new mapper with a custom handler.
     /// Use this to provide custom filter functions for all fields.
     pub fn new_with_handler<H>(sql_table_name: &str, handler: H) -> Self
     where
@@ -172,18 +145,16 @@ where {
             fields: HashMap::new(),
             predicates: HashMap::new(),
             deserialize_order: Vec::new(),
-            joined_mappers: HashMap::new(),
             selections: HashMap::new(),
             load_role_expr: None,
             delete_role_expr: None,
         }
     }
-    /// Create a new mapper from a struct that implements the Mapped trait.
-    /// The Toql derive does that for every attributed struct.
+    /// Create a new mapper from a struct that implements the [Mapped] trait.
     pub fn from_mapped<M: Mapped>() -> Result<TableMapper> {
         Self::from_mapped_with_handler::<M, _>(DefaultFieldHandler::new())
     }
-
+    /// Create a new mapper from a struct that implements the [Mapped] trait with a custom [FieldHandler].
     pub fn from_mapped_with_handler<M: Mapped, H>(handler: H) -> Result<TableMapper>
     where
         H: 'static + FieldHandler + Send + Sync,
@@ -193,28 +164,33 @@ where {
         M::map(&mut m)?;
         Ok(m)
     }
-    pub fn joined_mapper(&self, name: &str) -> Option<String> {
-        self.join(name).map(|j| j.joined_mapper.to_owned())
+    /// Returns joined mapper for a path name, if any.
+    pub fn joined_mapper(&self, path_name: &str) -> Option<String> {
+        self.join(path_name).map(|j| j.joined_mapper.to_owned())
     }
-    pub fn is_partial_join(&self, name: &str) -> bool {
-        self.join(name)
+    /// Returns true, if path name refers to a partial join table.
+    pub fn is_partial_join(&self, path_name: &str) -> bool {
+        self.join(path_name)
             .filter(|j| j.options.partial_table)
             .is_some()
     }
-    pub fn merged_mapper(&self, name: &str) -> Option<String> {
-        self.merge(name).map(|m| m.merged_mapper.to_owned())
+    /// Returns joined mapper for a path name, if any.
+    pub fn merged_mapper(&self, path_name: &str) -> Option<String> {
+        self.merge(path_name).map(|m| m.merged_mapper.to_owned())
     }
-
-    pub(crate) fn join(&self, name: &str) -> Option<&Join> {
-        self.joins.get(name)
+    /// Returns join details for a path name, if any.
+    pub(crate) fn join(&self, path_name: &str) -> Option<&Join> {
+        self.joins.get(path_name)
     }
-    pub(crate) fn merge(&self, name: &str) -> Option<&Merge> {
-        self.merges.get(name)
+    /// Returns merge details for a path name, if any.
+    pub(crate) fn merge(&self, path_name: &str) -> Option<&Merge> {
+        self.merges.get(path_name)
     }
-    pub(crate) fn field(&self, name: &str) -> Option<&Field> {
-        self.fields.get(name)
+    /// Returns field details for a path name, if any.
+    pub(crate) fn field(&self, field_name: &str) -> Option<&Field> {
+        self.fields.get(field_name)
     }
-
+    /// Returns all mappers that are partial joins from this `struct`.
     pub(crate) fn joined_partial_mappers(&self) -> Vec<(String, String)> {
         self.joins
             .iter()
@@ -228,9 +204,8 @@ where {
             .collect()
     }
 
-    /// Maps a Toql field to a field handler.
-    /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
-    /// how to generate SQL for your field.
+    /// Maps a Toql field name to a field handler.
+    /// The [FieldHandler] defines how to generate SQL.
     pub fn map_handler<'a, H>(
         &'a mut self,
         toql_field: &str,
@@ -242,9 +217,8 @@ where {
     {
         self.map_handler_with_options(toql_field, sql_expression, handler, FieldOptions::new())
     }
-    // Maps a Toql field with options to a field handler.
-    /// This allows most freedom, you can define in the [FieldHandler](trait.FieldHandler.html)
-    /// how to generate SQL for your field.
+    /// Maps a Toql field with options to a field handler.
+    /// The [FieldHandler] defines how to generate SQL.
     pub fn map_handler_with_options<'a, H>(
         &'a mut self,
         toql_field: &str,
@@ -266,7 +240,7 @@ where {
         self
     }
 
-    /// Adds a new field - or updates an existing field - to the mapper.
+    /// Map a column with default [FieldOptions]
     pub fn map_column<'a, T>(&'a mut self, toql_field: &str, column_name: T) -> &'a mut Self
     where
         T: Into<String>,
@@ -278,7 +252,8 @@ where {
         )
     }
 
-    /// Adds a new field - or updates an existing field - to the mapper.
+    //// Map a column.
+    /// Convenience function for generic [TableMapper::map_expr_with_options].
     pub fn map_column_with_options<'a, T>(
         &'a mut self,
         toql_field: &str,
@@ -295,7 +270,7 @@ where {
         )
     }
 
-    /// Adds a new field - or updates an existing field - to the mapper.
+    //// Map an expression
     pub fn map_expr_with_options<'a>(
         &'a mut self,
         toql_field: &str,
@@ -333,8 +308,7 @@ where {
 
         self
     }
-    /// Adds a join for a given path to the mapper.
-    /// Example: `map.join("foo", "LEFT JOIN Foo f ON (foo_id = f.id)")`
+    /// Map a join with default [JoinOptions]
     pub fn map_join<'a>(
         &'a mut self,
         toql_path: &str,
@@ -352,6 +326,7 @@ where {
             JoinOptions::new(),
         )
     }
+    /// Map a join with options.
     pub fn map_join_with_options<'a, S>(
         &'a mut self,
         toql_path: S,
@@ -381,6 +356,7 @@ where {
         self
     }
 
+    /// Map a merge with default [MergeOptions].
     pub fn map_merge<S>(
         &mut self,
         toql_path: S,
@@ -399,6 +375,7 @@ where {
             MergeOptions::new(),
         )
     }
+    /// Map a merge with default [MergeOptions].
     pub fn map_merge_with_options<S>(
         &mut self,
         toql_path: S,
@@ -423,6 +400,7 @@ where {
         );
         self
     }
+    /// Map a predicate handler with default [PredicateOptions].
     pub fn map_predicate_handler<H>(&mut self, name: &str, sql_expression: SqlExpr, handler: H)
     where
         H: 'static + PredicateHandler + Send + Sync,
@@ -434,9 +412,12 @@ where {
             PredicateOptions::new(),
         )
     }
+    /// Map a predicate expression with default [PredicateOptions].
     pub fn map_predicate(&mut self, name: &str, sql_expression: SqlExpr) {
         self.map_predicate_with_options(name, sql_expression, PredicateOptions::new());
     }
+
+    /// Map a predicate expression with a custom [PredicateHandler].
     pub fn map_predicate_handler_with_options<H>(
         &mut self,
         name: &str,
@@ -453,6 +434,7 @@ where {
         };
         self.predicates.insert(name.to_string(), predicate);
     }
+    /// Map a predicate expression.
     pub fn map_predicate_with_options(
         &mut self,
         name: &str,
@@ -467,6 +449,7 @@ where {
         self.predicates.insert(name.to_string(), predicate);
     }
 
+    /// Map a selection.
     pub fn map_selection(&mut self, name: &str, fields_or_paths: Vec<String>) {
         if cfg!(debug_assertion) && name.len() <= 3 {
             panic!(
@@ -477,10 +460,12 @@ where {
         self.selections.insert(name.to_string(), fields_or_paths);
     }
 
+    /// Restrict deleted this `struct` with a role expression.
     pub fn restrict_delete(&mut self, role_expr: RoleExpr) {
         self.delete_role_expr = Some(role_expr);
     }
 
+    /// Restrict loading this `struct` with a role expression.  
     pub fn restrict_load(&mut self, role_expr: RoleExpr) {
         self.load_role_expr = Some(role_expr);
     }

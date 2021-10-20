@@ -1,56 +1,69 @@
-//! Keep a boolean role expression that can be evaluated to true or false for a given set of roles
-/// The RoleExpr can also be used to build a role expression programmatically.
+//! A boolean role expression that can be evaluated.
+
+///  A `RoleExpr` is a boolean expression tree.
 ///
-/// Here an example for the expression 'roles admin or power_user'
-/// ```ignore
-/// use toql::role_expr::RoleExpr;
+/// It is typically parsed by the [RoleExprParser](crate::role_expr_parser::RoleExprParser).
+/// However it can also be build programmatically.
+///
+/// Here an example for the expression `admin or power_user`:
+/// ```rust
+/// use toql::prelude::RoleExpr;
+///
 /// let e = RoleExpr::Role("admin".to_string())
-///                .and(RoleExpr::Role("power_user".to_string()));
+///                .or(RoleExpr::Role("power_user".to_string()));
 /// assert_eq!("admin;power_user", e.to_string());
 /// ```
-/// To build a Role expr form a string, there is a [RoleExprParser](role_expr_parser/struct.RoleExprParser.html) to turn a string into a role expression.
-/// Check there for the string notation of role expressions.
+/// To validate a role expression use the [RoleValidator](crate::role_validator::RoleValidator).
 ///
-/// To evaluate a role expression use the [RoleValidator](role_validator/struct.RoleValidator.html).
+/// `RoleExpr` are used by Toql derive generated code.
 ///
-/// Note that this functionality should not be interesting for Toql *users*.
-/// Role expressions are handled internally when requested through the struct mapping.
+/// End users should restrict actions with role expressions through the Toql derive.
 ///
-/// ## Example
+/// ### Example
 /// Restricting the field's selection to the roles 'admin' or 'power_user'
-/// ```ignore
-/// #[derive[Toql]]
+/// ```rust
+/// #[derive(Toql)]
 /// struct FooBar {
 ///   #[toql(key)]
 ///   id: u64,
+///
 ///   #[toql(roles(load="admin;power_user"))]
 ///   name: Option<String>
 /// }
 /// ```
-
+///
 #[derive(Debug, Clone)]
 pub enum RoleExpr {
+    /// Concatenate both nodes with AND
     And(Box<RoleExpr>, Box<RoleExpr>),
+    /// Concatenate both nodes with OR
     Or(Box<RoleExpr>, Box<RoleExpr>),
+    /// Negate node
     Not(Box<RoleExpr>),
+    /// This node is a role name
     Role(String),
+    /// This node is always invalid
     Invalid,
 }
 
 impl RoleExpr {
+    // Create a role expression that is always invalid
     pub fn invalid() -> Self {
         RoleExpr::Invalid
     }
+    // Create a role for the given name
     pub fn role(role: String) -> Self {
         RoleExpr::Role(role)
     }
-
+    // Concatenate this role and another role with AND
     pub fn and(self, role_expr: RoleExpr) -> Self {
         RoleExpr::And(Box::new(self), Box::new(role_expr))
     }
+    // Concatenate this role and another role with OR
     pub fn or(self, role_expr: RoleExpr) -> Self {
         RoleExpr::Or(Box::new(self), Box::new(role_expr))
     }
+    // Negate this role expression
     #[allow(clippy::clippy::should_implement_trait)]
     pub fn not(self) -> Self {
         RoleExpr::Not(Box::new(self))

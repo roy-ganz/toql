@@ -1,4 +1,4 @@
-/// Macros for backends to log SQL statements and TOQL queries in a common way
+//! Macros for backends to log SQL statements and TOQL queries in a common way
 #[macro_export]
 macro_rules! log_sql {
     ($s:expr, $p:expr) => {

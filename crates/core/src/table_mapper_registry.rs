@@ -1,8 +1,4 @@
-//! ### Registry
-//! If a struct contains merged fields (collections of structs) then the SQL Builder must build multiple SQL queries with different mappers.
-//! To give high level functions all SQL Mappers, they must be put into a registry. This allows to
-//! load the full dependency tree.
-//!
+//! A registry for all table mappers.
 
 use crate::{
     field_handler::FieldHandler, result::Result, table_mapper::mapped::Mapped,
@@ -11,32 +7,40 @@ use crate::{
 use heck::MixedCase;
 use std::collections::HashMap;
 
+/// The registry hold all table mappers togheter.
 #[derive(Debug)]
 pub struct TableMapperRegistry {
     pub mappers: HashMap<String, TableMapper>,
-    //  pub alias_format: AliasFormat, //
 }
 impl TableMapperRegistry {
+    /// Create new registry.
     pub fn new() -> TableMapperRegistry {
         TableMapperRegistry {
             mappers: HashMap::new(),
         }
     }
-    pub fn get(&self, name: &str) -> Option<&TableMapper> {
-        self.mappers.get(name)
+    /// Get a mapper for a table name.
+    pub fn get(&self, table_name: &str) -> Option<&TableMapper> {
+        self.mappers.get(table_name)
     }
 
+    /// Insert a mapper. Take the table name from the mnapper.
     pub fn insert(&mut self, mapper: TableMapper) {
         // Mixed case corresponds to toql path
         self.mappers
             .insert(mapper.table_name.to_mixed_case(), mapper);
     }
+    /// Insert a mapper for a given struct.
+    /// The [Mapped] trait is implemented for every Topql derived struct.
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> Result<String> {
         let m = TableMapper::from_mapped::<M>()?;
         self.mappers.insert(M::type_name(), m);
         tracing::event!(tracing::Level::INFO, ty = %M::type_name(), "Registered database schema for type.");
         Ok(M::type_name())
     }
+    /// Insert a mapper for a given struct with a [FieldHandler]
+    /// This allows a custom field handler for a given struct.
+    /// The [Mapped] trait is implemented for every Topql derived struct.
     pub fn insert_new_mapper_with_handler<M: Mapped, H>(&mut self, handler: H) -> Result<String>
     where
         H: 'static + FieldHandler + Send + Sync,

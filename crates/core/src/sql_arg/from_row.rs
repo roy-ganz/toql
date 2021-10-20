@@ -1,3 +1,4 @@
+//! Implementation of the [FromRow](crate::from_row::FromRow) trait for SqlArg.
 use super::SqlArg;
 use crate::deserialize::error::DeserializeError;
 use crate::error::ToqlError;

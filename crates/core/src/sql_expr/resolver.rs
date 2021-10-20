@@ -1,3 +1,4 @@
+//! Turns an [SqlExpr] into [Sql]
 use super::{resolver_error::ResolverError, PredicateColumn};
 use crate::{
     alias_translator::AliasTranslator,
@@ -8,15 +9,31 @@ use crate::{
 };
 use std::{borrow::Cow, collections::HashMap};
 
+/// The resolver may hold values for placeholder tokens from [SqlExpr] and replace those.
+///
+/// It will replace placeholder tokens from [SqlExpr] with concret values as good as it can.
+///
+/// This is a typical use:
+/// ```rust
+/// use toql::prelude::{SqlExpr, AliasFormat};
+/// use toql::{alias_translator::AliasTranslator, sql_expr::resolver::Resolver};
+///
+/// let sql_expr = SqlExpr::self_literal();
+/// let mut alias_translator = AliasTranslator::new(AliasFormat::Tiny);
+/// let resolver = Resolver::new().with_self_alias("t1");
+///
+/// let sql = resolver.to_sql(&sql_expr, &mut alias_translator).unwrap();
+/// assert_eq!("t1", sql.to_unsafe_string());
+/// ```
 pub struct Resolver<'a> {
     self_alias: Option<&'a str>,
     other_alias: Option<&'a str>,
     arguments: Option<&'a [SqlArg]>,
     aux_params: Option<&'a ParameterMap<'a>>,
-    // alias_translator: Option<&'a AliasTranslator>
 }
 
 impl<'a> Resolver<'a> {
+    // Create new resolver.
     pub fn new() -> Self {
         Self {
             self_alias: None,
@@ -27,25 +44,29 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    /// Replace self alias placeholders with this alias.
     pub fn with_self_alias(mut self, alias: &'a str) -> Self {
         self.self_alias = Some(alias);
         self
     }
+    /// Replace other alias placeholders with this alias.
     pub fn with_other_alias(mut self, alias: &'a str) -> Self {
         self.other_alias = Some(alias);
         self
     }
+    /// Replace aux param placeholders with values from this map.
     pub fn with_aux_params(mut self, aux_params: &'a ParameterMap<'a>) -> Self {
         self.aux_params = Some(aux_params);
         self
     }
+    /// Replace argument placeholder with values from this argument list.
     pub fn with_arguments(mut self, arguments: &'a [SqlArg]) -> Self {
         self.arguments = Some(arguments);
         self
     }
 
-    /// Replace aux params with SQL expressions
-    /// Unreplaced aux params will be returned
+    /// Replace aux param palceholders with SQL expressions.
+    /// Skips placeholders that can't be replaced.
     pub fn replace_aux_params(
         sql_expr: SqlExpr,
         aux_params_exprs: &HashMap<String, SqlExpr>,
@@ -66,9 +87,8 @@ impl<'a> Resolver<'a> {
         SqlExpr::from(tokens)
     }
 
-    /// Resolve aux params.
-    /// Repalce  aux params with SqlArg if value is in parameter map
-    /// Otherwise return unresolved aux param
+    /// Resolve aux params placeholders with value from parameter map.
+    /// Skips placeholders that cannot be resolved.
     pub fn resolve_aux_params(sql_expr: SqlExpr, aux_params: &ParameterMap) -> SqlExpr {
         let mut tokens = Vec::new();
 
@@ -87,6 +107,7 @@ impl<'a> Resolver<'a> {
         SqlExpr::from(tokens) // Return resolved string
     }
 
+    // Resolve all placeholder tokens from sql_expr.
     pub fn resolve(&self, sql_expr: &'a SqlExpr) -> std::result::Result<SqlExpr, ResolverError> {
         let mut tokens = Vec::new();
 
@@ -97,6 +118,7 @@ impl<'a> Resolver<'a> {
         Ok(SqlExpr::from(tokens))
     }
 
+    /// Resolve all aliases to literal strings.
     pub fn alias_to_literals(
         &self,
         sql_expr: &'a SqlExpr,
@@ -110,6 +132,9 @@ impl<'a> Resolver<'a> {
         Ok(SqlExpr::from(tokens))
     }
 
+    /// Resolve all placeholder tokens and translate aliases with the [AliasTranslator].
+    /// This turns an [SqlExpr] into [Sql], if all placeholder tokens can be resolved
+    /// and fail otherwise.
     pub fn to_sql(
         &self,
         sql_expr: &SqlExpr,

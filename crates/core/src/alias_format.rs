@@ -1,4 +1,4 @@
-//! Alias format for table aliases.
+//! Alias format for different table aliases.
 
 /// This determines how the [AliasTranslator](crate::alias_translator::AliasTranslator) formats table aliases in SQL code.
 /// Toql uses table aliases for every column.

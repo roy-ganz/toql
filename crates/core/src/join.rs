@@ -1,28 +1,30 @@
-//! Join struct to simplify update handling of joins
-/// A join struct can contain either the full entity or just it's key.
-/// This allows to load the full entity. For updates however,
-/// you are not forced to set a full entity if you only want to  
-/// updating a foreign key.
+//! [Join] enum to simplify update handling of joins.
+/// A join struct can contain either the full entity or just its key.
+/// This allows to load the full entity.
+/// For updates however you are not forced to set a full entity,
+/// if you only want to  updating a foreign key.
 ///
 /// ### Compare both
 ///
-/// ``` ignore
+/// ```ignore
 /// use toql::prelude::Join;
 ///
 /// #[derive(Toql)]
 /// struct User {
 ///    #[toql(key)]
 ///     id: u64,
-///     #[toql(join())] {
-///     language: Join<Language>
-///     #[toql(join())] {
+
+///     #[toql(join())]
+///     language: Join<Language>,
+
+///     #[toql(join())]
 ///     country: Country
 ///  }
 /// ```
 /// For loading both `language` and `country` behave the same.
-/// The difference comes on updating: Lets assume a web interface
+/// The difference comes on updating: Let's assume a web interface
 /// that can change both `language` and `country`.
-/// For `language`, the web can only send back the key. It will deserialize into the join.
+/// For `language`, the web client can only send back the key. It will deserialize into Join::Key.
 /// To change `country` however the client needs to send back a full valid country,
 /// otherwise the deserializer (serde) will fail.
 /// Likewise when programming `Join` is more ergonomic in update situations.

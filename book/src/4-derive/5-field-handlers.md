@@ -67,6 +67,16 @@ and use it in a query with
 
 For a bigger example, check out our [permission handler](6-appendix/4-row-access-control.md).
 
+### Field handlers with local aux params
+If you want to use the same field handler in different places 
+it mightly come handy to give the field handler some local context.
 
+This can be achieved with local aux_params:
+
+```rust
+    #[toql(sql="", field_handler="smart_name_handler", aux_param(name="strategy", value="quick"))]
+    smart_name: String
+```
+The aux param `strategy` is only available in the `smart_name_handler`. Only strings values are supported.
 
 

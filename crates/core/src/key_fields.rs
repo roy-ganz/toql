@@ -1,20 +1,17 @@
-//! # Key trait
-//!
-//! The key trait is implemented for every Toql derived struct.
-//! The most useful functions for library consumers are [get_key] and [set_key] to access the primary key of a struct.
-//! Notice that these operations fail, if the fields that should hold the values are `None`.
-//!
+//! Toql query field information for keys.
+
+
 
 use crate::sql_arg::SqlArg;
 
 mod join;
 
-/// Trait to provide the entity type for a key. This is only used
-/// for ergonomics of the api.
+/// The [KeyFields] trait is similar to [Key](crate::key::Key) but provides field names instead of columns.
+/// It is used to build key predicates in Toql queries.
 pub trait KeyFields {
     type Entity;
 
-    /// Return primary key columns for a given entity.
+    /// Return primary key fields for a given entity.
     fn fields() -> Vec<String>;
 
     /// Return key values as params. Useful to loop across a composite key.

@@ -1,30 +1,13 @@
+//! The `#[derive(Toql)]` creates all the boilerplate code to make the ✨ happen.
+//! Using the derive is the easy. However beware that the generated code size can become large 
+//! as it's about ~3K lines of code for a medium `struct`.
+//! 
+//! For a bigger project, you are strongly advised to create a cargo workspace and
+//! to put your Toql derived structs into a separate crate to reduce compile time.
+//! This will pay off once your database model stabilizes.
 //!
-//! The Toql Derive creates all the boilerplate functions to make the ✨ happen.
-//! Using the derive is the easiest way to deal with your structs and is therefore recommended.
-//! However beware that the generated code size can become large as it's about ~9K lines of code for a small struct.
-//! You may disable some functionality.
-//!
-//! For a derived struct the following is generated:
-//!  - Trait [Mapped](../toql_core/table_mapper/trait.Mapped.html) to map struct to [TableMapper](../toql_core/table_mapper/struct.TableMapper.html).
-//!  - Methods for all fields to support building a [Query](../toql_core/query/struct.Query.html).
-//!  - Methods to load, insert, delete and update a struct. Requires database feature.
-//!
-//! ### Example:
-//! ```rust
-//! use toql::derive::Toql;
-//!
-//! #[derive(Toql)]
-//! struct User {
-
-//!   #[toql(key)] // Use this field as key for delete and update
-//!   id : u64,
-//!
-//!   username : Option<String>
-//! }
-//! ```
-//!
-//! Check out the [guide](https://roy-ganz.github.io/toql/derive/reference.html) for list of available attributes.
-//!
+//! The `#[derive(ToqlEnum)]` must be added on enums to implement deserialization and conversion.
+//! Notice that `ToqlEnum` requires enums to have implementations for the `ToString` and `FromStr` traits.
 
 #![recursion_limit = "1024"]
 
@@ -53,7 +36,7 @@ mod sane;
 mod util;
 
 mod string_set;
-
+/// Derive to deserialize enums.
 #[proc_macro_derive(ToqlEnum)]
 pub fn toql_enum_derive(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init

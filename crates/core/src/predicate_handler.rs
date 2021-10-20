@@ -1,4 +1,4 @@
-//! A PredicateHandler may modify a mapped column or expression.
+//! A [PredicateHandler] may modify a mapped column or expression.
 use crate::{
     parameter_map::ParameterMap, sql_arg::SqlArg, sql_builder::sql_builder_error::SqlBuilderError,
     sql_expr::SqlExpr,

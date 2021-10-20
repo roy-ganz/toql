@@ -1,4 +1,3 @@
-//!
 //! Result of SQL Builder. Use it to get SQL that can be sent to the database.
 
 use super::select_stream::SelectStream;
@@ -33,6 +32,7 @@ pub struct BuildResult {
 }
 
 impl BuildResult {
+    /// Create a new build result
     pub fn new(verb: SqlExpr) -> Self {
         BuildResult {
             table_alias: String::new(),

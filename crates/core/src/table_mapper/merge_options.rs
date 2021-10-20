@@ -1,6 +1,6 @@
 use crate::role_expr::RoleExpr;
 
-/// Options for a mapped field.
+/// Options for a mapped merge.
 #[derive(Debug)]
 pub struct MergeOptions {
     pub(crate) preselect: bool, // Always select this merge, regardless of query fields
@@ -23,10 +23,8 @@ impl MergeOptions {
         self
     }
 
-    /// The merge can only be selected and filtered by queries that have
-    /// these roles.
-    /// Example: The email address is only visible to users with
-    /// the _admin_ role.
+    /// The merge can only be selected and filtered by queries that
+    /// fullfill this role expression.
     pub fn restrict_load(mut self, role_expr: RoleExpr) -> Self {
         self.load_role_expr = Some(role_expr);
         self

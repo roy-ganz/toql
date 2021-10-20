@@ -4,7 +4,8 @@
 pub enum TableMapperError {
     /// The requested canonical alias is not used. Contains the alias name.
     CanonicalAliasMissing(String),
-    ColumnMissing(String, String), // table column
+    /// The column is missing. Contains the table and collumn name.
+    ColumnMissing(String, String),
 }
 impl fmt::Display for TableMapperError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

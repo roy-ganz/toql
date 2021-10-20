@@ -4,7 +4,7 @@ use crate::table_mapper_registry::TableMapperRegistry;
 use lru::LruCache;
 use std::{collections::HashSet, sync::RwLock};
 
-/// Cache keeps static table information in the [TableMapperRegistry](crate::table_mapper_registry::TableMapperRegsitry) and
+/// Cache keeps static table information in the [TableMapperRegistry](crate::table_mapper_registry::TableMapperRegistry) and
 /// may lookup SQL statements to bypass the [SqlBuilder](crate::sql_builder::SqlBuilder). However this
 /// is currently not implemented.
 pub struct Cache {

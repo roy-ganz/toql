@@ -1,6 +1,9 @@
+//! Trait to build UPDATE SQL statements.
 use crate::{error::ToqlError, query::field_path::FieldPath, sql_expr::SqlExpr};
 
-// Trait is implemented for structs that can update
+/// The trait allows to build the UPDATE SQL statement for nested structs.
+///
+/// Trait is implemented by the Toql derive for structs that can update.
 pub trait TreeUpdate {
     fn update<'a, I>(
         &self,

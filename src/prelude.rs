@@ -24,7 +24,6 @@ pub use toql_core::table_mapper_registry::TableMapperRegistry;
 pub use toql_core::key::Key;
 pub use toql_core::keyed::{Keyed, KeyedMut};
 pub use toql_core::map_key::MapKey;
-pub use toql_core::map_query::MapQuery;
 
 pub use toql_core::parameter_map::ParameterMap;
 pub use toql_sql_expr_macro::sql_expr;

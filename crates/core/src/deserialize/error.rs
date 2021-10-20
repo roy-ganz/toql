@@ -1,9 +1,13 @@
 use std::fmt;
 
+/// Error that may happen when a database row is deseriazed
 #[derive(Debug)]
 pub enum DeserializeError {
+    /// A selection is expected, but the [SelectStream](crate::sql_builder::select_stream::SelectStream) is `None`.
     SelectionExpected(String),
+    /// The [SelectStream](crate::sql_builder::select_stream::SelectStream) ended unexpectedly.
     StreamEnd,
+    /// Conversion from database row into Rust struct field failed.
     ConversionFailed(String, String),
 }
 

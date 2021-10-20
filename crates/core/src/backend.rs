@@ -1,13 +1,10 @@
 //! Toql Api implementations that are database independend
 
-//pub mod api;
 pub mod context;
 pub mod context_builder;
-//pub mod fields;
-pub mod insert;
-//pub mod paths;
 pub mod count;
 pub mod delete;
+pub mod insert;
 pub mod load;
 mod map;
 pub mod update;

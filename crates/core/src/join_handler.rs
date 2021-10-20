@@ -1,4 +1,4 @@
-//! A JoinHandler may modify an ON condition in a join clause.
+//! A [JoinHandler] may modify an ON condition in a join clause.
 /// Use it to create or build an ON condition.
 /// To disable a join, just return `false`.
 ///

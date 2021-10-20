@@ -1,3 +1,4 @@
+//! Errors from [SqlBuilder](crate::sql_builder::SqlBuilder)
 use std::fmt;
 
 #[derive(Debug)]

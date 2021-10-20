@@ -1,3 +1,5 @@
+//! Implementation of the [From](std::convert::From) for [SqlArg].
+//! Used to convert basic datatypes into [SqlArg].
 use super::SqlArg;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 

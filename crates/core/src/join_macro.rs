@@ -1,4 +1,15 @@
-// Join returns always a reference
+//! Convenience macros to work with the [Join](crate::join::Join) type.
+//!
+//! Use `join!`, if you expect a [Join](crate::join::Join) to contain an entity.
+//! The macro will fail with a [ToqlError::NoneError](crate::error::ToqlError::NoneError), if the entity is missing. 
+//!
+//! ### Example 
+//! With a join like `address: Join<Address>` in an object `user` you can write 
+//! ```rust
+//! let address = join!(user.address)?;
+//! ```
+//! Likewise for `Option<Join<Address>>` use `rval_join!`.
+
 #[macro_export]
 macro_rules! join {
     ($x: expr) => {

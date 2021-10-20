@@ -1,72 +1,35 @@
-//!
-//! The SQL Builder turns a [Query](../query/struct.Query.html) with the help of a [SQL Mapper](../table_mapper/struct.TableMapper.html)
-//! into a [SQL Builder Result](../sql_builder_result/BuildResult.html)
-//! The result hold the different parts of an SQL query and can be turned into an SQL query that can be sent to the database.
-//!
-//! ## Example
-//!
-//! ``` ignore
-//!
-//! let  query = Query::wildcard().and(Field::from("foo").eq(5));
-//! let mapper::new("Bar b").map_field("foo", "b.foo");
-//! let builder_result = QueryBuilder::new().build_query(&mapper, &query);
-//! assert_eq!("SELECT b.foo FROM Bar b WHERE b.foo = ?", builder_result.to_sql());
-//! assert_eq!(["5"], builder_result.params());
-//! ```
-//!
-//! The SQL Builder can also add joins if needed. Joins must be registered on the SQL Mapper for this.
-//!
-//! ### Count queries
-//! Besides normal queries the SQL Builder can als build count queries.
-//!
-//! Let's assume you have a grid view with books and the user enters a search term to filter your grid.
-//! The normal query will get 50 books, but you will only display 10 books. Toql calls those 50 _the filtered count_.
-//! To get the unfilted count, Toql must issue another query with different filter settings. Typically to get
-//! the number of all books only that user has access to. Toql calls this _the total count_.
-//!
-//! ### Paths
-//! The SQL Builder can also ignore paths to skip paths in the query that are not mapped in the mapper.
-//! This is needed for structs that contain collections, as these collections must be querried with a different mapper.
-//!
-//! Let's assume a struct *user* had a collection of *phones*.
-//! The Toql query may look like:  `username, phones_number`.
-//! The SQL Builder needs 2 passes to resolve that query:
-//!  - The first pass will query all users with the user mapper and will ignore the path *phones_*.
-//!  - The second pass will only build the query for the path *phones_* with the help of the phone mapper.
-//!
+//! The SQL builder can build different select statements.
 pub mod build_result;
 pub mod select_stream;
 pub mod sql_builder_error;
-pub mod wildcard_scope;
 
 pub(crate) mod build_context;
 pub(crate) mod path_tree;
 
-use super::sql_builder::build_context::BuildContext;
-use super::sql_builder::build_result::BuildResult;
-use crate::error::ToqlError;
-use crate::query::Query;
-use crate::query::QueryToken;
-use crate::result::Result;
-use crate::sql_builder::sql_builder_error::SqlBuilderError;
-
-use crate::table_mapper::{join_type::JoinType, DeserializeType, TableMapper};
-
-use std::collections::HashMap;
-use std::collections::HashSet;
-
-use crate::table_mapper_registry::TableMapperRegistry;
-
-use crate::sql_arg::SqlArg;
 use crate::{
+    error::ToqlError,
     parameter_map::ParameterMap,
-    query::{concatenation::Concatenation, field_order::FieldOrder, field_path::FieldPath},
+    query::{
+        concatenation::Concatenation, field_order::FieldOrder, field_path::FieldPath, Query,
+        QueryToken,
+    },
+    result::Result,
     role_validator::RoleValidator,
+    sql_arg::SqlArg,
+    sql_builder::{
+        build_context::BuildContext, build_result::BuildResult, sql_builder_error::SqlBuilderError,
+    },
     sql_expr::{resolver::Resolver, SqlExpr},
+    table_mapper::{join_type::JoinType, DeserializeType, TableMapper},
+    table_mapper_registry::TableMapperRegistry,
 };
+
 use path_tree::PathTree;
 use select_stream::Select;
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 enum MapperOrMerge<'a> {
     Mapper(&'a TableMapper),
@@ -84,28 +47,29 @@ pub struct SqlBuilder<'a> {
 }
 
 impl<'a> SqlBuilder<'a> {
-    /// Create a new SQL Builder
-    pub fn new(base_type: &'a str, table_mapper_registry: &'a TableMapperRegistry) -> Self {
+    /// Create a new SQL Builder from a root mapper and the table mapper registry
+    pub fn new(root_mapper: &'a str, table_mapper_registry: &'a TableMapperRegistry) -> Self {
         SqlBuilder {
-            root_mapper: base_type.to_string(),
-            home_mapper: base_type.to_string(),
+            root_mapper: root_mapper.to_string(),
+            home_mapper: root_mapper.to_string(),
             table_mapper_registry,
             roles: HashSet::new(),
             aux_params: HashMap::new(),
             extra_joins: HashSet::new(),
         }
     }
-
+    /// Use these roles with the builder.
     pub fn with_roles(mut self, roles: HashSet<String>) -> Self {
         self.roles = roles;
         self
     }
-
+    /// Use these auxiliary parameters with the builder.
     pub fn with_aux_params(mut self, aux_params: HashMap<String, SqlArg>) -> Self {
         self.aux_params = aux_params;
         self
     }
-
+    /// Add this raw SQL join statement to the result.
+    /// (For internal merge joins)
     pub fn with_extra_join<T: Into<String>>(mut self, join: T) -> Self {
         self.extra_joins.insert(join.into());
         self
@@ -201,6 +165,11 @@ impl<'a> SqlBuilder<'a> {
         ))
     }
 
+    /// Build a delete statement from the [Query].
+    /// This build a delete filter predicate from the field filters and predicates in the query.
+    /// Any field selections are ignored.
+    ///
+    /// Returns a [BuildResult] that can be turned into SQL.
     pub fn build_delete<M>(&mut self, query: &Query<M>) -> Result<BuildResult> {
         let mut context = BuildContext::new();
         let root_mapper = self
@@ -344,6 +313,9 @@ impl<'a> SqlBuilder<'a> {
         resolver.resolve(&delete_expr).map_err(ToqlError::from)
     }
 
+    /// Build a normal select statement from the [Query].
+    ///
+    /// Returns a [BuildResult] that can be turned into SQL.
     pub fn build_select<M>(
         &mut self,
         query_home_path: &str,
@@ -374,6 +346,12 @@ impl<'a> SqlBuilder<'a> {
         Ok(result)
     }
 
+    /// Build a count statement from the [Query].
+    /// This build a count filter predicate from the field filters and predicates.
+    /// If `count_selection_ony` is true then only filters are used that are part
+    /// of the count selection ($cnt) or predicates that are marked as count_filters.
+    ///
+    /// Returns a [BuildResult] that can be turned into SQL.
     pub fn build_count<M>(
         &mut self,
         query_root_path: &str,

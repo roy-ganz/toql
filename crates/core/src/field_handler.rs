@@ -1,4 +1,4 @@
-//! A FieldHandler may modify a mapped column or expression.
+//! A [FieldHandler] may modify a mapped column or expression.
 /// Use it to
 /// - define your own custom function (through FN)
 /// - map the standart filters differently
@@ -105,7 +105,7 @@ impl FieldHandler for DefaultFieldHandler {
                     .push_arg(upper.clone());
                 Ok(Some(select))
             }
-           /*  FieldFilter::Re(criteria) => {
+            /*  FieldFilter::Re(criteria) => {
                 select.push_literal(" RLIKE ").push_arg(criteria.clone());
                 Ok(Some(select))
             } */

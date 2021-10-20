@@ -1,50 +1,73 @@
-// Toql. Transfer Object Query Language
-// Copyright (c) 2019 Roy Ganz
-//
-// Licensed under the Apache License, Version 2.0
-// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
-// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. All files in the project carrying such notice may not be copied,
-// modified, or distributed except according to those terms.
-
-//! # Toql. Transfer Object Query Language
+//! # Toql - A friendly and productive ORM
 //!
-//! Welcome to Toql API documentation!
 //!
-//! This API documentation is very technical and is purely a reference.
-//! There is a [guide](https://roy-ganz.github.io/toql/) that is better to get started.
+//! [Beginner Guide](https://roy-ganz.github.io/toql), [API documentation](https://docs.rs/toql/0.3/toql/)
 //!
-//! ## Overview
+//! Toql is an ORM for async databases that features
+//! - Translation between Rust structs and database tables.
+//! - Can load and modify nested structs.
+//! - A unique dead simple query language, suitable for web clients.
+//! - Different table aliases from long and readable to tiny and fast.
+//! - Prepared statements against SQL injection.
+//! - Support for raw SQL for full database power.
+//! - Support for role based access.
+//! - Highly customizable through user defined parameters, query functions, field handlers, etc.
+//! - Compile time safety for queries, fields and path names.
+//! - No unsafe Rust code.
+//! - Tested on real world scenario.
 //!
-//! The project consists of the following main parts:
+//! It currently only supports **MySQL**. More are coming, promised :)
 //!
-//!  * A [Query Parser](https://docs.rs/toql_core/0.1/toql_core/query_parser/index.html) to build a Toql query from a string.
-//!  * A [Query](https://docs.rs/toql_core/0.1/toql_core/query/index.html) that can be built with methods.
-//!  * A [SQL Mapper](https://docs.rs/toql_core/0.1/toql_core/table_mapper/index.html) to map Toql fields to database columns or expressions.
-//!  * A [SQL Builder](https://docs.rs/toql_core/0.1/toql_core/sql_builder/index.html) to  turn your Toql query into an SQL statement using the mapper.
-//!  * A [Toql Derive](https://docs.rs/toql_derive/0.1/index.html) to build all the boilerplate code to make some ✨ happen.
-//!  * Integration with
-//!      * [MySQL](https://docs.rs/toql_mysql/0.1/index.html)
-//!      * [Rocket](https://docs.rs/toql_rocket/0.1/index.html)
+//! ## Installation
+//! Add this to your `Cargo.toml`:
 //!
-//! ## Small Example
-//! Using Toql without any dependency features is possible and easy. Here we go:
-//! ``` rust
-//! use toql::{query_parser::QueryParser, table_mapper::TableMapper, sql_builder::SqlBuilder};
-//!
-//! let query = QueryParser::parse("id, +title LK '%foo%'").unwrap();
-//! let mut mapper = TableMapper::new("Book b");
-//!     mapper
-//!         .map_field("id", "b.id")
-//!         .map_field("title", "b.title");
-//!
-//! let result = SqlBuilder::new().build(&mapper, &query).unwrap();
-//! assert_eq!("SELECT b.id, b.title FROM Book b WHERE b.title LIKE ? ORDER BY b.title ASC", result.to_sql());
+//! ```toml
+//! [dependencies]
+//! toql = {version = "0.3", features = ["serde"]}
+//! toql_mysql_async = "0.3"
 //! ```
 //!
-//! ## Bigger Example
-//! Have a look at the [CRUD example](https://github.com/roy-ganz/toql/blob/master/examples/rocket_mysql/main.rs) that serves users with Rocket and MySQL.
+//! ## Look And Feel
 //!
+//! Derive your structs:
+//! ```rust
+//! #[derive(Toql)]
+//! #[toql(auto_key = true)]
+//! struct Todo {
+//!     #[toql(key)]
+//!     id: u64,
+//!     what: String,
+//!
+//!     #[toql(join())]
+//!     user: User
+//! }
+//! ```
+//!
+//! And do stuff with them:
+//! ```rust
+//! let toql = ...
+//! let todo = Todo{ ... };
+//!
+//! // Insert todo and update its generated id
+//! toql.insert_one(&mut todo, paths!(top)).await?;
+//!
+//! // Compile time checked queries!
+//! let q = query!(Todo, "*, user_id eq ?", &todo.user.id);
+//!
+//! // Typesafe loading
+//! let user = toql.load_many(q).await?;
+//! ```
+//!
+//!
+//! ## Quick start
+//! Toql has a [supporting crate](https://crates.io/crates/toql_rocket) to play well with [Rocket](https://crates.io/crates/rocket). Check out the [CRUD example](https://github.com/roy-ganz/todo_rotomy).
+//!
+//! ## Contribution
+//! Comments, bug fixes and quality improvements are welcome.
+//!
+//! ## License
+//! Toql is distributed under the terms of both the MIT license and the
+//! Apache License (Version 2.0).
 
 pub use toql_core::alias_format;
 pub use toql_core::alias_translator;
@@ -55,13 +78,11 @@ pub use toql_core::key;
 pub use toql_core::key_fields;
 pub use toql_core::keyed;
 pub use toql_core::map_key;
-pub use toql_core::merge;
 pub use toql_core::query;
 pub use toql_core::result;
 pub use toql_core::sql;
 pub use toql_core::sql_arg;
 pub use toql_core::sql_expr;
-pub use toql_core::sql_expr_parser;
 pub use toql_core::toql_api::fields;
 pub use toql_core::toql_api::paths;
 

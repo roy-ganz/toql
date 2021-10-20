@@ -1,30 +1,9 @@
+//! The `role_expr!` macro compiles a role expression into program code. 
 //!
-//! The Toql Derive creates all the boilerplate functions to make the ✨ happen.
-//! Using the derive is the easiest way to deal with your structs and is therefore recommended.
-//! However beware that the generated code size can become large as it's about ~9K lines of code for a small struct.
-//! You may disable some functionality.
-//!
-//! For a derived struct the following is generated:
-//!  - Trait [Mapped](../toql_core/table_mapper/trait.Mapped.html) to map struct to [TableMapper](../toql_core/table_mapper/struct.TableMapper.html).
-//!  - Methods for all fields to support building a [Query](../toql_core/query/struct.Query.html).
-//!  - Methods to load, insert, delete and update a struct. Requires database feature.
-//!
-//! ### Example:
+//! ### Example
 //! ```rust
-//! use toql::derive::Toql;
-//!
-//! #[derive(Toql)]
-//! struct User {
-
-//!   #[toql(key)] // Use this field as key for delete and update
-//!   id : u64,
-//!
-//!   username : Option<String>
-//! }
+//! let f = role_expr!("admin;power_user");
 //! ```
-//!
-//! Check out the [guide](https://roy-ganz.github.io/toql/derive/reference.html) for list of available attributes.
-//!
 
 #![recursion_limit = "512"]
 
