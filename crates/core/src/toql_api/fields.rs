@@ -2,7 +2,7 @@
 
 /// The struct hold a list of field names.
 /// Users of the Toql library should use the fields! macro to
-/// build it. The [fields!](toql_fields_macro::fields) macro provides compile time garanties.
+/// build it. The `fields!` macro provides compile time garanties.
 /// Unlike [Query](crate::query::Query) Fields is not typesafe.
 /// This will be improved in the future.
 pub struct Fields {

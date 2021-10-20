@@ -2,7 +2,7 @@
 
 /// The struct hold a list of path names.
 /// Users of the Toql library should use the paths! macro to
-/// build it. The [paths!](toql_paths_macro::paths) macro provides compile time garanties.
+/// build it. The `paths!` macro provides compile time garanties.
 /// Unlike [Query](crate::query::Query) Paths is not typesafe.
 /// This will be improved in the future.
 pub struct Paths {

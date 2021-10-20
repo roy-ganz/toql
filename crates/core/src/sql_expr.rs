@@ -53,7 +53,7 @@ pub enum SqlExprToken {
 /// A SQL expression is a list of tokens that can be resolved into SQL.
 ///
 /// Library users are advised to not build it programmatically,
-/// but to use the [sql_expr!](toql_sql_expr_macro::sql_expr) macro.
+/// but to use the `sql_expr!` macro.
 /// This macro provides compile time safety and convenience.
 ///
 /// However it's also possible to build it programmatically:
