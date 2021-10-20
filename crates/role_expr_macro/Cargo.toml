@@ -13,20 +13,14 @@ repository = "https://github.com/roy-ganz/toql"
 proc-macro = true
 
 [dependencies]
-
 syn = "0.15"
 darling ="0.9"
-
 quote = "0.6"
 heck = "0.3"
-
 proc-macro2 = "0.4"
-
 tracing = "0.1"
 env_logger="0.6"
-
 pest= "2.0"
-
 toql_role_expr_parser = { version = "0.3", path = "../role_expr_parser" }
 
 
