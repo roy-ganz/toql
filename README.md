@@ -1,8 +1,4 @@
-
-![Bollard by the Sea by Gábor Szakács (Public Domain)](book/src/bollard-at-the-port.gif)
-
 # Toql - A friendly and productive ORM
-
 
 [Beginner Guide](https://roy-ganz.github.io/toql), [API documentation](https://docs.rs/toql/0.3/toql/)
 
@@ -63,7 +59,7 @@ let user = toql.load_many(q).await?;
 
 
 ## Quick start
-Toql has a [supporting crate](https://crates.io/crates/toql_rocket) to play well with [Rocket](https://crates.io/crates/rocket). Check out the [CRUD example](https://github.com/roy-ganz/todo_rotomy).
+Check out the [CRUD example](https://github.com/roy-ganz/todo_rotomy).
 
 ## Contribution
 Comments, bug fixes and quality improvements are welcome. 
