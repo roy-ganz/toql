@@ -79,7 +79,7 @@ is referred to as
 
 
 ## Exclusion
-Field can be excluded in several ways
+Fields can be excluded in several ways
 - `skip` excludes a field completely from the table, use for non-db fields.
 - `skip_mut` ensures a field is never updated, automatically added for keys and SQL expressions.
 - `skip_wildcard` removes a field from default [wildcard selection](../5-query-language/2-select.md), use for expensive SQL expressions or soft hiding.
@@ -95,10 +95,13 @@ struct UserRef {
 
 	full_name: String,
 
+	#[toql(skip_wildcard)]
+	middle_name: String,
+
 	#[toql(skip)]
 	value: String,
 
-	#[toql(skip_mut, skip_wildcard)]
-	county: Country
+	#[toql(join, skip_mut)]
+	country: Country
 }
 ```

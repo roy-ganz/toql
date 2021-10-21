@@ -25,10 +25,10 @@ Optional fields that are `None` will insert the default value of the database. S
 ### The paths! macro
 The `paths!` macro compiles a path list. Any invalid path will show up at compile time. The insert functions insert all referenced joins and merges from such a path list.
 
-Let's assume a struct `User` that has a Vec of `books` with each book joining a `publisher`. A path list like `paths!(User, "books_publisher")` will 
+Let's assume a struct `User` that has a `Vec` of `books` with each book joining a `publisher`. A path list like `paths!(User, "books_publisher")` will 
 - insert all fields from `User`.
 - if the `id` of `User` is marked as [auto key](4-derive/2-keys.md), Toql will load the generated `id` from the database and update `User` and the composite key in `books`.
-- insert all fields the the joined `publisher`.
+- insert all fields from the joined `publisher`.
 - handle the `id` of publisher like the one in `books`.
 - insert the merged books with the correct composite keys.
 

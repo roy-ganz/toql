@@ -158,11 +158,11 @@ The second <code>insert_one</code> makes a copy of <code>u</code> and again refr
 <p>Optional fields that are <code>None</code> will insert the default value of the database. See <a href="4-derive/6-insert.html">the mapping</a> for details.</p>
 <a class="header" href="#the-paths-macro" id="the-paths-macro"><h3>The paths! macro</h3></a>
 <p>The <code>paths!</code> macro compiles a path list. Any invalid path will show up at compile time. The insert functions insert all referenced joins and merges from such a path list.</p>
-<p>Let's assume a struct <code>User</code> that has a Vec of <code>books</code> with each book joining a <code>publisher</code>. A path list like <code>paths!(User, &quot;books_publisher&quot;)</code> will</p>
+<p>Let's assume a struct <code>User</code> that has a <code>Vec</code> of <code>books</code> with each book joining a <code>publisher</code>. A path list like <code>paths!(User, &quot;books_publisher&quot;)</code> will</p>
 <ul>
 <li>insert all fields from <code>User</code>.</li>
 <li>if the <code>id</code> of <code>User</code> is marked as <a href="4-derive/2-keys.html">auto key</a>, Toql will load the generated <code>id</code> from the database and update <code>User</code> and the composite key in <code>books</code>.</li>
-<li>insert all fields the the joined <code>publisher</code>.</li>
+<li>insert all fields from the joined <code>publisher</code>.</li>
 <li>handle the <code>id</code> of publisher like the one in <code>books</code>.</li>
 <li>insert the merged books with the correct composite keys.</li>
 </ul>

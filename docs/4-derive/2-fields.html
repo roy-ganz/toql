@@ -216,7 +216,7 @@ struct UserRef {
 <p>is referred to as</p>
 <p><code>id, fullName, country_id</code></p>
 <a class="header" href="#exclusion" id="exclusion"><h2>Exclusion</h2></a>
-<p>Field can be excluded in several ways</p>
+<p>Fields can be excluded in several ways</p>
 <ul>
 <li><code>skip</code> excludes a field completely from the table, use for non-db fields.</li>
 <li><code>skip_mut</code> ensures a field is never updated, automatically added for keys and SQL expressions.</li>
@@ -234,11 +234,14 @@ struct UserRef {
 
     full_name: String,
 
+    #[toql(skip_wildcard)]
+    middle_name: String,
+
     #[toql(skip)]
     value: String,
 
-    #[toql(skip_mut, skip_wildcard)]
-    county: Country
+    #[toql(join, skip_mut)]
+    country: Country
 }
 #}</code></pre></pre>
 

@@ -59,7 +59,7 @@ Keys are useful to :
   - Update a [join](4-derive/4-joins.md).
 
 Keys can be serialized and deserialized with serde, if the `serde` feature is eanbled.
-This allows web clients to send either a full joined entity or just the key of it, 
+This allows web clients to send either a full entity or just the key of it, 
 if they want to update some dependency.
 
 

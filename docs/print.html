@@ -553,11 +553,11 @@ The second <code>insert_one</code> makes a copy of <code>u</code> and again refr
 <p>Optional fields that are <code>None</code> will insert the default value of the database. See <a href="3-api/4-derive/6-insert.html">the mapping</a> for details.</p>
 <a class="header" href="#the-paths-macro" id="the-paths-macro"><h3>The paths! macro</h3></a>
 <p>The <code>paths!</code> macro compiles a path list. Any invalid path will show up at compile time. The insert functions insert all referenced joins and merges from such a path list.</p>
-<p>Let's assume a struct <code>User</code> that has a Vec of <code>books</code> with each book joining a <code>publisher</code>. A path list like <code>paths!(User, &quot;books_publisher&quot;)</code> will</p>
+<p>Let's assume a struct <code>User</code> that has a <code>Vec</code> of <code>books</code> with each book joining a <code>publisher</code>. A path list like <code>paths!(User, &quot;books_publisher&quot;)</code> will</p>
 <ul>
 <li>insert all fields from <code>User</code>.</li>
 <li>if the <code>id</code> of <code>User</code> is marked as <a href="3-api/4-derive/2-keys.html">auto key</a>, Toql will load the generated <code>id</code> from the database and update <code>User</code> and the composite key in <code>books</code>.</li>
-<li>insert all fields the the joined <code>publisher</code>.</li>
+<li>insert all fields from the joined <code>publisher</code>.</li>
 <li>handle the <code>id</code> of publisher like the one in <code>books</code>.</li>
 <li>insert the merged books with the correct composite keys.</li>
 </ul>
@@ -842,7 +842,7 @@ struct UserRef {
 <p>is referred to as</p>
 <p><code>id, fullName, country_id</code></p>
 <a class="header" href="#exclusion" id="exclusion"><h2>Exclusion</h2></a>
-<p>Field can be excluded in several ways</p>
+<p>Fields can be excluded in several ways</p>
 <ul>
 <li><code>skip</code> excludes a field completely from the table, use for non-db fields.</li>
 <li><code>skip_mut</code> ensures a field is never updated, automatically added for keys and SQL expressions.</li>
@@ -860,11 +860,14 @@ struct UserRef {
 
     full_name: String,
 
+    #[toql(skip_wildcard)]
+    middle_name: String,
+
     #[toql(skip)]
     value: String,
 
-    #[toql(skip_mut, skip_wildcard)]
-    county: Country
+    #[toql(join, skip_mut)]
+    country: Country
 }
 #}</code></pre></pre>
 <a class="header" href="#optional-fields" id="optional-fields"><h1>Optional fields</h1></a>
@@ -1505,7 +1508,7 @@ struct UserLanguage {
 <li>Update a <a href="4-derive/4-derive/4-joins.html">join</a>.</li>
 </ul>
 <p>Keys can be serialized and deserialized with serde, if the <code>serde</code> feature is eanbled.
-This allows web clients to send either a full joined entity or just the key of it,
+This allows web clients to send either a full entity or just the key of it,
 if they want to update some dependency.</p>
 <a class="header" href="#example-4" id="example-4"><h4>Example</h4></a>
 <pre><code>use crate::user::{User, UserKey};
