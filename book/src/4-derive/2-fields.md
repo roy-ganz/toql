@@ -56,7 +56,7 @@ Use `column` also when mapping a field, that is a SQL keyword. Notice the back t
 
 ### Toql query fields
 
-Toql query fields on a struct are always mixed case, while dependencies are separated with an unserscore.
+Toql query fields on a struct are always mixed case, while dependencies are separated with an underscore.
 
 ```rust
 #[derive(Toql)]

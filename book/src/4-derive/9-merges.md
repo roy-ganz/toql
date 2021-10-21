@@ -1,7 +1,7 @@
 
 # Merges
 
-A struct can contain a Vec of other structs. Because this can't be loaded done directly in SQL, Toql will execute multiple queries and merge the results. 
+A struct can contain a `Vec` of other structs. Because this can't be loaded directly in SQL, Toql will execute multiple queries and merge the results. 
 
 ```rust
 #[derive(Toql)]
@@ -27,7 +27,7 @@ struct Phone {
 }
 ```
 
-Selecting all fields from above with `*, mobilePhones_*` will run 2 SELECT statements and merge the resulting `Vec<Phone>` into `Vec<User>` by the common column value of `User.id` and `Phone.user_id`.
+Selecting all fields from above with `*, mobilePhones_*` will run 2 SELECT statements and merge the resulting `Vec<Phone>` into `Vec<User>` by the common value of `User.id` and `Phone.user_id`.
 
 ## Renaming merge columns
 By default the merge column names follow the pattern above. However it's possible to explicitly specify the column names:

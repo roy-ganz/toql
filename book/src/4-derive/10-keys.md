@@ -24,7 +24,7 @@ struct User {
 ## Joins
 *Inner* joins can also have the `key` attribute. This is useful for association tables.
 
-For a join used as a key the SQL builder takes the primary key(s) of the joined struct to guess the foreign key columns.
+For a join used as a key the SQL builder takes the primary key of the joined struct to guess the foreign key columns.
 
 #### Example:
 ```rust
@@ -54,12 +54,12 @@ For the example above Toql assumes that the database table `UserLanguage`  has a
 The Toql derive creates for every struct a corresponding key struct. The key struct contains only the fields marked as key form the derived stuct.
 
 Keys are useful to :
-  - Delete an value with `delete_one`
-  - Build a [query](3-api/2-load.md) 
-  - Update a [join](4-derive/4-joins.md)
+  - Delete a value with `delete_one`.
+  - Build a [query](3-api/2-load.md). 
+  - Update a [join](4-derive/4-joins.md).
 
-Keys can be serialized and deserialized with serde [TODO feature].
-This allows web clients to send either a full joined entity or just the key of it 
+Keys can be serialized and deserialized with serde, if the `serde` feature is eanbled.
+This allows web clients to send either a full joined entity or just the key of it, 
 if they want to update some dependency.
 
 
