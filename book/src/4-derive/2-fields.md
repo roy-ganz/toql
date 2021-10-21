@@ -101,7 +101,7 @@ struct UserRef {
 	#[toql(skip)]
 	value: String,
 
-	#[toql(join, skip_mut)]
+	#[toql(join(), skip_mut)]
 	country: Country
 }
 ```
