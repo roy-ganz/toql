@@ -822,7 +822,7 @@ struct UserRef {
     order: u32,
 #}</code></pre></pre>
 <a class="header" href="#toql-query-fields" id="toql-query-fields"><h3>Toql query fields</h3></a>
-<p>Toql query fields on a struct are always mixed case, while dependencies are separated with an unserscore.</p>
+<p>Toql query fields on a struct are always mixed case, while dependencies are separated with an underscore.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -1309,14 +1309,14 @@ struct QuestionDetails {
 }
 #}</code></pre></pre>
 <p>In the example above <code>Question</code> and <code>QuestionDetails</code> share the same values for primary keys.This is what  <code>patial_table</code> says.
-So for a <em>question</em> with <em>id = 42</em> there is a <em>solution</em> with <em>question_id = 42</em>.</p>
+So for a <em>question</em> with <em>id = 42</em> there is a <em>question_details</em> with <em>question_id = 42</em>.</p>
 <p>Inserts will always insert all partial tables too, whenever a path list asks to insert the base table (Question).</p>
 <p>Also it will avoid to insert a non existing foreign key: If <code>QuestionDetails</code> was regular join (without <code>partial_table</code>)
-insert would try to set a (non existing) column <code>details_id</code> with the value to the primary key of <code>Questiondetails</code>.
+insert would try to set a (non existing) column <code>details_id</code> with the value of the primary key of <code>Questiondetails</code>.
 This would be correct for regular joins, but fails on partial tables.</p>
 <p>Updates have the same behaviour when inserting new merges and for loading <code>partial_table</code> has no effect.</p>
 <a class="header" href="#merges-1" id="merges-1"><h1>Merges</h1></a>
-<p>A struct can contain a Vec of other structs. Because this can't be loaded done directly in SQL, Toql will execute multiple queries and merge the results.</p>
+<p>A struct can contain a <code>Vec</code> of other structs. Because this can't be loaded directly in SQL, Toql will execute multiple queries and merge the results.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -1342,7 +1342,7 @@ struct Phone {
     prepaid : Option&lt;bool&gt;
 }
 #}</code></pre></pre>
-<p>Selecting all fields from above with <code>*, mobilePhones_*</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common column value of <code>User.id</code> and <code>Phone.user_id</code>.</p>
+<p>Selecting all fields from above with <code>*, mobilePhones_*</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common value of <code>User.id</code> and <code>Phone.user_id</code>.</p>
 <a class="header" href="#renaming-merge-columns" id="renaming-merge-columns"><h2>Renaming merge columns</h2></a>
 <p>By default the merge column names follow the pattern above. However it's possible to explicitly specify the column names:</p>
 <pre><pre class="playpen"><code class="language-rust">
@@ -1470,7 +1470,7 @@ struct User {
 </code></pre>
 <a class="header" href="#joins-2" id="joins-2"><h2>Joins</h2></a>
 <p><em>Inner</em> joins can also have the <code>key</code> attribute. This is useful for association tables.</p>
-<p>For a join used as a key the SQL builder takes the primary key(s) of the joined struct to guess the foreign key columns.</p>
+<p>For a join used as a key the SQL builder takes the primary key of the joined struct to guess the foreign key columns.</p>
 <a class="header" href="#example-3" id="example-3"><h4>Example:</h4></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
@@ -1500,12 +1500,12 @@ struct UserLanguage {
 <p>The Toql derive creates for every struct a corresponding key struct. The key struct contains only the fields marked as key form the derived stuct.</p>
 <p>Keys are useful to :</p>
 <ul>
-<li>Delete an value with <code>delete_one</code></li>
-<li>Build a <a href="4-derive/3-api/2-load.html">query</a></li>
-<li>Update a <a href="4-derive/4-derive/4-joins.html">join</a></li>
+<li>Delete a value with <code>delete_one</code>.</li>
+<li>Build a <a href="4-derive/3-api/2-load.html">query</a>.</li>
+<li>Update a <a href="4-derive/4-derive/4-joins.html">join</a>.</li>
 </ul>
-<p>Keys can be serialized and deserialized with serde [TODO feature].
-This allows web clients to send either a full joined entity or just the key of it
+<p>Keys can be serialized and deserialized with serde, if the <code>serde</code> feature is eanbled.
+This allows web clients to send either a full joined entity or just the key of it,
 if they want to update some dependency.</p>
 <a class="header" href="#example-4" id="example-4"><h4>Example</h4></a>
 <pre><code>use crate::user::{User, UserKey};

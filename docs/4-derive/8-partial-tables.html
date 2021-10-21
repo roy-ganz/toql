@@ -174,10 +174,10 @@ struct QuestionDetails {
 }
 #}</code></pre></pre>
 <p>In the example above <code>Question</code> and <code>QuestionDetails</code> share the same values for primary keys.This is what  <code>patial_table</code> says.
-So for a <em>question</em> with <em>id = 42</em> there is a <em>solution</em> with <em>question_id = 42</em>.</p>
+So for a <em>question</em> with <em>id = 42</em> there is a <em>question_details</em> with <em>question_id = 42</em>.</p>
 <p>Inserts will always insert all partial tables too, whenever a path list asks to insert the base table (Question).</p>
 <p>Also it will avoid to insert a non existing foreign key: If <code>QuestionDetails</code> was regular join (without <code>partial_table</code>)
-insert would try to set a (non existing) column <code>details_id</code> with the value to the primary key of <code>Questiondetails</code>.
+insert would try to set a (non existing) column <code>details_id</code> with the value of the primary key of <code>Questiondetails</code>.
 This would be correct for regular joins, but fails on partial tables.</p>
 <p>Updates have the same behaviour when inserting new merges and for loading <code>partial_table</code> has no effect.</p>
 

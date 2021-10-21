@@ -141,7 +141,7 @@
                 <div id="content" class="content">
                     <main>
                         <a class="header" href="#merges" id="merges"><h1>Merges</h1></a>
-<p>A struct can contain a Vec of other structs. Because this can't be loaded done directly in SQL, Toql will execute multiple queries and merge the results.</p>
+<p>A struct can contain a <code>Vec</code> of other structs. Because this can't be loaded directly in SQL, Toql will execute multiple queries and merge the results.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
@@ -167,7 +167,7 @@ struct Phone {
     prepaid : Option&lt;bool&gt;
 }
 #}</code></pre></pre>
-<p>Selecting all fields from above with <code>*, mobilePhones_*</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common column value of <code>User.id</code> and <code>Phone.user_id</code>.</p>
+<p>Selecting all fields from above with <code>*, mobilePhones_*</code> will run 2 SELECT statements and merge the resulting <code>Vec&lt;Phone&gt;</code> into <code>Vec&lt;User&gt;</code> by the common value of <code>User.id</code> and <code>Phone.user_id</code>.</p>
 <a class="header" href="#renaming-merge-columns" id="renaming-merge-columns"><h2>Renaming merge columns</h2></a>
 <p>By default the merge column names follow the pattern above. However it's possible to explicitly specify the column names:</p>
 <pre><pre class="playpen"><code class="language-rust">

@@ -160,7 +160,7 @@ struct User {
 </code></pre>
 <a class="header" href="#joins" id="joins"><h2>Joins</h2></a>
 <p><em>Inner</em> joins can also have the <code>key</code> attribute. This is useful for association tables.</p>
-<p>For a join used as a key the SQL builder takes the primary key(s) of the joined struct to guess the foreign key columns.</p>
+<p>For a join used as a key the SQL builder takes the primary key of the joined struct to guess the foreign key columns.</p>
 <a class="header" href="#example-1" id="example-1"><h4>Example:</h4></a>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
@@ -190,12 +190,12 @@ struct UserLanguage {
 <p>The Toql derive creates for every struct a corresponding key struct. The key struct contains only the fields marked as key form the derived stuct.</p>
 <p>Keys are useful to :</p>
 <ul>
-<li>Delete an value with <code>delete_one</code></li>
-<li>Build a <a href="3-api/2-load.html">query</a></li>
-<li>Update a <a href="4-derive/4-joins.html">join</a></li>
+<li>Delete a value with <code>delete_one</code>.</li>
+<li>Build a <a href="3-api/2-load.html">query</a>.</li>
+<li>Update a <a href="4-derive/4-joins.html">join</a>.</li>
 </ul>
-<p>Keys can be serialized and deserialized with serde [TODO feature].
-This allows web clients to send either a full joined entity or just the key of it
+<p>Keys can be serialized and deserialized with serde, if the <code>serde</code> feature is eanbled.
+This allows web clients to send either a full joined entity or just the key of it,
 if they want to update some dependency.</p>
 <a class="header" href="#example-2" id="example-2"><h4>Example</h4></a>
 <pre><code>use crate::user::{User, UserKey};
