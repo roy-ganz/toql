@@ -15,7 +15,7 @@ struct User {
 }
 ```
 
-Notice the `..` ! This special alias will be replaced with the alias crated for _User_.
+Notice the `..` ! This special alias will be replaced with the alias created for _User_.
 The generated SELECT might look like this:
 
 ```

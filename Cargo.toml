@@ -27,6 +27,10 @@ log = "0.4"
 [dev-dependencies]
 async-trait ="0.1"
 tokio ={ version = "1", features = ["full"] }
+tracing= "0.1"
+#tracing-test= "0.1"
+tracing-test= {version = "0.1", git="https://github.com/reem/tracing-test", branch="add-configurable-env-filter"}
+pretty_assertions ="1"
 
 [workspace]
 members =  [

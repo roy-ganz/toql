@@ -58,4 +58,7 @@ pub mod table_mapper;
 pub mod table_mapper_registry;
 pub mod tree;
 
+#[macro_use]
+pub mod mock_db; // row! macro
+
 pub use tracing; // Reexport dependency for generated code from Toql derive

@@ -35,7 +35,7 @@ impl TableMapperRegistry {
     pub fn insert_new_mapper<M: Mapped>(&mut self) -> Result<String> {
         let m = TableMapper::from_mapped::<M>()?;
         self.mappers.insert(M::type_name(), m);
-        tracing::event!(tracing::Level::INFO, ty = %M::type_name(), "Registered database schema for type.");
+        tracing::event!(tracing::Level::INFO, ty = %M::type_name(), "Registered table mapping for type.");
         Ok(M::type_name())
     }
     /// Insert a mapper for a given struct with a [FieldHandler]

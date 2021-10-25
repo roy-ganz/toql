@@ -303,7 +303,7 @@ impl<'a> Resolver<'a> {
                     match a.len() {
                         0 => return Err(ResolverError::ArgumentMissing),
                         1 => {
-                            stmt.push_str(" =  ?");
+                            stmt.push_str(" = ?");
                             args.push(a.get(0).unwrap().to_owned());
                         }
                         _ => {

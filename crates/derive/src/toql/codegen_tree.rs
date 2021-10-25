@@ -495,15 +495,15 @@ impl<'a> CodegenTree<'a> {
                     match field.number_of_options {
                          0 => {self.identity_set_merges_key_code.push(
                             quote!(
-                                for e in #refer self. #rust_field_ident #unwrap_mut {
-                                    let key = < #rust_type_ident as toql :: keyed :: Keyed >::key(e);
+                                for e in #refer_mut self. #rust_field_ident #unwrap_mut {
+                                    let key = < #rust_base_type_ident as toql :: keyed :: Keyed >::key(e);
                                             let merge_key = toql::keyed::Keyed::key(e);
                                             let merge_key_params = toql::key::Key::params(&merge_key);
                                             let valid = toql::sql_arg::valid_key(&merge_key_params);
                                             if matches!(
                                                 action,
                                                 toql::tree::tree_identity::IdentityAction::RefreshInvalid
-                                            ) && vvalid
+                                            ) && valid
                                             {
                                             continue
                                             }
@@ -515,7 +515,7 @@ impl<'a> CodegenTree<'a> {
                                             continue
                                             }
 
-                                                for (self_key_column, self_key_params) in self_key_columns.iter().zip(self_key_params)() {
+                                                for (self_key_column, self_key_param) in self_key_columns.iter().zip(&self_key_params) {
                                                     let calculated_other_column= match self_key_column.as_str() {
                                                         #(#column_mapping,)*
                                                         x @ _ => x
@@ -913,7 +913,7 @@ impl<'a> quote::ToTokens for CodegenTree<'a> {
                  #struct_key_ident: toql::from_row::FromRow<R, E>,
                  #(#tree_merge_dispatch_bounds)*
                 {
-                    #[allow(unreachable_code, unused_variables, unused_mut)]
+                    #[allow(unreachable_code, unused_variables, unused_mut,unused_imports)]
                     fn merge<'a, I>(  &mut self, mut descendents: I, field: &str,
                                 rows: &[R],row_offset: usize, index: &std::collections::HashMap<u64,Vec<usize>>, selection_stream: &toql::sql_builder::select_stream::SelectStream)
                         -> std::result::Result<(), E>

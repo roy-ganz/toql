@@ -26,10 +26,10 @@ struct User {
 	#[toql(preselect)]
 	info: Option<String> 	// Nullable column: Value or NULL
 
-	#[toql(join)]
+	#[toql(join())]
 	address1: Option<Address> 	// Selectable inner Join: Foreign key is inserted or default
 
-	#[toql(join)]
+	#[toql(join())]
 	address2: Option<Option<Address>>// Selectable left join: Default, value or NULL
 
 	#[toql(join())]

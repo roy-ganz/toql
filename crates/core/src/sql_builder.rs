@@ -110,7 +110,7 @@ impl<'a> SqlBuilder<'a> {
                     }
                     let resolver = Resolver::new().with_self_alias(alias);
                     if !columns_expr.is_empty() {
-                        columns_expr.push_literal(" AND ");
+                        columns_expr.push_literal(", ");
                     }
                     columns_expr.extend(resolver.resolve(&field.expression)?);
                 }

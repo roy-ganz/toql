@@ -40,17 +40,15 @@ where
 
     let (mut entities, unmerged_paths, counts) = load_top(backend, &query, page).await?;
     if !entities.is_empty() {
-        let mut pending_paths = unmerged_paths;
+        let mut pending_home_paths = unmerged_paths;
+        
         loop {
-            pending_paths = load_and_merge(backend, &query, &mut entities, &pending_paths).await?;
+            pending_home_paths = load_and_merge(backend, &query, &mut entities, &pending_home_paths).await?;
 
             // Quit, if all paths have been merged
-            if pending_paths.is_empty() {
+            if pending_home_paths.is_empty() {
                 break;
             }
-
-            // Select and merge next paths
-            // unmerged_paths.extend(pending_paths.drain());
         }
     }
 
@@ -83,6 +81,8 @@ where
     };
 
     for home_path in unmerged_home_paths {
+        tracing::event!(tracing::Level::DEBUG, path = %&home_path, "Loading path for merge.");
+
         // Get merge JOIN with ON from mapper
         let hp = FieldPath::from(&home_path);
         let parent_home_path = hp.ancestors().nth(1); // Skip unchanged value
@@ -102,7 +102,7 @@ where
         };
 
         pending_home_paths = result.unmerged_home_paths().clone();
-
+        
         let other_alias = result.table_alias().clone();
         let merge_resolver = Resolver::new()
             .with_self_alias(&merge_base_alias)
@@ -145,8 +145,12 @@ where
         };
 
         result.set_preselect(key_select_expr); // Select key columns for indexing
+        let space = merge_join.ends_with_literal(" "); // Recursions add whitespace
         result.push_join(merge_join);
-        result.push_join(SqlExpr::literal(" ON ("));
+        if !space {
+            result.push_join(SqlExpr::literal(" "));
+        }
+        result.push_join(SqlExpr::literal("ON ("));
         result.push_join(merge_join_predicate);
 
         // Get ON predicate from entity keys

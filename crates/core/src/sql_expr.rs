@@ -164,8 +164,8 @@ impl SqlExpr {
         self
     }
     /// Return true if last literal token ends with `lit`.
-    pub fn ends_with_literal(&mut self, lit: &str) -> bool {
-        if let Some(SqlExprToken::Literal(l)) = self.tokens.last_mut() {
+    pub fn ends_with_literal(&self, lit: &str) -> bool {
+        if let Some(SqlExprToken::Literal(l)) = self.tokens.last() {
             l.ends_with(lit)
         } else {
             false

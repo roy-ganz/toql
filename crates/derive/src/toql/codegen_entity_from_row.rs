@@ -572,7 +572,7 @@ impl<'a> quote::ToTokens for CodegenEntityFromRow<'a> {
                 Ok(0 #(+ #forwards)*)
             }
 
-            #[allow(unused_variables, unused_mut)]
+            #[allow(unused_variables, unused_mut, unused_imports)]
             fn from_row<'a, I> ( mut row : &R , i : &mut usize, mut iter: &mut I)
                 ->std::result:: Result < Option<#struct_ident>, E>
                 where I:   Iterator<Item = &'a toql::sql_builder::select_stream::Select> + Clone {
