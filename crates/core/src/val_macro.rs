@@ -5,9 +5,21 @@
 //!
 //! ### Example 
 //! With a field like `name: Option<String>` in an object `user` you can write 
-//! ```rust
-//! let address : &Address = rval!(user.address)?;
-//! let address : Address = val!(user.address)?;
+//! ```rust, ignore
+//! use toql_core::{rval, val};
+//! use toql_derive::Toql;
+//!
+//! #[derive(Toql)]
+//! struct User {
+//!     #[toql(key)]
+//!     id: u64,
+//!     name: Option<String> // Selectable field
+//! }
+//! 
+//! let user = User{ id: 5, name: Some("Peter".to_string())};
+//!
+//! let name : &String = rval!(user.name).expect("Name is None.");
+//! let name : String = val!(user.name).expect("Name is None.");
 //! ```
 //! 
 //! The macros are useful, because typical Toql derive structs contain a lot of 

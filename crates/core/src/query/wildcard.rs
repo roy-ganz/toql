@@ -32,7 +32,12 @@ impl Wildcard {
         T: Into<String>,
     {
         let mut path = path.into();
-        #[cfg(debug)]
+        // Remove optional trailing *
+        if path.ends_with('*') {
+            path.pop();
+        }
+
+        #[cfg(debug_assertions)]
         {
             if !path.chars().all(|x| x.is_alphanumeric() || x == '_') {
                 panic!(
@@ -41,10 +46,7 @@ impl Wildcard {
                 );
             }
         }
-        // Remove optional trailing *
-        if path.ends_with('*') {
-            path.pop();
-        }
+        
         // Add _ at end if missing
         if !path.is_empty() && !path.ends_with('_') {
             path.push('_');
@@ -68,4 +70,29 @@ impl Default for Wildcard {
     fn default() -> Self {
         Self::new()
     }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::Wildcard;
+
+    #[test]
+    fn build() {
+        assert_eq!(Wildcard::new().into_string(), "*");
+        assert_eq!(Wildcard::default().into_string(), "*");
+        assert_eq!(Wildcard::from("").into_string(), "*");
+        assert_eq!(Wildcard::from("level2").into_string(), "level2_*");
+        assert_eq!(Wildcard::from("level2_").into_string(), "level2_*"); // tolerate underscore
+        assert_eq!(Wildcard::from("level2_*").into_string(), "level2_*"); // tolerate underscore and asterix
+
+        assert_eq!(Wildcard::from("").into_path(), "");
+        assert_eq!(Wildcard::from("level2").into_path(), "level2_"); // Path adds underscore
+        assert_eq!(Wildcard::from("level2_").into_path(), "level2_");
+    }
+    #[test]
+     #[should_panic]
+     fn invalid_name() {
+         Wildcard::from("level%2");
+     }
 }

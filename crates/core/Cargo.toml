@@ -27,3 +27,7 @@ toql_role_expr_parser = { version = "0.3", path = "../role_expr_parser" }
 [features]
 serde_feature = ["serde"]
 
+
+#[dev-dependencies]
+#toql_derive = {version = "0.3", path = "../derive"}
+

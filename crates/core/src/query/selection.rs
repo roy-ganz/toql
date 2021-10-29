@@ -30,8 +30,20 @@ impl Selection {
 impl ToString for Selection {
     fn to_string(&self) -> String {
         let mut s = String::new();
-        s.push('#');
+        s.push('$');
         s.push_str(&self.name);
         s
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::Selection;
+
+    #[test]
+    fn build() {
+        assert_eq!(Selection::from("sel").to_string(), "$sel");
+        assert_eq!(Selection::from("level2_sel").to_string(), "$level2_sel");
     }
 }

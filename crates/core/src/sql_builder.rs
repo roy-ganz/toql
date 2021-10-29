@@ -11,7 +11,7 @@ use crate::{
     parameter_map::ParameterMap,
     query::{
         concatenation::Concatenation, field_order::FieldOrder, field_path::FieldPath, Query,
-        QueryToken,
+        query_token::QueryToken,
     },
     result::Result,
     role_validator::RoleValidator,

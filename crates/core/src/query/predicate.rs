@@ -26,11 +26,13 @@ impl Predicate {
         T: Into<String>,
     {
         let name = name.into();
-        #[cfg(debug)]
+        #[cfg(debug_assertions)]
         {
-            // Ensure name does not end with wildcard
-            if name.ends_with("*") {
-                panic!("Fieldname {:?} must not end with wildcard.", name);
+            if !name.chars().all(|x| x.is_alphanumeric() || x == '_') {
+                panic!(
+                    "Predicate {:?} must only contain alphanumeric characters and underscores.",
+                    name
+                );
             }
         }
 
@@ -81,5 +83,18 @@ impl ToString for Predicate {
 impl From<&str> for Predicate {
     fn from(s: &str) -> Predicate {
         Predicate::from(s)
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::Predicate;
+
+    #[test]
+    fn build() {
+        assert_eq!(Predicate::from("pred").to_string(), "@pred");
+        assert_eq!(Predicate::from("pred").is(5).to_string(), "@pred 5");
+        assert_eq!(Predicate::from("pred").are(vec![5, 10]).to_string(), "@pred 5 10");
     }
 }

@@ -50,7 +50,7 @@ pub mod query_fields;
 pub mod query_parser;
 pub mod query_path;
 pub mod role_expr;
-pub mod role_expr_parser;
+//pub mod role_expr_parser;
 pub mod role_validator;
 pub mod sql_builder;
 pub mod sql_expr;

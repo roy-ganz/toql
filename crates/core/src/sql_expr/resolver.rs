@@ -15,11 +15,11 @@ use std::{borrow::Cow, collections::HashMap};
 ///
 /// This is a typical use:
 /// ```rust
-/// use toql::prelude::{SqlExpr, AliasFormat};
-/// use toql::{alias_translator::AliasTranslator, sql_expr::resolver::Resolver};
+/// use toql_core::{sql_expr::SqlExpr, alias_format::AliasFormat};
+/// use toql_core::{alias_translator::AliasTranslator, sql_expr::resolver::Resolver};
 ///
-/// let sql_expr = SqlExpr::self_literal();
-/// let mut alias_translator = AliasTranslator::new(AliasFormat::Tiny);
+/// let sql_expr = SqlExpr::self_alias();
+/// let mut alias_translator = AliasTranslator::new(AliasFormat::TinyIndex);
 /// let resolver = Resolver::new().with_self_alias("t1");
 ///
 /// let sql = resolver.to_sql(&sql_expr, &mut alias_translator).unwrap();

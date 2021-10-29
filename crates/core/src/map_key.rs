@@ -31,12 +31,22 @@ where
 /// - Basic collection of keys
 /// - Building a key predicate for a Toql query
 ///
-/// (Assume a Toql derived User struct)
-/// ```
-///  let users = vec![User{id:5}, User{id:7}];
+/// ```rust, ignore
+/// use toql_derive::Toql;
+/// use toql_core::{map_key::MapKey, query::Query};
+///
+/// #[derive(Toql)]
+/// struct User {
+///     #[toql(key)]
+///     id: u64,
+///     name: String
+/// }
+///
+///  let users = vec![User{id:5, name: "Joe".to_string()}, User{id:7, name: "Sue".to_string()}];
 ///  let keys = users.iter().map_key().collect::<Vec<_>>(); // Returns Vec<UserKey>
 ///  let predicate = users.iter().map_key().collect::<Query>(); // Build query
-///  assert(predicate.to_string, "(id eq 5;id eq 7)");
+///
+///  assert_eq!(predicate.to_string, "(id eq 5;id eq 7)");
 /// ```
 /// Notice that when keys are be collected into a [Query](crate::query::Query) the
 /// predicates are concatenated with OR.

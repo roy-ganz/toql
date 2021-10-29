@@ -1,10 +1,9 @@
 use toql_core::query_parser::QueryParser;
 use toql_core::sql_builder::SqlBuilder;
 use toql_core::table_mapper_registry::TableMapperRegistry;
-
-use toql_core::alias::AliasFormat;
+use toql_core::sql_expr::SqlExpr;
+use toql_core::alias_format::AliasFormat;
 use toql_core::alias_translator::AliasTranslator;
-use toql_core::sql_expr_parser::SqlExprParser;
 use toql_core::table_mapper::TableMapper;
 
 struct User {}
@@ -14,14 +13,15 @@ fn setup_registry() -> TableMapperRegistry {
     let mut registry = TableMapperRegistry::new();
 
     let mut mapper = TableMapper::new::<User>("User");
+    
     mapper
         .map_column("id", "id")
         .map_column("username", "username")
         .map_join(
             "book",
             "Book",
-            SqlExprParser::parse("INNER JOIN Book ...").unwrap(),
-            SqlExprParser::parse("..booki_id = ...id").unwrap(),
+            SqlExpr::literal("INNER JOIN Book ").push_other_alias(),
+            SqlExpr::aliased_column("book_id").push_literal(" = ").push_other_alias()
         );
     registry.insert(mapper);
 

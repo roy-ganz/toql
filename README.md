@@ -1,6 +1,6 @@
 # Toql - A friendly and productive ORM
 
-[Beginner Guide](https://roy-ganz.github.io/toql), [API documentation](https://docs.rs/toql/0.3/toql/)
+[Beginner Guide](https://roy-ganz.github.io/toql_guide), [API documentation](https://docs.rs/toql/0.3/toql/)
 
 Toql is an ORM for async databases that features
 - Translation between Rust structs and database tables.

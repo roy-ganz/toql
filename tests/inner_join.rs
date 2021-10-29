@@ -1,5 +1,6 @@
 use toql::prelude::{fields, paths, query, Cache, Join, Result, Toql, ToqlApi};
 use toql::mock_db::MockDb;
+use tracing_test::traced_test;
 
 //
 #[derive(Debug, Default, Toql)]
@@ -109,6 +110,81 @@ async fn load() -> Result<()> {
                     ON (level1_level2_level3.level4_id = level1_level2_level3_level4.id AND level1_level2_level3.text = 'ABC')) \
                 ON (level1_level2.level_3 = level1_level2_level3.id)) \
             ON (level1.level2_id = level1_level2.id)");
+    Ok(())
+}
+#[tokio::test]
+#[traced_test("info")]
+async fn count() -> Result<()> {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    // Count with joined level 1 + preselected level 2
+    let q = query!(Level1, "*"); // Query contains no filter
+    let r = toql.count(q).await?;
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "SELECT COUNT(*) FROM Level1 level1"
+    );
+
+    let q = query!(Level1, "id eq 4"); // Query contains filter 
+    let r = toql.count(q).await?;
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "SELECT COUNT(*) FROM Level1 level1 WHERE level1.id = 4"
+    );
+
+    // Load preselects from level 1..4 and fields from level 5
+    let q = query!(Level1, "level2_level3_level4_level5_id eq 5");
+    let r = toql.count(q).await?;
+    assert_eq!(toql.take_unsafe_sql(),
+           "SELECT COUNT(*) \
+           FROM Level1 level1 \
+           JOIN (Level2 level1_level2 \
+                JOIN (Level3 level1_level2_level3 \
+                    JOIN (Level4 level1_level2_level3_level4 \
+                        JOIN (Level5 level1_level2_level3_level4_level5) \
+                        ON (level1_level2_level3_level4.level5_id = level1_level2_level3_level4_level5.id)) \
+                    ON (level1_level2_level3.level4_id = level1_level2_level3_level4.id AND level1_level2_level3.text = 'ABC')) \
+                ON (level1_level2.level_3 = level1_level2_level3.id)) \
+            ON (level1.level2_id = level1_level2.id) \
+            WHERE level1_level2_level3_level4_level5.id = 5");
+    Ok(())
+}
+#[tokio::test]
+#[traced_test("info")]
+async fn delete() -> Result<()> {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    // Delete without filter return no queries
+    // This is for safety, otherwise everything would be deleted
+    let q = query!(Level1, "*"); // Query contains no filter
+    let r = toql.delete_many(q).await?;
+    assert_eq!(toql.sqls_empty(), true);
+
+    // Delete with filter on level1
+    let q = query!(Level1, "id eq 4"); // Query contains filter 
+    let r = toql.delete_many(q).await?;
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "DELETE level1 FROM Level1 level1 WHERE level1.id = 4"
+    );
+
+    // Delete with filter on level 5
+    let q = query!(Level1, "level2_level3_level4_level5_id eq 5");
+    let r = toql.delete_many(q).await?;
+    assert_eq!(toql.take_unsafe_sql(),
+           "DELETE level1 \
+           FROM Level1 level1 \
+           JOIN (Level2 level1_level2 \
+                JOIN (Level3 level1_level2_level3 \
+                    JOIN (Level4 level1_level2_level3_level4 \
+                        JOIN (Level5 level1_level2_level3_level4_level5) \
+                        ON (level1_level2_level3_level4.level5_id = level1_level2_level3_level4_level5.id)) \
+                    ON (level1_level2_level3.level4_id = level1_level2_level3_level4.id AND level1_level2_level3.text = 'ABC')) \
+                ON (level1_level2.level_3 = level1_level2_level3.id)) \
+            ON (level1.level2_id = level1_level2.id) \
+            WHERE level1_level2_level3_level4_level5.id = 5");
     Ok(())
 }
 

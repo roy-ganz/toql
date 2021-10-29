@@ -35,19 +35,29 @@ pub mod update;
 /// ### Example
 /// The following code shows the function signature to load an entity `MyUser` from a any database:
 ///
-/// ```
-/// use toql::prelude::{ToqlError, ToqlApi, Load, FromRow};
+/// ```rust, ignore
+/// use toql_core::{error::ToqlError, toql_api::ToqlApi, load::Load, from_row::FromRow};
+/// use toql_derive::Toql;
+///
+/// struct MyError;
+///
+/// #[derive(Toql)]
+/// struct MyUser {
+///    #[toql(key)]
+///    id: u64,
+///    name: String
+/// }
 ///
 /// async fn load_user<R, E, A>(toql: &mut A) -> std::result::Result<Vec<MyUser>, MyError>
 /// where A: ToqlApi<Row=R, Error = E>,
 ///     E: From<ToqlError>,
 ///     MyUser: Load<R, E>,
-///     <MyUser as Keyed>::Key: FromRow<R, E>,  // Needed until rust-lang/rfcs#2289 is resolved
+///     <User as Keyed>::Key: FromRow<R, E>,  // Needed until rust-lang/rfcs#2289 is resolved
 ///     MyError: From<E>
 /// {
 ///        let users = toql.load_many().await?;
 ///        Ok(users)
-///  }
+/// }
 /// ```
 #[async_trait]
 pub trait ToqlApi

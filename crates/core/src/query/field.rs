@@ -13,7 +13,7 @@ use super::concatenation::Concatenation;
 use super::field_filter::FieldFilter;
 use super::field_order::FieldOrder;
 use crate::sql_arg::SqlArg;
-use heck::MixedCase;
+//use heck::MixedCase;
 
 #[derive(Clone, Debug)]
 pub struct Field {
@@ -22,7 +22,7 @@ pub struct Field {
     pub(crate) hidden: bool,
     pub(crate) order: Option<FieldOrder>,
     pub(crate) filter: Option<FieldFilter>,
-    pub(crate) aggregation: bool,
+  //  pub(crate) aggregation: bool,
 }
 
 impl Field {
@@ -32,11 +32,14 @@ impl Field {
         T: Into<String>,
     {
         let name = name.into();
-        #[cfg(debug)]
+        #[cfg(debug_assertions)]
         {
             // Ensure name does not end with wildcard
-            if name.ends_with("*") {
-                panic!("Fieldname {:?} must not end with wildcard.", name);
+            if !name.chars().all(|x| x.is_alphanumeric() || x == '_') {
+                panic!(
+                    "Field {:?} must only contain alphanumeric characters and underscores.",
+                    name
+                );
             }
         }
 
@@ -46,23 +49,23 @@ impl Field {
             hidden: false,
             order: None,
             filter: None,
-            aggregation: false,
+           // aggregation: false,
         }
     }
-    pub fn canonical_alias(&self, root: &str) -> String {
+  /*   pub fn canonical_alias(&self, root: &str) -> String {
         format!("{}_{}", root.to_mixed_case(), self.name)
-    }
+    } */
 
     /// Hide field. Useful if a field should not be selected, but be used for filtering.
     pub fn hide(mut self) -> Self {
         self.hidden = true;
         self
     }
-    /// Aggregate a field to make the filter be in SQL HAVING clause instead of WHERE clause
+   /*  /// Aggregate a field to make the filter be in SQL HAVING clause instead of WHERE clause
     pub fn aggregate(mut self) -> Self {
         self.aggregation = true;
         self
-    }
+    } */
     /// Use this field to order records in ascending way. Give ordering priority when records are ordered by multiple fields.
     pub fn asc(mut self, order: u8) -> Self {
         self.order = Some(FieldOrder::Asc(order));
@@ -160,10 +163,7 @@ impl Field {
         ));
         self
     }
-
-    /// Filter records with custom function.
-    /// To provide a custom function you must implement (FieldHandler)[../table_mapper/trait.FieldHandler.html]
-    /// See _custom handler test_ for an example.
+   
     pub fn concatenate(mut self, concatenation: Concatenation) -> Self {
         self.concatenation = concatenation;
         self
@@ -194,11 +194,11 @@ impl ToString for Field {
         s.push_str(&self.name);
 
         if self.filter.is_some() {
-            if self.aggregation {
+          /*   if self.aggregation {
                 s.push_str(" !");
-            } else {
+            } else { */
                 s.push(' ');
-            }
+            //}
         }
         match self.filter {
             None => {}
@@ -210,8 +210,50 @@ impl ToString for Field {
     }
 }
 
-impl From<&str> for Field {
+/* impl From<&str> for Field {
     fn from(s: &str) -> Field {
         Field::from(s)
     }
+} */
+
+
+#[cfg(test)]
+mod test {
+    use super::Field;
+
+    #[test]
+    fn build() {
+        assert_eq!(Field::from("prop").eq(true).to_string(), "prop EQ 1");
+        assert_eq!(Field::from("prop").eqn().to_string(), "prop EQN");
+        assert_eq!(Field::from("prop").ne(1).to_string(), "prop NE 1");
+        assert_eq!(Field::from("prop").nen().to_string(), "prop NEN");
+        assert_eq!(Field::from("prop").gt(1).to_string(), "prop GT 1");
+        assert_eq!(Field::from("prop").ge(1.5).to_string(), "prop GE 1.5");
+        assert_eq!(Field::from("prop").lt(1.5).to_string(), "prop LT 1.5");
+        assert_eq!(Field::from("prop").le(1).to_string(), "prop LE 1");
+        assert_eq!(Field::from("prop").lk("%ABC%").to_string(), "prop LK '%ABC%'");
+        assert_eq!(Field::from("prop").bw(1, 10).to_string(), "prop BW 1 10");
+        assert_eq!(Field::from("prop").ins(vec![1, 10]).to_string(), "prop IN 1 10");
+        assert_eq!(Field::from("prop").out(vec![1, 10]).to_string(), "prop OUT 1 10");
+        assert_eq!(Field::from("prop").fnc("SC", vec![1, 10]).to_string(), "prop FN SC 1 10");
+
+        assert_eq!(Field::from("prop").asc(1).to_string(), "+1prop");
+        assert_eq!(Field::from("prop").desc(3).to_string(), "-3prop");
+        assert_eq!(Field::from("prop").hide().to_string(), ".prop");
+
+        // Combination
+        assert_eq!(Field::from("level3_prop").eq(10).hide().asc(4).to_string(), "+4.level3_prop EQ 10");
+    }
+
+     #[test]
+     fn into_name() {
+          assert_eq!(Field::from("level3_prop").eq(10).hide().asc(4).into_name(), "level3_prop");
+     }
+     
+     #[test]
+     #[should_panic]
+     fn invalid_name() {
+         Field::from("level%2");
+     }
+    
 }

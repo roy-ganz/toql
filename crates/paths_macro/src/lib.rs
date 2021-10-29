@@ -6,7 +6,23 @@
 //!
 //! ### Example
 //! Assume a `struct User` with a joined `address`.ok_or(none_error!())?
-//! ```rust
+//! ```rust, ignore
+//! #[derive(Toql)]
+//! struct User 
+//!     #[toql(key)]
+//!     id: u64,
+//!     name: String,
+//!     #[toql(join())]
+//!     address: Address
+//! }
+//!
+//! #[derive(Toql)]
+//! struct Address 
+//!     #[toql(key)]
+//!     id: u64,
+//!     street: String
+//! }
+//!
 //! let f = paths!(User, "address");
 //! ```
 //!
@@ -52,5 +68,65 @@ pub fn paths(input: TokenStream) -> TokenStream {
             tracing::debug!("{}", e.to_string());
             TokenStream::from(e)
         }
+    }
+}
+
+
+#[test]
+fn valid_path_list() {
+    use paths_macro::PathsMacro;
+    let input = "User, \"prop1, prop2\" ";
+    
+    let m  = syn::parse_str(input);
+    assert_eq!(m.is_ok(), true);
+
+   let m = m.unwrap();
+    assert!(matches!(m, PathsMacro::PathList{..}));
+    if let PathsMacro::PathList{query, struct_type} = m {
+        let f = paths_macro::parse(&query, struct_type); 
+        assert_eq!(f.is_ok(), true);
+    }
+}
+#[test]
+fn valid_top() {
+    use paths_macro::PathsMacro;
+    let input = "top";
+    
+    let m  = syn::parse_str(input);
+    assert_eq!(m.is_ok(), true);
+
+   let m = m.unwrap();
+    assert!(matches!(m,  PathsMacro::Top));
+}
+#[test]
+fn invalid_mixed_case_top() {
+    use paths_macro::PathsMacro;
+    let input = "Top";
+    
+    let m :syn::Result<PathsMacro> = syn::parse_str(input);
+    assert_eq!(m.is_ok(), false);
+}
+#[test]
+fn missing_pathlist() {
+    use paths_macro::PathsMacro;
+    let input = "User";
+    
+    let m :syn::Result<PathsMacro> = syn::parse_str(input);
+    assert_eq!(m.is_ok(), false);
+}
+
+#[test]
+fn invalid_pathlist() {
+    use paths_macro::PathsMacro;
+    let input = "User, \"prop1 prop2\" "; // missing comma
+    
+    let m = syn::parse_str(input);
+    assert_eq!(m.is_ok(), true);
+
+    let m = m.unwrap();
+    assert!(matches!(m,  PathsMacro::PathList{..}));
+    if let PathsMacro::PathList{query, struct_type} = m {
+        let f = paths_macro::parse(&query, struct_type); 
+        assert_eq!(f.is_err(), true);
     }
 }

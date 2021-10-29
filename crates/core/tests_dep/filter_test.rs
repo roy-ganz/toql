@@ -1,34 +1,43 @@
 use std::collections::HashMap;
-use toql_core::query::FieldFilter;
-use toql_core::query_parser::QueryParser;
-use toql_core::sql_builder::SqlBuilder;
-use toql_core::sql_builder::SqlBuilderError;
-use toql_core::table_mapper::FieldHandler;
-use toql_core::table_mapper::FieldOptions;
-use toql_core::table_mapper::JoinType;
-use toql_core::table_mapper::TableMapper;
+use toql_core::{table_mapper_registry::TableMapperRegistry, table_mapper::TableMapper, table_mapper::JoinType, table_mapper::FieldOptions, table_mapper::FieldHandler, sql_builder::SqlBuilderError, sql_builder::SqlBuilder, query_parser::QueryParser, query::FieldFilter};
 
-fn setup_mapper() -> TableMapper {
-    let mut mapper = TableMapper::new("Book");
-    mapper
-        .join("author", JoinType::Left, "User a", "id = a.book_id")
+fn setup_registry() -> TableMapperRegistry {
+    let mut book_mapper = TableMapper::new("Book");
+    bok_mapper
+         .map_join(
+            "author",
+            "Author",
+            JoinType::Inner,
+            SqlExpr::literal("Author ").push_other_alias(),
+            SqlExpr::aliased_column("author_id").push_literal(" = ").push_other_alias()
+        )
         .map_field_with_options("id", "id", FieldOptions::new().preselect(true))
         .map_field("title", "title")
-        .map_field("published", "publishedAt")
-        .map_field("author_id", "a.id")
-        .map_field("author_username", "a.username");
-    mapper
+        .map_field("published", "publishedAt");
+       
+
+    let mut author_mapper = TableMapper::new("Author");
+    author_mapper
+          .map_field("id", "a.id")
+            .map_field("username", "a.username"); 
+    
+    let mut registry= TableMapperRegistry::new();
+    registry.insert(book_mapper);
+    registry.insert(author_mapper);
+
+    registry
 }
 
 #[test]
 fn filter_lk() {
-    let mapper = setup_mapper();
-    let query = QueryParser::parse("title LK '%Foobar%' ").unwrap();
-    println!("{:?}", query);
-    let result = SqlBuilder::new().build(&mapper, &query).unwrap();
+    let registry = setup_registry();
+    let query = QueryParser::parse("title LK '%Foobar%' ").expect("Invalid Toql query");
+    
+    let result = SqlBuilder::new("book", &registry)
+            .build_select("", &query).expect("Unable to build SQL.");
 
     assert_eq!(
-        "SELECT id, title, null, null, null FROM Book WHERE title LIKE ?",
+        "SELECT id, title FROM Book WHERE title LIKE ?",
         result.to_sql()
     );
     assert_eq!(*result.params(), ["%Foobar%"]);
@@ -36,7 +45,7 @@ fn filter_lk() {
 
 #[test]
 fn filter_having_gt() {
-    let mapper = setup_mapper();
+    let mapper = setup_registry();
     let query = QueryParser::parse("id !GT 5").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
@@ -49,7 +58,7 @@ fn filter_having_gt() {
 
 #[test]
 fn filter_bw() {
-    let mapper = setup_mapper();
+    let mapper = setup_registry();
     let query = QueryParser::parse("id BW 0 5").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
@@ -61,7 +70,7 @@ fn filter_bw() {
 }
 #[test]
 fn filter_in() {
-    let mapper = setup_mapper();
+    let mapper = setup_registry();
     let query = QueryParser::parse("id IN 0 1 5").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
 
@@ -74,7 +83,7 @@ fn filter_in() {
 
 #[test]
 fn filter_joined_eq() {
-    let mapper = setup_mapper();
+    let mapper = setup_registry();
     let query = QueryParser::parse("author_id EQ 5").unwrap();
 
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();
@@ -141,7 +150,7 @@ fn filter_fnc() {
         } */
     }
 
-    let mut mapper = setup_mapper();
+    let mut mapper = setup_registry();
     mapper.alter_handler("title", CustomFieldHandler {});
     let query = QueryParser::parse("title FN MA 'Foobar' ").unwrap();
     let result = SqlBuilder::new().build(&mapper, &query).unwrap();

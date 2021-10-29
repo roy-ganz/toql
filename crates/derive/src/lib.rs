@@ -129,3 +129,33 @@ pub fn toql_derive(input: TokenStream) -> TokenStream {
         Err(error) => TokenStream::from(error.write_errors()),
     }
 }
+
+
+#[test]
+fn derive_fields() {
+    use annot::Toql;
+    let input = r#"
+    #[toql(auto_key = true)]
+    struct User {
+        #[toql(key)]
+        id: u64,
+        name: String
+    }"#;
+    
+    // Parse valid Rust syntax
+    let m  = syn::parse_str::<syn::DeriveInput>(input);
+    println!("{:?}", &m);
+    assert_eq!(m.is_ok(), true);
+
+    let m = m.unwrap();
+     // Parse struct attributes, visibilty, generics and data
+    let derive = Toql::from_derive_input(&m);
+       
+    println!("{:?}", &derive);
+    assert!(codegen.is_ok())
+   // assert!(matches!(m,  FieldsMacro::FieldList{..}));
+   /*  if let FieldsMacro::FieldList{query, struct_type} = m {
+        let f = fields_macro::parse(&query, struct_type); 
+        assert_eq!(f.is_ok(), true);
+    } */
+}

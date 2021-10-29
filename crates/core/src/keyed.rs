@@ -8,10 +8,21 @@
 ///
 /// ### Example
 /// Basic usage (assume a Toql derived User struct):
-/// ```rust
-/// use toql::prelude::Keyed;
-/// let u = User{...};
+/// ```rust, ignore
+/// use toql_core::keyed::Keyed;
+/// use toql_derive::Toql;
+/// 
+/// #[derive(Toql)]
+/// struct User{
+///     #[toql(key)]
+///     id: u64,
+///     name: String
+/// }
+///
+/// let u =  User {id: 5, name: "Sue".to_string()};
 /// let k = u.key();
+///
+/// assert_eq!(k.id , 5);
 /// ```
 /// For collections there is [map_key](crate::map_key::map_key). It makes use of this trait.
 pub trait Keyed {
@@ -29,10 +40,21 @@ pub trait Keyed {
 ///
 /// ### Example
 /// Basic usage (assume a Toql derived User struct):
-/// ```rust
-/// use toql::prelude::Keyed;
-/// let u = User{...};
-/// let k = u.set_key(5.into());
+/// ```rust, ignore
+/// use crate::keyed::Keyed;
+/// use toql_derive::Toql;
+/// 
+/// #[derive(Toql)]
+/// struct User{
+///     #[toql(key)]
+///     id: u64,
+///     name: String
+/// }
+///
+/// let u =  User {id: 5, name: "Sue".to_string()};
+/// u.set_key(55.into());
+/// 
+/// /// assert_eq!(u.id , 55);
 /// ```
 /// Here the number 5 is converted into the key type of `User`. Then this key is
 /// set.

@@ -61,9 +61,9 @@ impl fmt::Display for TableMapperError {
     }
 }
 
-trait MapperFilter {
-    fn build(field: crate::query::QueryToken) -> String;
-}
+/* trait MapperFilter {
+    fn build(field: crate::query::query_token::QueryToken) -> String;
+} */
 
 /// Translates Toql fields into columns or SQL expressions.
 ///

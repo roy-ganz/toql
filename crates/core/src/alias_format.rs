@@ -62,7 +62,7 @@ impl AliasFormat {
     /// Creates a medium alias from a name and an index number.
     /// If the name ends with a number an underscore is added to separate it from the index.
     pub fn medium_index(name: &str, index: u16) -> String {
-        let mut wrap = false;
+     //   let mut wrap = false;
         let mut medium_name = String::from(if name.is_empty() {
             "t"
         } else {
@@ -75,15 +75,41 @@ impl AliasFormat {
         });
         let c = medium_name.chars().last().unwrap();
         if c.is_ascii_digit() {
-            medium_name.push('$');
-            wrap = true;
+            medium_name.push('_');
+          //  wrap = true;    
         }
         medium_name.push_str(index.to_string().as_str());
 
-        if wrap {
+       /*  if wrap {
             format!("`{}`", medium_name)
         } else {
             medium_name
-        }
+        } */
+        medium_name
     }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::AliasFormat;
+
+    #[test]
+    fn format_tiny() {
+        assert_eq!(AliasFormat::tiny_index(1), "t1");
+    }
+    #[test]
+    fn format_short() {
+        assert_eq!(AliasFormat::short_index("red_green_blue", 1), "bl1");
+        assert_eq!(AliasFormat::short_index("level1_level2_level3", 1), "le1");
+        assert_eq!(AliasFormat::short_index("l1_l2_l3", 1), "l3_1");
+        assert_eq!(AliasFormat::short_index("", 1), "t1");
+    }
+    #[test]
+    fn format_medium() {
+        assert_eq!(AliasFormat::medium_index("red_green_blue", 1), "blue1");
+        assert_eq!(AliasFormat::medium_index("level1_level2_level3", 1), "level3_1");
+        assert_eq!(AliasFormat::medium_index("", 1), "t1");
+    }
+
 }

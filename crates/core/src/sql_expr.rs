@@ -61,11 +61,14 @@ pub enum SqlExprToken {
 /// ### Example
 ///
 /// ```rust
-/// let mut e = SqlExpr::literal("SELECT ");
+///  use toql_core::sql_expr::SqlExpr;
+/// 
+///  let mut e = SqlExpr::literal("SELECT ");
 ///  e.push_self_alias();
 ///  e.push_literal("id FROM User ");
 ///  e.push_self_alias();
-///  assert("SELECT ..id FROM User ..", e.to_string());
+/// 
+///  assert_eq!("SELECT ..id FROM User ..", e.to_string());
 /// ```
 /// The resolver will replace the self aliases into real aliases and build proper SQL.
 #[derive(Debug, Clone)]

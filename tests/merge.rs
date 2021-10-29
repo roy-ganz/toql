@@ -162,7 +162,7 @@ async fn load2() -> Result<()> {
     // level1_level2.id, level1_level2.level1_id, level3.id, level3.level2_id, level3.text
     toql.mock_rows(select3, vec![row!(2u64, 1u64, 3u64, 2u64, "level3")]);  
 
-    // SELECT level1_level2_level3.id, level1_level2_level3.level2_id, level4.id, level4.level3_id, level4.text
+    // level1_level2_level3.id, level1_level2_level3.level2_id, level4.id, level4.level3_id, level4.text
     toql.mock_rows(select4, vec![row!(3u64, 2u64, 4u64, 3u64, "level4")]);
 
     let r = toql.load_many(q).await?;

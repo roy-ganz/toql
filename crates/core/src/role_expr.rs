@@ -7,12 +7,13 @@
 ///
 /// Here an example for the expression `admin or power_user`:
 /// ```rust
-/// use toql::prelude::RoleExpr;
+/// use toql_core::role_expr::RoleExpr;
 ///
 /// let e = RoleExpr::Role("admin".to_string())
 ///                .or(RoleExpr::Role("power_user".to_string()));
-/// assert_eq!("admin;power_user", e.to_string());
+/// assert_eq!("(`admin`); (`power_user`)", e.to_string());
 /// ```
+/// Notice that the string representation of OR always comes with parenthesis to express logical priority.
 /// To validate a role expression use the [RoleValidator](crate::role_validator::RoleValidator).
 ///
 /// `RoleExpr` are used by Toql derive generated code.
@@ -21,7 +22,9 @@
 ///
 /// ### Example
 /// Restricting the field's selection to the roles 'admin' or 'power_user'
-/// ```rust
+/// ```rust, ignore
+/// use toql_derive::Toql;
+///
 /// #[derive(Toql)]
 /// struct FooBar {
 ///   #[toql(key)]
@@ -79,9 +82,32 @@ impl ToString for RoleExpr {
             RoleExpr::Or(a, b) => {
                 format!("({}); ({})", a.to_string(), b.to_string())
             }
-            RoleExpr::Not(a) => a.to_string(),
-            RoleExpr::Role(r) => r.to_string(),
-            RoleExpr::Invalid => "`false`".to_string(),
+            RoleExpr::Not(a) => format!("!{}",a.to_string()),
+            RoleExpr::Role(r) => format!("`{}`", r.to_string()),
+            RoleExpr::Invalid => "FALSE".to_string(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::RoleExpr;
+
+    #[test]
+    fn build() {
+        let r1 = RoleExpr::role("role1".to_string());
+        assert_eq!(r1.to_string(), "`role1`");
+
+        let r2 = RoleExpr::role("role2".to_string());
+        assert_eq!(r1.clone().and(r2.clone()).to_string(), "`role1`, `role2`");
+
+        assert_eq!(r1.clone().or(r2.clone()).to_string(), "(`role1`); (`role2`)");
+
+        assert_eq!(r1.clone().or(r2.clone().not()).to_string(), "(`role1`); (!`role2`)");
+
+        assert_eq!(r1.clone().or(r2.and(r1.clone())).to_string(), "(`role1`); (`role2`, `role1`)");
+        
+        assert_eq!(r1.clone().and(RoleExpr::invalid()).to_string(), "`role1`, FALSE");
+     
     }
 }

@@ -25,7 +25,7 @@ num_f64 = @{
 }
 num_placeholder = @{"?"} // for use in query macro
 
-value= { num_i64 | num_u64 | num_f64 | string | num_placeholder }
+value= { num_f64 | num_i64 | num_u64 |  string | num_placeholder }
 
 filter0_name = {^"nen" | ^"eqn"}
 filter1_name = {^"eq" | ^"ne" | ^"lt" | ^"gt" | ^"le" | ^"ge" | ^"lk" |^"re" }
@@ -35,7 +35,7 @@ filterc_name = {^"fn" ~ name}
 
 filter0 = { filter0_name }
 filter1 = { filter1_name ~ value }
-filter2 = { filter1_name ~ value ~ value }
+filter2 = { filter2_name ~ value ~ value }
 filterx = { filterx_name ~ value+ }
 filterc = { filterc_name ~ value* }
 

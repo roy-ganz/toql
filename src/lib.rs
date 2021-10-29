@@ -30,7 +30,7 @@
 //! ## Look And Feel
 //!
 //! Derive your structs:
-//! ```rust
+//! ```rust, ignore
 //! #[derive(Toql)]
 //! #[toql(auto_key = true)]
 //! struct Todo {
@@ -44,7 +44,7 @@
 //! ```
 //!
 //! And do stuff with them:
-//! ```rust
+//! ```rust, ignore
 //! let toql = ...
 //! let todo = Todo{ ... };
 //!
@@ -119,7 +119,7 @@ pub use toql_core::page;
 pub use toql_core::page_counts;
 pub use toql_core::parameter_map;
 pub use toql_core::role_expr;
-pub use toql_core::role_expr_parser;
+//pub use toql_core::role_expr_parser;
 pub use toql_core::role_validator;
 pub use toql_core::mock_db;
 

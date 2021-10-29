@@ -5,8 +5,10 @@
 //!
 //! ### Example 
 //! With a join like `address: Join<Address>` in an object `user` you can write 
-//! ```rust
-//! let address = join!(user.address)?;
+//! ```rust, ignore
+//! use toql_core::join;
+//!
+//! let address : &Address = join!(user.address).expect("Entity is missing.");
 //! ```
 //! Likewise for `Option<Join<Address>>` use `rval_join!`.
 

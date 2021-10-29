@@ -82,7 +82,7 @@ impl FieldInfo {
         }
     }
 
-    pub fn concatenated_token(&self, struct_type: &Type) -> TokenStream {
+    fn concatenated_token(&self, struct_type: &Type) -> TokenStream {
         let token = match self.token_type {
             TokenType::Field => {
                 // Separate with underscore, convert to snake_case for rust
@@ -200,7 +200,6 @@ impl FieldInfo {
                         }
                     }
                     "BW" => quote!(.bw(#(#args),*)),
-                    "RE" => quote!(.re(#(#args),*)),
                     _ => {
                         if f.starts_with("FN ") {
                             let name = f.trim_start_matches("FN ");

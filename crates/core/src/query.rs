@@ -33,6 +33,7 @@ pub mod predicate;
 pub mod query_with;
 pub mod selection;
 pub mod wildcard;
+pub mod query_token;
 
 use crate::query::selection::Selection;
 use std::collections::HashMap;
@@ -44,60 +45,8 @@ use field::Field;
 use predicate::Predicate;
 use query_with::QueryWith;
 use wildcard::Wildcard;
+use query_token::QueryToken;
 
-#[derive(Clone, Debug)]
-pub(crate) enum QueryToken {
-    LeftBracket(Concatenation),
-    RightBracket,
-    Wildcard(Wildcard),
-    Field(Field),
-    Predicate(Predicate),
-    Selection(Selection),
-}
-
-impl From<&str> for QueryToken {
-    fn from(s: &str) -> QueryToken {
-        if s.ends_with('*') {
-            QueryToken::Wildcard(Wildcard::from(s))
-        } else {
-            QueryToken::Field(Field::from(s))
-        }
-    }
-}
-
-impl From<Field> for QueryToken {
-    fn from(field: Field) -> QueryToken {
-        QueryToken::Field(field)
-    }
-}
-
-impl From<Predicate> for QueryToken {
-    fn from(predicate: Predicate) -> QueryToken {
-        QueryToken::Predicate(predicate)
-    }
-}
-
-impl From<Selection> for QueryToken {
-    fn from(selection: Selection) -> QueryToken {
-        QueryToken::Selection(selection)
-    }
-}
-
-impl ToString for QueryToken {
-    fn to_string(&self) -> String {
-        match self {
-            QueryToken::RightBracket => String::from(")"),
-            QueryToken::LeftBracket(c) => match c {
-                Concatenation::And => String::from("("),
-                Concatenation::Or => String::from("("),
-            },
-            QueryToken::Field(field) => field.to_string(),
-            QueryToken::Predicate(predicate) => predicate.to_string(),
-            QueryToken::Selection(selection) => format!("${}", &selection.name),
-            QueryToken::Wildcard(wildcard) => format!("{}*", wildcard.path),
-        }
-    }
-}
 
 /// A Query allows to create a Toql query programmatically or modify a parsed string query.
 ///
@@ -208,18 +157,18 @@ impl<M> Query<M> {
             type_marker: std::marker::PhantomData,
         }
     }
-    /// Create a new query from the path of another query.
-    pub fn traverse<T>(&self, path: &str) -> Query<T> {
+    /// Create a new query for a home path.
+    pub fn traverse<T>(&self, home_path: &str) -> Query<T> {
         let tokens = self
             .tokens
             .iter()
             .filter_map(|t| match t {
                 QueryToken::Field(field) => {
-                    if field.name.starts_with(path) {
+                    if field.name.starts_with(home_path) {
                         let mut field = field.clone();
                         field.name = field
                             .name
-                            .trim_start_matches(path)
+                            .trim_start_matches(home_path)
                             .trim_start_matches('_')
                             .to_string();
                         Some(QueryToken::Field(field))
@@ -228,11 +177,11 @@ impl<M> Query<M> {
                     }
                 }
                 QueryToken::Wildcard(wildcard) => {
-                    if wildcard.path.starts_with(path) {
+                    if wildcard.path.starts_with(home_path) {
                         let mut wildcard = wildcard.clone();
                         wildcard.path = wildcard
                             .path
-                            .trim_start_matches(path)
+                            .trim_start_matches(home_path)
                             .trim_start_matches('_')
                             .to_string();
                         Some(QueryToken::Wildcard(wildcard))
@@ -511,5 +460,63 @@ impl<M> From<&str> for Query<M> {
 impl<M> Default for Query<M> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+
+
+#[cfg(test)]
+mod test {
+    use super::{Query, Field, Predicate, Selection, Wildcard, query_with::QueryWith};
+    use crate::sql_arg::SqlArg;
+
+    struct User;
+    struct Level2;
+
+    struct Item;
+
+    impl<T> QueryWith<T> for Item {
+         fn with(&self, query: Query<T>) -> Query<T> {
+             query
+                .and(Field::from("item").eq(1))
+                .aux_param("thing", "item")
+             
+         }
+    }
+
+    #[test]
+    fn build() {
+
+        assert_eq!(Query::<User>::default().to_string(), "");
+        assert_eq!(Query::<User>::new().to_string(), "");
+
+        let qf = Query::<User>::from(Field::from("prop"));
+        let qp = Query::<User>::from(Predicate::from("pred"));
+        let qs = Query::<User>::from(Selection::from("std"));
+        let qw = Query::<User>::from(Wildcard::from("level1"));
+
+        assert_eq!(qf.to_string(), "prop");
+        assert_eq!(qp.to_string(), "@pred");
+        assert_eq!(qs.to_string(), "$std");
+        assert_eq!(qw.to_string(), "level1_*");
+
+        assert_eq!(qf.clone_for_type::<User>().and(qp.clone_for_type()).to_string(), "prop,@pred");
+        assert_eq!(qf.clone_for_type::<User>().and_parentized(qp.clone_for_type()).to_string(), "prop,(@pred)");
+        assert_eq!(qf.clone_for_type::<User>().or(qp.clone_for_type()).to_string(), "prop;@pred");
+        assert_eq!(qf.clone_for_type::<User>().or_parentized(qp.clone_for_type()).to_string(), "prop;(@pred)");
+
+        let q :Query<User>= Query::from(Field::from("level2_prop2"))
+            .and(Query::from(Wildcard::from("level2")))
+            .and(Query::from(Field::from("level3_prop4")))
+            .and(Query::from(Field::from("level1_prop1")))
+            .and(Query::from(Field::from("prop")));
+        assert_eq!(qw.contains_path("level1"), true);
+        assert_eq!(qw.contains_path("level4"), false);
+        assert_eq!(q.traverse::<Level2>("level2").to_string(), "prop2,*");
+
+        let q = qf.with(Item);
+        assert_eq!(q.to_string(), "prop,item EQ 1");
+        assert_eq!(q.aux_params.get("thing"), Some(&SqlArg::from("item")));
+        
     }
 }

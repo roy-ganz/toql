@@ -52,3 +52,53 @@ impl AliasTranslator {
         a
     }
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::AliasTranslator;
+    use crate::alias_format::AliasFormat;
+    
+    #[test]
+    fn translate_canonical() {
+        let mut t = AliasTranslator::new(AliasFormat::Canonical);
+
+        assert_eq!(t.translate("level1_level2_level3"), "level1_level2_level3");
+        assert_eq!(t.translate("level1_level2"), "level1_level2");
+        
+        // Repeated translation must yield same alias
+        assert_eq!(t.translate("level1_level2_level3"), "level1_level2_level3");
+    }
+
+    #[test]
+    fn translate_medium() {
+        let mut t = AliasTranslator::new(AliasFormat::MediumIndex);
+
+        assert_eq!(t.translate("level1_level2_level3"), "level3_1");
+        assert_eq!(t.translate("level1_level2"), "level2_2");
+        
+        // Repeated translation must yield same alias
+        assert_eq!(t.translate("level1_level2_level3"), "level3_1");
+    }
+    #[test]
+    fn translate_short() {
+        let mut t = AliasTranslator::new(AliasFormat::ShortIndex);
+
+        assert_eq!(t.translate("level1_level2_level3"), "le1");
+        assert_eq!(t.translate("level1_level2"), "le2");
+        
+        // Repeated translation must yield same alias
+        assert_eq!(t.translate("level1_level2_level3"), "le1");
+    }
+    #[test]
+    fn translate_tiny() {
+        let mut t = AliasTranslator::new(AliasFormat::TinyIndex);
+
+        assert_eq!(t.translate("level1_level2_level3"), "t1");
+        assert_eq!(t.translate("level1_level2"), "t2");
+        
+        // Repeated translation must yield same alias
+        assert_eq!(t.translate("level1_level2_level3"), "t1");
+    }
+
+}

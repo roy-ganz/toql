@@ -311,3 +311,121 @@ impl<'a> ToString for FieldPath<'a> {
         self.0.to_string()
     }
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::FieldPath;
+
+    #[test]
+    fn parents() {
+        let p = FieldPath::from("level1").parents().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1"]);
+
+        let p = FieldPath::from("level1_level2_level3").parents().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level3", "level2", "level1"]);
+
+        let p = FieldPath::default().parents().map(|f|f.to_string()).collect::<Vec<String>>();
+        assert_eq!(p.is_empty(), true);
+    }
+    #[test]
+    fn children() {
+        let p = FieldPath::from("level1").children().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1"]);
+
+        let p = FieldPath::from("level1_level2_level3").children().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1", "level2", "level3"]);
+
+        let p = FieldPath::default().children().map(|f|f.to_string()).collect::<Vec<String>>();
+        assert_eq!(p.is_empty(), true);
+    }
+    #[test]
+    fn ancestors() {
+        let p = FieldPath::from("level1").ancestors().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1"]);
+
+        let p = FieldPath::from("level1_level2_level3").ancestors().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1_level2_level3", "level1_level2", "level1"]);
+
+        let p = FieldPath::default().ancestors().map(|f|f.to_string()).collect::<Vec<String>>();
+        assert_eq!(p.is_empty(), true);
+    }
+      #[test]
+    fn step_down() {
+        let p = FieldPath::from("level1").step_down().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1"]);
+
+        let p = FieldPath::from("level1_level2_level3").step_down().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1", "level1_level2", "level1_level2_level3"]);
+
+        let p = FieldPath::default().step_down().map(|f|f.to_string()).collect::<Vec<String>>();
+        assert_eq!(p.is_empty(), true);
+    }
+    #[test]
+    fn step_up() {
+        let p = FieldPath::from("level1").step_up().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec!["level1"]);
+
+        let p = FieldPath::from("level1_level2_level3").step_up().map(|f|f.to_string()).collect::<Vec<_>>();
+        assert_eq!(p, vec![ "level1_level2_level3", "level1_level2", "level1",]);
+
+        let p = FieldPath::default().step_up().map(|f|f.to_string()).collect::<Vec<String>>();
+        assert_eq!(p.is_empty(), true);
+    }
+
+    #[test]
+    fn build() {
+        let p = FieldPath::default();
+        let p = p.append("level1");
+        assert_eq!(p.to_string(),"level1");
+
+        let p = FieldPath::from("level1");
+        let p = p.append("level2");
+         assert_eq!(p.to_string(),"level1_level2");
+
+        let p = FieldPath::default();
+        let p = p.prepend("level1");
+        assert_eq!(p.to_string(),"level1");
+
+        let p = FieldPath::from("level2");
+        let p = p.prepend("level1");
+        assert_eq!(p.to_string(),"level1_level2");
+
+        let p = FieldPath::trim_basename("level1_level2");
+        assert_eq!(p.to_string(),"level1");
+
+        let p = FieldPath::trim_basename("level1_level2_");
+        assert_eq!(p.to_string(),"level1_level2");
+
+        let p = FieldPath::trim_basename("");
+        assert_eq!(p.to_string(),"");
+
+        let (p, n) = FieldPath::split_basename("level1_level2");
+        assert_eq!(p.to_string(),"level1");
+        assert_eq!(n,"level2");
+
+        let (p, n) = FieldPath::split_basename("level1_level2_");
+        assert_eq!(p.to_string(),"level1_level2");
+        assert_eq!(n,"");
+
+        let (p, n) = FieldPath::split_basename("");
+        assert_eq!(p.to_string(),"");
+        assert_eq!(p.is_empty(), true);
+        assert_eq!(n,"");
+
+        let pn = FieldPath::default();
+        let p1 = FieldPath::from("level1");
+        let p2 = FieldPath::from("level2");
+        assert_eq!(pn.or(&p1).to_string(),"level1");
+        assert_eq!(p1.or(&pn).to_string(),"level1");
+        assert_eq!(p1.or(&p2).to_string(),"level1");
+        assert_eq!(p2.or(&p1).to_string(),"level2");
+
+        let p = FieldPath::from("level1_level2_level3");
+        assert_eq!(p.localize_path("level1"), Some(FieldPath::from("level2_level3")));
+        assert_eq!(p.localize_path("level4").is_some(), false);
+        assert_eq!(p.localize_path("level1_"), Some(FieldPath::from("level2_level3")));
+    }
+}
+
+ 
