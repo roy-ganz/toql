@@ -31,13 +31,13 @@ toql_mysql_async = "0.3"
 Derive your structs:
 ```rust
 #[derive(Toql)]
-#[toql(auto_key = true)]
+#[toql(auto_key)]
 struct Todo {
     #[toql(key)]
     id: u64,
     what: String,
 
-    #[toql(join())]
+    #[toql(join)]
     user: User 
 }
 ```
@@ -54,7 +54,7 @@ toql.insert_one(&mut todo, paths!(top)).await?;
 let q = query!(Todo, "*, user_id eq ?", &todo.user.id); 
 
 // Typesafe loading
-let user = toql.load_many(q).await?; 
+let todos = toql.load_many(q).await?; 
 ```
 
 
