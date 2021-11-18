@@ -37,11 +37,7 @@ impl PredicateHandler for DefaultPredicateHandler {
         _args: &[SqlArg],
         _aux_params: &ParameterMap,
     ) -> Result<Option<SqlExpr>, crate::sql_builder::sql_builder_error::SqlBuilderError> {
-        // Wrap in parens
-        let mut e = SqlExpr::literal("(");
-        e.extend(predicate);
-        e.push_literal(")");
-        Ok(Some(e))
+        Ok(Some(predicate))
     }
 }
 

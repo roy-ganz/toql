@@ -1,10 +1,10 @@
 use crate::deserialize::error::DeserializeError;
-use crate::sql_arg::SqlArg;
 use crate::error::ToqlError;
+use crate::sql_arg::SqlArg;
 
+use crate::sql_builder::select_stream::Select;
 use std::convert::TryInto;
 use std::fmt;
-use crate::sql_builder::select_stream::Select;
 /// Newtype for mysql database row
 /// This allows to implement the conversion traits for basic data
 /// without violating the orphan rule.
@@ -24,7 +24,7 @@ impl fmt::Display for Row {
             }
             write!(f, "{}", v.to_string())?;
         }
-         write!(f, ")")?;
+        write!(f, ")")?;
         Ok(())
     }
 }
@@ -35,10 +35,9 @@ impl fmt::Display for Row {
 #[macro_export]
 macro_rules! row {
         ($($x:expr),+ $(,)?) => {
-           Row(vec![$(toql::prelude::SqlArg::from($x)),+])
+           toql::mock_db::row::Row(vec![$(toql::prelude::SqlArg::from($x)),+])
         }
 }
-
 
 macro_rules! from_row {
         ($($type:ty),+) => {

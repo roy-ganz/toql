@@ -78,7 +78,7 @@ impl FieldHandler for DefaultFieldHandler {
                 Ok(Some(select))
             }
             FieldFilter::Nen => {
-                select.push_literal(" IS NULL");
+                select.push_literal(" IS NOT NULL");
                 Ok(Some(select))
             }
             FieldFilter::Ge(criteria) => {
@@ -105,10 +105,6 @@ impl FieldHandler for DefaultFieldHandler {
                     .push_arg(upper.clone());
                 Ok(Some(select))
             }
-            /*  FieldFilter::Re(criteria) => {
-                select.push_literal(" RLIKE ").push_arg(criteria.clone());
-                Ok(Some(select))
-            } */
             FieldFilter::In(args) => {
                 if args.is_empty() {
                     return Ok(None);

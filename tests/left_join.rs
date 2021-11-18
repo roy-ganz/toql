@@ -1,5 +1,5 @@
-use toql::prelude::{fields, paths, query, Cache, Join, Result, Toql, ToqlApi};
 use toql::mock_db::MockDb;
+use toql::prelude::{fields, paths, query, Cache, Join, Toql, ToqlApi};
 use tracing_test::traced_test;
 //
 #[derive(Debug, Default, Toql)]
@@ -8,7 +8,7 @@ pub struct Level1 {
     id: u64,
     text: String,
 
-    #[toql(join(), preselect)] // Default mapping
+    #[toql(join, preselect)] // Default mapping
     level2: Option<Level2>, // Preselected left join
 }
 #[derive(Debug, Default, Toql)]
@@ -36,7 +36,7 @@ pub struct Level4 {
     id: u64,
     text: String,
 
-    #[toql(join())] // On handler (TODO)
+    #[toql(join)]
     level5: Option<Option<Join<Level5>>>, // Selectable left join
 }
 
@@ -77,13 +77,13 @@ fn populated_level() -> Level1 {
 
 #[tokio::test]
 #[traced_test("info")]
-async fn load() -> Result<()> {
+async fn load() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
     // Load level 1 + preselected level 2
     let q = query!(Level1, "*");
-    let r = toql.load_many(q).await?;
+    assert!(toql.load_many(q).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "SELECT level1.id, level1.text, level1_level2.id, level1_level2.text \
@@ -94,7 +94,7 @@ async fn load() -> Result<()> {
 
     // Load preselects from level 1..4 and fields from level 5
     let q = query!(Level1, "level2_level3_level4_level5_*");
-    let r = toql.load_many(q).await?;
+    assert!(toql.load_many(q).await.is_ok());
     assert_eq!(toql.take_unsafe_sql(),
            "SELECT level1.id, level1.text, \
            level1_level2.id, level1_level2.text, \
@@ -110,25 +110,21 @@ async fn load() -> Result<()> {
                     ON (level1_level2_level3.level4_id = level1_level2_level3_level4.id AND level1_level2_level3.text = 'ABC')) \
                 ON (level1_level2.level_3 = level1_level2_level3.id)) \
             ON (level1.level2_id = level1_level2.id)");
-    Ok(())
 }
 
 #[tokio::test]
 #[traced_test("info")]
-async fn count() -> Result<()> {
+async fn count() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
     // Count with joined level 1 + preselected level 2
     let q = query!(Level1, "*"); // Query contains no filter
-    let r = toql.count(q).await?;
-    assert_eq!(
-        toql.take_unsafe_sql(),
-        "SELECT COUNT(*) FROM Level1 level1"
-    );
+    assert!(toql.count(q).await.is_ok());
+    assert_eq!(toql.take_unsafe_sql(), "SELECT COUNT(*) FROM Level1 level1");
 
-    let q = query!(Level1, "id eq 4"); // Query contains filter 
-    let r = toql.count(q).await?;
+    let q = query!(Level1, "id eq 4"); // Query contains filter
+    assert!(toql.count(q).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "SELECT COUNT(*) FROM Level1 level1 WHERE level1.id = 4"
@@ -137,7 +133,7 @@ async fn count() -> Result<()> {
     // Load preselects from level 1..4 and fields from level 5
     // Left joins are converted into inner joins
     let q = query!(Level1, "level2_level3_level4_level5_id eq 5");
-    let r = toql.count(q).await?;
+    assert!(toql.count(q).await.is_ok());
     assert_eq!(toql.take_unsafe_sql(),
            "SELECT COUNT(*) \
            FROM Level1 level1 \
@@ -150,23 +146,22 @@ async fn count() -> Result<()> {
                 ON (level1_level2.level_3 = level1_level2_level3.id)) \
             ON (level1.level2_id = level1_level2.id) \
             WHERE level1_level2_level3_level4_level5.id = 5");
-    Ok(())
 }
 #[tokio::test]
 #[traced_test("info")]
-async fn delete() -> Result<()> {
+async fn delete() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
     // Delete without filter return no queries
     // This is for safety, otherwise everything would be deleted
-    let q = query!(Level1, "*"); 
-    let r = toql.delete_many(q).await?;
-    assert_eq!(toql.sqls_empty(), true);
+    let q = query!(Level1, "*");
+    assert!(toql.delete_many(q).await.is_ok());
+    assert!(toql.sqls_empty());
 
     // Delete with filter on level1
-    let q = query!(Level1, "id eq 4"); 
-    let r = toql.delete_many(q).await?;
+    let q = query!(Level1, "id eq 4");
+    assert!(toql.delete_many(q).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "DELETE level1 FROM Level1 level1 WHERE level1.id = 4"
@@ -175,7 +170,7 @@ async fn delete() -> Result<()> {
     // Delete with filter on level 5
     // Left joins are converted into inner joins
     let q = query!(Level1, "level2_level3_level4_level5_id eq 5");
-    let r = toql.delete_many(q).await?;
+    assert!(toql.delete_many(q).await.is_ok());
     assert_eq!(toql.take_unsafe_sql(),
            "DELETE level1 \
            FROM Level1 level1 \
@@ -188,19 +183,18 @@ async fn delete() -> Result<()> {
                 ON (level1_level2.level_3 = level1_level2_level3.id)) \
             ON (level1.level2_id = level1_level2.id) \
             WHERE level1_level2_level3_level4_level5.id = 5");
-    Ok(())
 }
 
 #[tokio::test]
 #[traced_test("info")]
-async fn insert() -> Result<()> {
+async fn insert() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
     let mut l = Level1::default();
 
     // insert level 1
-    toql.insert_one(&mut l, paths!(top)).await?;
+    assert!(toql.insert_one(&mut l, paths!(top)).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "INSERT INTO Level1 (id, text, level2_id) VALUES (0, '', NULL)"
@@ -209,8 +203,10 @@ async fn insert() -> Result<()> {
     // insert path levels 1..5
     // this will only insert level 1,
     // level 2.. is skipped (unselected)
-    toql.insert_one(&mut l, paths!(Level1, "level2_level3_level4_level5"))
-        .await?;
+    assert!(toql
+        .insert_one(&mut l, paths!(Level1, "level2_level3_level4_level5"))
+        .await
+        .is_ok());
     let sqls = toql.take_unsafe_sqls();
     assert_eq!(
         sqls,
@@ -220,8 +216,10 @@ async fn insert() -> Result<()> {
     // insert path levels 1..5
     // this will insert level 1..5
     let mut l = populated_level();
-    toql.insert_one(&mut l, paths!(Level1, "level2_level3_level4_level5"))
-        .await?;
+    assert!(toql
+        .insert_one(&mut l, paths!(Level1, "level2_level3_level4_level5"))
+        .await
+        .is_ok());
     let sqls = toql.take_unsafe_sqls();
     assert_eq!(
         sqls,
@@ -233,31 +231,30 @@ async fn insert() -> Result<()> {
             "INSERT INTO Level2 (id, text, level_3) VALUES (2, 'level2', 3)"
         ]
     );
-    Ok(())
 }
 
 #[tokio::test]
 #[traced_test("info")]
-async fn update() -> Result<()> {
+async fn update() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
     // Update level 1
     // Nothing is updated, fields are empty
     let mut l1 = Level1::default();
-    toql.update_one(&mut l1, fields!(top)).await?;
+    assert!(toql.update_one(&mut l1, fields!(top)).await.is_ok());
     assert_eq!(toql.sqls_empty(), true);
 
     // Update level 1 with invalid key
     // Nothing is updated
     let mut l1 = populated_level();
     l1.id = 0;
-    toql.update_one(&mut l1, fields!(top)).await?;
+    assert!(toql.update_one(&mut l1, fields!(top)).await.is_ok());
     assert_eq!(toql.sqls_empty(), true);
 
     // Update level 1 (text + foreign key)
     let mut l1 = populated_level();
-    toql.update_one(&mut l1, fields!(top)).await?;
+    assert!(toql.update_one(&mut l1, fields!(top)).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "UPDATE Level1 SET text = 'level1', level2_id = 2 WHERE id = 1"
@@ -265,8 +262,10 @@ async fn update() -> Result<()> {
 
     // Update level 5 (text)
     let mut l1 = populated_level();
-    toql.update_one(&mut l1, fields!(Level1, "level2_level3_level4_level5_*"))
-        .await?;
+    assert!(toql
+        .update_one(&mut l1, fields!(Level1, "level2_level3_level4_level5_*"))
+        .await
+        .is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "UPDATE Level5 SET text = 'level5' WHERE id = 5"
@@ -274,16 +273,18 @@ async fn update() -> Result<()> {
 
     // Update level 1 - 5
     let mut l1 = populated_level();
-    toql.update_one(
-        &mut l1,
-        fields!(
-            Level1,
-            "*, level2_*, \
+    assert!(toql
+        .update_one(
+            &mut l1,
+            fields!(
+                Level1,
+                "*, level2_*, \
             level2_level3_*, level2_level3_level4_*,\
             level2_level3_level4_level5_*"
-        ),
-    )
-    .await?;
+            ),
+        )
+        .await
+        .is_ok());
     let sqls = toql.take_unsafe_sqls();
     assert_eq!(
         sqls,
@@ -295,5 +296,4 @@ async fn update() -> Result<()> {
             "UPDATE Level5 SET text = \'level5\' WHERE id = 5"
         ]
     );
-    Ok(())
 }

@@ -36,7 +36,6 @@ impl ToString for Selection {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::Selection;

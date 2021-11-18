@@ -1,5 +1,7 @@
-
-use super::{wildcard::Wildcard, concatenation::Concatenation, field::Field, predicate::Predicate, selection::Selection};
+use super::{
+    concatenation::Concatenation, field::Field, predicate::Predicate, selection::Selection,
+    wildcard::Wildcard,
+};
 
 #[derive(Clone, Debug)]
 pub(crate) enum QueryToken {
@@ -55,10 +57,9 @@ impl ToString for QueryToken {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use super::{Predicate, Selection, Wildcard, Field, Concatenation, QueryToken};
+    use super::{Concatenation, Field, Predicate, QueryToken, Selection, Wildcard};
 
     #[test]
     fn to_string() {
@@ -66,9 +67,17 @@ mod test {
         assert_eq!(QueryToken::LeftBracket(Concatenation::And).to_string(), "(");
         assert_eq!(QueryToken::LeftBracket(Concatenation::Or).to_string(), "(");
         assert_eq!(QueryToken::Field(Field::from("prop")).to_string(), "prop");
-        assert_eq!(QueryToken::Predicate(Predicate::from("search")).to_string(), "@search");
-        assert_eq!(QueryToken::Selection(Selection::from("std")).to_string(), "$std");
-        assert_eq!(QueryToken::Wildcard(Wildcard::from("level1")).to_string(), "level1_*");
-       
+        assert_eq!(
+            QueryToken::Predicate(Predicate::from("search")).to_string(),
+            "@search"
+        );
+        assert_eq!(
+            QueryToken::Selection(Selection::from("std")).to_string(),
+            "$std"
+        );
+        assert_eq!(
+            QueryToken::Wildcard(Wildcard::from("level1")).to_string(),
+            "level1_*"
+        );
     }
 }

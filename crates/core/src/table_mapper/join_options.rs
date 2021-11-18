@@ -7,8 +7,7 @@ pub struct JoinOptions {
     pub(crate) key: bool, // Always select this join, regardless of query fields
     pub(crate) preselect: bool, // Always select this join, regardless of query fields
     pub(crate) partial_table: bool, // This joins to a table that shares the same primary key(s)
-    pub(crate) skip_wildcard: bool, // Ignore field on this join for wildcard selection (NOT IN USE, TODO check to remove)
-    pub(crate) skip_mut: bool,      // Ignore field for updates
+    pub(crate) skip_mut: bool, // Ignore field for updates
     pub(crate) load_role_expr: Option<RoleExpr>, // Only for use by these roles
     pub(crate) aux_params: HashMap<String, SqlArg>, // Additional build params
     pub(crate) join_handler: Option<Arc<dyn JoinHandler + Send + Sync>>, // Optional join handler
@@ -21,7 +20,6 @@ impl JoinOptions {
             key: false,
             preselect: false,
             partial_table: false,
-            skip_wildcard: false,
             skip_mut: false,
             load_role_expr: None,
             aux_params: HashMap::new(),
@@ -35,6 +33,15 @@ impl JoinOptions {
         self
     }
 
+    /// Use custom handler to build join.
+    pub fn handler<H>(mut self, handler: H) -> Self
+    where
+        H: 'static + JoinHandler + Send + Sync,
+    {
+        self.join_handler = Some(Arc::new(handler));
+        self
+    }
+
     /// Mark join as preselected.
     /// The join must always be loaded, regardless what the [Query](crate::query::Query) selects.
     pub fn preselect(mut self, preselect: bool) -> Self {
@@ -45,12 +52,6 @@ impl JoinOptions {
     ///  Mark join as part of a partial table.
     pub fn partial_table(mut self, partial_table: bool) -> Self {
         self.partial_table = partial_table;
-        self
-    }
-
-    /// Skip this join is ignored by the wildcard.
-    pub fn skip_wildcard(mut self, skip_wildcard: bool) -> Self {
-        self.skip_wildcard = skip_wildcard;
         self
     }
 

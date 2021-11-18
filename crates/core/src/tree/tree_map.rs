@@ -1,4 +1,4 @@
-//! Trait to map entities. 
+//! Trait to map entities.
 use crate::{table_mapper::mapped::Mapped, table_mapper_registry::TableMapperRegistry};
 
 /// The trait maps the implementing struct and its dependencies.

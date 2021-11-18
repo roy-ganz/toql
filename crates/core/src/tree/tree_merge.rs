@@ -2,7 +2,6 @@
 use crate::{query::field_path::FieldPath, sql_builder::select_stream::SelectStream};
 use std::collections::HashMap;
 
-
 /// The trait allows to merge rows into nested structs.
 ///
 /// Trait is implemented by The Toql derive for structs that can deserialize from rows.

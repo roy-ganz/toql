@@ -1,27 +1,25 @@
 use crate::{
     alias_translator::AliasTranslator,
+    backend::{map, Backend},
     error::ToqlError,
     parameter_map::ParameterMap,
     query::field_path::FieldPath,
+    result::Result,
     sql::Sql,
     sql_builder::{sql_builder_error::SqlBuilderError, SqlBuilder},
     sql_expr::resolver::Resolver,
     table_mapper::{mapped::Mapped, TableMapper},
+    toql_api::{insert::Insert, paths::Paths},
     tree::{
         tree_identity::{IdentityAction, TreeIdentity},
         tree_insert::TreeInsert,
-        tree_predicate::TreePredicate,
     },
 };
-use std::cell::RefCell;
-use std::{borrow::BorrowMut, collections::HashMap};
-
-use super::{map, Backend};
-use crate::result::Result;
-use crate::toql_api::paths::Paths;
-use std::collections::HashSet;
-
-use crate::{table_mapper_registry::TableMapperRegistry, toql_api::insert::Insert};
+use std::{
+    borrow::BorrowMut,
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+};
 
 pub async fn insert<B, Q, T, R, E>(
     backend: &mut B,
@@ -163,31 +161,7 @@ where
     Ok(())
 }
 
-pub(crate) fn add_partial_tables<T>(
-    registry: &TableMapperRegistry,
-    query_path: &FieldPath,
-    paths: &mut Vec<String>,
-) -> std::result::Result<(), ToqlError>
-where
-    T: Mapped + TreePredicate,
-{
-    let ty = <T as Mapped>::type_name();
-
-    let sql_builder = SqlBuilder::new(&ty, registry);
-    let mapper = sql_builder.mapper_for_query_path(query_path)?;
-
-    let partial_joins: Vec<(String, String)> = mapper.joined_partial_mappers();
-
-    for (p, _m) in &partial_joins {
-        let qp = query_path.append(p);
-        add_partial_tables::<T>(registry, &qp, paths)?;
-        paths.push(qp.to_string());
-    }
-
-    Ok(())
-}
-
-pub fn set_tree_identity<'a, T, Q, I>(
+pub(crate) fn set_tree_identity<'a, T, Q, I>(
     action: IdentityAction,
     entities: &mut [Q],
     descendents: I,
@@ -205,7 +179,7 @@ where
     Ok(())
 }
 
-pub fn build_insert_sql<'a, T, Q, B, R, E, J>(
+pub(crate) fn build_insert_sql<'a, T, Q, B, R, E, J>(
     backend: &mut B,
     entities: &[Q],
     query_path: &FieldPath,
@@ -275,27 +249,6 @@ where
     Ok(Some(Sql(insert_stmt, values_sql.1)))
 }
 
-pub fn split_basename(
-    fields: &[String],
-    path_basenames: &mut HashMap<String, HashSet<String>>,
-    paths: &mut Vec<String>,
-) {
-    for f in fields {
-        let (path, base) = FieldPath::split_basename(f);
-        if !path.is_empty() {
-            if path_basenames.get(path.as_str()).is_none() {
-                path_basenames.insert(path.as_str().to_string(), HashSet::new());
-            }
-            path_basenames
-                .get_mut(path.as_str())
-                .unwrap()
-                .insert(base.to_string());
-
-            paths.push(path.to_string());
-        }
-    }
-}
-
 pub fn plan_insert_order<T, S: AsRef<str>>(
     mappers: &HashMap<String, TableMapper>,
     paths: &[S],
@@ -321,15 +274,15 @@ where
 
         for (d, c) in steps.zip(children) {
             if let Some(j) = mapper.joined_mapper(c.as_str()) {
+                if joins.len() <= level {
+                    joins.push(HashSet::new());
+                }
+                if partials.len() <= level {
+                    partials.push(HashSet::new());
+                }
                 if !mapper.is_partial_join(c.as_str()) {
-                    if joins.len() <= level {
-                        joins.push(HashSet::new());
-                    }
                     joins.get_mut(level).unwrap().insert(d.as_str().to_string());
                 } else {
-                    if partials.len() <= level {
-                        partials.push(HashSet::new());
-                    }
                     partials
                         .get_mut(level)
                         .unwrap()
@@ -375,10 +328,10 @@ fn insert_partial_tables_order(
 
     for (path, mapper_name) in &partial_joins {
         let qp = query_path.append(path);
-        insert_partial_tables_order(&mappers, &mapper_name, level + 1, &qp, joins_or_merges)?;
         if joins_or_merges.len() <= level {
             joins_or_merges.push(HashSet::new())
         }
+        insert_partial_tables_order(&mappers, &mapper_name, level + 1, &qp, joins_or_merges)?;
         joins_or_merges
             .get_mut(level)
             .unwrap()

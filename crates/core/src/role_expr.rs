@@ -82,7 +82,7 @@ impl ToString for RoleExpr {
             RoleExpr::Or(a, b) => {
                 format!("({}); ({})", a.to_string(), b.to_string())
             }
-            RoleExpr::Not(a) => format!("!{}",a.to_string()),
+            RoleExpr::Not(a) => format!("!{}", a.to_string()),
             RoleExpr::Role(r) => format!("`{}`", r.to_string()),
             RoleExpr::Invalid => "FALSE".to_string(),
         }
@@ -101,13 +101,24 @@ mod test {
         let r2 = RoleExpr::role("role2".to_string());
         assert_eq!(r1.clone().and(r2.clone()).to_string(), "`role1`, `role2`");
 
-        assert_eq!(r1.clone().or(r2.clone()).to_string(), "(`role1`); (`role2`)");
+        assert_eq!(
+            r1.clone().or(r2.clone()).to_string(),
+            "(`role1`); (`role2`)"
+        );
 
-        assert_eq!(r1.clone().or(r2.clone().not()).to_string(), "(`role1`); (!`role2`)");
+        assert_eq!(
+            r1.clone().or(r2.clone().not()).to_string(),
+            "(`role1`); (!`role2`)"
+        );
 
-        assert_eq!(r1.clone().or(r2.and(r1.clone())).to_string(), "(`role1`); (`role2`, `role1`)");
-        
-        assert_eq!(r1.clone().and(RoleExpr::invalid()).to_string(), "`role1`, FALSE");
-     
+        assert_eq!(
+            r1.clone().or(r2.and(r1.clone())).to_string(),
+            "(`role1`); (`role2`, `role1`)"
+        );
+
+        assert_eq!(
+            r1.clone().and(RoleExpr::invalid()).to_string(),
+            "`role1`, FALSE"
+        );
     }
 }

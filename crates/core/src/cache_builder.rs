@@ -20,7 +20,7 @@ impl CacheBuilder {
     }
 
     pub fn into_cache(self) -> Cache {
-        let registry = TableMapperRegistry::new();
+        let registry = TableMapperRegistry::default();
         Cache {
             registry: RwLock::new(registry),
             registered_roots: RwLock::new(HashSet::new()),

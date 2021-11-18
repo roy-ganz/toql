@@ -11,7 +11,7 @@
 /// ```rust, ignore
 /// use toql_core::keyed::Keyed;
 /// use toql_derive::Toql;
-/// 
+///
 /// #[derive(Toql)]
 /// struct User{
 ///     #[toql(key)]
@@ -43,7 +43,7 @@ pub trait Keyed {
 /// ```rust, ignore
 /// use crate::keyed::Keyed;
 /// use toql_derive::Toql;
-/// 
+///
 /// #[derive(Toql)]
 /// struct User{
 ///     #[toql(key)]
@@ -53,7 +53,7 @@ pub trait Keyed {
 ///
 /// let u =  User {id: 5, name: "Sue".to_string()};
 /// u.set_key(55.into());
-/// 
+///
 /// /// assert_eq!(u.id , 55);
 /// ```
 /// Here the number 5 is converted into the key type of `User`. Then this key is

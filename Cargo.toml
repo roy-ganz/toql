@@ -11,7 +11,8 @@ repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
 toql_core = { path = "crates/core", version = "0.3" }
-toql_derive = { path = "crates/derive", version = "0.3" }
+toql_derive = { path = "crates/toql_derive", version = "0.3" }
+toql_enum_derive = { path = "crates/toql_enum_derive", version = "0.3" }
 toql_query_macro = { path = "crates/query_macro", version = "0.3" }
 toql_query_parser = { path = "crates/query_parser", version = "0.3" }
 toql_sql_expr_parser = { path = "crates/sql_expr_parser", version = "0.3" }
@@ -35,7 +36,8 @@ pretty_assertions ="1"
 [workspace]
 members =  [
     "crates/core",
-    "crates/derive",
+    "crates/toql_derive",
+    "crates/toql_enum_derive",
     "crates/query_macro",
     "crates/query_parser",
     "crates/sql_expr_parser",

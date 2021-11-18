@@ -91,7 +91,7 @@ impl ToString for SqlArg {
             SqlArg::I64(t) => t.to_string(),
             SqlArg::F64(t) => t.to_string(),
             SqlArg::Str(t) => format!("'{}'", t.to_string()),
-            SqlArg::Bool(t) => format!("{}", (if *t {1} else {0})),
+            SqlArg::Bool(t) => format!("{}", (if *t { 1 } else { 0 })),
             SqlArg::Null => "0".to_string(),
         }
     }
@@ -111,7 +111,7 @@ pub fn valid_key(args: &[SqlArg]) -> bool {
 
 #[cfg(test)]
 mod test {
-    use super::{SqlArg, valid_key};
+    use super::{valid_key, SqlArg};
 
     #[test]
     fn convert_u64() {

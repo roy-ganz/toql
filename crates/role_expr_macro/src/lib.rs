@@ -1,4 +1,4 @@
-//! The `role_expr!` macro compiles a role expression into program code. 
+//! The `role_expr!` macro compiles a role expression into program code.
 //!
 //! ### Example
 //! ```rust, ignore
@@ -51,37 +51,37 @@ pub fn role_expr(input: TokenStream) -> TokenStream {
     }
 }
 
-
-
 #[test]
 fn role_names() {
     use role_expr_macro::RoleExprMacro;
     let input = "\"role1, role_1\"";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-    let RoleExprMacro{query} = m.unwrap();
-    let f = role_expr_macro::parse(&query); 
+    let RoleExprMacro { query } = m.unwrap();
+    let f = role_expr_macro::parse(&query);
     assert_eq!(f.is_ok(), true);
-    
-    assert_eq!(f.unwrap().to_string(), "toql :: role_expr :: RoleExpr :: And ( \
+
+    assert_eq!(
+        f.unwrap().to_string(),
+        "toql :: role_expr :: RoleExpr :: And ( \
             Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role1\" . to_string ( ) ) ) , \
-            Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role_1\" . to_string ( ) ) ) )");
-     
+            Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role_1\" . to_string ( ) ) ) )"
+    );
 }
 #[test]
 fn concatenation() {
     use role_expr_macro::RoleExprMacro;
     let input = "\"role1, role2; !role3\"";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-    let RoleExprMacro{query} = m.unwrap();
-    let f = role_expr_macro::parse(&query); 
+    let RoleExprMacro { query } = m.unwrap();
+    let f = role_expr_macro::parse(&query);
     assert_eq!(f.is_ok(), true);
-    
+
     assert_eq!(f.unwrap().to_string(), "toql :: role_expr :: RoleExpr :: Or ( \
             Box :: new ( toql :: role_expr :: RoleExpr :: And ( \
                 Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role1\" . to_string ( ) ) ) , \
@@ -93,18 +93,17 @@ fn concatenation() {
 fn parenthesis() {
     use role_expr_macro::RoleExprMacro;
     let input = "\"(((role1); role2), role3)\"";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-    let RoleExprMacro{query} = m.unwrap();
-    let f = role_expr_macro::parse(&query); 
+    let RoleExprMacro { query } = m.unwrap();
+    let f = role_expr_macro::parse(&query);
     assert_eq!(f.is_ok(), true);
-    
+
     assert_eq!(f.unwrap().to_string(), "toql :: role_expr :: RoleExpr :: And ( \
             Box :: new ( toql :: role_expr :: RoleExpr :: Or ( \
                 Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role1\" . to_string ( ) ) ) , \
                 Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role2\" . to_string ( ) ) ) ) ) , \
             Box :: new ( toql :: role_expr :: RoleExpr :: role ( \"role3\" . to_string ( ) ) ) )");
- 
 }

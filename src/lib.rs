@@ -120,9 +120,8 @@ pub use toql_core::page_counts;
 pub use toql_core::parameter_map;
 pub use toql_core::role_expr;
 //pub use toql_core::role_expr_parser;
-pub use toql_core::role_validator;
 pub use toql_core::mock_db;
-
+pub use toql_core::role_validator;
 
 pub use toql_core::toql_api; // Export for derives
 pub use toql_core::tracing; // Reexport for derive

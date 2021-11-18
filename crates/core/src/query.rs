@@ -30,10 +30,10 @@ pub mod field_order;
 pub mod field_path;
 pub mod from_key_fields;
 pub mod predicate;
+pub mod query_token;
 pub mod query_with;
 pub mod selection;
 pub mod wildcard;
-pub mod query_token;
 
 use crate::query::selection::Selection;
 use std::collections::HashMap;
@@ -43,10 +43,9 @@ use std::fmt;
 use concatenation::Concatenation;
 use field::Field;
 use predicate::Predicate;
+use query_token::QueryToken;
 use query_with::QueryWith;
 use wildcard::Wildcard;
-use query_token::QueryToken;
-
 
 /// A Query allows to create a Toql query programmatically or modify a parsed string query.
 ///
@@ -463,11 +462,9 @@ impl<M> Default for Query<M> {
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
-    use super::{Query, Field, Predicate, Selection, Wildcard, query_with::QueryWith};
+    use super::{query_with::QueryWith, Field, Predicate, Query, Selection, Wildcard};
     use crate::sql_arg::SqlArg;
 
     struct User;
@@ -476,17 +473,15 @@ mod test {
     struct Item;
 
     impl<T> QueryWith<T> for Item {
-         fn with(&self, query: Query<T>) -> Query<T> {
-             query
+        fn with(&self, query: Query<T>) -> Query<T> {
+            query
                 .and(Field::from("item").eq(1))
                 .aux_param("thing", "item")
-             
-         }
+        }
     }
 
     #[test]
     fn build() {
-
         assert_eq!(Query::<User>::default().to_string(), "");
         assert_eq!(Query::<User>::new().to_string(), "");
 
@@ -500,12 +495,32 @@ mod test {
         assert_eq!(qs.to_string(), "$std");
         assert_eq!(qw.to_string(), "level1_*");
 
-        assert_eq!(qf.clone_for_type::<User>().and(qp.clone_for_type()).to_string(), "prop,@pred");
-        assert_eq!(qf.clone_for_type::<User>().and_parentized(qp.clone_for_type()).to_string(), "prop,(@pred)");
-        assert_eq!(qf.clone_for_type::<User>().or(qp.clone_for_type()).to_string(), "prop;@pred");
-        assert_eq!(qf.clone_for_type::<User>().or_parentized(qp.clone_for_type()).to_string(), "prop;(@pred)");
+        assert_eq!(
+            qf.clone_for_type::<User>()
+                .and(qp.clone_for_type())
+                .to_string(),
+            "prop,@pred"
+        );
+        assert_eq!(
+            qf.clone_for_type::<User>()
+                .and_parentized(qp.clone_for_type())
+                .to_string(),
+            "prop,(@pred)"
+        );
+        assert_eq!(
+            qf.clone_for_type::<User>()
+                .or(qp.clone_for_type())
+                .to_string(),
+            "prop;@pred"
+        );
+        assert_eq!(
+            qf.clone_for_type::<User>()
+                .or_parentized(qp.clone_for_type())
+                .to_string(),
+            "prop;(@pred)"
+        );
 
-        let q :Query<User>= Query::from(Field::from("level2_prop2"))
+        let q: Query<User> = Query::from(Field::from("level2_prop2"))
             .and(Query::from(Wildcard::from("level2")))
             .and(Query::from(Field::from("level3_prop4")))
             .and(Query::from(Field::from("level1_prop1")))
@@ -517,6 +532,5 @@ mod test {
         let q = qf.with(Item);
         assert_eq!(q.to_string(), "prop,item EQ 1");
         assert_eq!(q.aux_params.get("thing"), Some(&SqlArg::from("item")));
-        
     }
 }

@@ -6,13 +6,13 @@ use std::{cell::RefCell, result::Result};
 pub enum IdentityAction {
     /// Set key to value (primary + dependencies).
     /// Argument needs interior mutability, because keys are taken from `Vec`.
-    Set(RefCell<Vec<SqlArg>>), 
+    Set(RefCell<Vec<SqlArg>>),
     /// Set only invalid keys to value  (primary + dependencies).
     /// Argument needs interior mutability, because keys are taken from `Vec`.
-    SetInvalid(RefCell<Vec<SqlArg>>), 
+    SetInvalid(RefCell<Vec<SqlArg>>),
     /// Refresh all foreign keys, that refer to this entity (merges).
     Refresh,
-     /// Refresh all invalid foreign keys, that refer to this entity (merges).
+    /// Refresh all invalid foreign keys, that refer to this entity (merges).
     RefreshInvalid,
     /// Refresh all valid foreign keys, that refer to this entity (merges).
     RefreshValid,

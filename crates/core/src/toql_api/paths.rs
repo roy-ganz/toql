@@ -21,3 +21,20 @@ impl Paths {
         self.list
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::Paths;
+
+    #[test]
+    fn paths_top() {
+        assert!(Paths::top().into_inner().is_empty());
+    }
+    #[test]
+    fn paths_from() {
+        assert_eq!(
+            Paths::from(vec!["level1".to_string()]).into_inner(),
+            ["level1"]
+        );
+    }
+}

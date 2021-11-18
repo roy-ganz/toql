@@ -46,7 +46,7 @@ impl Wildcard {
                 );
             }
         }
-        
+
         // Add _ at end if missing
         if !path.is_empty() && !path.ends_with('_') {
             path.push('_');
@@ -72,7 +72,6 @@ impl Default for Wildcard {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::Wildcard;
@@ -91,8 +90,8 @@ mod test {
         assert_eq!(Wildcard::from("level2_").into_path(), "level2_");
     }
     #[test]
-     #[should_panic]
-     fn invalid_name() {
-         Wildcard::from("level%2");
-     }
+    #[should_panic]
+    fn invalid_name() {
+        Wildcard::from("level%2");
+    }
 }

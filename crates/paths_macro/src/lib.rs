@@ -1,14 +1,14 @@
-//! The `paths!` macro compiles a list of Toql field names into program code. 
+//! The `paths!` macro compiles a list of Toql field names into program code.
 //! Any syntax errors or wrong path names will show up at compile time.
 //!
-//! Wrong path names are detected because the `paths!` macro uses the 
+//! Wrong path names are detected because the `paths!` macro uses the
 //! query builder functions that are genereated by the Toql derive.
 //!
 //! ### Example
 //! Assume a `struct User` with a joined `address`.ok_or(none_error!())?
 //! ```rust, ignore
 //! #[derive(Toql)]
-//! struct User 
+//! struct User
 //!     #[toql(key)]
 //!     id: u64,
 //!     name: String,
@@ -17,7 +17,7 @@
 //! }
 //!
 //! #[derive(Toql)]
-//! struct Address 
+//! struct Address
 //!     #[toql(key)]
 //!     id: u64,
 //!     street: String
@@ -26,7 +26,7 @@
 //! let f = paths!(User, "address");
 //! ```
 //!
-//! Notice that the `paths!` macro takes a type, however the resulting `Paths` is untyped. 
+//! Notice that the `paths!` macro takes a type, however the resulting `Paths` is untyped.
 //! This is a shortcoming and will be resolved in the future.
 
 #![recursion_limit = "512"]
@@ -37,15 +37,15 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
-use syn::parse_macro_input;
 use proc_macro::TokenStream;
+use syn::parse_macro_input;
 
 mod paths_macro;
 
 #[proc_macro]
 pub fn paths(input: TokenStream) -> TokenStream {
     let _ = env_logger::try_init(); // Avoid multiple init
-                                    
+
     tracing::debug!("Source code for `{:?}`: ", &input);
 
     let ast = parse_macro_input!(input as paths_macro::PathsMacro);
@@ -71,19 +71,18 @@ pub fn paths(input: TokenStream) -> TokenStream {
     }
 }
 
-
 #[test]
 fn valid_path_list() {
     use paths_macro::PathsMacro;
     let input = "User, \"prop1, prop2\" ";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-   let m = m.unwrap();
-    assert!(matches!(m, PathsMacro::PathList{..}));
-    if let PathsMacro::PathList{query, struct_type} = m {
-        let f = paths_macro::parse(&query, struct_type); 
+    let m = m.unwrap();
+    assert!(matches!(m, PathsMacro::PathList { .. }));
+    if let PathsMacro::PathList { query, struct_type } = m {
+        let f = paths_macro::parse(&query, struct_type);
         assert_eq!(f.is_ok(), true);
     }
 }
@@ -91,27 +90,27 @@ fn valid_path_list() {
 fn valid_top() {
     use paths_macro::PathsMacro;
     let input = "top";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-   let m = m.unwrap();
-    assert!(matches!(m,  PathsMacro::Top));
+    let m = m.unwrap();
+    assert!(matches!(m, PathsMacro::Top));
 }
 #[test]
 fn invalid_mixed_case_top() {
     use paths_macro::PathsMacro;
     let input = "Top";
-    
-    let m :syn::Result<PathsMacro> = syn::parse_str(input);
+
+    let m: syn::Result<PathsMacro> = syn::parse_str(input);
     assert_eq!(m.is_ok(), false);
 }
 #[test]
 fn missing_pathlist() {
     use paths_macro::PathsMacro;
     let input = "User";
-    
-    let m :syn::Result<PathsMacro> = syn::parse_str(input);
+
+    let m: syn::Result<PathsMacro> = syn::parse_str(input);
     assert_eq!(m.is_ok(), false);
 }
 
@@ -119,14 +118,14 @@ fn missing_pathlist() {
 fn invalid_pathlist() {
     use paths_macro::PathsMacro;
     let input = "User, \"prop1 prop2\" "; // missing comma
-    
+
     let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
     let m = m.unwrap();
-    assert!(matches!(m,  PathsMacro::PathList{..}));
-    if let PathsMacro::PathList{query, struct_type} = m {
-        let f = paths_macro::parse(&query, struct_type); 
+    assert!(matches!(m, PathsMacro::PathList { .. }));
+    if let PathsMacro::PathList { query, struct_type } = m {
+        let f = paths_macro::parse(&query, struct_type);
         assert_eq!(f.is_err(), true);
     }
 }

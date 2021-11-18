@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::{
-    insert::{add_partial_tables, build_insert_sql, set_tree_identity},
+    insert::{build_insert_sql, set_tree_identity},
     map, Backend,
 };
 use std::{
@@ -362,4 +362,28 @@ where
     }
 
     Ok((field_path_order, merge_path_order, fields))
+}
+
+fn add_partial_tables<T>(
+    registry: &TableMapperRegistry,
+    query_path: &FieldPath,
+    paths: &mut Vec<String>,
+) -> std::result::Result<(), ToqlError>
+where
+    T: Mapped + TreePredicate,
+{
+    let ty = <T as Mapped>::type_name();
+
+    let sql_builder = SqlBuilder::new(&ty, registry);
+    let mapper = sql_builder.mapper_for_query_path(query_path)?;
+
+    let partial_joins: Vec<(String, String)> = mapper.joined_partial_mappers();
+
+    for (p, _m) in &partial_joins {
+        let qp = query_path.append(p);
+        add_partial_tables::<T>(registry, &qp, paths)?;
+        paths.push(qp.to_string());
+    }
+
+    Ok(())
 }

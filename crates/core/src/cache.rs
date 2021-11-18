@@ -17,7 +17,7 @@ impl Cache {
     /// Creates a new ``Cache` with `capacity` entries.
     pub fn with_capacity(capacity: usize) -> Self {
         Cache {
-            registry: RwLock::new(TableMapperRegistry::new()),
+            registry: RwLock::new(TableMapperRegistry::default()),
             registered_roots: RwLock::new(HashSet::new()),
             _query_cache: RwLock::new(LruCache::new(capacity)),
         }

@@ -19,10 +19,6 @@ impl Context {
 
 impl Default for Context {
     fn default() -> Self {
-        Context {
-            roles: HashSet::new(),
-            aux_params: HashMap::new(),
-            alias_format: AliasFormat::Canonical,
-        }
+        Context::new(AliasFormat::Canonical)
     }
 }

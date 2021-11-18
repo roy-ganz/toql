@@ -25,12 +25,7 @@ impl Parse for RoleExprMacro {
 
 pub fn parse(role_expr_string: &LitStr) -> std::result::Result<TokenStream, TokenStream> {
     fn evaluate_pair(pair: Pair<Rule>) -> Option<TokenStream> {
-        /*  println!("Rule:    {:?}", pair.as_rule());
-        println!("Span:    {:?}", pair.as_span());
-        println!("Text:    {}", pair.as_str()); */
-
         let span = pair.clone().as_span();
-
         match pair.as_rule() {
             Rule::role => {
                 let role = span.as_str();

@@ -15,27 +15,24 @@ impl Sql {
     /// never do this, because of the risk of SQL injection!
     /// The string is should only be used for debugging and logging purposes.
     pub fn to_unsafe_string(&self) -> String {
-
-        fn parse_and_replace(position:&str, args: &[SqlArg], unsafe_string: &mut String) {
+        fn parse_and_replace(position: &str, args: &[SqlArg], unsafe_string: &mut String) {
             let pos: Result<usize, _> = position.parse();
-                    match pos {
-                        Ok(pos) => {
-                            let arg: Option<&SqlArg> = args.get(pos - 1); // Positional argument start from 1
-                            match arg {
-                                Some(v) => unsafe_string.push_str(&v.to_sql_string()),
-                                None => {
-                                    unsafe_string.push('$');
-                                    unsafe_string.push_str(&position);
-                                    unsafe_string.push(' ');
-                                }
-                            }
-                        }
-                        _ => {
+            match pos {
+                Ok(pos) => {
+                    let arg: Option<&SqlArg> = args.get(pos - 1); // Positional argument start from 1
+                    match arg {
+                        Some(v) => unsafe_string.push_str(&v.to_sql_string()),
+                        None => {
                             unsafe_string.push('$');
                             unsafe_string.push_str(&position);
-                            unsafe_string.push(' ');
                         }
                     }
+                }
+                _ => {
+                    unsafe_string.push('$');
+                    unsafe_string.push_str(&position);
+                }
+            }
         }
 
         let mut quoted = false;
@@ -78,7 +75,7 @@ impl Sql {
         if position_parsing {
             parse_and_replace(&position, &self.1, &mut unsafe_string);
         }
-        
+
         unsafe_string
     }
     /// Add `Sql` at the end.
@@ -112,29 +109,53 @@ impl Default for Sql {
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
     use super::{Sql, SqlArg};
-        
+
     #[test]
     fn to_unsafe_string() {
-        assert_eq!(Sql("SELECT ?".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(), "SELECT 1");
-        assert_eq!(Sql("SELECT ? FROM".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(), "SELECT 1 FROM");
-        assert_eq!(Sql("SELECT $1 FROM".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(), "SELECT 1 FROM");
-        assert_eq!(Sql("SELECT $1".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(), "SELECT 1");
-        assert_eq!(Sql("SELECT '?'".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(), "SELECT '?'");
-        assert_eq!(Sql("SELECT '''?'".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(), "SELECT '''?'");
+        assert_eq!(
+            Sql("SELECT ?".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(),
+            "SELECT 1"
+        );
+        assert_eq!(
+            Sql("SELECT ? FROM".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(),
+            "SELECT 1 FROM"
+        );
+        assert_eq!(
+            Sql("SELECT $1 FROM".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(),
+            "SELECT 1 FROM"
+        );
+        assert_eq!(
+            Sql("SELECT $1".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(),
+            "SELECT 1"
+        );
+        assert_eq!(
+            Sql("SELECT $1".to_string(), vec![]).to_unsafe_string(),
+            "SELECT $1"
+        );
+        assert_eq!(
+            Sql("SELECT $a".to_string(), vec![]).to_unsafe_string(),
+            "SELECT $a"
+        );
+        assert_eq!(
+            Sql("SELECT '?'".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(),
+            "SELECT '?'"
+        );
+        assert_eq!(
+            Sql("SELECT '''?'".to_string(), vec![SqlArg::U64(1)]).to_unsafe_string(),
+            "SELECT '''?'"
+        );
     }
 
-     #[test]
+    #[test]
     fn build() {
         assert_eq!(Sql::default().to_unsafe_string(), "");
         assert_eq!(Sql::default().is_empty(), true);
         assert_eq!(Sql::new().is_empty(), true);
 
-        let mut s= Sql::new();
+        let mut s = Sql::new();
         s.push_literal("SELECT 1 FROM");
         assert_eq!(s.to_unsafe_string(), "SELECT 1 FROM");
         s.pop_literals(5);

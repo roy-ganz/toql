@@ -31,7 +31,6 @@ impl RoleValidator {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::RoleValidator;
@@ -40,39 +39,37 @@ mod test {
 
     #[test]
     fn validate_expressions() {
-
         let mut roles = HashSet::new();
         roles.insert("role1".to_string());
         roles.insert("role2".to_string());
 
         // Contains
         let e = RoleExpr::role("role1".to_string());
-        assert_eq!(RoleValidator::is_valid(&roles, &e), true);        
-        
+        assert_eq!(RoleValidator::is_valid(&roles, &e), true);
+
         // Logical AND
         let e = RoleExpr::role("role1".to_string()).and(RoleExpr::role("role2".to_string()));
-        assert_eq!(RoleValidator::is_valid(&roles, &e), true);   
+        assert_eq!(RoleValidator::is_valid(&roles, &e), true);
 
-         let e = RoleExpr::role("role1".to_string()).and(RoleExpr::role("role3".to_string()));
-        assert_eq!(RoleValidator::is_valid(&roles, &e), false);      
+        let e = RoleExpr::role("role1".to_string()).and(RoleExpr::role("role3".to_string()));
+        assert_eq!(RoleValidator::is_valid(&roles, &e), false);
 
-        // Logical OR   
+        // Logical OR
         let e = RoleExpr::role("role1".to_string()).or(RoleExpr::role("role3".to_string()));
-        assert_eq!(RoleValidator::is_valid(&roles, &e), true);   
+        assert_eq!(RoleValidator::is_valid(&roles, &e), true);
 
         let e = RoleExpr::role("role3".to_string()).or(RoleExpr::role("role4".to_string()));
-        assert_eq!(RoleValidator::is_valid(&roles, &e), false);   
+        assert_eq!(RoleValidator::is_valid(&roles, &e), false);
 
-        // Logical NOT 
+        // Logical NOT
         let e = RoleExpr::role("role3".to_string()).not();
-        assert_eq!(RoleValidator::is_valid(&roles, &e), true);   
+        assert_eq!(RoleValidator::is_valid(&roles, &e), true);
 
         let e = RoleExpr::role("role1".to_string()).not();
-        assert_eq!(RoleValidator::is_valid(&roles, &e), false);   
+        assert_eq!(RoleValidator::is_valid(&roles, &e), false);
 
         // Invalid
         let e = RoleExpr::invalid();
-        assert_eq!(RoleValidator::is_valid(&roles, &e), false);   
-
+        assert_eq!(RoleValidator::is_valid(&roles, &e), false);
     }
 }

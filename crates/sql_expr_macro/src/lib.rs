@@ -1,4 +1,4 @@
-//! The `sql_expr!` macro compiles an SQL expression into program code. 
+//! The `sql_expr!` macro compiles an SQL expression into program code.
 //!
 //! ### Example
 //! ```rust, ignore
@@ -51,19 +51,18 @@ pub fn sql_expr(input: TokenStream) -> TokenStream {
     }
 }
 
-
 #[test]
 fn literal_and_alias() {
     use sql_expr_macro::SqlExprMacro;
     let input = "\"SELECT ..id FROM Table .. JOIN OtherTable ...\"";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-    let SqlExprMacro{query, arguments} = m.unwrap();
-    let f = sql_expr_macro::parse(&query, &mut arguments.iter()); 
+    let SqlExprMacro { query, arguments } = m.unwrap();
+    let f = sql_expr_macro::parse(&query, &mut arguments.iter());
     assert_eq!(f.is_ok(), true);
-    
+
     assert_eq!(f.unwrap().to_string(), "{ let mut t = toql :: sql_expr :: SqlExpr :: new ( ) ; \
         t . extend ( toql :: sql_expr :: SqlExpr :: from ( vec ! [ \
             toql :: sql_expr :: SqlExprToken :: Literal ( String :: from ( \"SELECT \" ) ) , \
@@ -77,14 +76,14 @@ fn literal_and_alias() {
 fn placeholders_and_aux_params() {
     use sql_expr_macro::SqlExprMacro;
     let input = "\"SELECT ?, <aux_parm>\"";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-    let SqlExprMacro{query, arguments} = m.unwrap();
-    let f = sql_expr_macro::parse(&query, &mut arguments.iter()); 
+    let SqlExprMacro { query, arguments } = m.unwrap();
+    let f = sql_expr_macro::parse(&query, &mut arguments.iter());
     assert_eq!(f.is_ok(), true);
-    
+
     assert_eq!(f.unwrap().to_string(), "{ let mut t = toql :: sql_expr :: SqlExpr :: new ( ) ; \
     t . extend ( toql :: sql_expr :: SqlExpr :: from ( vec ! [ \
         toql :: sql_expr :: SqlExprToken :: Literal ( String :: from ( \"SELECT \" ) ) , \
@@ -96,15 +95,15 @@ fn placeholders_and_aux_params() {
 fn quotes() {
     use sql_expr_macro::SqlExprMacro;
     let input = "\"SELECT '''?', '<aux_parm>'\"";
-    
-    let m  = syn::parse_str(input);
+
+    let m = syn::parse_str(input);
     assert_eq!(m.is_ok(), true);
 
-    let SqlExprMacro{query, arguments} = m.unwrap();
-    let f = sql_expr_macro::parse(&query, &mut arguments.iter()); 
+    let SqlExprMacro { query, arguments } = m.unwrap();
+    let f = sql_expr_macro::parse(&query, &mut arguments.iter());
     assert_eq!(f.is_ok(), true);
-    
+
     assert_eq!(f.unwrap().to_string(), "{ let mut t = toql :: sql_expr :: SqlExpr :: new ( ) ; \
     t . extend ( toql :: sql_expr :: SqlExpr :: from ( vec ! [ \
         toql :: sql_expr :: SqlExprToken :: Literal ( String :: from ( \"SELECT \'\'\'?\', \'<aux_parm>\'\" ) ) ] ) ) ; t }");
- }
+}

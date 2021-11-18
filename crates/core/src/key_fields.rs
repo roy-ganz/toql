@@ -1,7 +1,5 @@
 //! Toql query field information for keys.
 
-
-
 use crate::sql_arg::SqlArg;
 
 mod join;

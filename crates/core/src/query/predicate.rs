@@ -86,7 +86,6 @@ impl From<&str> for Predicate {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::Predicate;
@@ -95,6 +94,9 @@ mod test {
     fn build() {
         assert_eq!(Predicate::from("pred").to_string(), "@pred");
         assert_eq!(Predicate::from("pred").is(5).to_string(), "@pred 5");
-        assert_eq!(Predicate::from("pred").are(vec![5, 10]).to_string(), "@pred 5 10");
+        assert_eq!(
+            Predicate::from("pred").are(vec![5, 10]).to_string(),
+            "@pred 5 10"
+        );
     }
 }

@@ -19,10 +19,10 @@ use crate::query::field::Field;
 use crate::query::field_filter::FieldFilter;
 use crate::query::field_order::FieldOrder;
 use crate::query::predicate::Predicate;
+use crate::query::query_token::QueryToken;
 use crate::query::selection::Selection;
 use crate::query::wildcard::Wildcard;
 use crate::query::Query;
-use crate::query::query_token::QueryToken;
 use crate::sql_arg::SqlArg;
 use crate::sql_builder::sql_builder_error::SqlBuilderError;
 use toql_query_parser::PestQueryParser;
@@ -62,7 +62,7 @@ impl TokenInfo {
             hidden: false,
             order: None,
             filter: None,
-          //  aggregation: false,
+            //  aggregation: false,
             name: String::new(),
             concatenation: Concatenation::And,
         }
@@ -74,7 +74,7 @@ impl TokenInfo {
                 hidden: self.hidden,
                 order: self.order.clone(),
                 filter: self.build_filter()?,
-              //  aggregation: self.aggregation,
+                //  aggregation: self.aggregation,
                 concatenation: self.concatenation.clone(),
             }))),
             TokenType::Wildcard => Ok(Some(QueryToken::Wildcard(Wildcard {
@@ -135,14 +135,14 @@ impl TokenInfo {
                     "IN" => Ok(Some(FieldFilter::In(self.args.drain(..).collect()))),
                     "OUT" => Ok(Some(FieldFilter::Out(self.args.drain(..).collect()))),
                     "BW" => {
-                        let to =  self.args.pop().ok_or_else(|| {
+                        let to = self.args.pop().ok_or_else(|| {
                             SqlBuilderError::FilterInvalid(filtername.to_string())
                         })?;
-                        let from =  self.args.pop().ok_or_else(|| {
+                        let from = self.args.pop().ok_or_else(|| {
                             SqlBuilderError::FilterInvalid(filtername.to_string())
                         })?;
-                        Ok(Some(FieldFilter::Bw(from,to)))
-                        },
+                        Ok(Some(FieldFilter::Bw(from, to)))
+                    }
                     _ => {
                         if upc.starts_with("FN ") {
                             let filtername = upc.trim_start_matches("FN ");
@@ -288,47 +288,56 @@ impl QueryParser {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::QueryParser;
-    
+
     struct User;
-   
+
     #[test]
     fn parse_filters() {
-         let q = QueryParser::parse::<User>("prop1, prop2 EQN, prop3 NE 1, prop4 NEN, \
-            prop5 GT 1.5, prop6 GE 1.5, prop7 LT 1.5, prop8 LE 1.5").expect("Invalid Syntax");
-            
+        let q = QueryParser::parse::<User>(
+            "prop1, prop2 EQN, prop3 NE 1, prop4 NEN, \
+            prop5 GT 1.5, prop6 GE 1.5, prop7 LT 1.5, prop8 LE 1.5",
+        )
+        .expect("Invalid Syntax");
 
-        assert_eq!(q.to_string(), "prop1,prop2 EQN,prop3 NE 1,prop4 NEN,\
-            prop5 GT 1.5,prop6 GE 1.5,prop7 LT 1.5,prop8 LE 1.5"); 
+        assert_eq!(
+            q.to_string(),
+            "prop1,prop2 EQN,prop3 NE 1,prop4 NEN,\
+            prop5 GT 1.5,prop6 GE 1.5,prop7 LT 1.5,prop8 LE 1.5"
+        );
 
-         let q = QueryParser::parse::<User>("prop9 LK 'ABC', prop10 BW 1 10, prop11 IN 1 2 3, prop12 OUT 1 2 3, \
-            prop13 FN CUSTOM 'A' 'B' 2").expect("Invalid Syntax");
-        
-          assert_eq!(q.to_string(), "prop9 LK 'ABC',prop10 BW 1 10,prop11 IN 1 2 3,prop12 OUT 1 2 3,\
-            prop13 FN CUSTOM 'A' 'B' 2"); 
+        let q = QueryParser::parse::<User>(
+            "prop9 LK 'ABC', prop10 BW 1 10, prop11 IN 1 2 3, prop12 OUT 1 2 3, \
+            prop13 FN CUSTOM 'A' 'B' 2",
+        )
+        .expect("Invalid Syntax");
 
+        assert_eq!(
+            q.to_string(),
+            "prop9 LK 'ABC',prop10 BW 1 10,prop11 IN 1 2 3,prop12 OUT 1 2 3,\
+            prop13 FN CUSTOM 'A' 'B' 2"
+        );
     }
-     #[test]
+    #[test]
     fn parse_parentesis() {
-        let q = QueryParser::parse::<User>("(prop1 eq 1, prop2 eqn); prop3 ne 1").expect("Invalid Syntax");
+        let q = QueryParser::parse::<User>("(prop1 eq 1, prop2 eqn); prop3 ne 1")
+            .expect("Invalid Syntax");
         assert_eq!(q.to_string(), "(prop1 EQ 1,prop2 EQN);prop3 NE 1");
 
-        let q = QueryParser::parse::<User>("(((prop1 eq 1, prop2 eqn)); prop3 ne 1)").expect("Invalid Syntax");
+        let q = QueryParser::parse::<User>("(((prop1 eq 1, prop2 eqn)); prop3 ne 1)")
+            .expect("Invalid Syntax");
         assert_eq!(q.to_string(), "(((prop1 EQ 1,prop2 EQN));prop3 NE 1)");
     }
     #[test]
     fn parse_predicate() {
         let q = QueryParser::parse::<User>("@level1_pred, @pred").expect("Invalid Syntax");
         assert_eq!(q.to_string(), "@level1_pred,@pred");
-   }
+    }
     #[test]
     fn parse_selection() {
         let q = QueryParser::parse::<User>("$level1_mut, $mut").expect("Invalid Syntax");
         assert_eq!(q.to_string(), "$level1_mut,$mut");
-   }
-
+    }
 }
-

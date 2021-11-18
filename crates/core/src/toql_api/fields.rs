@@ -22,3 +22,20 @@ impl Fields {
         self.list
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::Fields;
+
+    #[test]
+    fn fields_top() {
+        assert_eq!(Fields::top().into_inner(), ["*"]);
+    }
+    #[test]
+    fn fields_from() {
+        assert_eq!(
+            Fields::from(vec!["level1_*".to_string()]).into_inner(),
+            ["level1_*"]
+        );
+    }
+}

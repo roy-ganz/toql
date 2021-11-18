@@ -42,9 +42,9 @@ impl PathTree {
     /// This will walk down the paths and insert the parts
     /// as roots, heads and nodes.
     pub fn insert(&mut self, path: &FieldPath) {
-        let mut parents = path.ancestors().skip(1);
+        let mut parents = path.step_up().skip(1);
 
-        for a in path.ancestors() {
+        for a in path.step_up() {
             // If Parent exists, its not a tree root
 
             match parents.next() {

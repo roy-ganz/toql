@@ -122,7 +122,11 @@ impl FieldInfo {
                 let are = if self.single_array_argument {
                     quote!(.are( #(#args),* ))
                 } else {
-                    quote!(.are( &[#(#args),*] ))
+                    if self.args.is_empty() {
+                        quote!()
+                    } else {
+                        quote!(.are( &[#(#args),*] ))
+                    }
                 };
                 Some(
                     quote!(<#struct_type as toql::query_fields::QueryFields>::fields(). #(#fnname()).* #are ),
@@ -281,7 +285,7 @@ fn evaluate_pair(
                 }
             }
             Rule::hidden => {
-                field_info.hidden = quote!(.hidden());
+                field_info.hidden = quote!(.hide());
             }
 
             Rule::wildcard => {

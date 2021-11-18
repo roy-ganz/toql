@@ -100,12 +100,11 @@ impl ToString for FieldFilter {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::FieldFilter;
     use crate::sql_arg::SqlArg;
-    
+
     #[test]
     fn to_string() {
         assert_eq!(FieldFilter::Eqn.to_string(), "EQN");
@@ -115,10 +114,25 @@ mod test {
         assert_eq!(FieldFilter::Ge(SqlArg::U64(1)).to_string(), "GE 1");
         assert_eq!(FieldFilter::Lt(SqlArg::U64(1)).to_string(), "LT 1");
         assert_eq!(FieldFilter::Le(SqlArg::U64(1)).to_string(), "LE 1");
-        assert_eq!(FieldFilter::Lk(SqlArg::Str("%ABC%".to_string())).to_string(), "LK '%ABC%'");
-        assert_eq!(FieldFilter::Bw(SqlArg::U64(1), SqlArg::U64(10)).to_string(), "BW 1 10");
-        assert_eq!(FieldFilter::In(vec![SqlArg::U64(1), SqlArg::U64(10)]).to_string(), "IN 1 10");
-        assert_eq!(FieldFilter::Out(vec![SqlArg::U64(1), SqlArg::U64(10)]).to_string(), "OUT 1 10");
-        assert_eq!(FieldFilter::Fn("SC".to_string(), vec![SqlArg::U64(1), SqlArg::U64(10)]).to_string(), "FN SC 1 10");
+        assert_eq!(
+            FieldFilter::Lk(SqlArg::Str("%ABC%".to_string())).to_string(),
+            "LK '%ABC%'"
+        );
+        assert_eq!(
+            FieldFilter::Bw(SqlArg::U64(1), SqlArg::U64(10)).to_string(),
+            "BW 1 10"
+        );
+        assert_eq!(
+            FieldFilter::In(vec![SqlArg::U64(1), SqlArg::U64(10)]).to_string(),
+            "IN 1 10"
+        );
+        assert_eq!(
+            FieldFilter::Out(vec![SqlArg::U64(1), SqlArg::U64(10)]).to_string(),
+            "OUT 1 10"
+        );
+        assert_eq!(
+            FieldFilter::Fn("SC".to_string(), vec![SqlArg::U64(1), SqlArg::U64(10)]).to_string(),
+            "FN SC 1 10"
+        );
     }
 }

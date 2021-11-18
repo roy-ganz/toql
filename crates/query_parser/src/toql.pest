@@ -1,15 +1,3 @@
-/* char =  { !("'") ~ ANY }
-string = @{ char* }
-num_value =  { ASCII_DIGIT+ }
-text_value =  { "'" ~ string ~ "'" }
-value= { num_value | text_value  }  */
-/*char = {
-    !("'" | "\\") ~ ANY
-    | "\\" ~ ("'" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
-    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
-}
-inner = @{ char* }
-*/
 // Like SQL strings 'Tim''s dog'
 string = ${  "'" ~ ( "''" | (!"'" ~ ANY) )* ~  "'" }
 

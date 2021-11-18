@@ -7,7 +7,7 @@ pub trait TreePredicate {
     fn columns<'a, I>(descendents: I) -> Result<Vec<String>, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>;
-    
+
     /// Return the key column values
     fn args<'a, I>(&self, descendents: I, args: &mut Vec<SqlArg>) -> Result<(), ToqlError>
     where

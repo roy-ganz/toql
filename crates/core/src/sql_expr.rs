@@ -62,12 +62,12 @@ pub enum SqlExprToken {
 ///
 /// ```rust
 ///  use toql_core::sql_expr::SqlExpr;
-/// 
+///
 ///  let mut e = SqlExpr::literal("SELECT ");
 ///  e.push_self_alias();
 ///  e.push_literal("id FROM User ");
 ///  e.push_self_alias();
-/// 
+///
 ///  assert_eq!("SELECT ..id FROM User ..", e.to_string());
 /// ```
 /// The resolver will replace the self aliases into real aliases and build proper SQL.
@@ -140,12 +140,12 @@ impl SqlExpr {
         }
     }
     /// Create SQL expression from aliased column.
-    pub fn aliased_column(column_name: String) -> Self {
+    pub fn aliased_column(column_name: impl Into<String>) -> Self {
         SqlExpr {
             tokens: vec![
                 SqlExprToken::SelfAlias,
                 SqlExprToken::Literal(".".to_string()),
-                SqlExprToken::Literal(column_name),
+                SqlExprToken::Literal(column_name.into()),
             ],
             maybe_aux_params: false,
         }
@@ -280,29 +280,32 @@ impl fmt::Display for SqlExprToken {
             SqlExprToken::Predicate {
                 columns: _,
                 args: _,
-            } => write!(f, "ToDo"),
+            } => write!(f, "<Predicate>"),
         }
-    }
-}
-
-impl std::convert::From<&str> for SqlExpr {
-    fn from(s: &str) -> Self {
-        SqlExpr::literal(s)
-    }
-}
-impl std::convert::From<String> for SqlExpr {
-    fn from(s: String) -> Self {
-        SqlExpr::literal(s)
-    }
-}
-impl std::convert::From<&String> for SqlExpr {
-    fn from(s: &String) -> Self {
-        SqlExpr::literal(s)
     }
 }
 
 impl Default for SqlExpr {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::SqlExpr;
+    use crate::sql_arg::SqlArg;
+
+    #[test]
+    fn create() {
+        assert_eq!(format!("{}", SqlExpr::default()), "");
+        assert_eq!(format!("{}", SqlExpr::new()), "");
+        assert_eq!(format!("{}", SqlExpr::literal("lit")), "lit");
+        assert_eq!(format!("{}", SqlExpr::alias("alias")), "alias");
+        assert_eq!(format!("{}", SqlExpr::self_alias()), "..");
+        assert_eq!(format!("{}", SqlExpr::other_alias()), "...");
+        assert_eq!(format!("{}", SqlExpr::unresolved_arg()), "?");
+        assert_eq!(format!("{}", SqlExpr::arg(SqlArg::from("arg"))), "'arg'");
+        assert_eq!(format!("{}", SqlExpr::aliased_column("col")), "...col");
     }
 }

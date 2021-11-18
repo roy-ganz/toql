@@ -1,8 +1,8 @@
 //! The Toql Mock Db provides a dummy database that can be used for testing or documentation examples.
 
-use std::collections::HashMap;
 use crate::backend::context::Context;
 use crate::cache::Cache;
+use std::collections::HashMap;
 
 pub mod backend;
 #[macro_use]
@@ -24,10 +24,6 @@ impl<'a> MockDb<'a> {
     pub fn clear_rows(&mut self) {
         self.backend.rows.clear();
     }
-   /*  pub fn take_sqls(&mut self) -> Vec<Sql> {
-        self.clear_rows();
-        self.backend.sqls.drain(..).collect::<Vec<_>>()
-    } */
     pub fn take_unsafe_sqls(&mut self) -> Vec<String> {
         self.clear_rows();
         self.backend
@@ -36,21 +32,15 @@ impl<'a> MockDb<'a> {
             .map(|s| s.to_unsafe_string())
             .collect::<Vec<_>>()
     }
-    /*  pub fn take_sql(&mut self) -> Sql {
-        self.clear_rows();
-        let len = self.backend.sqls.len();
-        if len != 1 {
-            panic!("Expected 1 SQL statement, but got {}", len);
-        }
-        self.backend.sqls.remove(0)
-    }  */
     pub fn take_unsafe_sql(&mut self) -> String {
         self.clear_rows();
         let len = self.backend.sqls.len();
-        if len != 1 {
+        if len == 0 {
             "<<No SQL statement>>".to_string()
+        } else if len > 1 {
+            "<<Multiple SQL statements>>".to_string()
         } else {
-            let sql =  self.backend.sqls.remove(0);
+            let sql = self.backend.sqls.remove(0);
             sql.to_unsafe_string()
         }
     }

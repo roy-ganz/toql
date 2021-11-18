@@ -9,17 +9,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - Fix invalid code generation with optional merges.
+- Fix bug with hidden fields
 
 ### Added
 - MockDb, a mocking database backend.
 - Unit tests.
 - Integration tests.
-- Fixed Doc tests.
+- Fixed doc tests.
 
 Tarpaulin reported test coverage is XX%.
 
 ### Changed
 - Make guide a separate repository for better versioning.
+- Change syntax of boolean attributes in Toql derive
+- Complete rewrite of Toql derive code generation 
 
 ## 0.3.0 - 2021-10-21
 

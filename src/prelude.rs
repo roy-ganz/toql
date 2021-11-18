@@ -8,6 +8,8 @@ pub use toql_core::page_counts::PageCounts;
 pub use toql_core::predicate_handler::PredicateHandler;
 pub use toql_core::result::Result;
 pub use toql_core::sql_arg::SqlArg;
+pub use toql_core::sql_expr::resolver::Resolver;
+pub use toql_core::sql_expr::resolver_error::ResolverError;
 pub use toql_core::sql_expr::SqlExpr;
 
 pub use toql_core::join::Join;
@@ -28,7 +30,8 @@ pub use toql_core::map_key::MapKey;
 pub use toql_core::parameter_map::ParameterMap;
 pub use toql_sql_expr_macro::sql_expr;
 
-pub use toql_derive::{Toql, ToqlEnum};
+pub use toql_derive::Toql;
+pub use toql_enum_derive::ToqlEnum;
 
 // Export macros
 pub use toql_core::{

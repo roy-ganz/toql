@@ -24,7 +24,7 @@ impl TableMapperRegistry {
         self.mappers.get(table_name)
     }
 
-    /// Insert a mapper. Take the table name from the mnapper.
+    /// Insert a mapper. Take the table name from the mapper.
     pub fn insert(&mut self, mapper: TableMapper) {
         // Mixed case corresponds to toql path
         self.mappers
