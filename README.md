@@ -1,6 +1,9 @@
 # Toql - A friendly and productive ORM
 
-[Beginner Guide](https://roy-ganz.github.io/toql_guide), [API documentation](https://docs.rs/toql/0.3/toql/)
+![Tests](https://github.com/roy-ganz/toql/actions/workflows/tests.yml/badge.svg)
+[![Current Crates.io Version](https://img.shields.io/crates/v/toql.svg)](https://crates.io/crates/toql)
+
+[Beginner Guide](https://roy-ganz.github.io/toql_guide) | [API documentation](https://docs.rs/toql)
 
 Toql is an ORM for async databases that features
 - Translation between Rust structs and database tables.
