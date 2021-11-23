@@ -215,7 +215,7 @@ impl<'a> SqlBuilder<'a> {
 
         let (query_path, merge_field) = FieldPath::split_basename(&merge_path);
 
-        let base_mapper = self.joined_mapper_for_local_path(&query_path)?;
+        let base_mapper = self.mapper_for_query_path(&query_path)?;
         let root_path = FieldPath::from(&root_mapper.canonical_table_alias);
         let canonical_path = root_path.append(&query_path);
 

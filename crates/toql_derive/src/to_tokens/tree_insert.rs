@@ -122,20 +122,41 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                                     )}
                    }
                );
-                let columns_map_code = &join_kind.columns_map_code;
+             //   let columns_map_code = &join_kind.columns_map_code;
                 let default_self_column_code = &join_kind.default_self_column_code;
 
                 // Add if columns should not be skipped
 
                 if !join_kind.partial_table {
-                    insert_columns_code.push(quote!(
+                    if join_kind.columns.is_empty() {
+                         insert_columns_code.push(
+                            quote!(
+                                for other_column in <<#field_base_type as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
+                                        #default_self_column_code;
+
+                                      //  let self_column = #columns_map_code;
+                                        e.push_literal(default_self_column_code);
+                                        e.push_literal(", ");
+                                }
+                            )
+                        );
+                    } else {
+                        for c in &join_kind.columns {
+                            let col_name= &c.this;
+                             insert_columns_code.push(
+                                quote!( e.push_literal(#col_name);
+                                e.push_literal(", ");)
+                             );
+                        }
+                    };
+                    /* insert_columns_code.push(quote!(
                         for other_column in <<#field_base_type as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
                                 #default_self_column_code;
                                 let self_column = #columns_map_code;
                                 e.push_literal(self_column);
                                 e.push_literal(", ");
                         }
-                    ));
+                    )); */
 
                     insert_values_code.push(
                         match join_kind.selection  {

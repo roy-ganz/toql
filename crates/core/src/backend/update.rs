@@ -355,7 +355,6 @@ where
         } else {
             let k = trimmed_query_field.to_string();
             if !merge_path_order.contains(&k) {
-                // TODO maybe unordered Hashset works too
                 merge_path_order.push(k);
             }
         }

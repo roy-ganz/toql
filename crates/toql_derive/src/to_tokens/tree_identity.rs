@@ -218,47 +218,59 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                 }
                 if !skip_identity_code {
                     match merge.selection {
-                         MergeSelection::Preselect => {identity_set_merges_key_code.push(
-                            quote!(
-                                for e in &mut self. #field_ident {
-                                    let key = toql :: keyed :: Keyed ::key(e);
-                                            let merge_key = toql::keyed::Keyed::key(e);
-                                            let merge_key_params = toql::key::Key::params(&merge_key);
-                                            let valid = toql::sql_arg::valid_key(&merge_key_params);
-                                            if matches!(
-                                                action,
-                                                toql::tree::tree_identity::IdentityAction::RefreshInvalid
-                                            ) && valid
-                                            {
-                                            continue
-                                            }
-                                            if matches!(
-                                                action,
-                                                toql::tree::tree_identity::IdentityAction::RefreshValid
-                                            ) && !valid
-                                            {
-                                            continue
-                                            }
-
-                                                for (self_key_column, self_key_param) in self_key_columns.iter().zip(&self_key_params) {
-                                                    let calculated_other_column= match self_key_column.as_str() {
-                                                        #(#column_mapping,)*
-                                                        x @ _ => x
-                                                    };
-                                                    if cfg!(debug_assertions) {
-                                                        let foreign_identity_columns = <#field_base_type as toql::identity::Identity>::columns();
-                                                        if !foreign_identity_columns.contains(&calculated_other_column.to_string()) {
-                                                            toql::tracing::warn!("`{}` cannot find column `{}` in `{}`. \
-                                                            Try adding `#[toql(foreign_key)]` in `{}` to the missing field.", #struct_name, calculated_other_column, #field_base_name, #field_base_name)
-                                                        }
-                                                    }
-                                                    toql::identity::Identity::set_column(e, calculated_other_column, self_key_param)?;
+                        MergeSelection::Preselect => {
+                            identity_set_merges_key_code.push(
+                                quote!(
+                                    for e in &mut self. #field_ident {
+                                        let key = toql :: keyed :: Keyed ::key(e);
+                                        let merge_key = toql::keyed::Keyed::key(e);
+                                        let merge_key_params = toql::key::Key::params(&merge_key);
+                                        let valid = toql::sql_arg::valid_key(&merge_key_params);
+                                        if matches!(
+                                            action,
+                                            toql::tree::tree_identity::IdentityAction::RefreshInvalid
+                                        ) && valid
+                                        {
+                                        continue
+                                        }
+                                        if matches!(
+                                            action,
+                                            toql::tree::tree_identity::IdentityAction::RefreshValid
+                                        ) && !valid
+                                        {
+                                        continue
+                                        }
+                                        let mut found = false;
+                                        for (self_key_column, self_key_param) in self_key_columns.iter().zip(&self_key_params) {
+                                            let calculated_other_column= match self_key_column.as_str() {
+                                                #(#column_mapping,)*
+                                                x @ _ => x
+                                            };
+                                            if cfg!(debug_assertions) {
+                                                let foreign_identity_columns = <#field_base_type as toql::identity::Identity>::columns();
+                                                if foreign_identity_columns.contains(&calculated_other_column.to_string()) {
+                                                    found = true;
                                                 }
-                                }
+                                            }
+                                            toql::identity::Identity::set_column(e, calculated_other_column, self_key_param)?;
+                                            if cfg!(debug_assertions) {
+                                                if !found
+                                                {
+                                                    toql :: tracing :: warn !
+                                                    ("`{}` is unable to update foreign key in `{}`. \
+                                                            Try adding `#[toql(foreign_key)]` to field(s) in `{}` that refer to `{}`.",
+                                                    #struct_name, #field_base_name,
+                                                    #field_base_name, #struct_name)
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
                             )
-                        )  },
+                        }
                         MergeSelection::Select => {
-                             identity_set_merges_key_code.push( quote!(
+                            identity_set_merges_key_code.push(
+                                quote!(
                                     if let Some(u) = self. #field_ident .as_mut() {
                                         for e in u {
                                             let merge_key = toql::keyed::Keyed::key(e);
@@ -278,32 +290,42 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                                             {
                                                 continue
                                             }
+                                            let mut found = false;
                                             for (self_key_column, self_key_param) in self_key_columns.iter().zip(&self_key_params) {
                                                 let calculated_other_column= match self_key_column.as_str() {
                                                     #(#column_mapping,)*
                                                     x @ _ => x
                                                 };
-                                                if cfg!(debug_assertions) {
-                                                        let foreign_identity_columns = <#field_base_type as toql::identity::Identity>::columns();
-                                                        if !foreign_identity_columns.contains(&calculated_other_column.to_string()) {
-                                                            toql::tracing::warn!("`{}` cannot find column `{}` in `{}`. \
-                                                            Try adding `#[toql(foreign_key)]` in `{}` to the missing field.", #struct_name, calculated_other_column, #field_base_name, #field_base_name)
-                                                        }
+                                                 if cfg!(debug_assertions) {
+                                                    let foreign_identity_columns = <#field_base_type as toql::identity::Identity>::columns();
+                                                    if foreign_identity_columns.contains(&calculated_other_column.to_string()) {
+                                                        found = true;
                                                     }
+                                                }
                                                 toql::identity::Identity::set_column(e, calculated_other_column, self_key_param)?;
+                                                if cfg!(debug_assertions) {
+                                                    if !found {
+                                                        toql :: tracing :: warn !
+                                                        ("`{}` is unable to update foreign key in `{}`. \
+                                                                Try adding `#[toql(foreign_key)]` to field(s) in `{}` that refer to `{}`.",
+                                                        #struct_name, #field_base_name,
+                                                        #field_base_name, #struct_name)
+                                                    }
+                                                }
                                             }
                                         }
 
-                                    }))
+                                    }
+                                )
+                            )
                         }
-                        }
+                    }
                 }
             }
         };
     }
 
     // Generate  token stream
-
     let identity_set_self_key_code = quote!(
        fn set_self_key(entity: &mut #struct_name_ident, args: &mut Vec<toql::sql_arg::SqlArg>, invalid_only: bool) -> std::result::Result<(), toql::error::ToqlError> {
                 if invalid_only {

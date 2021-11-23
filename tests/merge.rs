@@ -3,6 +3,34 @@ use toql::mock_db::MockDb;
 use toql::prelude::{fields, paths, query, Cache, Toql, ToqlApi};
 use toql::row;
 use tracing_test::traced_test;
+/*
+#[derive(Debug, Default)]
+pub struct Level1 {
+    id: u64,
+    text: String,
+    level2: Vec<Level2>, // Preselected merge
+}
+#[derive(Debug, Default)]
+pub struct Level2 {
+    id: u64,
+    level1_id: u64,
+    text: String,
+    level3: Option<Vec<Level3>>, // Selectable merge
+}
+
+#[derive(Debug, Default)]
+pub struct Level3 {
+    id: u64,
+    level2_id: u64,
+    text: String,
+    level4: Vec<Level4>, // Preselected merge join
+}
+#[derive(Debug, Default)]
+pub struct Level4 {
+    id: u64,
+    level3_id: u64,
+    text: String,
+}*/
 
 #[derive(Debug, Default, Toql)]
 pub struct Level1 {
@@ -72,6 +100,41 @@ fn populated_level() -> Level1 {
         id: 1,
         text: "level1".to_string(),
         level2: vec![l2],
+    }
+}
+
+fn populated_level2() -> Level1 {
+    let l3_new = Level3 {
+        id: 3,
+        text: "level3_new".to_string(),
+        level2_id: 0, // Invalid value in composite key
+        level4: vec![],
+    };
+    let l3 = Level3 {
+        id: 3,
+        text: "level3".to_string(),
+        level2_id: 2,
+        level4: vec![],
+    };
+
+    let l2_new = Level2 {
+        id: 2,
+        text: "level2_new".to_string(),
+        level1_id: 0, // invalid value in composite key
+        level3: Some(vec![]),
+    };
+
+    let l2 = Level2 {
+        id: 2,
+        text: "level2".to_string(),
+        level1_id: 1,
+        level3: Some(vec![l3, l3_new]),
+    };
+
+    Level1 {
+        id: 1,
+        text: "level1".to_string(),
+        level2: vec![l2, l2_new],
     }
 }
 
@@ -237,6 +300,54 @@ async fn update() {
             "UPDATE Level3 SET text = 'level3' WHERE id = 3 AND level2_id = 2",
             "UPDATE Level4 SET text = 'level4' WHERE id = 4 AND level3_id = 3"
         ]
+    );
+}
+
+#[tokio::test]
+#[traced_test("info")]
+async fn update2() {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    // Resize Vec level2
+    // - Delete all items not belonging to level1
+    // - Update keys of new items (invalid composite key)
+    // - Insert new items
+
+    let mut l1 = populated_level2();
+    assert!(toql
+        .update_one(&mut l1, fields!(Level1, "level2"))
+        .await
+        .is_ok());
+    assert_eq!(
+        toql.take_unsafe_sqls(),
+        ["DELETE level1_level2 FROM Level2 level1_level2 JOIN Level1 level1 ON level1.id = level1_level2.level1_id \
+            WHERE level1.id = 1 AND NOT (level1_level2.id = 2 AND level1_level2.level1_id = 1)",
+        "INSERT INTO Level2 (id, level1_id, text) VALUES (2, 1, 'level2_new')"]
+    );
+
+    // Resize Vec level2 and level3
+    // - Delete all items not belonging to level1
+    // - Update keys of new items (invalid composite key)
+    // - Insert new items
+    let mut l1 = populated_level2();
+
+    assert!(toql
+        .update_one(&mut l1, fields!(Level1, "level2, level2_level3"))
+        .await
+        .is_ok());
+    assert_eq!(
+        toql.take_unsafe_sqls(),
+        ["DELETE level1_level2 FROM Level2 level1_level2 \
+            JOIN Level1 level1 ON level1.id = level1_level2.level1_id \
+            WHERE level1.id = 1 AND NOT (level1_level2.id = 2 AND level1_level2.level1_id = 1)",
+        "INSERT INTO Level2 (id, level1_id, text) VALUES (2, 1, 'level2_new')",
+        "DELETE level1_level2_level3 FROM Level3 level1_level2_level3 \
+            JOIN Level2 level1_level2 \
+            ON level1_level2.id = level1_level2_level3.level2_id \
+            WHERE level1_level2.id = 2 AND level1_level2.level1_id = 1 OR level1_level2.id = 2 AND level1_level2.level1_id = 1 \
+            AND NOT (level1_level2_level3.id = 3 AND level1_level2_level3.level2_id = 2)",
+        "INSERT INTO Level3 (id, level2_id, text) VALUES (3, 2, \'level3_new\')"]
     );
 }
 
