@@ -64,8 +64,7 @@ pub(crate) fn parse_struct_field<'a>(
     struct_attr: &StructAttr,
     fields: impl Iterator<Item = &'a syn::Field>,
 ) -> syn::Result<Vec<Field>> {
-    use syn::spanned::Spanned;
-
+    
     let mut parsed_fields = Vec::new();
     for field in fields {
         if let Some(ident) = &field.ident {

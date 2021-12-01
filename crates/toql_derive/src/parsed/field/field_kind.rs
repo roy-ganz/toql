@@ -26,27 +26,31 @@ pub(crate) enum FieldKind {
 }
 
 impl FieldKind {
-    pub(crate) fn as_regular(&self) -> Option<&RegularField> {
+    #[cfg(test)]
+     pub(crate) fn as_regular(&self) -> Option<&RegularField> {
         match self {
             FieldKind::Regular(s) => Some(s),
             _ => None,
         }
     }
+    #[cfg(test)]
     pub(crate) fn as_join(&self) -> Option<&JoinField> {
         match self {
             FieldKind::Join(s) => Some(s),
             _ => None,
         }
     }
+    #[cfg(test)]
     pub(crate) fn as_merge(&self) -> Option<&MergeField> {
         match self {
             FieldKind::Merge(m) => Some(m),
             _ => None,
         }
     }
+    #[cfg(test)]
     pub(crate) fn is_skipped(self) -> bool {
         matches!(self, FieldKind::Skipped)
-    }
+    } 
 }
 
 pub(crate) fn build(
