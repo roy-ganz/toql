@@ -1,6 +1,6 @@
 use toql::{
     mock_db::MockDb,
-    prelude::{fields, paths, query, sql_expr, Cache, Join, Toql, ToqlApi},
+    prelude::{fields, paths, query, Cache, Join, Toql, ToqlApi},
 };
 use tracing_test::traced_test;
 

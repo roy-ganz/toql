@@ -496,11 +496,10 @@ mod test {
     use syn::{Ident, NestedMeta, Path};
 
     fn create_field() -> FieldAttr {
-        FieldAttr::try_from(
+        FieldAttr::new(
             Ident::new("field", Span::call_site()),
             Ident::new("u64", Span::call_site()).into(),
         )
-        .unwrap()
     }
 
     #[test]

@@ -182,9 +182,7 @@ impl<'a> SqlBuilder<'a> {
             if !RoleValidator::is_valid(&self.roles, role_expr) {
                 return Err(SqlBuilderError::RoleRequired(
                     role_expr.to_string(),
-                    format!("mapper `{}`",
-                        self.home_mapper.to_string(),
-                    )
+                    format!("mapper `{}`", self.home_mapper.to_string(),),
                 )
                 .into());
             }
@@ -281,8 +279,8 @@ impl<'a> SqlBuilder<'a> {
                     if query_home_path.is_empty() {
                         format!("mapper `{}`", &self.home_mapper)
                     } else {
-                        format!("path `{}`",query_home_path)
-                    }
+                        format!("path `{}`", query_home_path)
+                    },
                 )
                 .into());
             }
@@ -530,9 +528,12 @@ impl<'a> SqlBuilder<'a> {
                     if !RoleValidator::is_valid(&self.roles, role) {
                         return Err(SqlBuilderError::RoleRequired(
                             role.to_string(),
-                            format!("path `{}`",
-                            FieldPath::from(&build_context.query_home_path).append(&local_path).to_string(),
-                            )
+                            format!(
+                                "path `{}`",
+                                FieldPath::from(&build_context.query_home_path)
+                                    .append(&local_path)
+                                    .to_string(),
+                            ),
                         )
                         .into());
                     }
@@ -672,12 +673,13 @@ impl<'a> SqlBuilder<'a> {
                                 ) {
                                     return Err(SqlBuilderError::RoleRequired(
                                         role_expr.to_string(),
-                                        format!("field `{}`",
-                                        FieldPath::from(&build_context.query_home_path)
-                                            .append(&local_path)
-                                            .append(field_name)
-                                            .to_string(),
-                                    )
+                                        format!(
+                                            "field `{}`",
+                                            FieldPath::from(&build_context.query_home_path)
+                                                .append(&local_path)
+                                                .append(field_name)
+                                                .to_string(),
+                                        ),
                                     )
                                     .into());
                                 }
@@ -759,9 +761,13 @@ impl<'a> SqlBuilder<'a> {
                                 if !RoleValidator::is_valid(&self.roles, role) {
                                     return Err(SqlBuilderError::RoleRequired(
                                         role.to_string(),
-                                        format!("predicate `@{}`",query_path
-                                            .append(&local_path)
-                                            .append(basename).to_string()),
+                                        format!(
+                                            "predicate `@{}`",
+                                            query_path
+                                                .append(&local_path)
+                                                .append(basename)
+                                                .to_string()
+                                        ),
                                     )
                                     .into());
                                 }
@@ -889,37 +895,40 @@ impl<'a> SqlBuilder<'a> {
                         FieldPath::split_basename(local_path_with_basename);
                     // Skip merge fields
                     if let Ok(mapper) = self.joined_mapper_for_local_path(&local_path) {
-                            if let Some(role) = &mapper.load_role_expr {
-                                if !RoleValidator::is_valid(&self.roles, role) {
-                                    return Err(SqlBuilderError::RoleRequired(
+                        if let Some(role) = &mapper.load_role_expr {
+                            if !RoleValidator::is_valid(&self.roles, role) {
+                                return Err(SqlBuilderError::RoleRequired(
                                     role.to_string(),
-                                            format!("field `{}`",
+                                    format!(
+                                        "field `{}`",
                                         FieldPath::from(&build_context.query_home_path)
                                             .append(&local_path)
                                             .to_string(),
-                                            )
-                                    ).into());
-                                }
+                                    ),
+                                )
+                                .into());
                             }
+                        }
 
                         let field_info = mapper
                             .field(field_name)
                             .ok_or_else(|| SqlBuilderError::FieldMissing(field_name.to_string()))?;
-                        
+
                         if let Some(load_role_expr) = &field_info.options.load_role_expr {
-                            if !RoleValidator::is_valid(&self.roles, load_role_expr){
+                            if !RoleValidator::is_valid(&self.roles, load_role_expr) {
                                 return Err(SqlBuilderError::RoleRequired(
                                     load_role_expr.to_string(),
-                                    format!("field `{}`",
-                                    FieldPath::from(&build_context.query_home_path)
-                                        .append(local_path_with_basename)
-                                        .to_string(),
-                                    )
+                                    format!(
+                                        "field `{}`",
+                                        FieldPath::from(&build_context.query_home_path)
+                                            .append(local_path_with_basename)
+                                            .to_string(),
+                                    ),
                                 )
                                 .into());
                             }
-                        } 
-                        
+                        }
+
                         let p = [
                             &self.aux_params,
                             &field_info.options.aux_params,
@@ -1010,7 +1019,6 @@ impl<'a> SqlBuilder<'a> {
                         &mapped_field.options.aux_params,
                     ];
                     let aux_params = ParameterMap::new(&p);
-                    
 
                     let role_valid = mapped_field
                         .options
@@ -1028,11 +1036,12 @@ impl<'a> SqlBuilder<'a> {
                                 .map_or_else(|| String::new(), |e| e.to_string());
                             return Err(SqlBuilderError::RoleRequired(
                                 role_string,
-                                format!("field `{}`",
-                                FieldPath::from(&build_context.query_home_path)
-                                    .append(&local_field)
-                                    .to_string(),
-                                )
+                                format!(
+                                    "field `{}`",
+                                    FieldPath::from(&build_context.query_home_path)
+                                        .append(&local_field)
+                                        .to_string(),
+                                ),
                             )
                             .into());
                         }
@@ -1084,10 +1093,12 @@ impl<'a> SqlBuilder<'a> {
                                 .map_or_else(|| String::new(), |e| e.to_string());
                             return Err(SqlBuilderError::RoleRequired(
                                 role_string,
-                                format!("field `{}`", 
-                                FieldPath::from(&build_context.query_home_path)
-                                    .append(&local_field)
-                                    .to_string()),
+                                format!(
+                                    "field `{}`",
+                                    FieldPath::from(&build_context.query_home_path)
+                                        .append(&local_field)
+                                        .to_string()
+                                ),
                             )
                             .into());
                         }
@@ -1147,10 +1158,10 @@ impl<'a> SqlBuilder<'a> {
                         .map_or(true, |e| RoleValidator::is_valid(&self.roles, e));
 
                     let role_string = if let Some(e) = &mapped_join.options.load_role_expr {
-                                e.to_string()
-                            } else {
-                                String::from("")
-                            };
+                        e.to_string()
+                    } else {
+                        String::from("")
+                    };
                     // If role is invalid raise error for explicit join
                     if build_context
                         .local_joined_paths
@@ -1159,16 +1170,17 @@ impl<'a> SqlBuilder<'a> {
                         if !role_valid {
                             return Err(SqlBuilderError::RoleRequired(
                                 role_string,
-                                format!("path `{}`", 
-                                FieldPath::from(&build_context.query_home_path)
-                                    .append(&local_join_path)
-                                    .to_string(),
-                                )
+                                format!(
+                                    "path `{}`",
+                                    FieldPath::from(&build_context.query_home_path)
+                                        .append(&local_join_path)
+                                        .to_string(),
+                                ),
                             )
                             .into());
                         }
                         // Query selected join
-                        result.select_stream.push(Select::Query); 
+                        result.select_stream.push(Select::Query);
 
                         // Select fields for this path
                         self.resolve_select(&local_join_path, query, build_context, result)?;
@@ -1176,11 +1188,12 @@ impl<'a> SqlBuilder<'a> {
                         if !role_valid {
                             return Err(SqlBuilderError::RoleRequired(
                                 role_string,
-                                format!("path `{}`", 
-                                FieldPath::from(&build_context.query_home_path)
-                                    .append(&local_join_path)
-                                    .to_string(),
-                                )
+                                format!(
+                                    "path `{}`",
+                                    FieldPath::from(&build_context.query_home_path)
+                                        .append(&local_join_path)
+                                        .to_string(),
+                                ),
                             )
                             .into());
                         }
@@ -1213,14 +1226,12 @@ impl<'a> SqlBuilder<'a> {
                             if !RoleValidator::is_valid(&self.roles, role_expr) {
                                 return Err(SqlBuilderError::RoleRequired(
                                     role_expr.to_string(),
-                                    format!("path `{}`", 
-                                    query_field.to_string(),
-                                    )
-                            )
-                            .into());
+                                    format!("path `{}`", query_field.to_string(),),
+                                )
+                                .into());
                             }
                         }
-                       
+
                         result.unmerged_home_paths.insert(query_field.to_string());
                     }
                 }

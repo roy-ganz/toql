@@ -1,6 +1,6 @@
 use super::literals::{
-    set_unique_bool, set_unique_path_lit, set_unique_rename_case_lit,
-    set_unique_str_lit, set_unique_usize_lit,
+    set_unique_bool, set_unique_path_lit, set_unique_rename_case_lit, set_unique_str_lit,
+    set_unique_usize_lit,
 };
 use crate::{
     error::{attribute_err, DeriveError},

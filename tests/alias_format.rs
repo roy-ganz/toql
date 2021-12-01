@@ -1,8 +1,6 @@
 use pretty_assertions::assert_eq;
 use toql::mock_db::MockDb;
-use toql::prelude::{
-    fields, paths, query, AliasFormat, Cache, ContextBuilder, Join, Toql, ToqlApi,
-};
+use toql::prelude::{query, AliasFormat, Cache, ContextBuilder, Join, Toql, ToqlApi};
 use toql::row;
 use tracing_test::traced_test;
 

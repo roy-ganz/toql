@@ -101,10 +101,7 @@ mod test {
         let r2 = RoleExpr::role("role2".to_string());
         assert_eq!(r1.clone().and(r2.clone()).to_string(), "role1, role2");
 
-        assert_eq!(
-            r1.clone().or(r2.clone()).to_string(),
-            "(role1); (role2)"
-        );
+        assert_eq!(r1.clone().or(r2.clone()).to_string(), "(role1); (role2)");
 
         assert_eq!(
             r1.clone().or(r2.clone().not()).to_string(),
@@ -116,9 +113,6 @@ mod test {
             "(role1); (role2, role1)"
         );
 
-        assert_eq!(
-            r1.clone().and(RoleExpr::invalid()).to_string(),
-            "role1, 0"
-        );
+        assert_eq!(r1.clone().and(RoleExpr::invalid()).to_string(), "role1, 0");
     }
 }

@@ -120,7 +120,7 @@ fn eval_arguments<'a>(
 mod test {
     use super::{get_type_info, TypeHint};
     use syn::parse_str;
-    
+
     #[test]
     fn fields() {
         let ti = get_type_info(&parse_str::<syn::Path>("Other").unwrap()).unwrap();
@@ -138,7 +138,7 @@ mod test {
         assert_eq!(ti.base_name.to_string(), "Other");
         assert_eq!(ti.type_hint, TypeHint::Other);
     }
-     #[test]
+    #[test]
     fn joins() {
         let ti = get_type_info(&parse_str::<syn::Path>("Join<Other>").unwrap()).unwrap();
         assert_eq!(ti.number_of_options, 0);
@@ -150,7 +150,8 @@ mod test {
         assert_eq!(ti.base_name.to_string(), "Other");
         assert_eq!(ti.type_hint, TypeHint::Join);
 
-        let ti = get_type_info(&parse_str::<syn::Path>("Option<Option<Join<Other>>>").unwrap()).unwrap();
+        let ti =
+            get_type_info(&parse_str::<syn::Path>("Option<Option<Join<Other>>>").unwrap()).unwrap();
         assert_eq!(ti.number_of_options, 2);
         assert_eq!(ti.base_name.to_string(), "Other");
         assert_eq!(ti.type_hint, TypeHint::Join);
@@ -168,7 +169,8 @@ mod test {
         assert_eq!(ti.type_hint, TypeHint::Merge);
 
         // This is not supported, but can be parsed
-         let ti = get_type_info(&parse_str::<syn::Path>("Option<Option<Vec<Other>>>").unwrap()).unwrap();
+        let ti =
+            get_type_info(&parse_str::<syn::Path>("Option<Option<Vec<Other>>>").unwrap()).unwrap();
         assert_eq!(ti.number_of_options, 2);
         assert_eq!(ti.base_name.to_string(), "Other");
         assert_eq!(ti.type_hint, TypeHint::Merge);

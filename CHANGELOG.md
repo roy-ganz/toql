@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Integration tests.
 - Fixed doc tests.
 
-Tarpaulin reported test coverage is 87.61%.
+Tarpaulin reported test coverage is 87%.
 
 ### Changed
 - Make guide a separate repository for better versioning.

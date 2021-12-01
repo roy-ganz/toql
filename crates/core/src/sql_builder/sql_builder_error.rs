@@ -39,18 +39,32 @@ impl fmt::Display for SqlBuilderError {
             SqlBuilderError::PathUnexpected(ref path) => {
                 write!(f, "a path `{}` was found but no path is allowed", path)
             }
-            SqlBuilderError::SelectionMissing(ref selection) => write!(f, "selection `{}` is missing", selection),
-            SqlBuilderError::PredicateMissing(ref predicate) => write!(f, "predicate `@{}` is missing", predicate),
+            SqlBuilderError::SelectionMissing(ref selection) => {
+                write!(f, "selection `{}` is missing", selection)
+            }
+            SqlBuilderError::PredicateMissing(ref predicate) => {
+                write!(f, "predicate `@{}` is missing", predicate)
+            }
             SqlBuilderError::JoinMissing(ref join, ref table) => {
-                write!(f, "join `{}` is missing on mapper for table `{}`", join, table)
+                write!(
+                    f,
+                    "join `{}` is missing on mapper for table `{}`",
+                    join, table
+                )
             }
             SqlBuilderError::MergeMissing(ref merge) => write!(f, "merge `{}` is missing", merge),
             SqlBuilderError::RoleRequired(ref role, ref what) => {
                 write!(f, "role expression `{}` failed for {}", role, what)
             }
-            SqlBuilderError::FilterInvalid(ref filter) => write!(f, "filter `{}` is invalid ", filter),
+            SqlBuilderError::FilterInvalid(ref filter) => {
+                write!(f, "filter `{}` is invalid ", filter)
+            }
             SqlBuilderError::KeyMismatch(ref value, ref ty) => {
-                write!(f, "key with value `{}` does not match key of `{}` ", value, ty)
+                write!(
+                    f,
+                    "key with value `{}` does not match key of `{}` ",
+                    value, ty
+                )
             }
             SqlBuilderError::QueryParamMissing(ref param) => {
                 write!(f, "query parameter `{}` is missing ", param)

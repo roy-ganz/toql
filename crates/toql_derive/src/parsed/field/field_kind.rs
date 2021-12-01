@@ -27,7 +27,7 @@ pub(crate) enum FieldKind {
 
 impl FieldKind {
     #[cfg(test)]
-     pub(crate) fn as_regular(&self) -> Option<&RegularField> {
+    pub(crate) fn as_regular(&self) -> Option<&RegularField> {
         match self {
             FieldKind::Regular(s) => Some(s),
             _ => None,
@@ -50,7 +50,7 @@ impl FieldKind {
     #[cfg(test)]
     pub(crate) fn is_skipped(self) -> bool {
         matches!(self, FieldKind::Skipped)
-    } 
+    }
 }
 
 pub(crate) fn build(

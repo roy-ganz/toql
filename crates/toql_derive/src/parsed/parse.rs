@@ -64,12 +64,10 @@ pub(crate) fn parse_struct_field<'a>(
     struct_attr: &StructAttr,
     fields: impl Iterator<Item = &'a syn::Field>,
 ) -> syn::Result<Vec<Field>> {
-    
     let mut parsed_fields = Vec::new();
     for field in fields {
         if let Some(ident) = &field.ident {
             if let syn::Type::Path(syn::TypePath { path, .. }) = &field.ty {
-                             
                 let mut field_attr = FieldAttr::new(ident.clone(), path.clone());
 
                 // Parse fields attributes

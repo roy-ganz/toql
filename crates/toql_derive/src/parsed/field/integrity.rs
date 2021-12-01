@@ -89,8 +89,7 @@ pub(crate) fn check_join_attr_integrity(
     if field_attr.skip_wildcard.unwrap_or_default() && field_attr.preselect.unwrap_or_default() {
         return Err(DeriveError::Custom(
             field_attr.name.span(),
-            "`skip_wildcard` is not allowed together with `preselect`."
-                .to_string(),
+            "`skip_wildcard` is not allowed together with `preselect`.".to_string(),
         ));
     }
     if field_attr.skip_wildcard.unwrap_or_default() {
@@ -160,8 +159,7 @@ pub(crate) fn check_merge_attr_integrity(
     if field_attr.skip_wildcard.unwrap_or_default() {
         return Err(DeriveError::Custom(
             field_attr.name.span(),
-            "`skip_wildcard` is not allowed for merged fields."
-                .to_string(),
+            "`skip_wildcard` is not allowed for merged fields.".to_string(),
         ));
     }
 

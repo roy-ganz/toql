@@ -1,10 +1,10 @@
+use pretty_assertions::assert_eq;
 use std::collections::HashSet;
 use toql::{
     mock_db::MockDb,
-    prelude::{query, Cache, ContextBuilder, Join, SqlBuilderError, Toql, ToqlApi, ToqlError},
+    prelude::{query, Cache, ContextBuilder, SqlBuilderError, Toql, ToqlApi, ToqlError},
 };
 use tracing_test::traced_test;
-use pretty_assertions::assert_eq;
 
 #[derive(Debug, Default, Toql)]
 #[toql(roles(load = "level1_load", update = "level1_update"))]
