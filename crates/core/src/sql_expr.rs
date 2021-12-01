@@ -291,6 +291,24 @@ impl Default for SqlExpr {
     }
 }
 
+// Convenience trait that allow
+// sql_expr!("SELECT {}", "hkjh")
+impl From<&str> for SqlExpr {
+    fn from(s: &str) -> Self {
+        SqlExpr::literal(s.to_string())
+    }
+}
+impl From<String> for SqlExpr {
+    fn from(s: String) -> Self {
+        SqlExpr::literal(s)
+    }
+}
+impl From<&String> for SqlExpr {
+    fn from(s: &String) -> Self {
+        SqlExpr::literal(s)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::SqlExpr;
@@ -307,5 +325,14 @@ mod test {
         assert_eq!(format!("{}", SqlExpr::unresolved_arg()), "?");
         assert_eq!(format!("{}", SqlExpr::arg(SqlArg::from("arg"))), "'arg'");
         assert_eq!(format!("{}", SqlExpr::aliased_column("col")), "...col");
+        assert_eq!(format!("{}", <SqlExpr as From<&str>>::from("lit")), "lit");
+        assert_eq!(
+            format!("{}", <SqlExpr as From<String>>::from("lit".to_string())),
+            "lit"
+        );
+        assert_eq!(
+            format!("{}", <SqlExpr as From<&String>>::from(&"lit".to_string())),
+            "lit"
+        );
     }
 }

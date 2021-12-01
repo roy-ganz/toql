@@ -30,7 +30,7 @@ where
     {
         match self {
             Join::Key(k) => match descendents.next() {
-                Some(p) => Err(ToqlError::ValueMissing(p.as_str().to_string())),
+                Some(_) => Ok(()),
                 None => match action {
                     IdentityAction::Set(ids) => {
                         let n = <<T as Keyed>::Key as Key>::columns().len();

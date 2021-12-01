@@ -24,7 +24,7 @@ impl Select {
 /// The selections can either come from the query or the preselections in the mapping.
 /// The number of selections does not correspond with the number of selected columns or expressions, because
 /// each join gets an additional selection. For the number of columns take (BuildResult::column_counter)[crate::sql_builder::build_result::BuildResult::column_counter].
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SelectStream {
     stream: Vec<Select>,
 }
@@ -34,23 +34,9 @@ impl SelectStream {
     pub fn new() -> Self {
         Self { stream: Vec::new() }
     }
-    /// Alter select state at position in stream.
-    pub fn change(&mut self, pos: usize, select: Select) {
-        if let Some(p) = self.stream.get_mut(pos) {
-            *p = select;
-        }
-    }
     /// Add select state at the end of the stream.
     pub fn push(&mut self, selection: Select) {
         self.stream.push(selection);
-    }
-    /// Stream length.
-    pub fn len(&mut self) -> usize {
-        self.stream.len()
-    }
-    /// Return true, if stream is empty.
-    pub fn is_empty(&mut self) -> bool {
-        self.stream.is_empty()
     }
     /// Return iterator to the stream.
     pub fn iter(&self) -> std::slice::Iter<'_, Select> {
@@ -61,5 +47,15 @@ impl SelectStream {
 impl Default for SelectStream {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::SelectStream;
+
+    #[test]
+    fn default() {
+        assert_eq!(SelectStream::new(), SelectStream::default())
     }
 }

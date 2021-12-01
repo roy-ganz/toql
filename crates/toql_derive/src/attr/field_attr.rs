@@ -1,6 +1,6 @@
 use super::literals::{parse_lit_str, set_unique_bool, set_unique_path_lit, set_unique_str_lit};
 use crate::{
-    error::DeriveError,
+    error::{attribute_err, DeriveError},
     parsed::field::{
         join_field::ColumnPair,
         merge_field::{MergeColumn, MergeMatch},
@@ -9,8 +9,7 @@ use crate::{
     result::Result,
 };
 use std::collections::HashMap;
-use syn::spanned::Spanned;
-use syn::{Ident, Path};
+use syn::{spanned::Spanned, Ident, Path};
 
 #[derive(Debug)]
 pub(crate) struct FieldAttr {
@@ -72,26 +71,20 @@ impl FieldAttr {
         &mut self,
         nested_meta: impl Iterator<Item = syn::NestedMeta>,
     ) -> Result<()> {
-        fn available_err(ident: Ident) -> DeriveError {
-            let available = [
-                "preselect",
-                "skip_mut",
-                "skip_wildcard",
-                "sql",
-                "columns",
-                "handler",
-                "foreign_key",
-                "key",
-                "roles",
-                "aux_params",
-                "join",
-                "merge",
-            ]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-            DeriveError::UnknownAttribute(ident, available)
-        }
+        const KEYWORDS: &[&str] = &[
+            "preselect",
+            "skip_mut",
+            "skip_wildcard",
+            "sql",
+            "column",
+            "handler",
+            "foreign_key",
+            "key",
+            "roles",
+            "aux_params",
+            "join",
+            "merge",
+        ];
 
         for meta in nested_meta {
             // println!("META = {:?}", &meta);
@@ -126,12 +119,12 @@ impl FieldAttr {
                             // Shorthand for merge
                             self.merge = Some(MergeAttr::default());
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             } else if let syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
                 path,
@@ -151,12 +144,12 @@ impl FieldAttr {
                             // Applies on fields and predicates
                             set_unique_path_lit(&mut self.handler, ident, &lit)?;
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             } else if let syn::NestedMeta::Meta(syn::Meta::List(syn::MetaList {
                 path,
@@ -167,36 +160,34 @@ impl FieldAttr {
                 if let Some(ident) = path.get_ident() {
                     match ident.to_string().as_str() {
                         "roles" => {
-                            self.parse_roles_meta(ident, nested.into_iter())?;
+                            self.parse_roles_meta(nested.into_iter())?;
                         }
                         "aux_param" => {
                             // field or join
                             Self::parse_aux_params_meta(
-                                &mut self.aux_params,
                                 ident,
                                 nested.into_iter(),
+                                &mut self.aux_params,
                             )?;
                         }
                         "join" => {
                             Self::parse_join_meta(
-                                &mut self.join.get_or_insert(JoinAttr::default()),
-                                ident.clone(),
                                 nested.into_iter(),
+                                &mut self.join.get_or_insert(JoinAttr::default()),
                             )?;
                         }
                         "merge" => {
                             Self::parse_merge_meta(
-                                &mut self.merge.get_or_insert(MergeAttr::default()),
-                                ident.clone(),
                                 nested.into_iter(),
+                                &mut self.merge.get_or_insert(MergeAttr::default()),
                             )?;
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             }
         }
@@ -205,17 +196,11 @@ impl FieldAttr {
     }
 
     fn parse_join_meta(
-        join_attr: &mut JoinAttr,
-        ident: syn::Ident,
         nested_metas: impl Iterator<Item = syn::NestedMeta>,
+        join_attr: &mut JoinAttr,
     ) -> Result<()> {
-        fn available_err(ident: syn::Ident) -> DeriveError {
-            let available = ["on_sql", "columns", "partial_table"]
-                .iter()
-                .map(|s| s.to_string())
-                .collect();
-            DeriveError::UnknownAttribute(ident, available)
-        }
+        const KEYWORDS: &[&str] = &["on_sql", "columns", "partial_table"];
+
         for meta in nested_metas {
             if let syn::NestedMeta::Meta(syn::Meta::Path(path)) = meta {
                 if let Some(ident) = path.get_ident() {
@@ -223,12 +208,12 @@ impl FieldAttr {
                         "partial_table" => {
                             set_unique_bool(&mut join_attr.partial_table, ident, true)?;
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(available_err(ident.clone()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             } else if let syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
                 path,
@@ -241,12 +226,12 @@ impl FieldAttr {
                         "on_sql" => {
                             set_unique_str_lit(&mut join_attr.on_sql, ident, &lit)?;
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    DeriveError::AttributeNameExpected(path.span());
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             } else if let syn::NestedMeta::Meta(syn::Meta::List(syn::MetaList {
                 path,
@@ -258,17 +243,17 @@ impl FieldAttr {
                     match ident.to_string().as_str() {
                         "columns" => {
                             Self::parse_column_pair_meta(
-                                &mut join_attr.columns,
                                 ident,
                                 nested.into_iter(),
+                                &mut join_attr.columns,
                             )?;
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    DeriveError::AttributeNameExpected(path.span());
+                    DeriveError::AttributeExpected(path.span());
                 }
             }
         }
@@ -276,17 +261,10 @@ impl FieldAttr {
     }
 
     fn parse_merge_meta(
-        merge_attr: &mut MergeAttr,
-        _ident: syn::Ident,
         nested_metas: impl Iterator<Item = syn::NestedMeta>,
+        merge_attr: &mut MergeAttr,
     ) -> Result<()> {
-        fn available_err(ident: syn::Ident) -> DeriveError {
-            let available = ["on_sql", "join_sql", "columns"]
-                .iter()
-                .map(|s| s.to_string())
-                .collect();
-            DeriveError::UnknownAttribute(ident, available)
-        }
+        const KEYWORDS: &[&str] = &["on_sql", "columns", "join_sql"];
 
         for meta in nested_metas {
             if let syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
@@ -304,12 +282,12 @@ impl FieldAttr {
                             set_unique_str_lit(&mut merge_attr.join_sql, ident, &lit)?;
                         }
 
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    DeriveError::AttributeExpected(path.span());
                 }
             } else if let syn::NestedMeta::Meta(syn::Meta::List(syn::MetaList {
                 path,
@@ -321,17 +299,17 @@ impl FieldAttr {
                     match ident.to_string().as_str() {
                         "columns" => {
                             Self::parse_merge_match_meta(
-                                &mut merge_attr.columns,
                                 ident,
                                 nested.into_iter(),
+                                &mut merge_attr.columns,
                             )?;
                         }
-                        _ => {
-                            return Err(available_err(ident.clone()));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    DeriveError::AttributeExpected(path.span());
                 }
             }
         }
@@ -339,9 +317,9 @@ impl FieldAttr {
     }
     fn parse_roles_meta(
         &mut self,
-        _ident: &Ident,
         nested_metas: impl Iterator<Item = syn::NestedMeta>,
     ) -> Result<()> {
+        const KEYWORDS: &[&str] = &["load", "update"];
         for meta in nested_metas {
             if let syn::NestedMeta::Meta(syn::Meta::NameValue(syn::MetaNameValue {
                 path,
@@ -353,26 +331,24 @@ impl FieldAttr {
                     match ident.to_string().as_str() {
                         "load" => {
                             if self.roles.load.is_some() {
-                                return Err(DeriveError::DuplicateAttribute(ident.clone()));
+                                return Err(DeriveError::AttributeDuplicate(ident.span()));
                             } else {
                                 self.roles.load = Some(parse_lit_str(&lit)?);
                             }
                         }
                         "update" => {
                             if self.roles.update.is_some() {
-                                return Err(DeriveError::DuplicateAttribute(ident.clone()));
+                                return Err(DeriveError::AttributeDuplicate(ident.span()));
                             } else {
                                 self.roles.update = Some(parse_lit_str(&lit)?);
                             }
                         }
-                        _ => {
-                            let available =
-                                ["load", "update"].iter().map(|s| s.to_string()).collect();
-                            return Err(DeriveError::UnknownAttribute(ident.clone(), available));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             }
         }
@@ -380,10 +356,11 @@ impl FieldAttr {
     }
 
     fn parse_aux_params_meta(
-        aux_params: &mut HashMap<String, String>,
         ident: &Ident,
         nested_metas: impl Iterator<Item = syn::NestedMeta>,
+        aux_params: &mut HashMap<String, String>,
     ) -> Result<()> {
+        const KEYWORDS: &[&str] = &["name", "value"];
         let mut name = None;
         let mut value = None;
         for meta in nested_metas {
@@ -401,30 +378,30 @@ impl FieldAttr {
                         "value" => {
                             set_unique_str_lit(&mut value, ident, &lit)?;
                         }
-                        _ => {
-                            let available =
-                                ["name", "value"].iter().map(|s| s.to_string()).collect();
-                            return Err(DeriveError::UnknownAttribute(ident.clone(), available));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             }
         }
         let name =
-            name.ok_or_else(|| DeriveError::AttributeMissing(ident.clone(), "name".to_string()))?;
+            name.ok_or_else(|| DeriveError::AttributeRequired(ident.span(), "name".to_string()))?;
         let value = value
-            .ok_or_else(|| DeriveError::AttributeMissing(ident.clone(), "value".to_string()))?;
+            .ok_or_else(|| DeriveError::AttributeRequired(ident.span(), "value".to_string()))?;
         aux_params.insert(name, value);
 
         Ok(())
     }
     fn parse_column_pair_meta(
-        columns: &mut Vec<ColumnPair>,
         ident: &Ident,
         nested_metas: impl Iterator<Item = syn::NestedMeta>,
+        columns: &mut Vec<ColumnPair>,
     ) -> Result<()> {
+        const KEYWORDS: &[&str] = &["self", "other"];
+
         let mut this = None;
         let mut other = None;
         for meta in nested_metas {
@@ -442,31 +419,30 @@ impl FieldAttr {
                         "other" => {
                             set_unique_str_lit(&mut other, ident, &lit)?;
                         }
-                        _ => {
-                            let available =
-                                ["self", "other"].iter().map(|s| s.to_string()).collect();
-                            return Err(DeriveError::UnknownAttribute(ident.clone(), available));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             }
         }
         let this =
-            this.ok_or_else(|| DeriveError::AttributeMissing(ident.clone(), "self".to_string()))?;
+            this.ok_or_else(|| DeriveError::AttributeRequired(ident.span(), "self".to_string()))?;
         let other = other
-            .ok_or_else(|| DeriveError::AttributeMissing(ident.clone(), "other".to_string()))?;
+            .ok_or_else(|| DeriveError::AttributeRequired(ident.span(), "other".to_string()))?;
 
         columns.push(ColumnPair { this, other });
 
         Ok(())
     }
     fn parse_merge_match_meta(
-        columns: &mut Vec<MergeMatch>,
         ident: &Ident,
         nested_metas: impl Iterator<Item = syn::NestedMeta>,
+        columns: &mut Vec<MergeMatch>,
     ) -> Result<()> {
+        const KEYWORDS: &[&str] = &["self", "other"];
         let mut this = None;
         let mut other = None;
         for meta in nested_metas {
@@ -484,21 +460,19 @@ impl FieldAttr {
                         "other" => {
                             set_unique_str_lit(&mut other, ident, &lit)?;
                         }
-                        _ => {
-                            let available =
-                                ["self", "other"].iter().map(|s| s.to_string()).collect();
-                            return Err(DeriveError::UnknownAttribute(ident.clone(), available));
+                        keyword => {
+                            return Err(attribute_err(ident.span(), keyword, KEYWORDS));
                         }
                     }
                 } else {
-                    return Err(DeriveError::AttributeNameExpected(path.span()));
+                    return Err(DeriveError::AttributeExpected(path.span()));
                 }
             }
         }
         let this =
-            this.ok_or_else(|| DeriveError::AttributeMissing(ident.clone(), "self".to_string()))?;
+            this.ok_or_else(|| DeriveError::AttributeRequired(ident.span(), "self".to_string()))?;
         let other = other
-            .ok_or_else(|| DeriveError::AttributeMissing(ident.clone(), "other".to_string()))?;
+            .ok_or_else(|| DeriveError::AttributeRequired(ident.span(), "other".to_string()))?;
 
         columns.push(MergeMatch {
             this,
@@ -510,5 +484,320 @@ impl FieldAttr {
         });
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::FieldAttr;
+    use crate::error::DeriveError;
+    use proc_macro2::Span;
+    use std::iter::once;
+    use syn::{Ident, NestedMeta, Path};
+
+    fn create_field() -> FieldAttr {
+        FieldAttr::try_from(
+            Ident::new("field", Span::call_site()),
+            Ident::new("u64", Span::call_site()).into(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn parse_invalid_flags() {
+        let keywords = &[
+            "preselect",
+            "skip_mut",
+            "skip_wildcard",
+            "foreign_key",
+            "key",
+        ];
+
+        for keyword in keywords {
+            let mut field_attr = create_field();
+
+            // Unexpected argument type
+            let meta = syn::parse_str::<NestedMeta>(&format!("{}=true", keyword)).unwrap();
+            let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+            assert_eq!(
+                err.to_string(),
+                DeriveError::AttributeInvalid(Span::call_site()).to_string()
+            );
+
+            // Unexpected list
+            let mut field_attr = create_field();
+            let meta = syn::parse_str::<NestedMeta>(&format!("{}()", keyword)).unwrap();
+            let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+            assert_eq!(
+                err.to_string(),
+                DeriveError::AttributeInvalid(Span::call_site()).to_string()
+            );
+        }
+    }
+
+    #[test]
+    fn parse_preselect() {
+        // Succesful case
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>("preselect").unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.preselect.is_some());
+    }
+    #[test]
+    fn parse_skip_mut() {
+        // Succesful case
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>("skip_mut").unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.skip_mut.is_some());
+    }
+    #[test]
+    fn parse_skip_wildcard() {
+        // Succesful case
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>("skip_wildcard").unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.skip_wildcard.is_some());
+    }
+    #[test]
+    fn parse_foreign_key() {
+        // Succesful case
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>("foreign_key").unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.foreign_key.is_some());
+    }
+    #[test]
+    fn parse_key() {
+        // Succesful case
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>("key").unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.key.is_some());
+    }
+
+    #[test]
+    fn parse_sql() {
+        // Succesful case
+        let input = r#"sql="ABC""#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert_eq!(field_attr.sql, Some("ABC".to_string()));
+
+        // Bad argument type
+        let input = r#"sql=ABC"#;
+        assert!(syn::parse_str::<NestedMeta>(input).is_err());
+
+        // Missing argument
+        let input = r#"sql"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeInvalid(Span::call_site()).to_string()
+        );
+
+        // Unexpected list
+        let input = r#"sql()"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeInvalid(Span::call_site()).to_string()
+        );
+    }
+
+    #[test]
+    fn parse_invalid_arg_with_value() {
+        let keywords = ["sql", "column"];
+
+        for keyword in &keywords {
+            // Bad argument type
+            assert!(syn::parse_str::<NestedMeta>(&format!("{}=ABC", keyword)).is_err());
+
+            // Missing argument
+            let mut field_attr = create_field();
+            let meta = syn::parse_str::<NestedMeta>(keyword).unwrap();
+            let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+            assert_eq!(
+                err.to_string(),
+                DeriveError::AttributeInvalid(Span::call_site()).to_string()
+            );
+
+            // Unexpected list
+            let mut field_attr = create_field();
+            let meta = syn::parse_str::<NestedMeta>(&format!("{}()", keyword)).unwrap();
+            let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+            assert_eq!(
+                err.to_string(),
+                DeriveError::AttributeInvalid(Span::call_site()).to_string()
+            );
+        }
+    }
+
+    #[test]
+    fn parse_column() {
+        // Succesful case
+        let input = r#"column="ABC""#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert_eq!(field_attr.column, Some("ABC".to_string()));
+    }
+
+    #[test]
+    fn parse_handler() {
+        // Succesful case
+        let input = r#"handler="abc""#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert_eq!(
+            field_attr.handler,
+            Some(Path::from(Ident::new("abc", Span::call_site())))
+        );
+    }
+    #[test]
+    fn parse_aux_params() {
+        // Succesful case
+        let input = r#"aux_param(name="a", value="b")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        let a = field_attr.aux_params.get("a").unwrap();
+        assert_eq!(a, "b");
+
+        // Missing name
+        let input = r#"aux_param(value="b1")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeRequired(Span::call_site(), "name".to_string()).to_string()
+        );
+
+        // Missing value
+        let input = r#"aux_param(name="a1")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeRequired(Span::call_site(), "value".to_string()).to_string()
+        );
+    }
+    #[test]
+    fn parse_roles() {
+        // Succesful case
+        let input = r#"roles(load="l", update="u")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert_eq!(field_attr.roles.load, Some("l".to_string()));
+        assert_eq!(field_attr.roles.update, Some("u".to_string()));
+
+        // Tolerate missing value
+        let input = r#"roles()"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.roles.load.is_none());
+        assert!(field_attr.roles.update.is_none());
+
+        // Duplicate roles
+        let input = r#"roles(load="l", load="u")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeDuplicate(Span::call_site()).to_string()
+        );
+    }
+    #[test]
+    fn parse_join() {
+        // Succesful case
+        let input = r#"join"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.join.is_some());
+
+        // Succesful case
+        let input = r#"join(columns(self="s1", other="o2"), columns(self="a2", other="o2"), on_sql="pred1", partial_table)"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        let join = field_attr.join.unwrap();
+
+        assert_eq!(join.columns.len(), 2);
+        assert_eq!(join.on_sql, Some("pred1".to_string()));
+        assert_eq!(join.partial_table, Some(true));
+
+        // Duplicate on_sql
+        let input = r#"join(on_sql="pred1", on_sql="pred2")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeDuplicate(Span::call_site()).to_string()
+        );
+    }
+    #[test]
+    fn parse_merge() {
+        use crate::parsed::field::merge_field::MergeColumn;
+
+        // Succesful case
+        let input = r#"merge"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        assert!(field_attr.merge.is_some());
+
+        // Succesful case
+        let input = r#"merge(columns(self="s1", other="o2"), columns(self="a2", other="o2"), on_sql="pred1", join_sql="join1")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        let merge = field_attr.merge.unwrap();
+
+        assert_eq!(merge.columns.len(), 2);
+        assert_eq!(merge.on_sql, Some("pred1".to_string()));
+        assert_eq!(merge.join_sql, Some("join1".to_string()));
+
+        // Aliased merge column
+        let input = r#"merge(columns(self="s1", other="a.o2"))"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        field_attr.parse_field_meta(once(meta)).unwrap();
+        let merge = field_attr.merge.unwrap();
+        let column = merge.columns.get(0).unwrap();
+
+        assert_eq!(column.this, "s1".to_string());
+        assert_eq!(column.other, MergeColumn::Aliased("a.o2".to_string()));
+
+        // Duplicate on_sql
+        let input = r#"merge(on_sql="pred1", on_sql="pred2")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeDuplicate(Span::call_site()).to_string()
+        );
+        // Duplicate join_sql
+        let input = r#"merge(join_sql="pred1", join_sql="pred2")"#;
+        let mut field_attr = create_field();
+        let meta = syn::parse_str::<NestedMeta>(input).unwrap();
+        let err = field_attr.parse_field_meta(once(meta)).err().unwrap();
+        assert_eq!(
+            err.to_string(),
+            DeriveError::AttributeDuplicate(Span::call_site()).to_string()
+        );
     }
 }

@@ -53,7 +53,9 @@ where
 
     let mut refreshed_paths = HashSet::new();
 
-    for query_path in &field_order {
+    // Process from bottom to top
+    // This should not matter however
+    for query_path in field_order.iter().rev() {
         let fields = match fields_map.get(query_path) {
             Some(f) => f,
             None => continue,
@@ -77,8 +79,9 @@ where
 
     // Save insert positions for merged entities
     // After key refresh of parent invalid keys in merged entities will become valid.
+    // Process from top to bottom. This matters for nested merges where keys need to be updated.
     let mut query_path_should_insert_map: HashMap<&str, Vec<bool>> = HashMap::new();
-    for query_merge_path in &merge_order {
+    for query_merge_path in merge_order.iter() {
         let qp = FieldPath::from(query_merge_path);
 
         let cols = <T as TreePredicate>::columns(&mut qp.children())?;
@@ -359,6 +362,8 @@ where
             }
         }
     }
+    field_path_order.sort_by_cached_key(|k| k.chars().filter(|c| c == &'_').count());
+    merge_path_order.sort_by_cached_key(|k| k.chars().filter(|c| c == &'_').count());
 
     Ok((field_path_order, merge_path_order, fields))
 }

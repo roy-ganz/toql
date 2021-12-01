@@ -24,8 +24,13 @@ impl<'a> MockDb<'a> {
     pub fn clear_rows(&mut self) {
         self.backend.rows.clear();
     }
+    pub fn reset_id(&mut self) {
+        self.backend.current_id = self.backend.start_id;
+    }
     pub fn take_unsafe_sqls(&mut self) -> Vec<String> {
         self.clear_rows();
+        self.reset_id();
+
         self.backend
             .sqls
             .drain(..)
@@ -34,6 +39,7 @@ impl<'a> MockDb<'a> {
     }
     pub fn take_unsafe_sql(&mut self) -> String {
         self.clear_rows();
+        self.reset_id();
         let len = self.backend.sqls.len();
         if len == 0 {
             "<<No SQL statement>>".to_string()
@@ -64,6 +70,8 @@ impl<'a> MockDb<'a> {
                 context,
                 sqls: Vec::new(),
                 rows: HashMap::new(),
+                current_id: 100,
+                start_id: 100, // Start at index 100
             },
         }
     }

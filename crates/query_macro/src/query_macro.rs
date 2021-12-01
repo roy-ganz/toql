@@ -230,6 +230,8 @@ pub fn parse(
     struct_type: Type,
     query_args: &mut syn::punctuated::Iter<'_, syn::Expr>,
 ) -> std::result::Result<TokenStream, TokenStream> {
+    use crate::syn::spanned::Spanned;
+
     let mut output_stream: TokenStream = quote!(toql::query::Query::<#struct_type>::new());
 
     // eprintln!("About to parse {}", toql_string);
@@ -240,6 +242,12 @@ pub fn parse(
                 &struct_type,
                 query_args,
             )?);
+
+            if let Some(arg) = query_args.next() {
+                return Err(
+                    quote_spanned!(arg.span() => compile_error!("Missing placeholder for argument")),
+                );
+            }
         }
         Err(e) => {
             let msg = e.to_string();

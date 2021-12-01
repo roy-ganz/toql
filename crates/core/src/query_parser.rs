@@ -194,11 +194,11 @@ impl QueryParser {
                     token_info.name = span.as_str().to_string();
                 }
                 Rule::wildcard => {
-                    token_info.name = span
-                        .as_str()
-                        .trim_end_matches('*')
-                        .trim_end_matches('_')
-                        .to_string();
+                    token_info.name = span.as_str().trim_end_matches('*').to_string();
+                    // Wildcard path must end with underscore
+                    if !token_info.name.is_empty() && !token_info.name.ends_with('_') {
+                        token_info.name.push('_');
+                    }
                     token_info.token_type = TokenType::Wildcard;
                 }
                 Rule::filter0_name => {
@@ -297,14 +297,14 @@ mod test {
     #[test]
     fn parse_filters() {
         let q = QueryParser::parse::<User>(
-            "prop1, prop2 EQN, prop3 NE 1, prop4 NEN, \
+            "prop1, prop2 EQN, prop3 NE -1, prop4 NEN, \
             prop5 GT 1.5, prop6 GE 1.5, prop7 LT 1.5, prop8 LE 1.5",
         )
-        .expect("Invalid Syntax");
+        .unwrap();
 
         assert_eq!(
             q.to_string(),
-            "prop1,prop2 EQN,prop3 NE 1,prop4 NEN,\
+            "prop1,prop2 EQN,prop3 NE -1,prop4 NEN,\
             prop5 GT 1.5,prop6 GE 1.5,prop7 LT 1.5,prop8 LE 1.5"
         );
 
@@ -312,7 +312,7 @@ mod test {
             "prop9 LK 'ABC', prop10 BW 1 10, prop11 IN 1 2 3, prop12 OUT 1 2 3, \
             prop13 FN CUSTOM 'A' 'B' 2",
         )
-        .expect("Invalid Syntax");
+        .unwrap();
 
         assert_eq!(
             q.to_string(),
@@ -321,23 +321,31 @@ mod test {
         );
     }
     #[test]
-    fn parse_parentesis() {
-        let q = QueryParser::parse::<User>("(prop1 eq 1, prop2 eqn); prop3 ne 1")
-            .expect("Invalid Syntax");
+    fn parse_parens() {
+        let q = QueryParser::parse::<User>("(prop1 eq 1, prop2 eqn); prop3 ne 1").unwrap();
         assert_eq!(q.to_string(), "(prop1 EQ 1,prop2 EQN);prop3 NE 1");
 
-        let q = QueryParser::parse::<User>("(((prop1 eq 1, prop2 eqn)); prop3 ne 1)")
-            .expect("Invalid Syntax");
+        let q = QueryParser::parse::<User>("(((prop1 eq 1, prop2 eqn)); prop3 ne 1)").unwrap();
         assert_eq!(q.to_string(), "(((prop1 EQ 1,prop2 EQN));prop3 NE 1)");
     }
     #[test]
     fn parse_predicate() {
-        let q = QueryParser::parse::<User>("@level1_pred, @pred").expect("Invalid Syntax");
+        let q = QueryParser::parse::<User>("@level1_pred, @pred").unwrap();
         assert_eq!(q.to_string(), "@level1_pred,@pred");
     }
     #[test]
     fn parse_selection() {
-        let q = QueryParser::parse::<User>("$level1_mut, $mut").expect("Invalid Syntax");
+        let q = QueryParser::parse::<User>("$level1_mut, $mut").unwrap();
         assert_eq!(q.to_string(), "$level1_mut,$mut");
+    }
+    #[test]
+    fn parse_wildcard_and_field() {
+        let q = QueryParser::parse::<User>("level1_*,*, b").unwrap();
+        assert_eq!(q.to_string(), "level1_*,*,b");
+    }
+    #[test]
+    fn parse_order_and_hidden() {
+        let q = QueryParser::parse::<User>("+1level1_a, -2.b").unwrap();
+        assert_eq!(q.to_string(), "+1level1_a,-2.b");
     }
 }

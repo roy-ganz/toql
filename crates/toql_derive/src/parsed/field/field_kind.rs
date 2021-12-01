@@ -68,12 +68,7 @@ pub(crate) fn build(
             (1, false) => JoinSelection::SelectInner,
             (0, false) => JoinSelection::PreselectInner,
             (1, true) => JoinSelection::PreselectLeft,
-            _ => {
-                return Err(DeriveError::UnsupportedToken(
-                    field_attr.type_path.span(),
-                    "unsupported type for join".to_string(),
-                ))
-            }
+            _ => return Err(DeriveError::InvalidType(field_attr.type_path.span())),
         };
         check_join_attr_integrity(field_attr, &type_info)?;
 
@@ -115,12 +110,7 @@ pub(crate) fn build(
         let selection = match type_info.number_of_options {
             1 => MergeSelection::Select,
             0 => MergeSelection::Preselect,
-            _ => {
-                return Err(DeriveError::UnsupportedToken(
-                    field_attr.type_path.span(),
-                    "unsupported type for join".to_string(),
-                ))
-            }
+            _ => return Err(DeriveError::InvalidType(field_attr.type_path.span())),
         };
         check_merge_attr_integrity(field_attr, &merge_attr, &type_info.type_hint)?;
 
@@ -148,7 +138,7 @@ pub(crate) fn build(
             (1, false) => RegularSelection::Select,
             (0, false) => RegularSelection::Preselect,
             (1, true) => RegularSelection::PreselectNullable,
-            _ => return Err(DeriveError::InvalidFieldType(field_attr.type_path.span())),
+            _ => return Err(DeriveError::InvalidType(field_attr.type_path.span())),
         };
         check_regular_attr_integrity(field_attr, &type_info)?;
         if field_attr.key.unwrap_or_default() && type_info.number_of_options > 0 {

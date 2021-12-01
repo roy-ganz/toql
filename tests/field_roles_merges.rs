@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use pretty_assertions::assert_eq;
 use toql::mock_db::MockDb;
-use toql::prelude::{fields, query, Cache, ContextBuilder, Toql, ToqlApi};
+use toql::prelude::{
+    fields, query, Cache, ContextBuilder, SqlBuilderError, Toql, ToqlApi, ToqlError,
+};
 use toql::row;
 use tracing_test::traced_test;
 
@@ -91,7 +93,15 @@ async fn load() {
     // Load level 1 : No role
     // -> fail to load text
     let q = query!(Level1, "text");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load1_role".to_string(),
+            "field `text`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1: load1_role
     // -> only id, text is loaded
@@ -105,7 +115,15 @@ async fn load() {
     // Load level 2: missing role `load2_role`
     // -> fail to load join
     let q = query!(Level1, "level2_*");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load2_role".to_string(),
+            "path `level2`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1, 2: preselected merge `level3` is missing role
     // Succeeds, because no entities are loaded for level1
@@ -208,10 +226,19 @@ async fn update() {
 
     // Update level 1 text: No Role
     // - Fail to update level1.text because role is missing
-    assert!(toql
+    let err = toql
         .update_one(&mut l, fields!(Level1, "text"))
         .await
-        .is_err());
+        .err()
+        .unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "update1_text_role".to_string(),
+            "field `text` on mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Update level 1 text with role
     let mut toql = toql_for_roles(&["update1_text_role"], &cache);

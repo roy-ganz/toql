@@ -18,7 +18,7 @@ where
     }
     fn values<'a, 'b, I, J>(
         &self,
-        mut descendents: I,
+        descendents: I,
         roles: &HashSet<String>,
         should_insert: &mut J,
         values: &mut SqlExpr,
@@ -28,19 +28,7 @@ where
         J: Iterator<Item = &'b bool>,
     {
         match self {
-            Join::Key(k) => match descendents.next() {
-                Some(p) => Err(ToqlError::ValueMissing(p.as_str().to_string())),
-                None => {
-                    <<Self as Keyed>::Key as Key>::params(&k)
-                        .into_iter()
-                        .for_each(|a| {
-                            values.push_arg(a);
-                            values.push_literal(", ");
-                        });
-                    values.pop();
-                    Ok(())
-                }
-            },
+            Join::Key(_) => Ok(()),
             Join::Entity(e) => e.values(descendents, roles, should_insert, values),
         }
     }

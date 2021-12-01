@@ -240,3 +240,45 @@ fn parenthesis() {
         . or_parentized ( toql :: query :: Query :: < User > :: new ( ) \
             . and ( < User as toql :: query_fields :: QueryFields > :: fields ( ) . r#prop ( ) . eq ( \"ABC\" ) ) ) )");
 }
+
+#[test]
+fn too_many_arguments() {
+    use query_macro::QueryMacro;
+    let input = "User, \"*\", x"; // {} or is missing for argument x
+
+    let m = syn::parse_str(input);
+    assert_eq!(m.is_ok(), true);
+    let QueryMacro {
+        query,
+        struct_type,
+        arguments,
+    } = m.unwrap();
+    let f = query_macro::parse(&query, struct_type, &mut arguments.iter());
+    assert_eq!(f.is_err(), true);
+}
+
+#[test]
+fn missing_arguments() {
+    use query_macro::QueryMacro;
+    let input = "User, \"*,?\""; // missing argument for placeholder
+    let m = syn::parse_str(input);
+    assert_eq!(m.is_ok(), true);
+    let QueryMacro {
+        query,
+        struct_type,
+        arguments,
+    } = m.unwrap();
+    let f = query_macro::parse(&query, struct_type, &mut arguments.iter());
+    assert_eq!(f.is_err(), true);
+
+    let input = "User, \"*,{}\""; // missing argument for query
+    let m = syn::parse_str(input);
+    assert_eq!(m.is_ok(), true);
+    let QueryMacro {
+        query,
+        struct_type,
+        arguments,
+    } = m.unwrap();
+    let f = query_macro::parse(&query, struct_type, &mut arguments.iter());
+    assert_eq!(f.is_err(), true);
+}

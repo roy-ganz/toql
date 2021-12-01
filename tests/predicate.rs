@@ -1,6 +1,8 @@
 use toql::mock_db::MockDb;
 use toql::predicate_handler::PredicateHandler;
-use toql::prelude::{query, Cache, SqlArg, Toql, ToqlApi};
+use toql::prelude::{
+    query, Cache, ResolverError, SqlArg, SqlBuilderError, Toql, ToqlApi, ToqlError,
+};
 use toql::row;
 use tracing_test::traced_test;
 
@@ -51,7 +53,7 @@ impl PredicateHandler for MyPredicateHandler {
             0 => Ok(None),
             1 => Ok(Some(expression)),
             _ => Err(toql::prelude::SqlBuilderError::FilterInvalid(
-                "Expected 0 or 1".to_string(),
+                "expected 0 or 1".to_string(),
             )),
         }
     }
@@ -108,7 +110,13 @@ async fn load2() {
     // Filter level1 with missing aux param
     // -> Fails
     let q = query!(Level1, "@apPred");
-    assert!(toql.load_many(&q).await.is_err());
+    let err = toql.load_many(&q).await.err().unwrap();
+    println!("{:?}", err);
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlExprResolverError(ResolverError::AuxParamMissing("aux_param".to_string()))
+            .to_string()
+    );
 
     let q = q.aux_param("aux_param", 42);
     assert!(toql.load_many(q).await.is_ok());
@@ -126,11 +134,26 @@ async fn load3() {
 
     // Handler raises error
     let q = query!(Level1, "@hPred");
-    assert!(toql.load_many(&q).await.is_err());
+    let err = toql.load_many(&q).await.err().unwrap();
+
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::FilterInvalid(
+            "expected 0 or 1".to_string()
+        ))
+        .to_string()
+    );
 
     // Handler raises error
     let q = query!(Level1, "@hPred 2");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::FilterInvalid(
+            "expected 0 or 1".to_string()
+        ))
+        .to_string()
+    );
 
     // Handler filters predicate
     let q = query!(Level1, "@hPred 1");

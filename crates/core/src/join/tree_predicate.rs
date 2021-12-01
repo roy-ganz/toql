@@ -22,7 +22,7 @@ where
     {
         match self {
             Join::Key(k) => match descendents.next() {
-                Some(p) => Err(ToqlError::ValueMissing(p.as_str().to_string())),
+                Some(_) => Ok(()),
                 None => {
                     args.extend(<<Self as Keyed>::Key as Key>::params(&k));
                     Ok(())

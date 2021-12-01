@@ -38,7 +38,6 @@ extern crate lazy_static;
 pub mod alias_translator;
 pub mod backend;
 pub mod cache;
-pub mod cache_builder;
 pub mod field_handler;
 pub mod from_row;
 pub mod join;

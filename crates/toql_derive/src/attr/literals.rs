@@ -6,30 +6,30 @@ pub(crate) fn parse_lit_str(lit: &Lit) -> Result<String> {
     if let Lit::Str(lit_str) = lit {
         Ok(lit_str.value())
     } else {
-        Err(DeriveError::StringExpected(lit.clone()).into())
+        Err(DeriveError::AttributeValueInvalid(lit.span()))
     }
 }
 pub(crate) fn parse_lit_str_as_path(lit: &Lit) -> Result<Path> {
     if let Lit::Str(lit_str) = lit {
         lit_str
             .parse()
-            .map_err(|_| DeriveError::PathExpected(lit.clone()).into())
+            .map_err(|_| DeriveError::AttributeValueInvalid(lit.span()))
     } else {
-        Err(DeriveError::PathExpected(lit.clone()).into())
+        Err(DeriveError::AttributeValueInvalid(lit.span()))
     }
 }
 pub(crate) fn parse_lit_u64(lit: &Lit) -> Result<u64> {
     if let Lit::Int(lit_int) = lit {
         lit_int
             .base10_parse::<u64>()
-            .map_err(|_| DeriveError::IntegerExpected(lit.clone()).into())
+            .map_err(|_| DeriveError::AttributeValueInvalid(lit.span()))
     } else {
-        Err(DeriveError::IntegerExpected(lit.clone()).into())
+        Err(DeriveError::AttributeValueInvalid(lit.span()))
     }
 }
 pub(crate) fn set_unique_bool(value: &mut Option<bool>, ident: &Ident, b: bool) -> Result<()> {
     if value.is_some() {
-        return Err(DeriveError::DuplicateAttribute(ident.clone()).into());
+        return Err(DeriveError::AttributeDuplicate(ident.span()));
     } else {
         *value = Some(b);
     }
@@ -41,7 +41,7 @@ pub(crate) fn set_unique_str_lit(
     lit: &Lit,
 ) -> Result<()> {
     if value.is_some() {
-        return Err(DeriveError::DuplicateAttribute(ident.clone()).into());
+        return Err(DeriveError::AttributeDuplicate(ident.span()));
     } else {
         *value = Some(parse_lit_str(lit)?);
     }
@@ -53,7 +53,7 @@ pub(crate) fn set_unique_path_lit(
     lit: &Lit,
 ) -> Result<()> {
     if value.is_some() {
-        return Err(DeriveError::DuplicateAttribute(ident.clone()).into());
+        return Err(DeriveError::AttributeDuplicate(ident.span()));
     } else {
         *value = Some(parse_lit_str_as_path(lit)?);
     }
@@ -65,7 +65,7 @@ pub(crate) fn set_unique_usize_lit(
     lit: &Lit,
 ) -> Result<()> {
     if value.is_some() {
-        return Err(DeriveError::DuplicateAttribute(ident.clone()).into());
+        return Err(DeriveError::AttributeDuplicate(ident.span()));
     } else {
         *value = Some(parse_lit_u64(lit)? as usize);
     }
@@ -81,7 +81,7 @@ pub(crate) fn set_unique_rename_case_lit(
         match lit.parse() {
             Ok(c) => {
                 if value.is_some() {
-                    return Err(DeriveError::DuplicateAttribute(ident.clone()).into());
+                    return Err(DeriveError::AttributeDuplicate(ident.span()));
                 } else {
                     *value = Some(c);
                 }
@@ -89,11 +89,15 @@ pub(crate) fn set_unique_rename_case_lit(
             Err(_) => {
                 let expected: Vec<String> =
                     RenameCase::VARIANTS.iter().map(|s| s.to_string()).collect();
-                return Err(DeriveError::InvalidEnumValue(lit_str.clone(), expected).into());
+                return Err(DeriveError::AttributeValueUnknown(
+                    lit_str.span(),
+                    expected.join(", "),
+                )
+                .into());
             }
         }
     } else {
-        return Err(DeriveError::StringExpected(lit.clone()).into());
+        return Err(DeriveError::AttributeValueInvalid(lit.span()));
     }
     Ok(())
 }

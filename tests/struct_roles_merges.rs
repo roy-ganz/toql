@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use pretty_assertions::assert_eq;
 use toql::mock_db::MockDb;
-use toql::prelude::{fields, paths, query, Cache, ContextBuilder, Toql, ToqlApi};
+use toql::prelude::{
+    fields, paths, query, Cache, ContextBuilder, SqlBuilderError, Toql, ToqlApi, ToqlError,
+};
 use toql::row;
 use tracing_test::traced_test;
 
@@ -75,7 +77,15 @@ async fn load() {
     // Load level 1
     // fail to load fields
     let q = query!(Level1, "*");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load1_role".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1 with load1_role
     // succeed to load fields
@@ -90,7 +100,15 @@ async fn load() {
     let mut toql = toql_for_roles(&["load1_role"], &cache);
     toql.mock_rows("SELECT level1.id FROM Level1 level1", vec![row!(1u64)]);
     let q = query!(Level1, "level2_*");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load2_role".to_string(),
+            "path `level2`".to_string()
+        ))
+        .to_string()
+    );
 
     let mut toql = toql_for_roles(&["load1_role", "load2_role"], &cache);
     toql.mock_rows("SELECT level1.id FROM Level1 level1", vec![row!(1u64)]);
@@ -123,7 +141,19 @@ async fn update() {
 
     // Update level 1: No Role
     // Throws errror
-    assert!(toql.update_one(&mut l, fields!(Level1, "*")).await.is_err());
+    let err = toql
+        .update_one(&mut l, fields!(Level1, "*"))
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "upd1_role".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Update level 1 text with role
     let mut toql = toql_for_roles(&["upd1_role"], &cache);
@@ -154,7 +184,19 @@ async fn insert() {
 
     // Insert level 1: No Role
     // Throws errror
-    assert!(toql.insert_one(&mut l, paths!(Level1, "")).await.is_err());
+    let err = toql
+        .insert_one(&mut l, paths!(Level1, ""))
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "ins1_role".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Insert level 1 with role
     let mut toql = toql_for_roles(&["ins1_role"], &cache);
@@ -166,13 +208,22 @@ async fn insert() {
 
     // Insert level 2 with missing role for level1
     let mut toql = toql_for_roles(&["ins2_role"], &cache);
-    assert!(toql
+    let err = toql
         .insert_one(&mut l, paths!(Level1, "level2"))
         .await
-        .is_err());
+        .err()
+        .unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "ins1_role".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Insert level 2 with roles
-    // generated id (101) is updated on level1 and updated on Level2
+    // generated id (100) is updated on level1 and updated on Level2
     let mut toql = toql_for_roles(&["ins1_role", "ins2_role"], &cache);
     assert!(toql
         .insert_one(&mut l, paths!(Level1, "level2"))
@@ -183,7 +234,7 @@ async fn insert() {
         toql.take_unsafe_sqls(),
         [
             "INSERT INTO Level1 (text) VALUES (\'level1\')",
-            "INSERT INTO Level2 (level1_id, text) VALUES (101, \'level2\')"
+            "INSERT INTO Level2 (level1_id, text) VALUES (100, \'level2\')"
         ]
     );
 }
@@ -197,7 +248,15 @@ async fn delete() {
     // Delete Level1 without role
     // Fails
     let q = query!(Level1, "id eq 1");
-    assert!(toql.delete_many(q).await.is_err());
+    let err = toql.delete_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "del1_role".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Delete Level1 with role
     let mut toql = toql_for_roles(&["del1_role"], &cache);

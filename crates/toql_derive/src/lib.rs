@@ -45,7 +45,7 @@ fn test_predicate() {
     #[toql(auto_key, predicate(
         name = "search",
         sql = "MATCH (..id, ..currency_symbol) AGAINST (?  IN BOOLEAN MODE)",
-        on_aux_param= "hello", on_aux_param( name = "ajl", index = 3),
+        on_aux_param(name= "hello", index= 0), on_aux_param( name = "ajl", index = 3),
         handler="test::get_handler"
     ))]
     struct User {

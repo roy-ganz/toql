@@ -122,41 +122,20 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                                     )}
                    }
                );
-             //   let columns_map_code = &join_kind.columns_map_code;
+                let columns_map_code = &join_kind.columns_map_code;
                 let default_self_column_code = &join_kind.default_self_column_code;
 
                 // Add if columns should not be skipped
 
                 if !join_kind.partial_table {
-                    if join_kind.columns.is_empty() {
-                         insert_columns_code.push(
-                            quote!(
-                                for other_column in <<#field_base_type as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
-                                        #default_self_column_code;
-
-                                      //  let self_column = #columns_map_code;
-                                        e.push_literal(default_self_column_code);
-                                        e.push_literal(", ");
-                                }
-                            )
-                        );
-                    } else {
-                        for c in &join_kind.columns {
-                            let col_name= &c.this;
-                             insert_columns_code.push(
-                                quote!( e.push_literal(#col_name);
-                                e.push_literal(", ");)
-                             );
-                        }
-                    };
-                    /* insert_columns_code.push(quote!(
+                    insert_columns_code.push(quote!(
                         for other_column in <<#field_base_type as toql::keyed::Keyed>::Key as toql::key::Key>::columns() {
                                 #default_self_column_code;
                                 let self_column = #columns_map_code;
                                 e.push_literal(self_column);
                                 e.push_literal(", ");
                         }
-                    )); */
+                    ));
 
                     insert_values_code.push(
                         match join_kind.selection  {
@@ -269,8 +248,9 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
     let struct_name = parsed_struct.struct_name.to_string();
     let role_assert = if let Some(role_expr_string) = &parsed_struct.roles.insert {
         quote!(
-            if !toql::role_validator::RoleValidator::is_valid(roles, &&toql::role_expr_macro::role_expr!(#role_expr_string))  {
-                return Err( toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string(), #struct_name .to_string() ).into())
+            let role_expr = toql::role_expr_macro::role_expr!(#role_expr_string);
+            if !toql::role_validator::RoleValidator::is_valid(roles, &role_expr)  {
+                return Err( toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(role_expr.to_string(), format!("mapper `{}`", #struct_name) ).into())
             }
         )
     } else {

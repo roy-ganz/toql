@@ -20,6 +20,8 @@ pub(crate) struct MockDbBackend<'a> {
     pub(crate) context: Context,
     pub(crate) cache: &'a Cache,
     pub(crate) rows: HashMap<String, Vec<Row>>, // Maps select statements to multiple rows
+    pub(crate) current_id: u64,
+    pub(crate) start_id: u64,
 }
 
 // Implement template functions for updating entities
@@ -32,12 +34,14 @@ impl<'a> Backend<Row, ToqlError> for MockDbBackend<'a> {
     }
     async fn insert_sql(&mut self, sql: Sql) -> Result<Vec<SqlArg>> {
         log_mut_sql!(&sql);
-        let number_of_rows: u64 = *(&(sql.0.as_str()).matches(')').count()) as u64;
+        // Count number of closing parens to guess number of rows
+        let number_of_rows: u64 = sql.0.chars().filter(|c| c == &')').count() as u64 - 1;
 
         self.sqls.push(sql);
         let ids = (0..number_of_rows)
-            .map(|n| SqlArg::U64((n + 100).into()))
+            .map(|n| SqlArg::U64((n + self.current_id).into()))
             .collect::<Vec<_>>();
+        self.current_id += number_of_rows;
         Ok(ids)
     }
 

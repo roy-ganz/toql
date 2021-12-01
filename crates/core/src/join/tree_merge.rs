@@ -12,7 +12,7 @@ where
 {
     fn merge<'a, I>(
         &mut self,
-        mut descendents: I,
+        descendents: I,
         field: &str,
         rows: &[R],
         row_offset: usize,
@@ -23,10 +23,7 @@ where
         I: Iterator<Item = FieldPath<'a>> + Clone,
     {
         match self {
-            Join::Key(_) => Err(ToqlError::ValueMissing(
-                descendents.next().unwrap_or_default().to_string(),
-            )
-            .into()),
+            Join::Key(_) => Ok(()),
             Join::Entity(e) => e.merge(
                 descendents,
                 field,

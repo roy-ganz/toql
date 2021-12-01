@@ -295,10 +295,10 @@ async fn update() {
     assert_eq!(
         sqls,
         [
-            "UPDATE Level1 SET text = 'level1' WHERE id = 1",
-            "UPDATE Level2 SET text = 'level2' WHERE id = 2 AND level1_id = 1",
+            "UPDATE Level4 SET text = 'level4' WHERE id = 4 AND level3_id = 3",
             "UPDATE Level3 SET text = 'level3' WHERE id = 3 AND level2_id = 2",
-            "UPDATE Level4 SET text = 'level4' WHERE id = 4 AND level3_id = 3"
+            "UPDATE Level2 SET text = 'level2' WHERE id = 2 AND level1_id = 1",
+            "UPDATE Level1 SET text = 'level1' WHERE id = 1"
         ]
     );
 }
@@ -330,10 +330,11 @@ async fn update2() {
     // - Delete all items not belonging to level1
     // - Update keys of new items (invalid composite key)
     // - Insert new items
+    // - Execution order is different that field list : `level2` comes before `level2_level3`
     let mut l1 = populated_level2();
 
     assert!(toql
-        .update_one(&mut l1, fields!(Level1, "level2, level2_level3"))
+        .update_one(&mut l1, fields!(Level1, "level2_level3, level2"))
         .await
         .is_ok());
     assert_eq!(

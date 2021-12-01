@@ -101,17 +101,6 @@ impl<'a> FieldPath<'a> {
         self.0.as_ref()
     }
 
-    /// True, if path is relative to root path
-    pub fn relative(&self, root_path: &str) -> bool {
-        self.0.starts_with(root_path)
-    }
-
-    /// True, if path is immediate child of root path
-    pub fn child(&self, root_path: &str) -> bool {
-        let relative_path = root_path.trim_start_matches(self.0.as_ref());
-        !relative_path.contains('_')
-    }
-
     /// Iterator to yield all parents
     /// Field without path has no parents.
     /// user_address_country_id -> country, address, user
@@ -193,25 +182,6 @@ impl<'a> Iterator for StepUp<'a> {
             }
             None if self.pos != 0 => {
                 Some((FieldPath::from(&self.path[..self.pos]), self.pos = 0).0)
-            }
-            _ => None,
-        }
-    }
-}
-
-pub struct Ancestor<'a> {
-    pos: usize,
-    path: &'a str,
-}
-
-impl<'a> Iterator for Ancestor<'a> {
-    type Item = FieldPath<'a>;
-    fn next(&mut self) -> Option<FieldPath<'a>> {
-        let p = self.path[0..self.pos].rfind('_');
-        match p {
-            Some(i) => Some((FieldPath::from(&self.path[..self.pos]), self.pos = i).0),
-            None if self.pos != 0 => {
-                (Some(FieldPath::from(&self.path[..self.pos])), self.pos = 0).0
             }
             _ => None,
         }

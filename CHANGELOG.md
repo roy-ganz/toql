@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.3.1 -
 
 ### Fixed
+- Fix insert behaviour for joins that contain a key instead of a value.
+- Fix missing TreeInsert dispatching for joined keys.
 - Fix invalid code generation with optional merges.
 - Fix bug with hidden fields
 

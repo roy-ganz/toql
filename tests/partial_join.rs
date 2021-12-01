@@ -127,8 +127,8 @@ async fn insert() {
         sqls,
         [
             "INSERT INTO Level1 (text) VALUES ('level1')",
-            "INSERT INTO Level2 (id, text) VALUES (101, 'level2')",
-            "INSERT INTO Level3 (id, text, level4_id) VALUES (101, 'level3', 4)"
+            "INSERT INTO Level2 (id, text) VALUES (100, 'level2')",
+            "INSERT INTO Level3 (id, text, level4_id) VALUES (100, 'level3', 4)"
         ]
     );
 
@@ -142,10 +142,10 @@ async fn insert() {
     assert_eq!(
         sqls,
         [
-            "INSERT INTO Level1 (text) VALUES ('level1')",
-            "INSERT INTO Level4 (id, text) VALUES (4, 'level4')",
-            "INSERT INTO Level2 (id, text) VALUES (101, 'level2')",
-            "INSERT INTO Level3 (id, text, level4_id) VALUES (101, 'level3', 4)"
+            "INSERT INTO Level4 (id, text) VALUES (4, 'level4')", // Regular joins come first
+            "INSERT INTO Level1 (text) VALUES ('level1')", // Partial joins come last (top down)
+            "INSERT INTO Level2 (id, text) VALUES (100, 'level2')",
+            "INSERT INTO Level3 (id, text, level4_id) VALUES (100, 'level3', 4)",
         ]
     );
 }

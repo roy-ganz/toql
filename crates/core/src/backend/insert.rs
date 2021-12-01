@@ -58,22 +58,8 @@ where
         &mut partials,
     )?;
 
-    // Insert root
-    let home_path = FieldPath::default();
-    let sql = build_insert_sql(
-        backend,
-        entities,
-        &home_path,
-        &mut std::iter::repeat(&true),
-        "",
-        "",
-    )?;
-
-    insert_sql(backend, home_path, sql, entities).await?;
-
     // Insert joins from bottom to top
     for l in (0..joins.len()).rev() {
-        // TEST not rev
         for p in joins.get(l).unwrap() {
             let path = FieldPath::from(&p);
 
@@ -88,6 +74,18 @@ where
             insert_sql(backend, path, sql, entities).await?;
         }
     }
+
+    // Insert root
+    let home_path = FieldPath::default();
+    let sql = build_insert_sql(
+        backend,
+        entities,
+        &home_path,
+        &mut std::iter::repeat(&true),
+        "",
+        "",
+    )?;
+    insert_sql(backend, home_path, sql, entities).await?;
 
     // Insert merges
     for p in &merges {

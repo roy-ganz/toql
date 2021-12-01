@@ -30,6 +30,7 @@ pub struct Level3 {
     #[toql(join(on_sql = "..text = 'ABC'"), preselect)] // Custom ON statement
     level4: Option<Join<Level4>>, // Preselected left join
 }
+
 #[derive(Debug, Default, Toql)]
 pub struct Level4 {
     #[toql(key)]
@@ -224,12 +225,43 @@ async fn insert() {
     assert_eq!(
         sqls,
         [
-            "INSERT INTO Level1 (id, text, level2_id) VALUES (1, 'level1', 2)",
             "INSERT INTO Level5 (id, text) VALUES (5, 'level5')",
             "INSERT INTO Level4 (id, text, level5_id) VALUES (4, 'level4', 5)",
             "INSERT INTO Level3 (id, text, level4_id) VALUES (3, 'level3', 4)",
-            "INSERT INTO Level2 (id, text, level_3) VALUES (2, 'level2', 3)"
+            "INSERT INTO Level2 (id, text, level_3) VALUES (2, 'level2', 3)",
+            "INSERT INTO Level1 (id, text, level2_id) VALUES (1, 'level1', 2)"
         ]
+    );
+}
+
+#[tokio::test]
+#[traced_test("info")]
+async fn insert2() {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    let mut l = Level4 {
+        id: 4,
+        text: "level4".to_string(),
+        level5: Some(Some(Join::with_key(5))),
+    };
+
+    // insert level 4 with joined key
+    assert!(toql.insert_one(&mut l, paths!(top)).await.is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "INSERT INTO Level4 (id, text, level5_id) VALUES (4, 'level4', 5)"
+    );
+
+    // Insert level 4 + 5
+    // -> only Level 4 is inserted, because level 5 is empty
+    assert!(toql
+        .insert_one(&mut l, paths!(Level4, "level5"))
+        .await
+        .is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "INSERT INTO Level4 (id, text, level5_id) VALUES (4, 'level4', 5)"
     );
 }
 
@@ -289,11 +321,39 @@ async fn update() {
     assert_eq!(
         sqls,
         [
-            "UPDATE Level1 SET text = \'level1\', level2_id = 2 WHERE id = 1",
-            "UPDATE Level2 SET text = \'level2\', level_3 = 3 WHERE id = 2",
-            "UPDATE Level3 SET text = \'level3\', level4_id = 4 WHERE id = 3",
+            "UPDATE Level5 SET text = \'level5\' WHERE id = 5",
             "UPDATE Level4 SET text = \'level4\', level5_id = 5 WHERE id = 4",
-            "UPDATE Level5 SET text = \'level5\' WHERE id = 5"
+            "UPDATE Level3 SET text = \'level3\', level4_id = 4 WHERE id = 3",
+            "UPDATE Level2 SET text = \'level2\', level_3 = 3 WHERE id = 2",
+            "UPDATE Level1 SET text = \'level1\', level2_id = 2 WHERE id = 1"
         ]
     );
+}
+
+#[tokio::test]
+#[traced_test("info")]
+async fn update2() {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    let mut l = Level4 {
+        id: 4,
+        text: "level4".to_string(),
+        level5: Some(Some(Join::with_key(5))),
+    };
+
+    // Update level 4 with joined key
+    assert!(toql.update_one(&mut l, fields!(top)).await.is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "UPDATE Level4 SET text = \'level4\', level5_id = 5 WHERE id = 4"
+    );
+
+    // Update level 4 + 5
+    // -> No update statement because join does not contain value
+    assert!(toql
+        .update_one(&mut l, fields!(Level4, "level5_*"))
+        .await
+        .is_ok());
+    assert!(toql.sqls_empty());
 }

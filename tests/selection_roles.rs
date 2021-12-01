@@ -1,9 +1,10 @@
 use std::collections::HashSet;
 use toql::{
     mock_db::MockDb,
-    prelude::{query, Cache, ContextBuilder, Join, Toql, ToqlApi},
+    prelude::{query, Cache, ContextBuilder, Join, SqlBuilderError, Toql, ToqlApi, ToqlError},
 };
 use tracing_test::traced_test;
+use pretty_assertions::assert_eq;
 
 #[derive(Debug, Default, Toql)]
 #[toql(roles(load = "level1_load", update = "level1_update"))]
@@ -39,7 +40,15 @@ async fn mut_selection() {
     // Fails, because struct role is missing
     let mut toql = MockDb::from(&cache);
     let q = query!(Level1, "$mut");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "level1_load".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Select mut selection on level 2
     // Select keys from level 1 + 2 and mutable fields on level 2
@@ -78,7 +87,15 @@ async fn all_selection() {
 
     // Fail, because load role is missing
     let q = query!(Level1, "$all");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "level1_load".to_string(),
+            "mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Select all selection
     // Skip text3 because role is missing

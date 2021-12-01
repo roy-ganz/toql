@@ -9,7 +9,11 @@ use toql::{
 use tracing_test::traced_test;
 
 #[derive(Debug, Default, Toql)]
-#[toql(predicate(name = "pred", sql = "..text1 = ?", on_aux_param = "on_param"))] // Inject into join predicate
+#[toql(predicate(
+    name = "pred",
+    sql = "..text1 = ?",
+    on_aux_param(name = "on_param", index = 0)
+))] // Inject into join predicate
 pub struct Level1 {
     #[toql(key)]
     id: u64,
@@ -73,14 +77,20 @@ fn get_field_handler() -> MyFieldHandler {
 #[tokio::test]
 #[traced_test("info")]
 async fn query_aux_params() {
+    use toql::prelude::{ResolverError, ToqlError};
+
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
     // Load text1 without aux param
     // -> Fails
-
     let q = query!(Level1, "text1");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(&q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlExprResolverError(ResolverError::AuxParamMissing("text1".to_string()))
+            .to_string()
+    );
 
     // Load text1 with aux param
     let q = query!(Level1, "text1").aux_param("text1", "hello1");

@@ -66,19 +66,11 @@ pub(crate) fn get_type_info(type_path: &syn::Path) -> Result<TypeInfo> {
                     base_type,
                 });
             }
-            _ => {
-                return Err(DeriveError::UnsupportedToken(
-                    seg.span(),
-                    "unexpected parenthesis".to_string(),
-                ))
-            }
+            _ => return Err(DeriveError::InvalidType(seg.span())),
         }
     }
 
-    Err(DeriveError::UnsupportedToken(
-        type_path.span(),
-        "unexpected parenthesis".to_string(),
-    ))
+    Err(DeriveError::InvalidType(type_path.span()))
 }
 
 fn eval_arguments<'a>(
@@ -117,12 +109,7 @@ fn eval_arguments<'a>(
                             base_type,
                         )?;
                     }
-                    _ => {
-                        return Err(DeriveError::UnsupportedToken(
-                            seg.span(),
-                            "unexpected parenthesis".to_string(),
-                        ))
-                    }
+                    _ => return Err(DeriveError::InvalidType(seg.span())),
                 }
             }
         }

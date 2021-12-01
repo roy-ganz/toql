@@ -22,7 +22,7 @@ pub(crate) fn check_skipped_attr_integrity(field_attr: &FieldAttr) -> Result<()>
         || field_attr.foreign_key.unwrap_or_default()
         || field_attr.key.unwrap_or_default()
     {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "skipped fields do not allow other attributes.".to_string(),
         ));
@@ -36,37 +36,34 @@ pub(crate) fn check_regular_attr_integrity(
 ) -> Result<()> {
     // Expect join
     if type_info.type_hint == TypeHint::Join || type_info.type_hint == TypeHint::Merge {
-        return Err(DeriveError::InvalidFieldType(field_attr.type_path.span()));
+        return Err(DeriveError::InvalidType(field_attr.type_path.span()));
     }
 
     if field_attr.key.unwrap_or_default() && field_attr.skip_mut.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(field_attr.name.span(),
+        return Err(DeriveError::Custom(field_attr.name.span(),
                 "Key must not be `skip_mut`. Use `#[toql(auto_key)]` on your struct, if your key is an auto value."
                     .to_string(),
             ));
     }
     if field_attr.key.unwrap_or_default() && field_attr.sql.is_some() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "Key must not be an expression.".to_string(),
         ));
     }
     if field_attr.key.unwrap_or_default() && type_info.number_of_options > 0 {
-        return Err(DeriveError::InvalidAttribute(
-            field_attr.name.span(),
-            "Key must not be optional.".to_string(),
-        ));
+        return Err(DeriveError::OptionalKey(field_attr.name.span()));
     }
     if field_attr.key.unwrap_or_default()
         && (field_attr.roles.load.is_some() || field_attr.roles.update.is_some())
     {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "Key must not be role restricted.".to_string(),
         ));
     }
     if field_attr.column.is_some() && field_attr.sql.is_some() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`column` and `sql` are not allowed together.".to_string(),
         ));
@@ -81,29 +78,29 @@ pub(crate) fn check_join_attr_integrity(
 ) -> Result<()> {
     // Expect join
     if !(type_info.type_hint == TypeHint::Join || type_info.type_hint == TypeHint::Other) {
-        return Err(DeriveError::InvalidJoinType(field_attr.type_path.span()));
+        return Err(DeriveError::InvalidType(field_attr.type_path.span()));
     }
     if field_attr.sql.is_some() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`sql` not allowed for joins. Remove from `#[toql(..)]`.".to_string(),
         ));
     }
     if field_attr.skip_wildcard.unwrap_or_default() && field_attr.preselect.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`skip_wildcard` is not allowed together with `preselect`. Change `#[toql(..)]`."
                 .to_string(),
         ));
     }
     if field_attr.skip_wildcard.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`skip_wildcard` not allowed for joins. Remove from `#[toql(..)]`.".to_string(),
         ));
     }
     if field_attr.key.unwrap_or_default() && field_attr.skip_mut.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(field_attr.name.span(),
+        return Err(DeriveError::Custom(field_attr.name.span(),
                 "Key must not be `skip_mut`. Use `#[toql(auto_key)]` on your struct, if your key is an auto value."
                     .to_string(),
             ));
@@ -120,7 +117,7 @@ pub(crate) fn check_join_attr_integrity(
         .unwrap_or_default()
         && field_attr.roles.update.is_some()
     {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "partial joins can't be update restricted, because no foreign key exists. Remove update role restriction from `#[toql(..)]`.".to_string(),
         ));
@@ -134,34 +131,34 @@ pub(crate) fn check_merge_attr_integrity(
 ) -> Result<()> {
     // Expect merge
     if !(type_hint == &TypeHint::Merge || type_hint == &TypeHint::Other) {
-        return Err(DeriveError::InvalidMergeType(field_attr.type_path.span()));
+        return Err(DeriveError::InvalidType(field_attr.type_path.span()));
     }
     if field_attr.sql.is_some() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`sql` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string(),
         ));
     }
     if field_attr.preselect.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`preselect` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string(),
         ));
     }
     if field_attr.key.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`key` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string(),
         ));
     }
     if field_attr.handler.is_some() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`handler` not allowed for merged fields. Remove from `#[toql(..)]`.".to_string(),
         ));
     }
     if field_attr.skip_wildcard.unwrap_or_default() {
-        return Err(DeriveError::InvalidAttribute(
+        return Err(DeriveError::Custom(
             field_attr.name.span(),
             "`skip_wildcard` is not allowed for merged fields. Remove from `#[toql(..)]`."
                 .to_string(),
@@ -183,7 +180,7 @@ pub(crate) fn check_merge_attr_integrity(
             }
         });
         if found_self_alias {
-            return Err(DeriveError::InvalidAttribute(field_attr.name.span(),
+            return Err(DeriveError::Custom(field_attr.name.span(),
                                 "Alias `..` not allowed for merged fields. Use `...` to refer to table of merged entities. Change `#[toql(..)]`.".to_string(),
                             ));
         }

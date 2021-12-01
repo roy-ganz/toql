@@ -35,31 +35,31 @@ pub enum SqlBuilderError {
 impl fmt::Display for SqlBuilderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SqlBuilderError::FieldMissing(ref s) => write!(f, "field `{}` is missing", s),
-            SqlBuilderError::PathUnexpected(ref s) => {
-                write!(f, "a path `{}` was found but no path is allowed", s)
+            SqlBuilderError::FieldMissing(ref field) => write!(f, "field `{}` is missing", field),
+            SqlBuilderError::PathUnexpected(ref path) => {
+                write!(f, "a path `{}` was found but no path is allowed", path)
             }
-            SqlBuilderError::SelectionMissing(ref s) => write!(f, "selection `{}` is missing", s),
-            SqlBuilderError::PredicateMissing(ref s) => write!(f, "predicate `@{}` is missing", s),
-            SqlBuilderError::JoinMissing(ref s, ref t) => {
-                write!(f, "join `{}` is missing on mapper for table `{}`", s, t)
+            SqlBuilderError::SelectionMissing(ref selection) => write!(f, "selection `{}` is missing", selection),
+            SqlBuilderError::PredicateMissing(ref predicate) => write!(f, "predicate `@{}` is missing", predicate),
+            SqlBuilderError::JoinMissing(ref join, ref table) => {
+                write!(f, "join `{}` is missing on mapper for table `{}`", join, table)
             }
-            SqlBuilderError::MergeMissing(ref s) => write!(f, "merge `{}` is missing", s),
-            SqlBuilderError::RoleRequired(ref s, ref p) => {
-                write!(f, "role `{}` is required for `{}`", s, p)
+            SqlBuilderError::MergeMissing(ref merge) => write!(f, "merge `{}` is missing", merge),
+            SqlBuilderError::RoleRequired(ref role, ref what) => {
+                write!(f, "role expression `{}` failed for {}", role, what)
             }
-            SqlBuilderError::FilterInvalid(ref s) => write!(f, "filter `{}` is invalid ", s),
-            SqlBuilderError::KeyMismatch(ref t, ref s) => {
-                write!(f, "Key with value `{}` does not match key of `{}` ", t, s)
+            SqlBuilderError::FilterInvalid(ref filter) => write!(f, "filter `{}` is invalid ", filter),
+            SqlBuilderError::KeyMismatch(ref value, ref ty) => {
+                write!(f, "key with value `{}` does not match key of `{}` ", value, ty)
             }
-            SqlBuilderError::QueryParamMissing(ref s) => {
-                write!(f, "query parameter `{}` is missing ", s)
+            SqlBuilderError::QueryParamMissing(ref param) => {
+                write!(f, "query parameter `{}` is missing ", param)
             }
-            SqlBuilderError::QueryParamInvalid(ref s, ref d) => {
-                write!(f, "query parameter `{}` is invalid: {} ", s, d)
+            SqlBuilderError::QueryParamInvalid(ref param, ref reason) => {
+                write!(f, "query parameter `{}` is invalid: {} ", param, reason)
             }
-            SqlBuilderError::PredicateArgumentMissing(ref s) => {
-                write!(f, "predicate `{}` requires more arguments. ", s)
+            SqlBuilderError::PredicateArgumentMissing(ref predicate) => {
+                write!(f, "predicate `{}` requires more arguments. ", predicate)
             }
         }
     }

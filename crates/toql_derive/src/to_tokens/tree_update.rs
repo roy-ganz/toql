@@ -13,6 +13,8 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
     let mut update_set_code = Vec::new();
     let mut dispatch_update_code = Vec::new();
 
+    let struct_name = parsed_struct.struct_name.to_string();
+
     for field in &parsed_struct.fields {
         if field.skip_mut {
             continue;
@@ -26,7 +28,7 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                 quote!(
                    if !role_valid {
                          return Err(toql::error::ToqlError::SqlBuilderError(
-                             toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string(), #toql_query_name .to_string() )));
+                             toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(role_expr .to_string(), format!("field `{}` on mapper `{}`", #toql_query_name,  #struct_name ))));
                    }
                 )
             }
@@ -36,8 +38,8 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
         let role_valid_code = match &field.roles.update {
             Some(role_expr_string) => {
                 quote!(
-                   let role_valid = toql::role_validator::RoleValidator::is_valid(roles,
-                   &toql::role_expr_macro::role_expr!(#role_expr_string));
+                    let role_expr = toql::role_expr_macro::role_expr!(#role_expr_string);
+                   let role_valid = toql::role_validator::RoleValidator::is_valid(roles, &role_expr);
 
                 )
             }
@@ -101,10 +103,6 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                         ));
             }
             FieldKind::Join(join_attrs) => {
-                if join_attrs.key {
-                    continue;
-                }
-
                 let refer = if join_attrs.selection == JoinSelection::PreselectInner {
                     quote!(&)
                 } else {
@@ -112,38 +110,43 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                 };
 
                 dispatch_update_code.push(
-                        match join_attrs.selection {
-                            JoinSelection::PreselectInner => { //T
+                    match join_attrs.selection {
+                        JoinSelection::PreselectInner => { //T
+                            quote!(
+                                #toql_query_name => {
+                                        toql::tree::tree_update::TreeUpdate::update(#refer  self. #field_name_ident , descendents, fields, roles, exprs)?
+                                    }
+                            )
+
+                        },
+                        JoinSelection::PreselectLeft | JoinSelection::SelectInner => { // Option<T>
                                 quote!(
-                                    #toql_query_name => {
-                                            toql::tree::tree_update::TreeUpdate::update(#refer  self. #field_name_ident , descendents, fields, roles, exprs)?
+                                #toql_query_name => {
+                                        if let Some(f) = self. #field_name_ident .as_ref() {
+                                        toql::tree::tree_update::TreeUpdate::update( f , descendents, fields, roles, exprs)?
                                         }
-                                )
-
-                            },
-                            JoinSelection::PreselectLeft | JoinSelection::SelectInner => { // Option<T>
-                                 quote!(
-                                    #toql_query_name => {
-                                            if let Some(f) = self. #field_name_ident .as_ref() {
-                                            toql::tree::tree_update::TreeUpdate::update( f , descendents, fields, roles, exprs)?
-                                            }
-                                        }
-                                )
-                            }
-                            JoinSelection::SelectLeft => { // Option<Option<T>>
-                                 quote!(
-                                    #toql_query_name => {
-                                            if let Some(f1) = self. #field_name_ident .as_ref() {
-                                                if let Some(f2) = f1 {
-                                                     toql::tree::tree_update::TreeUpdate::update(f2 , descendents, fields, roles, exprs)?
-                                                    }
-                                            }
-                                        }
-                                )
-                            }
-
+                                    }
+                            )
                         }
-                    );
+                        JoinSelection::SelectLeft => { // Option<Option<T>>
+                                quote!(
+                                #toql_query_name => {
+                                        if let Some(f1) = self. #field_name_ident .as_ref() {
+                                            if let Some(f2) = f1 {
+                                                    toql::tree::tree_update::TreeUpdate::update(f2 , descendents, fields, roles, exprs)?
+                                                }
+                                        }
+                                    }
+                            )
+                        }
+
+                    }
+                );
+
+                // Key fields cannot be updated
+                if join_attrs.key {
+                    continue;
+                }
 
                 let mut inverse_column_translation: Vec<TokenStream> = Vec::new();
 
@@ -264,9 +267,10 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
             None => quote!(),
             Some(role_expr_string) => {
                 quote!(
-                    if !toql::role_validator::RoleValidator::is_valid(roles, &&toql::role_expr_macro::role_expr!(#role_expr_string))  {
+                    let role_expr = toql::role_expr_macro::role_expr!(#role_expr_string);
+                    if !toql::role_validator::RoleValidator::is_valid(roles, &role_expr)  {
                         return Err(toql::error::ToqlError::SqlBuilderError(
-                            toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(#role_expr_string .to_string(), #struct_name .to_string())));
+                            toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(role_expr.to_string(), format!("mapper `{}`", #struct_name))));
                     }
                 )
             }
@@ -281,7 +285,10 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                 exprs : &mut Vec<toql::sql_expr::SqlExpr>) -> std::result::Result<(), toql::error::ToqlError>
                 where I: Iterator<Item = toql::query::field_path::FieldPath<'a>> + Clone
                 {
-
+                            let key = <Self as toql::keyed::Keyed>::key(&self);
+                            if !toql::sql_arg::valid_key(&toql::key::Key::params(&key)) {
+                                return Ok(())
+                            }
                             match descendents.next() {
 
                                 Some(d) => {
@@ -294,11 +301,6 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                                     }
                                 },
                                 None => {
-                                    let key = <Self as toql::keyed::Keyed>::key(&self);
-                                    if !toql::sql_arg::valid_key(&toql::key::Key::params(&key)) {
-                                        return Ok(())
-                                    }
-
                                     let path_selected = fields.contains("*");
                                     #struct_upd_role_assert
 
@@ -316,7 +318,7 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                                         //let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_alias);
                                         // Qualifierd column name
                                         let resolver = toql::sql_expr::resolver::Resolver::new().with_self_alias(#sql_table_name);
-                                        expr.extend( resolver.alias_to_literals(&toql::key::Key::predicate_expr(&key, false))?);
+                                        expr.extend( resolver.alias_to_literals(&toql::key::Key::unaliased_predicate_expr(&key))?);
                                         exprs.push(expr);
                                     }
 

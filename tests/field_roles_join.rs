@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use pretty_assertions::assert_eq;
 use toql::mock_db::MockDb;
-use toql::prelude::{fields, query, Cache, ContextBuilder, Join, Toql, ToqlApi};
+use toql::prelude::{
+    fields, query, Cache, ContextBuilder, Join, SqlBuilderError, Toql, ToqlApi, ToqlError,
+};
 use tracing_test::traced_test;
 
 #[derive(Debug, Default, Toql)]
@@ -84,7 +86,15 @@ async fn load() {
     // Load level 1
     // fail to load text
     let q = query!(Level1, "text");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(&q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load1_role".to_string(),
+            "field `text`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1
     // load1_role: only id, text is loaded
@@ -98,20 +108,44 @@ async fn load() {
 
     // fail to load join
     let q = query!(Level1, "level2_*");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load2_role".to_string(),
+            "path `level2`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1, 2
     // Fails, because preselected join is missing role
     let mut toql = toql_for_roles(&["load2_role"], &cache);
     let q = query!(Level1, "level2_*");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load2_level3_role".to_string(),
+            "path `level2_level3`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1, 2 : level1_id, level2_id, level2_text,
     //  level2_level3_id (preselected), level2_level3_text (preselected)
     // failes, because role is missing for level3
     let mut toql = toql_for_roles(&["load2_role", "load2_level3_role"], &cache);
     let q = query!(Level1, "level2_*");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load3_text_role".to_string(),
+            "field `level2_level3_text`".to_string()
+        ))
+        .to_string()
+    );
 
     // Load level 1, 2 : level1_id, level2_id, level2_text,
     //  level2_level3_id (preselected) , level2_level3_text (preselected)
@@ -143,7 +177,15 @@ async fn load2() {
 
     let mut toql = MockDb::from(&cache);
     let q = query!(Level1, "+text");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(&q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "load1_role".to_string(),
+            "field `text`".to_string()
+        ))
+        .to_string()
+    );
 
     let mut toql = toql_for_roles(&["load1_role"], &cache);
     let q = query!(Level1, "+text");
@@ -208,10 +250,19 @@ async fn update() {
 
     // Update level 1 text: No Role
     // - Fail to update level1.text because role is missing
-    assert!(toql
+    let err = toql
         .update_one(&mut l, fields!(Level1, "text"))
         .await
-        .is_err());
+        .err()
+        .unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::RoleRequired(
+            "update1_text_role".to_string(),
+            "field `text` on mapper `Level1`".to_string()
+        ))
+        .to_string()
+    );
 
     // Update level 1 text with role
     let mut toql = toql_for_roles(&["update1_text_role"], &cache);

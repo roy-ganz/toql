@@ -1,5 +1,5 @@
 use toql::mock_db::MockDb;
-use toql::prelude::{query, Cache, Join, Toql, ToqlApi};
+use toql::prelude::{query, Cache, Join, SqlBuilderError, Toql, ToqlApi, ToqlError};
 use tracing_test::traced_test;
 
 #[derive(Debug, Default, Toql)]
@@ -51,7 +51,12 @@ async fn std_selection() {
     // Select std selection on level 2
     // Fails because $std is not defined.
     let q = query!(Level1, "$level2_std");
-    assert!(toql.load_many(q).await.is_err());
+    let err = toql.load_many(q).await.err().unwrap();
+    assert_eq!(
+        err.to_string(),
+        ToqlError::SqlBuilderError(SqlBuilderError::SelectionMissing("std".to_string()))
+            .to_string()
+    );
 }
 
 #[tokio::test]

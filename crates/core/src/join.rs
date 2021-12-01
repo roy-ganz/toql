@@ -40,6 +40,7 @@ pub mod tree_predicate;
 pub mod tree_update;
 
 use crate::error::ToqlError;
+use crate::keyed::Keyed;
 
 use std::boxed::Box;
 
@@ -50,7 +51,7 @@ use std::boxed::Box;
     derive(serde::Serialize, serde::Deserialize)
 )]
 #[cfg_attr(feature = "serde_feature", serde(untagged))]
-pub enum Join<E: crate::keyed::Keyed> {
+pub enum Join<E: Keyed> {
     /// Full entity is held. The entity is wrapped inside a `Box`. That does allow
     /// circular dependencies, in theory. In practice the compiler goes wild :(
     Entity(Box<E>),
@@ -60,7 +61,7 @@ pub enum Join<E: crate::keyed::Keyed> {
 
 impl<E> Default for Join<E>
 where
-    E: Default + crate::keyed::Keyed,
+    E: Default + Keyed,
 {
     fn default() -> Self {
         Join::Entity(Box::new(E::default()))
@@ -70,8 +71,8 @@ where
 // TODO decide on how to display keys to user
 /* impl<E> std::fmt::Display for Join<E>
 where
-    E:  std::fmt::Display + crate::keyed::Keyed,
-    <E as crate::keyed::Keyed>::Key:  std::fmt::Display,
+    E:  std::fmt::Display + Keyed,
+    <E as Keyed>::Key:  std::fmt::Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        match self {
@@ -83,8 +84,8 @@ where
 
 impl<E> Clone for Join<E>
 where
-    E: Clone + crate::keyed::Keyed,
-    <E as crate::keyed::Keyed>::Key: Clone,
+    E: Clone + Keyed,
+    <E as Keyed>::Key: Clone,
 {
     fn clone(&self) -> Self {
         match self {
@@ -96,7 +97,7 @@ where
 
 impl<T> Join<T>
 where
-    T: crate::keyed::Keyed,
+    T: Keyed,
 {
     /// Constructs join for entity
     pub fn with_entity(entity: T) -> Self {
@@ -104,7 +105,7 @@ where
     }
 
     /// Constructs join for key
-    pub fn with_key(key: impl Into<<T as crate::keyed::Keyed>::Key>) -> Self {
+    pub fn with_key(key: impl Into<<T as Keyed>::Key>) -> Self {
         Join::Key(key.into())
     }
 
@@ -140,9 +141,9 @@ where
     }
 
     /// Returns a key. If entity is held, key is taken from that entity
-    pub fn key(&self) -> <T as crate::keyed::Keyed>::Key
+    pub fn key(&self) -> <T as Keyed>::Key
     where
-        <T as crate::keyed::Keyed>::Key: std::clone::Clone,
+        <T as Keyed>::Key: std::clone::Clone,
     {
         match self {
             Join::Entity(e) => e.key(),
@@ -156,5 +157,99 @@ where
             Join::Key(_) => Err(ToqlError::NotFound),
             Join::Entity(e) => Ok(*e),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Join;
+    use crate::error::ToqlError;
+    use crate::key::Key;
+    use crate::keyed::Keyed;
+    use crate::sql_arg::SqlArg;
+
+    #[test]
+    fn build() {
+        #[derive(Debug, Clone, PartialEq)]
+        struct User {
+            id: u64,
+            name: String,
+        }
+        #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+        struct UserKey {
+            id: u64,
+        }
+
+        impl Keyed for User {
+            type Key = UserKey;
+
+            fn key(&self) -> Self::Key {
+                UserKey { id: self.id }
+            }
+        }
+        impl Key for UserKey {
+            type Entity = User;
+            fn columns() -> Vec<String> {
+                vec!["id".to_string()]
+            }
+            fn default_inverse_columns() -> Vec<String> {
+                vec!["user_id".to_string()]
+            }
+            fn params(&self) -> Vec<SqlArg> {
+                vec![SqlArg::U64(self.id)]
+            }
+        }
+
+        impl Default for User {
+            fn default() -> Self {
+                User {
+                    id: 0,
+                    name: "new_user".to_string(),
+                }
+            }
+        }
+
+        let mut u = User {
+            id: 1,
+            name: "user1".to_string(),
+        };
+
+        let mut j = Join::with_entity(u.clone());
+        assert_eq!(j.entity(), Some(&u));
+        assert_eq!(j.entity_mut(), Some(&mut u));
+        assert!(j
+            .entity_or_err(ToqlError::NoneError("expected entity".to_string()))
+            .is_ok());
+        assert!(j
+            .entity_mut_or_err(ToqlError::NoneError("expected entity".to_string()))
+            .is_ok());
+        assert_eq!(j.key(), u.key());
+        assert!(j.into_entity().is_ok());
+
+        let j: Join<User> = Join::with_key(u.key());
+        let mut j = j.clone();
+        assert_eq!(j.entity(), None);
+        assert_eq!(j.entity_mut(), None);
+        assert!(j
+            .entity_or_err(ToqlError::NoneError("expected entity".to_string()))
+            .is_err());
+        assert!(j
+            .entity_mut_or_err(ToqlError::NoneError("expected entity".to_string()))
+            .is_err());
+        assert_eq!(j.key(), u.key());
+        assert!(j.into_entity().is_err());
+
+        let j = Join::default();
+        let u = User::default();
+        assert_eq!(j.entity(), Some(&u));
+
+        // satisfy line coverage
+        let j = User::default().key();
+        assert_eq!(UserKey::columns(), vec!["id".to_string()]);
+        assert_eq!(
+            UserKey::default_inverse_columns(),
+            vec!["user_id".to_string()]
+        );
+        assert_eq!(j.params(), vec![SqlArg::U64(0)]);
     }
 }

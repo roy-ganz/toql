@@ -1,100 +1,82 @@
+use std::fmt;
+
 use proc_macro2::Span;
 #[derive(Debug)]
 pub enum DeriveError {
-    InvalidEnumValue(syn::LitStr, Vec<String>), // Invalid enum value at span, allowed values
-    UnknownAttribute(syn::Ident, Vec<String>),  // Unknown identifier at span, allowed values
-    AttributeMissing(syn::Ident, String),       // Expected identifier
-    DuplicateAttribute(syn::Ident),             // Duplicated identifier at span
-    StringExpected(syn::Lit),                   // Expected string at span
-    PathExpected(syn::Lit),                     // Expected string at span
-    IntegerExpected(syn::Lit),                  // Expected integer u64 at span
-    UnsupportedToken(Span, String),             // Expected integer u64 at span
-    InvalidAttribute(Span, String),             // Expected integer u64 at span
-    AttributeNameExpected(Span),                // Expected integer u64 at span
-    KeyMissing(Span),                           //
-    KeyTrailing(Span),                          // Expected integer u64 at span
-    OptionalKey(Span),                          // Expected integer u64 at span
-    InvalidFieldType(Span),                     // Expected integer u64 at span
-    InvalidJoinType(Span),                      // Expected integer u64 at span
-    InvalidMergeType(Span),                     // Expected integer u64 at span
+    // Expected an attribute
+    AttributeExpected(Span),
+    // Duplicated identifier at span
+    AttributeDuplicate(Span),
+    // Unknown attribute, contains allowed attribute names
+    AttributeUnknown(Span, String),
+    // Attribute is not used correctly
+    AttributeInvalid(Span),
+    // Required attribute is missing
+    AttributeRequired(Span, String),
+    // Attribute value is unknown, contains valid attribute values
+    AttributeValueUnknown(Span, String),
+    // Attribute value is invalid
+    AttributeValueInvalid(Span),
+    // Key is missing
+    KeyMissing(Span),
+    // Key is not at the beginning of a struct
+    KeyTrailing(Span),
+    // Key must not be optional
+    OptionalKey(Span),
+    // Type is not supported for field, join or merge
+    InvalidType(Span),
+    // Any other error happened, contains error message
+    Custom(Span, String),
 }
 
-// Into Syn Error
+pub(crate) fn attribute_err(span: Span, keyword: &str, keywords: &[&str]) -> DeriveError {
+    if keywords.contains(&keyword) {
+        DeriveError::AttributeInvalid(span)
+    } else {
+        DeriveError::AttributeUnknown(span, keywords.join(", "))
+    }
+}
+
 impl Into<syn::Error> for DeriveError {
     fn into(self) -> syn::Error {
+        syn::Error::new(self.span(), self.to_string())
+    }
+}
+
+impl DeriveError {
+    pub fn span(&self) -> Span {
         match self {
-            DeriveError::InvalidEnumValue(lit, expected) => {
-                let value = lit.value();
-                let propose = propose_str(&value, &expected);
-                syn::Error::new(
-                    lit.span(),
-                    match propose {
-                        Some(p) => format!("invalid `{}`. Did you mean `{}`?", value, expected[p]),
-                        None => format!(
-                            "invalid `{}`. Available values are: `{}`",
-                            value,
-                            expected.join("`,`")
-                        ),
-                    },
-                )
-            }
-            DeriveError::UnknownAttribute(ident, available) => syn::Error::new(
-                ident.span(),
-                format!(
-                    "unknown attribute `{}`. Available attributes are `{}`",
-                    ident,
-                    available.join("`,`")
-                ),
-            ),
-            DeriveError::AttributeMissing(ident, expected) => {
-                syn::Error::new(ident.span(), format!("expected identifier `{}`", expected))
-            }
-            DeriveError::DuplicateAttribute(ident) => {
-                syn::Error::new(ident.span(), format!("expected duplication of `{}`", ident))
-            }
-            DeriveError::StringExpected(lit) => {
-                syn::Error::new(lit.span(), "expected string".to_string())
-            }
-            DeriveError::PathExpected(lit) => {
-                syn::Error::new(lit.span(), "expected path".to_string())
-            }
-            DeriveError::IntegerExpected(lit) => {
-                syn::Error::new(lit.span(), "expected integer".to_string())
-            }
-            DeriveError::UnsupportedToken(span, msg) => {
-                syn::Error::new(span, format!("unsupported token: {}", msg))
-            }
-            DeriveError::InvalidAttribute(span, msg) => syn::Error::new(span, msg),
-            DeriveError::AttributeNameExpected(span) => {
-                syn::Error::new(span, "expected attribute name".to_string())
-            }
-            DeriveError::KeyMissing(span) => {
-                syn::Error::new(span, "key not found in struct. Add `#[toql(key)]` to fields that correspond to primary key.".to_string())
-            }
-            DeriveError::KeyTrailing(span) => {
-                syn::Error::new(span, "key must always be at the beginning of a struct. Move your field.".to_string())
-            }
-            DeriveError::OptionalKey(span) => {
-                syn::Error::new(span, "key must not be optioanl. Remove `Option<T>`.".to_string())
-            }
-            DeriveError::InvalidFieldType(span) => {
-                syn::Error::new(span, "Type is not supported for field.".to_string())
-            }
-            DeriveError::InvalidJoinType(span) => {
-                syn::Error::new(span, "Type is not supported join.".to_string())
-            }
-            DeriveError::InvalidMergeType(span) => {
-                syn::Error::new(span, "Type is not supported for merge.".to_string())
-            }
+            DeriveError::AttributeExpected(span)
+            | DeriveError::AttributeDuplicate(span)
+            | DeriveError::AttributeUnknown(span, _)
+            | DeriveError::AttributeInvalid(span)
+            | DeriveError::AttributeRequired(span, _)
+            | DeriveError::AttributeValueUnknown(span, _)
+            | DeriveError::AttributeValueInvalid(span)
+            | DeriveError::KeyMissing(span)
+            | DeriveError::KeyTrailing(span)
+            | DeriveError::OptionalKey(span)
+            | DeriveError::InvalidType(span)
+            | DeriveError::Custom(span, _) => span.to_owned(),
         }
     }
 }
 
-pub(crate) fn propose_str(input: &str, options: &[String]) -> Option<usize> {
-    for (n, o) in options.iter().enumerate() {
-        if levenshtein::levenshtein(input, o) < 4 {
-            return Some(n);
+impl fmt::Display for DeriveError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeriveError::AttributeExpected(_) => writeln!(f, "expected attribute"),
+            DeriveError::AttributeDuplicate(_) => write!(f, "attribute must be used only once"),
+            DeriveError::AttributeUnknown(_, available) => write!(f, "unknown attribute. Available attributes are `{}`", available),
+            DeriveError::AttributeInvalid(_) => write!(f, "attribute is known, but not used correctly"),
+            DeriveError::AttributeRequired(_, name) => write!(f, "attribute `{}` is required", name),
+            DeriveError::AttributeValueUnknown(_, expected) => write!(f, "invalid value. Available values are: `{}`",expected),
+            DeriveError::AttributeValueInvalid(_) => write!(f, "invalid value"),
+            DeriveError::KeyMissing(_) => write!(f, "key not found in struct. Add `#[toql(key)]` to fields that correspond to primary key."),
+            DeriveError::KeyTrailing(_) => write!(f, "key must always be at the beginning of a struct. Move your field."),
+            DeriveError::OptionalKey(_) => write!(f, "key must not be optional. Remove `Option<T>`."),
+            DeriveError::InvalidType(_) => write!(f, "Type is not supported."),
+            DeriveError::Custom(_, message) => write!(f, "{}", message),
         }
     }
-    None
 }

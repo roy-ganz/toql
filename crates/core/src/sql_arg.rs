@@ -112,6 +112,7 @@ pub fn valid_key(args: &[SqlArg]) -> bool {
 #[cfg(test)]
 mod test {
     use super::{valid_key, SqlArg};
+    use std::convert::TryInto;
 
     #[test]
     fn convert_u64() {
@@ -121,6 +122,17 @@ mod test {
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "1");
         assert_eq!(a.cmp_str("1"), false);
+        assert_eq!(1u64, a.try_into().unwrap());
+
+        let a = SqlArg::from(&1u64);
+        let x = a.get_u64().unwrap();
+        assert_eq!(x, 1u64);
+        assert_eq!(1u64, a.try_into().unwrap());
+
+        let a = SqlArg::from(&Some(1u64));
+        let x = a.get_u64().unwrap();
+        assert_eq!(x, 1u64);
+        assert_eq!(1u64, a.try_into().unwrap());
     }
     #[test]
     fn convert_i64() {
@@ -130,6 +142,17 @@ mod test {
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "1");
         assert_eq!(a.cmp_str("1"), false);
+        assert_eq!(1i64, a.try_into().unwrap());
+
+        let a = SqlArg::from(&1i64);
+        let x = a.get_i64().unwrap();
+        assert_eq!(x, 1i64);
+        assert_eq!(1i64, a.try_into().unwrap());
+
+        let a = SqlArg::from(&Some(1i64));
+        let x = a.get_i64().unwrap();
+        assert_eq!(x, 1i64);
+        assert_eq!(1i64, a.try_into().unwrap());
     }
     #[test]
     fn convert_f64() {
@@ -139,6 +162,17 @@ mod test {
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "1");
         assert_eq!(a.cmp_str("1"), false);
+        assert_eq!(1.0f64, a.try_into().unwrap());
+
+        let a = SqlArg::from(&1.0f64);
+        let x = a.get_f64().unwrap();
+        assert_eq!(x, 1f64);
+        assert_eq!(1.0f64, a.try_into().unwrap());
+
+        let a = SqlArg::from(&Some(1.0f64));
+        let x = a.get_f64().unwrap();
+        assert_eq!(x, 1f64);
+        assert_eq!(1.0f64, a.try_into().unwrap());
     }
     #[test]
     fn convert_str() {
@@ -148,6 +182,14 @@ mod test {
         assert_eq!(a.to_string(), "'1'");
         assert_eq!(a.to_sql_string(), "'1'");
         assert_eq!(a.cmp_str("1"), true);
+        let s: String = a.try_into().unwrap();
+        assert_eq!("1", &s);
+
+        let a = SqlArg::from(Some("1"));
+        let x = a.get_str().unwrap();
+        assert_eq!(x, "1");
+        let s: String = a.try_into().unwrap();
+        assert_eq!("1", &s);
     }
     #[test]
     fn convert_bool() {
@@ -157,14 +199,17 @@ mod test {
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "TRUE");
         assert_eq!(a.cmp_str("true"), false);
+        assert_eq!(true, a.try_into().unwrap());
 
         let a = SqlArg::from(&true);
         let x = a.get_bool().unwrap();
         assert_eq!(x, true);
+        assert_eq!(true, a.try_into().unwrap());
 
         let a = SqlArg::from(Some(true));
         let x = a.get_bool().unwrap();
         assert_eq!(x, true);
+        assert_eq!(true, a.try_into().unwrap());
     }
     #[test]
     fn convert_null() {
@@ -179,6 +224,10 @@ mod test {
         assert_eq!(a.get_f64().is_none(), true);
         assert_eq!(a.get_str().is_none(), true);
         assert_eq!(a.get_bool().is_none(), true);
+
+        let a: SqlArg = SqlArg::from(Option::<u64>::None);
+        assert_eq!(a.is_null(), true);
+        assert_eq!(Option::<u64>::None, a.try_into().unwrap());
     }
     #[test]
     fn valid_keys() {

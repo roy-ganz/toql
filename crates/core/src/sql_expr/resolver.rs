@@ -372,3 +372,70 @@ impl Default for Resolver<'_> {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::Resolver;
+    use crate::{
+        parameter_map::ParameterMap,
+        sql_arg::SqlArg,
+        sql_expr::{SqlExpr, SqlExprToken},
+    };
+    use std::collections::HashMap;
+    #[test]
+    fn create() {
+        let expr = SqlExpr::self_alias();
+        let resolver = Resolver::new().with_self_alias("a");
+        let expr = resolver.resolve(&expr).unwrap();
+        assert_eq!(expr.to_string(), "a");
+
+        let expr = SqlExpr::other_alias();
+        let resolver = Resolver::new().with_other_alias("a");
+        let expr = resolver.resolve(&expr).unwrap();
+        assert_eq!(expr.to_string(), "a");
+
+        let expr = SqlExpr::unresolved_arg();
+        let args = [SqlArg::Str("a".to_string())];
+        let resolver = Resolver::new().with_arguments(&args);
+        let expr = resolver.resolve(&expr).unwrap();
+        assert_eq!(expr.to_string(), "'a'");
+
+        let tokens = vec![SqlExprToken::AuxParam("param".to_string())];
+        let expr = SqlExpr::from(tokens);
+        let mut params = HashMap::new();
+        params.insert("param".to_string(), SqlArg::Str("a".to_string()));
+        let map = [&params];
+        let map = ParameterMap::new(&map);
+        let resolver = Resolver::new().with_aux_params(&map);
+        let expr = resolver.resolve(&expr).unwrap();
+        assert_eq!(expr.to_string(), "'a'");
+    }
+
+    #[test]
+    fn replace_aux_params() {
+        let tokens = vec![SqlExprToken::AuxParam("param".to_string())];
+        let expr = SqlExpr::from(tokens);
+
+        let mut replace = HashMap::new();
+        replace.insert("param".to_string(), SqlExpr::literal("a".to_string()));
+
+        let expr = Resolver::replace_aux_params(expr, &replace);
+        assert_eq!(expr.to_string(), "a");
+    }
+    #[test]
+    fn alias_to_literals() {
+        // resolve all aliases
+        let tokens = vec![
+            SqlExprToken::SelfAlias,
+            SqlExprToken::Literal(" ".to_string()),
+            SqlExprToken::OtherAlias,
+        ];
+        let expr = SqlExpr::from(tokens);
+
+        let resolver = Resolver::default()
+            .with_self_alias("a")
+            .with_other_alias("b");
+        let expr = resolver.alias_to_literals(&expr).unwrap();
+        assert_eq!(expr.to_string(), "a b");
+    }
+}

@@ -1,5 +1,4 @@
 pub use toql_core::cache::Cache;
-pub use toql_core::cache_builder::CacheBuilder;
 pub use toql_core::error::ToqlError;
 pub use toql_core::field_handler::{DefaultFieldHandler, FieldHandler};
 pub use toql_core::join_handler::JoinHandler;
