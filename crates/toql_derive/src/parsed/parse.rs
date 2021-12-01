@@ -29,8 +29,6 @@ impl Parse for ParsedStruct {
             }
         }
 
-        // println!("{:?}", &derive_input);
-
         // Parse struct fields with attributes
         if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &derive_input.data {
             parsed_fields = parse_struct_field(&struct_attr, fields.iter())
@@ -38,11 +36,9 @@ impl Parse for ParsedStruct {
         }
 
         check_key_integrity(&derive_input.ident, parsed_fields.iter())?;
-        // TODO may fn StructAttr into Toql
 
         // Table name is either user defined or calculated from struct name and renaming scheme
         let tables = struct_attr.tables.unwrap_or(RenameCase::CamelCase);
-        //let columns = columns.unwrap_or(RenameCase::CamelCase);
         let table = struct_attr
             .table
             .unwrap_or_else(|| tables.rename_str(&derive_input.ident.to_string()));
@@ -68,12 +64,14 @@ pub(crate) fn parse_struct_field<'a>(
     struct_attr: &StructAttr,
     fields: impl Iterator<Item = &'a syn::Field>,
 ) -> syn::Result<Vec<Field>> {
+    use syn::spanned::Spanned;
+
     let mut parsed_fields = Vec::new();
     for field in fields {
         if let Some(ident) = &field.ident {
             if let syn::Type::Path(syn::TypePath { path, .. }) = &field.ty {
-                let mut field_attr = FieldAttr::try_from(ident.clone(), path.clone())
-                    .map_err::<syn::Error, _>(|e| e.into())?;
+                             
+                let mut field_attr = FieldAttr::new(ident.clone(), path.clone());
 
                 // Parse fields attributes
                 for attr in &field.attrs {

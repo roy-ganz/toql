@@ -74,7 +74,7 @@ impl fmt::Display for DeriveError {
             DeriveError::AttributeValueInvalid(_) => write!(f, "invalid value"),
             DeriveError::KeyMissing(_) => write!(f, "key not found in struct. Add `#[toql(key)]` to fields that correspond to primary key."),
             DeriveError::KeyTrailing(_) => write!(f, "key must always be at the beginning of a struct. Move your field."),
-            DeriveError::OptionalKey(_) => write!(f, "key must not be optional. Remove `Option<T>`."),
+            DeriveError::OptionalKey(_) => write!(f, "key must not be optional."),
             DeriveError::InvalidType(_) => write!(f, "Type is not supported."),
             DeriveError::Custom(_, message) => write!(f, "{}", message),
         }

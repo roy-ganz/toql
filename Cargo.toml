@@ -1,6 +1,6 @@
 [package]
 name = "toql"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Toql - A friendly and productive ORM"
@@ -10,18 +10,18 @@ license = "MIT/Apache-2.0"
 repository = "https://github.com/roy-ganz/toql"
 
 [dependencies]
-toql_core = { path = "crates/core", version = "0.3" }
-toql_derive = { path = "crates/toql_derive", version = "0.3" }
-toql_enum_derive = { path = "crates/toql_enum_derive", version = "0.3" }
-toql_query_macro = { path = "crates/query_macro", version = "0.3" }
-toql_query_parser = { path = "crates/query_parser", version = "0.3" }
-toql_sql_expr_parser = { path = "crates/sql_expr_parser", version = "0.3" }
-toql_sql_expr_macro = { path = "crates/sql_expr_macro", version = "0.3" }
-toql_field_list_parser = { path = "crates/field_list_parser", version = "0.3" }
-toql_fields_macro = { path = "crates/fields_macro", version = "0.3" }
-toql_paths_macro = { path = "crates/paths_macro", version = "0.3" }
-toql_role_expr_macro = { path = "crates/role_expr_macro", version = "0.3" }
-toql_role_expr_parser = { path = "crates/role_expr_parser", version = "0.3" }
+toql_core = { path = "crates/core", version = "0.4.0" }
+toql_derive = { path = "crates/toql_derive", version = "0.4.0" }
+toql_enum_derive = { path = "crates/toql_enum_derive", version = "0.4.0" }
+toql_query_macro = { path = "crates/query_macro", version = "0.4.0" }
+toql_query_parser = { path = "crates/query_parser", version = "0.4.0" }
+toql_sql_expr_parser = { path = "crates/sql_expr_parser", version = "0.4.0" }
+toql_sql_expr_macro = { path = "crates/sql_expr_macro", version = "0.4.0" }
+toql_field_list_parser = { path = "crates/field_list_parser", version = "0.4.0" }
+toql_fields_macro = { path = "crates/fields_macro", version = "0.4.0" }
+toql_paths_macro = { path = "crates/paths_macro", version = "0.4.0" }
+toql_role_expr_macro = { path = "crates/role_expr_macro", version = "0.4.0" }
+toql_role_expr_parser = { path = "crates/role_expr_parser", version = "0.4.0" }
 
 log = "0.4"
 

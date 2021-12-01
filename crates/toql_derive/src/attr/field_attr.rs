@@ -31,10 +31,10 @@ pub(crate) struct FieldAttr {
 }
 
 impl FieldAttr {
-    pub(crate) fn try_from(name: syn::Ident, type_path: syn::Path) -> Result<Self> {
-        Ok(FieldAttr {
+    pub(crate) fn new(name: syn::Ident, type_path: syn::Path) -> Self {
+        FieldAttr {
             name,
-            type_path: type_path.clone(),
+            type_path,
             roles: FieldRoles::default(),
             preselect: None,
             skip_mut: None,
@@ -48,7 +48,7 @@ impl FieldAttr {
             aux_params: HashMap::new(),
             foreign_key: None,
             key: None,
-        })
+        }
     }
 }
 

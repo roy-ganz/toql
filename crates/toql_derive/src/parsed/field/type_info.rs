@@ -25,7 +25,6 @@ pub(crate) fn get_type_info(type_path: &syn::Path) -> Result<TypeInfo> {
     let last_segment = type_path.segments.last();
 
     if let Some(seg) = last_segment {
-        //println!("SEG = {:?}", &type_path);
         match seg.ident.to_string().as_str() {
             "Option" => number_of_options += 1,
             "Vec" => type_hint = TypeHint::Merge,
@@ -119,14 +118,59 @@ fn eval_arguments<'a>(
 
 #[cfg(test)]
 mod test {
-    use super::get_type_info;
+    use super::{get_type_info, TypeHint};
     use syn::parse_str;
-
+    
     #[test]
     fn fields() {
         let ti = get_type_info(&parse_str::<syn::Path>("Other").unwrap()).unwrap();
-
         assert_eq!(ti.number_of_options, 0);
         assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Other);
+
+        let ti = get_type_info(&parse_str::<syn::Path>("Option<Other>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 1);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Other);
+
+        let ti = get_type_info(&parse_str::<syn::Path>("Option<Option<Other>>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 2);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Other);
+    }
+     #[test]
+    fn joins() {
+        let ti = get_type_info(&parse_str::<syn::Path>("Join<Other>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 0);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Join);
+
+        let ti = get_type_info(&parse_str::<syn::Path>("Option<Join<Other>>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 1);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Join);
+
+        let ti = get_type_info(&parse_str::<syn::Path>("Option<Option<Join<Other>>>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 2);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Join);
+    }
+    #[test]
+    fn merges() {
+        let ti = get_type_info(&parse_str::<syn::Path>("Vec<Other>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 0);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Merge);
+
+        let ti = get_type_info(&parse_str::<syn::Path>("Option<Vec<Other>>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 1);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Merge);
+
+        // This is not supported, but can be parsed
+         let ti = get_type_info(&parse_str::<syn::Path>("Option<Option<Vec<Other>>>").unwrap()).unwrap();
+        assert_eq!(ti.number_of_options, 2);
+        assert_eq!(ti.base_name.to_string(), "Other");
+        assert_eq!(ti.type_hint, TypeHint::Merge);
     }
 }

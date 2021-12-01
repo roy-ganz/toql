@@ -23,17 +23,17 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
         let field_base_type_path = &field.field_base_type;
         let toql_query_name = &field.toql_query_name;
 
-        let role_assert = match &field.roles.update {
-            Some(role_expr_string) => {
+        let role_assert = if field.roles.update.is_some() {
                 quote!(
                    if !role_valid {
                          return Err(toql::error::ToqlError::SqlBuilderError(
                              toql::sql_builder::sql_builder_error::SqlBuilderError::RoleRequired(role_expr .to_string(), format!("field `{}` on mapper `{}`", #toql_query_name,  #struct_name ))));
                    }
                 )
-            }
-            None => quote!(),
-        };
+            } else {
+                quote!()
+            };
+        
 
         let role_valid_code = match &field.roles.update {
             Some(role_expr_string) => {

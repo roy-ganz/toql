@@ -1,6 +1,6 @@
 [package]
 name = "toql_field_list_parser"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Library with field list parser for Toql"

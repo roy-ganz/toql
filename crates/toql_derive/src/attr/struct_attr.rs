@@ -1,5 +1,5 @@
 use super::literals::{
-    parse_lit_str, set_unique_bool, set_unique_path_lit, set_unique_rename_case_lit,
+    set_unique_bool, set_unique_path_lit, set_unique_rename_case_lit,
     set_unique_str_lit, set_unique_usize_lit,
 };
 use crate::{
