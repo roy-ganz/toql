@@ -3,34 +3,6 @@ use toql::mock_db::MockDb;
 use toql::prelude::{fields, paths, query, Cache, Toql, ToqlApi};
 use toql::row;
 use tracing_test::traced_test;
-/*
-#[derive(Debug, Default)]
-pub struct Level1 {
-    id: u64,
-    text: String,
-    level2: Vec<Level2>, // Preselected merge
-}
-#[derive(Debug, Default)]
-pub struct Level2 {
-    id: u64,
-    level1_id: u64,
-    text: String,
-    level3: Option<Vec<Level3>>, // Selectable merge
-}
-
-#[derive(Debug, Default)]
-pub struct Level3 {
-    id: u64,
-    level2_id: u64,
-    text: String,
-    level4: Vec<Level4>, // Preselected merge join
-}
-#[derive(Debug, Default)]
-pub struct Level4 {
-    id: u64,
-    level3_id: u64,
-    text: String,
-}*/
 
 #[derive(Debug, Default, Toql)]
 pub struct Level1 {
@@ -38,7 +10,7 @@ pub struct Level1 {
     id: u64,
     text: String,
 
-    #[toql(merge())] // Default mapping Level1.id = Level2.level1_id
+    #[toql(merge)] // Default mapping Level1.id = Level2.level1_id
     level2: Vec<Level2>, // Preselected merge
 }
 #[derive(Debug, Default, Toql)]

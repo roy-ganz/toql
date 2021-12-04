@@ -14,6 +14,9 @@ pub struct Level1 {
     #[toql(key)]
     id: u64,
     text1: Option<String>,
+
+    #[toql(skip_wildcard)]
+    text2: Option<String>,
 }
 
 struct MyFieldHandler {
@@ -50,6 +53,27 @@ fn get_field_handler() -> MyFieldHandler {
     }
 }
 
+
+#[tokio::test]
+#[traced_test("info")]
+async fn skip_wildcard() {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    // Load text1 
+    let q = query!(Level1, "*");
+    assert!(toql.load_many(q).await.is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "SELECT level1.id, level1.text1 FROM Level1 level1"
+    );
+    let q = query!(Level1, "text2");
+    assert!(toql.load_many(q).await.is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "SELECT level1.id, level1.text2 FROM Level1 level1"
+    );
+}
 #[tokio::test]
 #[traced_test("info")]
 async fn filter() {

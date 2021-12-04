@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// Error that may happen when a database row is deseriazed
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DeserializeError {
     /// A selection is expected, but the [SelectStream](crate::sql_builder::select_stream::SelectStream) is `None`.
     SelectionExpected(String),

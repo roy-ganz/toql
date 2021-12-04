@@ -116,7 +116,7 @@ pub(crate) fn build(
             0 => MergeSelection::Preselect,
             _ => return Err(DeriveError::InvalidType(field_attr.type_path.span())),
         };
-        check_merge_attr_integrity(field_attr, &merge_attr, &type_info.type_hint)?;
+        check_merge_attr_integrity(field_attr, &merge_attr, &type_info)?;
 
         let sql_join_table_name = struct_attr
             .tables

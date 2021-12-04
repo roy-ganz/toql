@@ -36,7 +36,7 @@ pub(crate) fn check_regular_attr_integrity(
 ) -> Result<()> {
     // Expect join
     if type_info.type_hint == TypeHint::Join || type_info.type_hint == TypeHint::Merge {
-        return Err(DeriveError::InvalidType(field_attr.type_path.span()));
+        return Err(DeriveError::InvalidType(type_info.type_hint_span.clone()));
     }
 
     if field_attr.key.unwrap_or_default() && field_attr.skip_mut.unwrap_or_default() {
@@ -78,7 +78,7 @@ pub(crate) fn check_join_attr_integrity(
 ) -> Result<()> {
     // Expect join
     if !(type_info.type_hint == TypeHint::Join || type_info.type_hint == TypeHint::Other) {
-        return Err(DeriveError::InvalidType(field_attr.type_path.span()));
+        return Err(DeriveError::InvalidType(type_info.type_hint_span.clone()));
     }
     if field_attr.sql.is_some() {
         return Err(DeriveError::Custom(
@@ -126,11 +126,11 @@ pub(crate) fn check_join_attr_integrity(
 pub(crate) fn check_merge_attr_integrity(
     field_attr: &FieldAttr,
     merge_attr: &MergeAttr,
-    type_hint: &TypeHint,
+    type_info: &TypeInfo,
 ) -> Result<()> {
     // Expect merge
-    if !(type_hint == &TypeHint::Merge || type_hint == &TypeHint::Other) {
-        return Err(DeriveError::InvalidType(field_attr.type_path.span()));
+    if !(&type_info.type_hint == &TypeHint::Merge || &type_info.type_hint == &TypeHint::Other) {
+        return Err(DeriveError::InvalidType(type_info.type_hint_span.clone()));
     }
     if field_attr.sql.is_some() {
         return Err(DeriveError::Custom(

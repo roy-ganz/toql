@@ -40,8 +40,8 @@ pub enum DeserializeType {
     Merge(String),
 }
 
-#[derive(Debug)]
 /// Represents all errors from the SQL Builder
+#[derive(Debug, PartialEq)]
 pub enum TableMapperError {
     /// The requested canonical alias is not used. Contains the alias name.
     CanonicalAliasMissing(String),

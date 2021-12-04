@@ -22,7 +22,7 @@ macro_rules! ok_or_fail {
 }
 
 /// Represents all errors
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ToqlError {
     /// No single record found for the Toql query.
     NotFound,

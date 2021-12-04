@@ -165,8 +165,8 @@ impl QueryParser {
     /// Method to parse a string
     /// This fails if the syntax is wrong. The original PEST error is wrapped with the ToqlError and
     /// can be used to examine to problem in detail.
-    pub fn parse<M>(toql_string: &str) -> Result<Query<M>, ToqlError> {
-        let pairs = PestQueryParser::parse(Rule::query, toql_string)?;
+    pub fn parse<M>(toql_query: &str) -> Result<Query<M>, ToqlError> {
+        let pairs = PestQueryParser::parse(Rule::query, toql_query)?;
 
         let mut query = Query::new();
 

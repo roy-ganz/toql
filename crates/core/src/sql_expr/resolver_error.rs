@@ -2,7 +2,7 @@
 use std::fmt;
 
 /// Represents all errors from the Resolver
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ResolverError {
     /// Aux param can't be resolved, because it's missing.
     AuxParamMissing(String),

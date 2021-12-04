@@ -1,6 +1,7 @@
 use crate::error::DeriveError;
 use crate::result::Result;
 use syn::{spanned::Spanned, Ident, Path};
+use proc_macro2::Span;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum TypeHint {
@@ -11,6 +12,7 @@ pub(crate) enum TypeHint {
 pub(crate) struct TypeInfo {
     pub number_of_options: u8,
     pub type_hint: TypeHint,
+    pub type_hint_span: Span,
     pub base_name: syn::Ident, // Other
     pub base_type: syn::Path,  // other::Other
 }
@@ -18,6 +20,7 @@ pub(crate) struct TypeInfo {
 pub(crate) fn get_type_info(type_path: &syn::Path) -> Result<TypeInfo> {
     let mut number_of_options = 0;
     let mut type_hint = TypeHint::Other;
+    let mut type_hint_span = type_path.span();
 
     // Only look at last segment
     // my_crate::my_mod::my_type <- my_type is last segment
@@ -43,6 +46,7 @@ pub(crate) fn get_type_info(type_path: &syn::Path) -> Result<TypeInfo> {
                 return Ok(TypeInfo {
                     number_of_options,
                     type_hint,
+                    type_hint_span: seg.ident.span(),
                     base_name: seg.ident.clone(),
                     base_type: type_path.clone(),
                 })
@@ -55,12 +59,14 @@ pub(crate) fn get_type_info(type_path: &syn::Path) -> Result<TypeInfo> {
                     args.into_iter(),
                     &mut number_of_options,
                     &mut type_hint,
+                    &mut type_hint_span,
                     &mut base_name,
                     &mut base_type,
                 )?;
                 return Ok(TypeInfo {
                     number_of_options,
                     type_hint,
+                    type_hint_span,
                     base_name,
                     base_type,
                 });
@@ -76,6 +82,7 @@ fn eval_arguments<'a>(
     args: impl Iterator<Item = &'a syn::GenericArgument>,
     number_of_options: &mut u8,
     type_hint: &mut TypeHint,
+    type_hint_span: &mut Span,
     base_name: &mut Ident,
     base_type: &mut Path,
 ) -> Result<()> {
@@ -86,10 +93,15 @@ fn eval_arguments<'a>(
             // println!("BASE_TYPE = {:?}", base_type);
 
             if let Some(seg) = path.segments.last() {
+                
                 match seg.ident.to_string().as_str() {
                     "Option" => *number_of_options += 1,
-                    "Vec" => *type_hint = TypeHint::Merge,
-                    "Join" => *type_hint = TypeHint::Join,
+                    "Vec" => {
+                        *type_hint_span = seg.span();
+                        *type_hint = TypeHint::Merge},
+                    "Join" => {
+                        *type_hint_span = seg.span();
+                        *type_hint = TypeHint::Join},
                     _ => {}
                 }
                 match &seg.arguments {
@@ -104,6 +116,7 @@ fn eval_arguments<'a>(
                             args.into_iter(),
                             number_of_options,
                             type_hint,
+                            type_hint_span,
                             base_name,
                             base_type,
                         )?;

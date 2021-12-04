@@ -1,8 +1,8 @@
 //! Errors from [SqlBuilder](crate::sql_builder::SqlBuilder)
 use std::fmt;
 
-#[derive(Debug)]
 /// Represents all errors from the SQL Builder
+#[derive(Debug, PartialEq)]
 pub enum SqlBuilderError {
     /// The field is not mapped to a column or SQL expression. Contains the field name.
     FieldMissing(String),
