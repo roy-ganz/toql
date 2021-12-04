@@ -5,20 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.4 - 2021-12-01
+## 0.4 - 2021-12-04
 
 ### Fixed
 - Fix insert behaviour for joins that contain a key instead of a value.
 - Fix missing TreeInsert dispatching for joined keys.
 - Fix invalid code generation with optional merges.
-- Fix bug with hidden fields
+- Fix bug with hidden fields.
 - Fix insert execution order: top entities come after joins.
+- Fixed doc tests.
 
 ### Added
 - MockDb, a mocking database backend.
 - Unit tests.
 - Integration tests.
-- Fixed doc tests.
 
 Tarpaulin reported test coverage is 87%.
 
