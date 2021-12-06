@@ -49,7 +49,7 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                 }
             }
             x => {
-                let toql_field = &field.field_name.to_string();
+                let toql_field = &field.toql_query_name;
                 if let FieldKind::Join(join_attrs) = x {
                     if join_attrs.key {
                         key_composite_predicates.push(quote!(

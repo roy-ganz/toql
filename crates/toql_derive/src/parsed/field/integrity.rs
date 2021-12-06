@@ -5,7 +5,6 @@ use crate::{
 };
 
 use super::type_info::{TypeHint, TypeInfo};
-use syn::spanned::Spanned;
 
 pub(crate) fn check_skipped_attr_integrity(field_attr: &FieldAttr) -> Result<()> {
     if field_attr.skip_mut.unwrap_or_default()

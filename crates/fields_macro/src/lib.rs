@@ -86,6 +86,7 @@ fn valid_fieldlist() {
         assert_eq!(f.is_ok(), true);
     }
 }
+
 #[test]
 fn valid_top() {
     use fields_macro::FieldsMacro;
