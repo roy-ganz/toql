@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.4.1 - Unreleased
 
 ### Fixed
-- Fix wrong QueryField method for snake cased joins / merges.
+- Fix wrong QueryField naming for joins / merges.
 
 ## 0.4 - 2021-12-04
 
