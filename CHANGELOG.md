@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Fix wrong QueryField naming for joins / merges.
 
+### Changed
+- Improve string representation of SqlArg.
+
 ## 0.4 - 2021-12-04
 
 ### Fixed
