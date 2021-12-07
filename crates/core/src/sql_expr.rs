@@ -275,7 +275,7 @@ impl fmt::Display for SqlExprToken {
             SqlExprToken::AuxParam(name) => write!(f, "<{}>", name),
             SqlExprToken::UnresolvedArg => write!(f, "?"),
             SqlExprToken::Literal(l) => write!(f, "{}", l),
-            SqlExprToken::Arg(a) => write!(f, "{}", a.to_string()),
+            SqlExprToken::Arg(a) => write!(f, "{}", a.to_sql_string()),
             SqlExprToken::Alias(a) => write!(f, "{}", a),
             SqlExprToken::Predicate {
                 columns: _,

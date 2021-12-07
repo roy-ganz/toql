@@ -25,50 +25,50 @@ impl ToString for FieldFilter {
         match self {
             FieldFilter::Eq(ref arg) => {
                 s.push_str("EQ ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Eqn => {
                 s.push_str("EQN");
             }
             FieldFilter::Ne(ref arg) => {
                 s.push_str("NE ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Nen => {
                 s.push_str("NEN");
             }
             FieldFilter::Gt(ref arg) => {
                 s.push_str("GT ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Ge(ref arg) => {
                 s.push_str("GE ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Lt(ref arg) => {
                 s.push_str("LT ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Le(ref arg) => {
                 s.push_str("LE ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Lk(ref arg) => {
                 s.push_str("LK ");
-                s.push_str(&arg.to_string());
+                s.push_str(&arg.to_query_string());
             }
             FieldFilter::Bw(ref lower, ref upper) => {
                 s.push_str("BW ");
-                s.push_str(&lower.to_string());
+                s.push_str(&lower.to_query_string());
                 s.push(' ');
-                s.push_str(&upper.to_string());
+                s.push_str(&upper.to_query_string());
             }
             FieldFilter::In(ref args) => {
                 s.push_str("IN ");
                 s.push_str(
                     &args
                         .iter()
-                        .map(|a| a.to_sql_string())
+                        .map(|a| a.to_query_string())
                         .collect::<Vec<_>>()
                         .join(" "),
                 )
@@ -78,7 +78,7 @@ impl ToString for FieldFilter {
                 s.push_str(
                     &args
                         .iter()
-                        .map(|a| a.to_string())
+                        .map(|a| a.to_query_string())
                         .collect::<Vec<_>>()
                         .join(" "),
                 )
@@ -90,7 +90,7 @@ impl ToString for FieldFilter {
                 s.push_str(
                     &args
                         .iter()
-                        .map(|a| a.to_string())
+                        .map(|a| a.to_query_string())
                         .collect::<Vec<_>>()
                         .join(" "),
                 )
@@ -114,6 +114,7 @@ mod test {
         assert_eq!(FieldFilter::Ge(SqlArg::U64(1)).to_string(), "GE 1");
         assert_eq!(FieldFilter::Lt(SqlArg::U64(1)).to_string(), "LT 1");
         assert_eq!(FieldFilter::Le(SqlArg::U64(1)).to_string(), "LE 1");
+        assert_eq!(FieldFilter::Eq(SqlArg::Str("ABC".to_string())).to_string(), "EQ 'ABC'");
         assert_eq!(
             FieldFilter::Lk(SqlArg::Str("%ABC%".to_string())).to_string(),
             "LK '%ABC%'"

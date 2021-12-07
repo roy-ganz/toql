@@ -28,6 +28,17 @@ impl SqlArg {
             SqlArg::Null => "NULL".to_string(),
         }
     }
+    /// Build Toql query string.
+    pub fn to_query_string(&self) -> String {
+        match self {
+             SqlArg::U64(t) => t.to_string(),
+            SqlArg::I64(t) => t.to_string(),
+            SqlArg::F64(t) => t.to_string(),
+            SqlArg::Str(t) => format!("'{}'", t.to_string()),
+            SqlArg::Bool(t) => format!("{}", (if *t { 1 } else { 0 })),
+            SqlArg::Null => "0".to_string(),
+        }
+    }
 
     /// Return i64 or None, if type mismatches.
     pub fn get_i64(&self) -> Option<i64> {
@@ -84,15 +95,16 @@ impl SqlArg {
     }
 }
 
+/// For user display
 impl ToString for SqlArg {
     fn to_string(&self) -> String {
         match self {
             SqlArg::U64(t) => t.to_string(),
             SqlArg::I64(t) => t.to_string(),
             SqlArg::F64(t) => t.to_string(),
-            SqlArg::Str(t) => format!("'{}'", t.to_string()),
-            SqlArg::Bool(t) => format!("{}", (if *t { 1 } else { 0 })),
-            SqlArg::Null => "0".to_string(),
+            SqlArg::Str(t) =>  t.to_string(),
+            SqlArg::Bool(t) => String::from(if *t { "True" } else { "False" }),
+            SqlArg::Null => "Null".to_string(),
         }
     }
 }
@@ -121,6 +133,7 @@ mod test {
         assert_eq!(x, 1u64);
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "1");
+        assert_eq!(a.to_query_string(), "1");
         assert_eq!(a.cmp_str("1"), false);
         assert_eq!(1u64, a.try_into().unwrap());
 
@@ -141,6 +154,7 @@ mod test {
         assert_eq!(x, 1i64);
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "1");
+        assert_eq!(a.to_query_string(), "1");
         assert_eq!(a.cmp_str("1"), false);
         assert_eq!(1i64, a.try_into().unwrap());
 
@@ -161,6 +175,7 @@ mod test {
         assert_eq!(x, 1f64);
         assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "1");
+        assert_eq!(a.to_query_string(), "1");
         assert_eq!(a.cmp_str("1"), false);
         assert_eq!(1.0f64, a.try_into().unwrap());
 
@@ -179,8 +194,9 @@ mod test {
         let a = SqlArg::from("1");
         let x = a.get_str().unwrap();
         assert_eq!(x, "1");
-        assert_eq!(a.to_string(), "'1'");
+        assert_eq!(a.to_string(), "1");
         assert_eq!(a.to_sql_string(), "'1'");
+        assert_eq!(a.to_query_string(), "'1'");
         assert_eq!(a.cmp_str("1"), true);
         let s: String = a.try_into().unwrap();
         assert_eq!("1", &s);
@@ -196,10 +212,19 @@ mod test {
         let a = SqlArg::from(true);
         let x = a.get_bool().unwrap();
         assert_eq!(x, true);
-        assert_eq!(a.to_string(), "1");
+        assert_eq!(a.to_string(), "True");
+        assert_eq!(a.to_query_string(), "1");
         assert_eq!(a.to_sql_string(), "TRUE");
         assert_eq!(a.cmp_str("true"), false);
         assert_eq!(true, a.try_into().unwrap());
+
+        let a = SqlArg::from(false);
+        let x = a.get_bool().unwrap();
+        assert_eq!(x, false);
+        assert_eq!(a.to_string(), "False");
+        assert_eq!(a.to_query_string(), "0");
+        assert_eq!(a.to_sql_string(), "FALSE");
+        assert_eq!(false, a.try_into().unwrap());
 
         let a = SqlArg::from(&true);
         let x = a.get_bool().unwrap();
@@ -215,8 +240,9 @@ mod test {
     fn convert_null() {
         let a = SqlArg::Null;
         assert_eq!(a.is_null(), true);
-        assert_eq!(a.to_string(), "0");
+        assert_eq!(a.to_string(), "Null");
         assert_eq!(a.to_sql_string(), "NULL");
+        assert_eq!(a.to_query_string(), "0");
         assert_eq!(a.cmp_str("null"), false);
 
         assert_eq!(a.get_u64().is_none(), true);
