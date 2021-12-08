@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - Fix wrong QueryField naming for joins / merges.
+- Fix regression with names starting with `r#`
 
 ### Changed
 - Improve string representation of SqlArg.

@@ -13,7 +13,7 @@ use tracing_test::traced_test;
 pub struct Level1 {
     #[toql(key)]
     id: u64,
-    text1: Option<String>,
+    r#text1: Option<String>,
 
     #[toql(skip_wildcard)]
     text2: Option<String>,
@@ -52,7 +52,6 @@ fn get_field_handler() -> MyFieldHandler {
         basic: toql::prelude::DefaultFieldHandler::default(),
     }
 }
-
 
 #[tokio::test]
 #[traced_test("info")]
@@ -214,3 +213,4 @@ async fn order() {
     assert!(toql.load_one(q).await.is_ok());
     assert_eq!(toql.take_unsafe_sql(), select);
 }
+

@@ -85,7 +85,7 @@ pub(crate) fn build(
             .as_ref()
             .unwrap_or(&RenameCase::CamelCase)
             .rename_str(&type_info.base_name.to_string());
-        let join_alias = field_attr.name.to_string().as_str().to_mixed_case();
+        let join_alias = field_attr.name.to_string().trim_start_matches("r#").to_mixed_case();
 
         let default_self_column_code = generate_default_self_column_code(field_attr);
         let columns_map_code =
@@ -164,7 +164,7 @@ pub(crate) fn build(
                     .columns
                     .as_ref()
                     .unwrap_or(&RenameCase::SnakeCase)
-                    .rename_str(&format!("{}_{}", &table_name, &field_attr.name.to_string())),
+                    .rename_str(&format!("{}_{}", &table_name, &field_attr.name.to_string().trim_start_matches("r#"))),
             )
         };
         let sql_target = if let Some(sql) = &field_attr.sql {
@@ -176,7 +176,7 @@ pub(crate) fn build(
                     .columns
                     .clone()
                     .unwrap_or(RenameCase::SnakeCase)
-                    .rename_str(&field_attr.name.to_string()),
+                    .rename_str(&field_attr.name.to_string().trim_start_matches("r#")),
             })
         };
 
@@ -295,6 +295,6 @@ fn generate_columns_map_code(
 }
 
 fn generate_default_self_column_code(field_attr: &FieldAttr) -> TokenStream {
-    let default_self_column_format = format!("{}_{{}}", field_attr.name);
+    let default_self_column_format = format!("{}_{{}}", field_attr.name.to_string().trim_start_matches("r#"));
     quote!( let default_self_column= format!(#default_self_column_format, other_column);)
 }

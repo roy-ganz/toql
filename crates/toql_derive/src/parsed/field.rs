@@ -36,7 +36,7 @@ impl Field {
     pub(crate) fn try_from(struct_attr: &StructAttr, field_attr: FieldAttr) -> Result<Field> {
         use heck::MixedCase;
 
-        let toql_query_name = field_attr.name.to_string().to_mixed_case();
+        let toql_query_name = field_attr.name.to_string().trim_start_matches("r#").to_mixed_case();
 
         // Determine type of field
         // 1. type contains `Join` it must be join

@@ -152,11 +152,18 @@ async fn local_aux_params() {
 
     // Load text3 with field handler translation
     let q = query!(Level1, "text3");
-
     assert!(toql.load_many(q).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),
         "SELECT level1.id, (SELECT 'hello3') FROM Level1 level1"
+    );
+
+    // Wiuth filter
+        let q = query!(Level1, "text3 eq 'ABC'");
+    assert!(toql.load_many(q).await.is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "SELECT level1.id, (SELECT 'hello3') FROM Level1 level1 WHERE (SELECT 'hello3') = 'ABC'"
     );
 }
 
