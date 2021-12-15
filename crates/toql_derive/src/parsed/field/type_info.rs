@@ -1,7 +1,7 @@
 use crate::error::DeriveError;
 use crate::result::Result;
-use syn::{spanned::Spanned, Ident, Path};
 use proc_macro2::Span;
+use syn::{spanned::Spanned, Ident, Path};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum TypeHint {
@@ -93,15 +93,16 @@ fn eval_arguments<'a>(
             // println!("BASE_TYPE = {:?}", base_type);
 
             if let Some(seg) = path.segments.last() {
-                
                 match seg.ident.to_string().as_str() {
                     "Option" => *number_of_options += 1,
                     "Vec" => {
                         *type_hint_span = seg.span();
-                        *type_hint = TypeHint::Merge},
+                        *type_hint = TypeHint::Merge
+                    }
                     "Join" => {
                         *type_hint_span = seg.span();
-                        *type_hint = TypeHint::Join},
+                        *type_hint = TypeHint::Join
+                    }
                     _ => {}
                 }
                 match &seg.arguments {

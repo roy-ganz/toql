@@ -159,7 +159,7 @@ async fn local_aux_params() {
     );
 
     // Wiuth filter
-        let q = query!(Level1, "text3 eq 'ABC'");
+    let q = query!(Level1, "text3 eq 'ABC'");
     assert!(toql.load_many(q).await.is_ok());
     assert_eq!(
         toql.take_unsafe_sql(),

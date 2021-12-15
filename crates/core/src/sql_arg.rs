@@ -31,7 +31,7 @@ impl SqlArg {
     /// Build Toql query string.
     pub fn to_query_string(&self) -> String {
         match self {
-             SqlArg::U64(t) => t.to_string(),
+            SqlArg::U64(t) => t.to_string(),
             SqlArg::I64(t) => t.to_string(),
             SqlArg::F64(t) => t.to_string(),
             SqlArg::Str(t) => format!("'{}'", t.to_string()),
@@ -102,7 +102,7 @@ impl ToString for SqlArg {
             SqlArg::U64(t) => t.to_string(),
             SqlArg::I64(t) => t.to_string(),
             SqlArg::F64(t) => t.to_string(),
-            SqlArg::Str(t) =>  t.to_string(),
+            SqlArg::Str(t) => t.to_string(),
             SqlArg::Bool(t) => String::from(if *t { "True" } else { "False" }),
             SqlArg::Null => "Null".to_string(),
         }

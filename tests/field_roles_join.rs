@@ -10,31 +10,31 @@ use tracing_test::traced_test;
 #[derive(Debug, Default)]
 
 pub struct Level1 {
-    
+
     id: u64,
-    
+
     text: Option<String>,
 
-    
+
     level2: Option<Join<Level2>>,
 }
 #[derive(Debug, Default)]
 
 pub struct Level2 {
-   
+
     id: u64,
-   
+
     text: Option<String>, // Selectable
 
-   
+
     level3: Join<Level3>,
 }
 
 #[derive(Debug, Default)]
 pub struct Level3 {
- 
+
     id: u64,
- 
+
     text: String, // Preselected
 }*/
 
@@ -60,7 +60,7 @@ pub struct Level2 {
     #[toql(join, roles(load = "load2_level3_role"))]
     level3: Join<Level3>,
 }
- 
+
 #[derive(Debug, Default, Toql)]
 #[toql(auto_key)]
 pub struct Level3 {
@@ -319,5 +319,3 @@ async fn update() {
         .is_ok());
     assert!(toql.sqls_empty());
 }
-
-

@@ -59,7 +59,7 @@ async fn skip_wildcard() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
-    // Load text1 
+    // Load text1
     let q = query!(Level1, "*");
     assert!(toql.load_many(q).await.is_ok());
     assert_eq!(
@@ -213,4 +213,3 @@ async fn order() {
     assert!(toql.load_one(q).await.is_ok());
     assert_eq!(toql.take_unsafe_sql(), select);
 }
-

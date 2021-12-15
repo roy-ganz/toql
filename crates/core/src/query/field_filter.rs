@@ -114,7 +114,10 @@ mod test {
         assert_eq!(FieldFilter::Ge(SqlArg::U64(1)).to_string(), "GE 1");
         assert_eq!(FieldFilter::Lt(SqlArg::U64(1)).to_string(), "LT 1");
         assert_eq!(FieldFilter::Le(SqlArg::U64(1)).to_string(), "LE 1");
-        assert_eq!(FieldFilter::Eq(SqlArg::Str("ABC".to_string())).to_string(), "EQ 'ABC'");
+        assert_eq!(
+            FieldFilter::Eq(SqlArg::Str("ABC".to_string())).to_string(),
+            "EQ 'ABC'"
+        );
         assert_eq!(
             FieldFilter::Lk(SqlArg::Str("%ABC%".to_string())).to_string(),
             "LK '%ABC%'"
