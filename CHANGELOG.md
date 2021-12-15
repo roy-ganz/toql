@@ -5,16 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.4.1 - Unreleased
+## 0.4.1 - 2021-12-15
 
 ### Fixed
 - Fix wrong QueryField naming for joins / merges.
-- Fix regression with names starting with `r#`
+- Fix regression with Rust names starting with `r#`
 
 ### Changed
 - Improve string representation of SqlArg.
 
-## 0.4 - 2021-12-04
+## 0.4.0 - 2021-12-04
 
 ### Fixed
 - Fix insert behaviour for joins that contain a key instead of a value.

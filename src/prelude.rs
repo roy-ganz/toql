@@ -38,5 +38,5 @@ pub use toql_enum_derive::ToqlEnum;
 // Export macros
 pub use toql_core::{
     join, log_literal_sql, log_mut_literal_sql, log_mut_sql, log_sql, none_error, rval, rval_join,
-    val,
+    val
 };
