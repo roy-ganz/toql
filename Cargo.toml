@@ -1,6 +1,6 @@
 [package]
 name = "toql"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Roy Ganz <roy.ganz@glanis.biz>"]
 edition = "2018"
 description = "Toql - A friendly and productive ORM"

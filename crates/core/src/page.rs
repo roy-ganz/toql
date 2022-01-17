@@ -19,3 +19,23 @@ pub enum Page {
     /// Argments are *start index* and *number of records*.
     Counted(u64, u16),
 }
+
+impl Page {
+    pub fn is_counted(&self) -> bool {
+        match self {
+            Page::Uncounted(_, _) => false,
+            Page::Counted(_, _) => true,
+        }
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::Page;
+ #[test]
+    fn build() {
+        let p = Page::Counted(1, 10);
+        assert!(p.is_counted())
+    }
+}

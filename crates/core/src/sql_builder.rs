@@ -780,7 +780,6 @@ impl<'a> SqlBuilder<'a> {
                                 .with_arguments(&predicate.args)
                                 .with_aux_params(&aux_params);
 
-                            let expr = resolver.resolve(&mapped_predicate.expression)?;
                             let handler = mapped_predicate
                                 .options
                                 .predicate_handler
@@ -788,7 +787,7 @@ impl<'a> SqlBuilder<'a> {
                                 .unwrap_or(&mapper.predicate_handler);
 
                             if let Some(expr) =
-                                handler.build_predicate(expr, &predicate.args, &aux_params)?
+                                handler.build_predicate(mapped_predicate.expression.clone(), &predicate.args, &aux_params)?
                             {
                                 if !result.where_expr.is_empty()
                                     && !result.where_expr.ends_with_literal("(")
@@ -801,7 +800,7 @@ impl<'a> SqlBuilder<'a> {
                                         },
                                     );
                                 }
-                                result.where_expr.extend(expr);
+                                result.where_expr.extend(resolver.resolve(&expr)?);
                                 if !mapped_predicate.options.on_aux_params.is_empty() {
                                     for (i, a) in &mapped_predicate.options.on_aux_params {
                                         if let Some(v) = predicate.args.get(*i as usize) {

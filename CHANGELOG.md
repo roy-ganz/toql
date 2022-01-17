@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.4.2 - Unreleased
+
+### Fixed
+- Fix resolution order of predicate expressions.
+
+### Added
+- Page::is_counted.
+
 ## 0.4.1 - 2021-12-15
 
 ### Fixed
