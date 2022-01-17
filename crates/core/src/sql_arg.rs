@@ -1,5 +1,7 @@
 //! An argument for SQL expressions.
 
+use std::fmt;
+
 pub mod error;
 pub mod from;
 pub mod from_row;
@@ -96,15 +98,15 @@ impl SqlArg {
 }
 
 /// For user display
-impl ToString for SqlArg {
-    fn to_string(&self) -> String {
+impl fmt::Display for SqlArg {
+     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>{
         match self {
-            SqlArg::U64(t) => t.to_string(),
-            SqlArg::I64(t) => t.to_string(),
-            SqlArg::F64(t) => t.to_string(),
-            SqlArg::Str(t) => t.to_string(),
-            SqlArg::Bool(t) => String::from(if *t { "True" } else { "False" }),
-            SqlArg::Null => "Null".to_string(),
+            SqlArg::U64(t) =>  write!(f,"{}", t),
+            SqlArg::I64(t) => write!(f,"{}", t),
+            SqlArg::F64(t) => write!(f,"{}", t),
+            SqlArg::Str(t) => write!(f,"{}", t),
+            SqlArg::Bool(t) => write!(f, "{}", if *t { "True" } else { "False" }),
+            SqlArg::Null => write!(f,"{}", "Null"),
         }
     }
 }

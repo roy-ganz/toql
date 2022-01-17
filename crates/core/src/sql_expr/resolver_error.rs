@@ -1,37 +1,28 @@
 //! Errors from [Resolver](crate::sql_expr::resolver::Resolver)
-use std::fmt;
+use thiserror::Error;
 
 /// Represents all errors from the Resolver
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum ResolverError {
     /// Aux param can't be resolved, because it's missing.
+    #[error("aux param `{0}` is missing")]
     AuxParamMissing(String),
     /// Argument param can't be resolved, because it's missing.
+    #[error("not enough arguments provided")]
     ArgumentMissing,
     /// Value of self alias is unknown.
+    #[error("unresolved self alias `..`")]
     UnresolvedSelfAlias,
     /// Value of other alias is unknown.
+    #[error("unresolved other alias `...`")]
     UnresolvedOtherAlias,
     /// Value of argument is unknown.
+    #[error("unresolved argument")]
     UnresolvedArgument,
     /// Value of aux param is unknown.
+    #[error("unresolved aux param `{0}`")]
     UnresolvedAuxParameter(String),
 }
 
 // Result type alias with [ResolverError]
 pub type Result<T> = std::result::Result<T, ResolverError>;
-
-impl fmt::Display for ResolverError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ResolverError::AuxParamMissing(ref s) => write!(f, "aux param `{}` is missing", s),
-            ResolverError::ArgumentMissing => write!(f, "not enough arguments provided"),
-            ResolverError::UnresolvedSelfAlias => write!(f, "unresolved self alias `..`"),
-            ResolverError::UnresolvedOtherAlias => write!(f, "unresolved other alias `...`"),
-            ResolverError::UnresolvedArgument => write!(f, "unresolved argument"),
-            ResolverError::UnresolvedAuxParameter(ref s) => {
-                write!(f, "unresolved aux param `{}`", s)
-            }
-        }
-    }
-}

@@ -115,8 +115,8 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                         let mut args = Vec::new();
                         for c in inverse_columns {
                             let i = self_key_columns.iter().position(|r| r == &c)
-                                .ok_or_else(|| toql::table_mapper::TableMapperError::ColumnMissing(#field_base_name.to_string(), c.to_string()))?;
-                            args.push(self_key_params.get(i).ok_or_else(||toql::table_mapper::TableMapperError::ColumnMissing(#field_base_name.to_string(), c.to_string()))?.to_owned());
+                                .ok_or_else(|| toql::table_mapper::error::TableMapperError::ColumnMissing(#field_base_name.to_string(), c.to_string()))?;
+                            args.push(self_key_params.get(i).ok_or_else(||toql::table_mapper::error::TableMapperError::ColumnMissing(#field_base_name.to_string(), c.to_string()))?.to_owned());
                         }
 
                         let action = toql::tree::tree_identity::IdentityAction::Set(std::cell::RefCell::new(args));
