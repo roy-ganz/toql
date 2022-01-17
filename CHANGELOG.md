@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Fix resolution order of predicate expressions.
 
+### Changed
+- Use thiserror
+
 ### Added
 - Page::is_counted.
 
