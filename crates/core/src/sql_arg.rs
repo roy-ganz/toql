@@ -99,14 +99,14 @@ impl SqlArg {
 
 /// For user display
 impl fmt::Display for SqlArg {
-     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            SqlArg::U64(t) =>  write!(f,"{}", t),
-            SqlArg::I64(t) => write!(f,"{}", t),
-            SqlArg::F64(t) => write!(f,"{}", t),
-            SqlArg::Str(t) => write!(f,"{}", t),
+            SqlArg::U64(t) => write!(f, "{}", t),
+            SqlArg::I64(t) => write!(f, "{}", t),
+            SqlArg::F64(t) => write!(f, "{}", t),
+            SqlArg::Str(t) => write!(f, "{}", t),
             SqlArg::Bool(t) => write!(f, "{}", if *t { "True" } else { "False" }),
-            SqlArg::Null => write!(f,"{}", "Null"),
+            SqlArg::Null => write!(f, "{}", "Null"),
         }
     }
 }

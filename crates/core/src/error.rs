@@ -38,7 +38,7 @@ pub enum ToqlError {
     /// The query parser encountered a syntax error.
     #[error("{0}")]
     QueryParserError(#[from] PestError<toql_query_parser::Rule>),
-    
+
     /// The sql expression parser encountered a syntax error.
     #[error("{0}")]
     SqlExprParserError(#[from] PestError<toql_sql_expr_parser::Rule>),

@@ -786,9 +786,11 @@ impl<'a> SqlBuilder<'a> {
                                 .as_ref()
                                 .unwrap_or(&mapper.predicate_handler);
 
-                            if let Some(expr) =
-                                handler.build_predicate(mapped_predicate.expression.clone(), &predicate.args, &aux_params)?
-                            {
+                            if let Some(expr) = handler.build_predicate(
+                                mapped_predicate.expression.clone(),
+                                &predicate.args,
+                                &aux_params,
+                            )? {
                                 if !result.where_expr.is_empty()
                                     && !result.where_expr.ends_with_literal("(")
                                 {

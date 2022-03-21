@@ -21,8 +21,6 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
 
     for field in &parsed_struct.fields {
         let field_ident = &field.field_name;
-        let field_name = &field.field_name.to_string();
-
         let field_base_name = &field.field_base_name.to_string();
         let toql_query_name = &field.toql_query_name;
         let field_base_type = &field.field_base_type;
@@ -42,30 +40,38 @@ pub(crate) fn to_tokens(parsed_struct: &ParsedStruct, tokens: &mut TokenStream) 
                     number_of_keys += 1;
                 }
 
-                let unwrap_mut = match join_attrs.selection {
-                    JoinSelection::PreselectLeft | JoinSelection::SelectInner => {
-                        quote!(.as_mut().ok_or(toql::error::ToqlError::ValueMissing(#field_name.to_string()))?)
-                    }
-                    JoinSelection::PreselectInner => quote!(),
-                    JoinSelection::SelectLeft => {
-                        quote!(.as_mut().unwrap().as_mut().ok_or(toql::error::ToqlError::ValueMissing(#field_name.to_string()))?)
-                    }
-                };
-
-                let refer_mut = if join_attrs.selection == JoinSelection::PreselectInner {
-                    quote!(&mut)
-                } else {
-                    quote!()
-                };
-
                 dispatch_identity_code.push(
-                   quote!(
-                       #toql_query_name => {
-                            toql::tree::tree_identity::TreeIdentity::set_id(#refer_mut self. #field_ident #unwrap_mut,
-                            descendents, action)?
+                    match join_attrs.selection {
+                         JoinSelection::SelectLeft => {
+                            quote!(
+                                #toql_query_name => {
+                                    if let Some(e) = self. #field_ident .as_mut() {
+                                        if let Some(e2) = e .as_mut() {
+                                            toql::tree::tree_identity::TreeIdentity::set_id(e2, descendents, action)?;
+                                        }
+                                    }
+                                }
+                            )
+                         }
+
+                        JoinSelection::PreselectInner => {
+                            quote!(
+                                #toql_query_name => {
+                                    toql::tree::tree_identity::TreeIdentity::set_id(&mut self. #field_ident, descendents, action)?;
+                                }
+                            )
                         }
-                )
-               );
+                        JoinSelection::PreselectLeft | JoinSelection::SelectInner => {
+                            quote!(
+                                #toql_query_name => {
+                                    if let Some(e) = self. #field_ident. as_mut() {
+                                        toql::tree::tree_identity::TreeIdentity::set_id(e, descendents, action)?;
+                                    }
+                                }
+                            )
+                        }
+                    }
+                );
                 dispatch_auto_id_code.push(
                    quote!(
                        #toql_query_name => {

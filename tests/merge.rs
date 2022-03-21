@@ -33,11 +33,11 @@ pub struct Level3 {
     level2_id: u64,
     text: String,
 
+    // Custom ON statement to restrict join
     #[toql(merge(
         columns(self = "id", other = "level3_id"),
-        join_sql = "...text = 'ABC'"
+        on_sql = "...txt = 'ABC'"
     ))]
-    // Custom ON statement
     level4: Vec<Level4>, // Preselected merge join
 }
 #[derive(Debug, Default, Toql)]
@@ -47,13 +47,31 @@ pub struct Level4 {
     #[toql(key)]
     level3_id: u64,
     text: String,
+
+     // Custom JOIN statement to skip association table
+     #[toql(merge(
+        columns(self = "id", other = "la.level4_id"), // Required for merging after db loading
+        join_sql = "JOIN LevelAssoc la ON (la.level5_id = ...id)"
+    ))]
+    level5: Vec<Level5>, // Preselected merge join
+}
+#[derive(Debug, Default, Toql)]
+pub struct Level5 {
+    #[toql(key)]
+    id: u64,
+    text: String,
 }
 
 fn populated_level() -> Level1 {
+    let l5 = Level5 {
+        id: 5,
+        text: "level5".to_string(),
+    };
     let l4 = Level4 {
         id: 4,
         text: "level4".to_string(),
         level3_id: 3,
+        level5: vec![l5],
     };
     let l3 = Level3 {
         id: 3,
@@ -136,8 +154,8 @@ async fn load2() {
     let cache = Cache::new();
     let mut toql = MockDb::from(&cache);
 
-    // Load preselects from level 1..3 + all fields from level 4
-    let q = query!(Level1, "*, level2_level3_level4_*");
+    // Load preselects from level 1..4 + all fields from level 5
+    let q = query!(Level1, "*, level2_level3_level4_level5_*");
     let select1 = "SELECT level1.id, level1.text FROM Level1 level1";
     let select2 = "SELECT level1.id, level2.id, level2.level1_id, level2.text \
                         FROM Level2 level2 \
@@ -151,13 +169,21 @@ async fn load2() {
                         ON (level1_level2.id = level3.level2_id \
                             AND level1_level2.id = 2 \
                             AND level1_level2.level1_id = 1)";
-
     let select4 = "SELECT level1_level2_level3.id, level1_level2_level3.level2_id, level4.id, level4.level3_id, level4.text \
-                        FROM Level4 level4 level4.text = \'ABC' \
-                        JOIN Level3 level1_level2_level3 \
-                        ON (level1_level2_level3.id = level4.level3_id \
-                            AND level1_level2_level3.id = 3 \
-                            AND level1_level2_level3.level2_id = 2)";
+                     FROM Level4 level4 \
+                     JOIN Level3 level1_level2_level3 \
+                     ON (level4.txt = 'ABC' \
+                        AND level1_level2_level3.id = 3 \
+                        AND level1_level2_level3.level2_id = 2)";
+   
+    let select5 = "SELECT level1_level2_level3_level4.id, level1_level2_level3_level4.level3_id, level5.id, level5.text \
+                    FROM Level5 level5 \
+                    JOIN LevelAssoc la ON (la.level5_id = level5.id) \
+                    JOIN Level4 level1_level2_level3_level4 \
+                    ON (level1_level2_level3_level4.id = la.level4_id \
+                        AND level1_level2_level3_level4.id = 4 \
+                        AND level1_level2_level3_level4.level3_id = 3)";
+
 
     // level1.id
     toql.mock_rows(select1, vec![row!(1u64, "level1")]);
@@ -171,11 +197,14 @@ async fn load2() {
     // level1_level2_level3.id, level1_level2_level3.level2_id, level4.id, level4.level3_id, level4.text
     toql.mock_rows(select4, vec![row!(3u64, 2u64, 4u64, 3u64, "level4")]);
 
+    // level1_level2_level3_level4.id, level1_level2_level3_level4.level3_id, level5.id, level5.text
+    toql.mock_rows(select5, vec![row!(4u64, 3u64, 5u64, "level5")]);
+
     assert!(toql.load_many(q).await.is_ok());
 
     assert_eq!(
         toql.take_unsafe_sqls(),
-        [select1, select2, select3, select4]
+        [select1, select2, select3, select4, select5]
     );
 }
 

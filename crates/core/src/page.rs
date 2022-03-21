@@ -29,11 +29,10 @@ impl Page {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::Page;
- #[test]
+    #[test]
     fn build() {
         let p = Page::Counted(1, 10);
         assert!(p.is_counted())

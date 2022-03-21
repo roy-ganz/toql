@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - Fix resolution order of predicate expressions.
+- [#8]: Update with missing partial join.
 
 ### Changed
 - Use thiserror

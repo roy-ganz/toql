@@ -1,7 +1,8 @@
 use pretty_assertions::assert_eq;
 use toql::mock_db::MockDb;
-use toql::prelude::{paths, query, Cache, Toql, ToqlApi};
+use toql::prelude::{fields, paths, query, Cache, Toql, ToqlApi};
 use tracing_test::traced_test;
+
 /*
 #[derive(Debug, Default)]
 pub struct Level1 {
@@ -26,8 +27,7 @@ pub struct Level3 {
 pub struct Level4 {
     id: u64,
     text: String,
-}
-*/
+}*/
 
 #[derive(Debug, Default, Toql)]
 #[toql(auto_key)]
@@ -146,6 +146,78 @@ async fn insert() {
             "INSERT INTO Level1 (text) VALUES ('level1')", // Partial joins come last (top down)
             "INSERT INTO Level2 (id, text) VALUES (100, 'level2')",
             "INSERT INTO Level3 (id, text, level4_id) VALUES (100, 'level3', 4)",
+        ]
+    );
+}
+
+#[tokio::test]
+#[traced_test("info")]
+async fn update() {
+    let cache = Cache::new();
+    let mut toql = MockDb::from(&cache);
+
+    // Update level 1
+    // Nothing is updated, fields are empty
+    let mut l1 = Level1::default();
+    assert!(toql.update_one(&mut l1, fields!(top)).await.is_ok());
+    assert_eq!(toql.sqls_empty(), true);
+
+    // Update level 1
+    // Nothing is updated, fields are empty
+    let mut l1 = Level1::default();
+    assert!(toql
+        .update_one(&mut l1, fields!(Level1, "level2_level3_*"))
+        .await
+        .is_ok());
+    assert_eq!(toql.sqls_empty(), true);
+
+    // Update level 1 with invalid key
+    // Nothing is updated
+    let mut l1 = populated_level();
+    l1.id = 0;
+    assert!(toql.update_one(&mut l1, fields!(top)).await.is_ok());
+    assert_eq!(toql.sqls_empty(), true);
+
+    // Update level 1 (text + foreign key is skipped, beause partial join shares primary key)
+    let mut l1 = populated_level();
+    assert!(toql.update_one(&mut l1, fields!(top)).await.is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "UPDATE Level1 SET text = 'level1' WHERE id = 1"
+    );
+
+    // Update level 4 (text)
+    let mut l1 = populated_level();
+    assert!(toql
+        .update_one(&mut l1, fields!(Level1, "level2_level3_level4_*"))
+        .await
+        .is_ok());
+    assert_eq!(
+        toql.take_unsafe_sql(),
+        "UPDATE Level4 SET text = 'level4' WHERE id = 4"
+    );
+
+    // Update level 1 - 4
+    let mut l1 = populated_level();
+    assert!(toql
+        .update_one(
+            &mut l1,
+            fields!(
+                Level1,
+                "*, level2_*, \
+            level2_level3_*, level2_level3_level4_*"
+            ),
+        )
+        .await
+        .is_ok());
+    let sqls = toql.take_unsafe_sqls();
+    assert_eq!(
+        sqls,
+        [
+            "UPDATE Level4 SET text = \'level4\' WHERE id = 4",
+            "UPDATE Level3 SET text = \'level3\', level4_id = 4 WHERE id = 3", // Left join has foreign key
+            "UPDATE Level2 SET text = \'level2\' WHERE id = 2", // Partial join, no foreign key
+            "UPDATE Level1 SET text = \'level1\' WHERE id = 1"  // Partial join, no foreign key
         ]
     );
 }

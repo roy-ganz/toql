@@ -6,11 +6,11 @@ pub mod mapped;
 pub mod merge_options;
 pub mod predicate_options;
 
+pub mod error;
 pub(crate) mod field;
 pub(crate) mod join;
 pub(crate) mod merge;
-pub(crate) mod predicate;
-pub mod error; // Used by derive
+pub(crate) mod predicate; // Used by derive
 
 use crate::{
     field_handler::{DefaultFieldHandler, FieldHandler},
