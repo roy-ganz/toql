@@ -214,10 +214,10 @@ async fn update() {
     assert_eq!(
         sqls,
         [
-            "UPDATE Level4 SET text = \'level4\' WHERE id = 4",
-            "UPDATE Level3 SET text = \'level3\', level4_id = 4 WHERE id = 3", // Left join has foreign key
-            "UPDATE Level2 SET text = \'level2\' WHERE id = 2", // Partial join, no foreign key
-            "UPDATE Level1 SET text = \'level1\' WHERE id = 1"  // Partial join, no foreign key
+            "UPDATE Level1 SET text = \'level1\' WHERE id = 1", // Partial join, no foreign key
+            "UPDATE Level2 SET text = \'level2\' WHERE id = 1", // Partial join with same id as Level1 , no foreign key
+            "UPDATE Level3 SET text = \'level3\', level4_id = 4 WHERE id = 1", // Partial join on Level 2 (Level 1) with  left join has foreign key
+            "UPDATE Level4 SET text = \'level4\' WHERE id = 4"
         ]
     );
 }

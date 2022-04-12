@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.4.2 - Unreleased
 
 ### Fixed
+- [#9]: Wrong key when updating partial joins.
 - Fix resolution order of predicate expressions.
 - [#8]: Update with missing partial join.
 

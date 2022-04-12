@@ -51,27 +51,24 @@ where
     let (field_order, merge_order, fields_map) =
         plan_update_order::<T, _>(&*backend.registry()?, fields.list.as_ref())?;
 
-    let mut refreshed_paths = HashSet::new();
-
-    // Process from bottom to top
-    // This should not matter however
-    for query_path in field_order.iter().rev() {
+    // Process from top to bottom
+    // This ensures that partial joins have correctly updated keys
+    // because parent is called first
+    for query_path in field_order.iter() {
         let fields = match fields_map.get(query_path) {
             Some(f) => f,
             None => continue,
         };
 
-        let parent_path = FieldPath::trim_basename(query_path);
-        if !refreshed_paths.contains(parent_path.as_str()) {
-            let path = FieldPath::from(&query_path);
-            for e in entities.iter_mut() {
-                <T as TreeIdentity>::set_id(
-                    e.borrow_mut(),
-                    path.children(),
-                    &IdentityAction::RefreshValid,
-                )?;
-            }
-            refreshed_paths.insert(parent_path.to_string());
+        // TODO skip path for partial joins because
+        // they are already updated by  parent entity
+        let path = FieldPath::from(&query_path);
+        for e in entities.iter_mut() {
+            <T as TreeIdentity>::set_id(
+                e.borrow_mut(),
+                path.children(),
+                &IdentityAction::RefreshValid,
+            )?;
         }
 
         update_field_or_join(backend, entities, &query_path, fields).await?;

@@ -194,10 +194,10 @@ async fn update() {
     assert_eq!(
         sqls,
         [
-            "UPDATE Level3 SET text = \'level31\' WHERE id = 31 AND level2_id = 2",
-            "UPDATE Level3 SET text = \'level32\' WHERE id = 32 AND level2_id = 2",
+            "UPDATE Level1 SET text = \'level1\', level2_id = 2 WHERE id = 1",
             "UPDATE Level2 SET text = \'level2\' WHERE id = 2",
-            "UPDATE Level1 SET text = \'level1\', level2_id = 2 WHERE id = 1"
+            "UPDATE Level3 SET text = \'level31\' WHERE id = 31 AND level2_id = 2",
+            "UPDATE Level3 SET text = \'level32\' WHERE id = 32 AND level2_id = 2"
         ]
     );
 }

@@ -34,10 +34,7 @@ pub struct Level3 {
     text: String,
 
     // Custom ON statement to restrict join
-    #[toql(merge(
-        columns(self = "id", other = "level3_id"),
-        on_sql = "...txt = 'ABC'"
-    ))]
+    #[toql(merge(columns(self = "id", other = "level3_id"), on_sql = "...txt = 'ABC'"))]
     level4: Vec<Level4>, // Preselected merge join
 }
 #[derive(Debug, Default, Toql)]
@@ -48,8 +45,8 @@ pub struct Level4 {
     level3_id: u64,
     text: String,
 
-     // Custom JOIN statement to skip association table
-     #[toql(merge(
+    // Custom JOIN statement to skip association table
+    #[toql(merge(
         columns(self = "id", other = "la.level4_id"), // Required for merging after db loading
         join_sql = "JOIN LevelAssoc la ON (la.level5_id = ...id)"
     ))]
@@ -175,7 +172,7 @@ async fn load2() {
                      ON (level4.txt = 'ABC' \
                         AND level1_level2_level3.id = 3 \
                         AND level1_level2_level3.level2_id = 2)";
-   
+
     let select5 = "SELECT level1_level2_level3_level4.id, level1_level2_level3_level4.level3_id, level5.id, level5.text \
                     FROM Level5 level5 \
                     JOIN LevelAssoc la ON (la.level5_id = level5.id) \
@@ -183,7 +180,6 @@ async fn load2() {
                     ON (level1_level2_level3_level4.id = la.level4_id \
                         AND level1_level2_level3_level4.id = 4 \
                         AND level1_level2_level3_level4.level3_id = 3)";
-
 
     // level1.id
     toql.mock_rows(select1, vec![row!(1u64, "level1")]);
@@ -296,10 +292,10 @@ async fn update() {
     assert_eq!(
         sqls,
         [
-            "UPDATE Level4 SET text = 'level4' WHERE id = 4 AND level3_id = 3",
-            "UPDATE Level3 SET text = 'level3' WHERE id = 3 AND level2_id = 2",
+            "UPDATE Level1 SET text = 'level1' WHERE id = 1",
             "UPDATE Level2 SET text = 'level2' WHERE id = 2 AND level1_id = 1",
-            "UPDATE Level1 SET text = 'level1' WHERE id = 1"
+            "UPDATE Level3 SET text = 'level3' WHERE id = 3 AND level2_id = 2",
+            "UPDATE Level4 SET text = 'level4' WHERE id = 4 AND level3_id = 3"
         ]
     );
 }

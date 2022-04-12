@@ -19,7 +19,7 @@ pub enum IdentityAction {
 }
 /// Deal with primary and foreign keys in nested structs.
 pub trait TreeIdentity {
-    /// Returns true, if struct loacted at `descendents` has database generated keys.
+    /// Returns true, if struct located at `descendents` has database generated keys.
     fn auto_id<'a, I>(descendents: I) -> Result<bool, ToqlError>
     where
         I: Iterator<Item = FieldPath<'a>>;
